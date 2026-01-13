@@ -1,0 +1,8 @@
+# Adiology - Medical Imaging Analysis System
+# Python dependencies
+
+# Core dependencies (currently none required for basic functionality)
+# Add dependencies here as needed, for example:
+# numpy>=1.21.0
+# pillow>=9.0.0
+# pydicom>=2.3.0
