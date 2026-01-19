@@ -10158,6 +10158,108 @@ app.use('/api/admin/*', async (c, next) => {
   }
 });
 
+// ============================================================================
+// POCKETBASE ADMIN PANEL PROXY
+// ============================================================================
+// Proxy route for PocketBase admin UI at /admin
+// This forwards requests to PocketBase's built-in admin interface
+const POCKETBASE_URL = process.env.POCKETBASE_URL || 'http://127.0.0.1:8090';
+
+app.all('/admin/*', async (c) => {
+  try {
+    // Get the path after /admin
+    let adminPath = c.req.path.replace('/admin', '') || '/';
+    
+    // If path is empty or just '/', redirect to PocketBase admin root
+    if (adminPath === '/' || adminPath === '') {
+      adminPath = '/_/';
+    } else if (!adminPath.startsWith('/_/')) {
+      // If path doesn't start with /_/, prepend it
+      adminPath = `/_${adminPath}`;
+    }
+    
+    // Construct the PocketBase admin URL
+    const targetUrl = `${POCKETBASE_URL}${adminPath}`;
+    
+    // Get query parameters
+    const queryString = c.req.url.split('?')[1] || '';
+    const fullUrl = queryString ? `${targetUrl}?${queryString}` : targetUrl;
+    
+    // Forward the request to PocketBase
+    const method = c.req.method;
+    const headers: HeadersInit = {};
+    
+    // Copy relevant headers
+    const authHeader = c.req.header('Authorization');
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+    
+    const contentType = c.req.header('Content-Type');
+    if (contentType) {
+      headers['Content-Type'] = contentType;
+    }
+    
+    // Copy cookie header for session management
+    const cookieHeader = c.req.header('Cookie');
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+    
+    // Get request body if it exists
+    let body: BodyInit | undefined;
+    if (method !== 'GET' && method !== 'HEAD') {
+      try {
+        const bodyText = await c.req.text();
+        if (bodyText) {
+          body = bodyText;
+        }
+      } catch (e) {
+        // No body
+      }
+    }
+    
+    // Make the request to PocketBase
+    const response = await fetch(fullUrl, {
+      method,
+      headers,
+      body,
+    });
+    
+    // Get response body
+    const responseBody = await response.text();
+    
+    // Get response headers
+    const responseHeaders: HeadersInit = {};
+    response.headers.forEach((value, key) => {
+      // Filter out headers that shouldn't be forwarded
+      const lowerKey = key.toLowerCase();
+      if (!['content-encoding', 'transfer-encoding', 'connection', 'content-length'].includes(lowerKey)) {
+        responseHeaders[key] = value;
+      }
+    });
+    
+    // Set CORS headers for admin panel
+    responseHeaders['Access-Control-Allow-Origin'] = '*';
+    responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS';
+    responseHeaders['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie';
+    responseHeaders['Access-Control-Allow-Credentials'] = 'true';
+    
+    return new Response(responseBody, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+    });
+  } catch (error: any) {
+    console.error('PocketBase admin proxy error:', error);
+    return c.json({
+      error: 'Failed to proxy to PocketBase admin',
+      message: error.message,
+      pocketbaseUrl: POCKETBASE_URL,
+    }, 500);
+  }
+});
+
 // In production, serve static files from build/ - MUST be registered LAST after all API routes
 if (isProduction) {
   const fs = await import('fs');
@@ -10169,6 +10271,11 @@ if (isProduction) {
     // Never serve HTML for API routes - always return JSON error
     if (reqPath.startsWith('/api/')) {
       return c.json({ success: false, error: 'API endpoint not found' }, 404);
+    }
+    
+    // Skip admin routes (handled by proxy above)
+    if (reqPath.startsWith('/admin')) {
+      return c.json({ error: 'Admin route not found' }, 404);
     }
     
     const distPath = path.join(process.cwd(), 'build');

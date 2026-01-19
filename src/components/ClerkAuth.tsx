@@ -35,66 +35,14 @@ export const ClerkAuth: React.FC<ClerkAuthProps> = ({ onBackToHome, mode = 'sign
       </div>
       
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          {mode === 'sign-in' ? (
-            <SignIn 
-              appearance={{
-                elements: {
-                  rootBox: "mx-auto",
-                  card: "bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl",
-                  headerTitle: "text-white",
-                  headerSubtitle: "text-white/70",
-                  socialButtonsBlockButton: "bg-white/10 border-white/20 text-white hover:bg-white/20",
-                  socialButtonsBlockButtonText: "text-white",
-                  dividerLine: "bg-white/20",
-                  dividerText: "text-white/50",
-                  formFieldLabel: "text-white/80",
-                  formFieldInput: "bg-white/10 border-white/20 text-white placeholder:text-white/40",
-                  formButtonPrimary: "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700",
-                  footerActionLink: "text-indigo-400 hover:text-indigo-300",
-                  identityPreviewText: "text-white",
-                  identityPreviewEditButton: "text-indigo-400",
-                  formFieldAction: "text-indigo-400",
-                  alertText: "text-white",
-                  formFieldSuccessText: "text-green-400",
-                  formFieldErrorText: "text-red-400",
-                }
-              }}
-              routing="hash"
-              signUpUrl="#/sign-up"
-              forceRedirectUrl={undefined}
-              fallbackRedirectUrl={undefined}
-            />
-          ) : (
-            <SignUp 
-              appearance={{
-                elements: {
-                  rootBox: "mx-auto",
-                  card: "bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl",
-                  headerTitle: "text-white",
-                  headerSubtitle: "text-white/70",
-                  socialButtonsBlockButton: "bg-white/10 border-white/20 text-white hover:bg-white/20",
-                  socialButtonsBlockButtonText: "text-white",
-                  dividerLine: "bg-white/20",
-                  dividerText: "text-white/50",
-                  formFieldLabel: "text-white/80",
-                  formFieldInput: "bg-white/10 border-white/20 text-white placeholder:text-white/40",
-                  formButtonPrimary: "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700",
-                  footerActionLink: "text-indigo-400 hover:text-indigo-300",
-                  identityPreviewText: "text-white",
-                  identityPreviewEditButton: "text-indigo-400",
-                  formFieldAction: "text-indigo-400",
-                  alertText: "text-white",
-                  formFieldSuccessText: "text-green-400",
-                  formFieldErrorText: "text-red-400",
-                }
-              }}
-              routing="hash"
-              signInUrl="#/sign-in"
-              forceRedirectUrl={undefined}
-              fallbackRedirectUrl={undefined}
-            />
-          )}
+        <div className="w-full max-w-md text-center text-white/80">
+          <p className="mb-4">This component is deprecated. Please use the Auth component for authentication.</p>
+          <Button
+            onClick={onBackToHome}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            Go to Auth
+          </Button>
         </div>
       </div>
       
