@@ -7446,12 +7446,21 @@ app.post('/api/admin/users/:userId/role', async (c) => {
       } catch (error: any) {
         console.error('Error updating user role:', error);
         
+        // Try to get current user for logging
+        let currentUserRole = 'unknown';
+        try {
+          const currentUser = await pbAdmin.collection('users').getOne(userId);
+          currentUserRole = currentUser?.role || 'unknown';
+        } catch (e) {
+          // Ignore error getting user
+        }
+        
         await logAdminAction(
           adminContext.user.id,
           'update_user_role_error',
           'users',
           userId,
-          { error: error.message || 'Unknown error', newRole: role, oldRole: currentUser?.role },
+          { error: error.message || 'Unknown error', newRole: role, oldRole: currentUserRole },
           'error'
         );
         

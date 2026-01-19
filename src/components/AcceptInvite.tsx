@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth, useUser } from '../../utils/authCompat';
+import { useAuthCompat, useUserCompat } from '../../utils/authCompat';
 import { CheckCircle, Loader2, AlertCircle, Users, Mail } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
