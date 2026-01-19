@@ -29,8 +29,8 @@ import {
 import { getUserPreferences, applyUserPreferences } from './utils/userPreferences';
 import { notifications as notificationService } from './utils/notifications';
 import { setCurrentUserId } from './utils/localStorageHistory';
-import { getCurrentUserProfile, signOut, isAuthenticated, getSessionToken } from './utils/auth';
-import { getCurrentUser } from './utils/pocketbase/auth';
+import { getCurrentUserProfile, signOut, getSessionToken } from './utils/auth';
+import { getCurrentUser, isAuthenticated } from './utils/pocketbase/auth';
 import { pb } from './utils/pocketbase/client';
 import { DataSourceIndicator } from './components/DataSourceIndicator';
 import { useDataSource } from './hooks/useDataSource';
@@ -108,6 +108,23 @@ const AppContent = () => {
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
+      
+      // Check for test admin mode first
+      const testAdminMode = sessionStorage.getItem('test_admin_mode');
+      const testAdminUser = sessionStorage.getItem('test_admin_user');
+      
+      if (testAdminMode === 'true' && testAdminUser) {
+        try {
+          const mockUser = JSON.parse(testAdminUser);
+          setUser(mockUser);
+          setCurrentUserId(mockUser.id);
+          setLoading(false);
+          return;
+        } catch (e) {
+          console.error('Failed to parse test admin user:', e);
+        }
+      }
+      
       const currentUser = getCurrentUser();
       if (currentUser) {
         const profile = await getCurrentUserProfile();
@@ -127,8 +144,12 @@ const AppContent = () => {
       if (model) {
         initAuth();
       } else {
-        setUser(null);
-        setCurrentUserId(null);
+        // Only clear if not in test admin mode
+        const testAdminMode = sessionStorage.getItem('test_admin_mode');
+        if (testAdminMode !== 'true') {
+          setUser(null);
+          setCurrentUserId(null);
+        }
       }
     });
     
@@ -1263,8 +1284,31 @@ const AppContent = () => {
       <Auth
         initialMode={authMode}
         onLoginSuccess={() => {
-          setAppView('user');
-          setActiveTab('dashboard');
+          // Wait for user state to update, then navigate
+          setTimeout(() => {
+            setAppView('user');
+            setActiveTab('dashboard');
+            // Force a refresh of user state
+            const currentUser = getCurrentUser();
+            if (currentUser) {
+              getCurrentUserProfile().then(profile => {
+                if (profile) {
+                  setUser(profile);
+                  setCurrentUserId(currentUser.id);
+                }
+              });
+            }
+          }, 200);
+        }}
+        onSignupSuccess={(email, name) => {
+          // After signup, navigate to dashboard if user is authenticated
+          setTimeout(() => {
+            const currentUser = getCurrentUser();
+            if (currentUser || isAuthenticated()) {
+              setAppView('user');
+              setActiveTab('dashboard');
+            }
+          }, 300);
         }}
         onBackToHome={() => {
           setAppView('homepage');
@@ -1288,18 +1332,49 @@ const AppContent = () => {
     }
     
     if (!user) {
-      return (
-        <Auth
-          initialMode="login"
-          onLoginSuccess={() => {
-            setAppView('user');
-            setActiveTab('dashboard');
-          }}
-          onBackToHome={() => {
-            setAppView('homepage');
-          }}
-        />
-      );
+      // Check for test admin mode
+      const testAdminMode = sessionStorage.getItem('test_admin_mode');
+      const testAdminUser = sessionStorage.getItem('test_admin_user');
+      
+      if (testAdminMode === 'true' && testAdminUser) {
+        try {
+          const mockUser = JSON.parse(testAdminUser);
+          setUser(mockUser);
+          setCurrentUserId(mockUser.id);
+          // Continue to render user view
+        } catch (e) {
+          console.error('Failed to parse test admin user:', e);
+        }
+      }
+      
+      // If still no user, show auth
+      if (!user) {
+        return (
+          <Auth
+            initialMode="login"
+            onLoginSuccess={() => {
+              // Wait for user state to update, then navigate
+              setTimeout(() => {
+                setAppView('user');
+                setActiveTab('dashboard');
+                // Force a refresh of user state
+                const currentUser = getCurrentUser();
+                if (currentUser) {
+                  getCurrentUserProfile().then(profile => {
+                    if (profile) {
+                      setUser(profile);
+                      setCurrentUserId(currentUser.id);
+                    }
+                  });
+                }
+              }, 200);
+            }}
+            onBackToHome={() => {
+              setAppView('homepage');
+            }}
+          />
+        );
+      }
     }
   }
 

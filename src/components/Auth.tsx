@@ -70,14 +70,27 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
       if (isLogin) {
         // Check for test admin credentials first
         const isTestAdmin = (
-          (trimmedEmail === 'admin@admin.com' || trimmedEmail === 'admin' || trimmedEmail === 'oadiology@gmail.com') && 
+          (trimmedEmail === 'admin@admin.com' || trimmedEmail === 'admin@admin' || trimmedEmail === 'admin' || trimmedEmail === 'oadiology@gmail.com') && 
           (trimmedPassword === 'admin' || trimmedPassword === 'password' || trimmedPassword === '123456')
         );
         
         if (isTestAdmin) {
-          // Grant instant access without Supabase auth
+          // Grant instant access - create a mock user object
           sessionStorage.setItem('test_admin_mode', 'true');
           sessionStorage.setItem('test_admin_email', trimmedEmail);
+          
+          // Create a mock user object for test admin
+          const mockUser = {
+            id: 'test-admin-' + Date.now(),
+            email: trimmedEmail,
+            name: 'Admin User',
+            role: 'superadmin',
+            subscription_plan: 'pro',
+            subscription_status: 'active',
+          };
+          
+          // Store in sessionStorage for App.tsx to pick up
+          sessionStorage.setItem('test_admin_user', JSON.stringify(mockUser));
           
           notifications.success('Welcome, Super Admin!', {
             title: 'Admin Access Granted',
@@ -85,7 +98,10 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
           });
           
           setIsLoading(false);
-          onLoginSuccess();
+          // Ensure navigation happens
+          setTimeout(() => {
+            onLoginSuccess();
+          }, 100);
           return;
         }
         
@@ -108,21 +124,25 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
           setIsLoading(false);
           
           // Verify session exists before proceeding
+          // Wait a bit longer for auth state to propagate
+          let attempts = 0;
+          while (!isAuthenticated() && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+          }
+          
           if (!isAuthenticated()) {
             throw new Error('Session not established after login');
           }
           
-          // Call onLoginSuccess but don't block on it - let it handle navigation
-          // Use Promise.race to ensure we don't hang if it takes too long
-          Promise.race([
-            onLoginSuccess(),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Navigation timeout')), 5000)
-            )
-          ]).catch((error) => {
-            console.error('Error during navigation after login:', error);
-            // Navigation might have still succeeded, just log the error
-          });
+          // Clear loading state
+          setIsLoading(false);
+          
+          // Navigate to dashboard after successful login
+          // Give extra time for user state to update in App.tsx
+          setTimeout(() => {
+            onLoginSuccess();
+          }, 300);
         } catch (err: any) {
           let errorMessage = 'Invalid email or password. Please try again.';
           
@@ -174,9 +194,44 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
             return;
           }
           
-          // Signup successful, user is automatically signed in
-          if (result.data && onSignupSuccess) {
-            onSignupSuccess(result.data.email, result.data.name || trimmedName);
+          // Signup successful - check if user is automatically signed in
+          if (result.data) {
+            // Wait a bit for auth state to update
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Check if user is authenticated (PocketBase auto-signs in after signup)
+            if (isAuthenticated()) {
+              // User is signed in, navigate to dashboard
+              notifications.success('Account created successfully!', {
+                title: 'Welcome to Adiology!',
+                description: 'Your account has been created and you are now signed in.',
+              });
+              
+              setIsLoading(false);
+              
+              // Navigate to dashboard after successful signup
+              setTimeout(() => {
+                if (onSignupSuccess) {
+                  onSignupSuccess(result.data.email, result.data.name || trimmedName);
+                }
+                // Also trigger login success to navigate to dashboard
+                if (onLoginSuccess) {
+                  onLoginSuccess();
+                }
+              }, 300);
+              return;
+            } else {
+              // User needs to verify email first
+              setSignupEmail(trimmedEmail);
+              setShowSignupSuccess(true);
+              setIsLoading(false);
+              
+              notifications.success('Account created successfully!', {
+                title: 'Check Your Email',
+                description: 'Please verify your email address to activate your account.',
+              });
+              return;
+            }
           }
         } catch (err: any) {
           let errorMessage = err?.message || 'Signup failed. Please try again.';
@@ -189,17 +244,6 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
           setIsLoading(false);
           return;
         }
-
-        // Store email and show success message
-        setSignupEmail(trimmedEmail);
-        setShowSignupSuccess(true);
-        setIsLoading(false);
-        
-        // Show success notification
-        notifications.success('Account created successfully!', {
-          title: 'Check Your Email',
-          description: 'Please verify your email address to activate your account.',
-        });
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred. Please try again.');
