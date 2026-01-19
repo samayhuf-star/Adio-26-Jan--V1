@@ -7290,9 +7290,36 @@ app.post('/api/admin/users/:userId/block', async (c) => {
       }
       
       try {
+        // Get user data first for logging
+        const userData = await pbAdmin.collection('users').getOne(userId);
+        
         // Update user blocked status in PocketBase
         await pbAdmin.collection('users').update(userId, { 
           is_blocked: blocked,
+        });
+        
+        // Log the admin action
+        await logAdminAction(
+          adminContext.user.id,
+          blocked ? 'block_user' : 'unblock_user',
+          'users',
+          userId,
+          { 
+            blocked,
+            userEmail: userData?.email,
+            reason: 'Admin action'
+          },
+          'info'
+        );
+        
+        return c.json({
+          success: true,
+          data: {
+            userId,
+            is_blocked: blocked,
+            message: `User ${blocked ? 'blocked' : 'unblocked'} successfully`
+          },
+          timestamp: new Date().toISOString()
         });
       } catch (error: any) {
         await logAdminAction(
@@ -7300,7 +7327,7 @@ app.post('/api/admin/users/:userId/block', async (c) => {
           'block_user_error',
           'users',
           userId,
-          { error: error.message, blocked },
+          { error: error.message || 'Unknown error', blocked },
           'error'
         );
         
@@ -7312,20 +7339,6 @@ app.post('/api/admin/users/:userId/block', async (c) => {
           timestamp: new Date().toISOString()
         }, 500);
       }
-      
-      // Log the admin action
-      await logAdminAction(
-        adminContext.user.id,
-        blocked ? 'block_user' : 'unblock_user',
-        'users',
-        userId,
-        { 
-          blocked,
-          userEmail: data?.email,
-          reason: 'Admin action'
-        },
-        'info'
-      );
       
       return c.json({
         success: true,
@@ -7407,13 +7420,38 @@ app.post('/api/admin/users/:userId/role', async (c) => {
           role,
         });
         
+        // Log the admin action
+        await logAdminAction(
+          adminContext.user.id,
+          'update_user_role',
+          'users',
+          userId,
+          { 
+            oldRole: currentUser?.role,
+            newRole: role,
+            userEmail: currentUser?.email
+          },
+          'info'
+        );
+        
         return c.json({
+          success: true,
+          data: {
+            userId,
+            role,
+            message: `User role updated to ${role} successfully`
+          },
+          timestamp: new Date().toISOString()
+        });
+      } catch (error: any) {
+        console.error('Error updating user role:', error);
+        
         await logAdminAction(
           adminContext.user.id,
           'update_user_role_error',
           'users',
           userId,
-          { error: error.message, newRole: role, oldRole: currentUser?.role },
+          { error: error.message || 'Unknown error', newRole: role, oldRole: currentUser?.role },
           'error'
         );
         
@@ -7424,32 +7462,7 @@ app.post('/api/admin/users/:userId/role', async (c) => {
           details: { message: error instanceof Error ? error.message : 'Unknown error' },
           timestamp: new Date().toISOString()
         }, 500);
-      } catch (error: any) {
-      
-      // Log the admin action
-      await logAdminAction(
-        adminContext.user.id,
-        'update_user_role',
-        'users',
-        userId,
-        { 
-          oldRole: currentUser?.role,
-          newRole: role,
-          userEmail: currentUser?.email
-        },
-        'info'
-      );
-      
-      return c.json({
-        success: true,
-        data: {
-          userId,
-          role,
-          message: `User role updated to ${role} successfully`
-        },
-        timestamp: new Date().toISOString()
-      });
-      
+      }
     } catch (error: any) {
       console.error('Error updating user role:', error);
       
