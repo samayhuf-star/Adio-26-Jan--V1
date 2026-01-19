@@ -66,3 +66,8 @@ htmlcov/
 # Temporary files
 tmp/
 *.tmp
+
+# PocketBase
+pocketbase/
+pb_data/
+*.pb

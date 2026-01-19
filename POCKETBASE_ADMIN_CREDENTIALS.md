@@ -13,22 +13,44 @@
 
 ## First-Time Setup
 
-If this is your first time accessing PocketBase:
+### Step 1: Install PocketBase
 
-1. **Access PocketBase directly** (bypassing the proxy) to create the first admin account:
-   - Local: `http://127.0.0.1:8090/_/`
-   - Production: `https://your-pocketbase-instance.com/_/`
+If PocketBase is not installed, run:
 
-2. **Create the admin account** using the credentials above
+```bash
+./scripts/install-pocketbase.sh
+```
+
+### Step 2: Start PocketBase Server
+
+Start PocketBase:
+
+```bash
+./scripts/start-pocketbase.sh
+```
+
+The server will start at `http://127.0.0.1:8090`
+
+### Step 3: Create Admin Account
+
+1. **Open PocketBase Admin UI**:
+   - Go to: `http://127.0.0.1:8090/_/`
+   - PocketBase will prompt you to create the first admin account
+
+2. **Create the admin account**:
+   - Email: `admin@adiology.online`
+   - Password: `Admin@123!ChangeMe`
+   - Click "Create admin"
 
 3. **Update environment variables** in your `.env` file:
    ```bash
-   POCKETBASE_URL=http://127.0.0.1:8090  # or your production URL
+   POCKETBASE_URL=http://127.0.0.1:8090
    POCKETBASE_ADMIN_EMAIL=admin@adiology.online
    POCKETBASE_ADMIN_PASSWORD=Admin@123!ChangeMe
+   VITE_POCKETBASE_URL=http://127.0.0.1:8090
    ```
 
-4. **Restart your server** to load the new environment variables
+4. **Restart your application server** to load the new environment variables
 
 5. **Access the admin panel** at `/admin` and change the password immediately!
 

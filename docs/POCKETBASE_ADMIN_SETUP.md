@@ -9,26 +9,57 @@ The PocketBase admin panel is now accessible at `https://adiology.online/admin`.
 - **Production**: `https://adiology.online/admin`
 - **Local Development**: `http://localhost:5000/admin`
 
-## Initial Admin Credentials Setup
+## Installing and Starting PocketBase
 
-### Option 1: First-Time Setup (If PocketBase is Fresh)
+### Step 1: Install PocketBase
 
-If this is the first time setting up PocketBase, you need to create the initial admin account:
+PocketBase needs to be downloaded and installed separately. Run:
 
-1. **Access PocketBase directly** (bypassing the proxy):
-   - If running locally: `http://127.0.0.1:8090/_/`
-   - If deployed: `https://your-pocketbase-instance.com/_/`
+```bash
+./scripts/install-pocketbase.sh
+```
 
-2. **Create the first admin account**:
+This will download the PocketBase binary for your operating system and place it in the `pocketbase/` directory.
+
+### Step 2: Start PocketBase Server
+
+Start the PocketBase server:
+
+```bash
+./scripts/start-pocketbase.sh
+```
+
+Or manually:
+```bash
+./pocketbase/pocketbase serve --http=127.0.0.1:8090
+```
+
+The server will be available at:
+- **API**: `http://127.0.0.1:8090`
+- **Admin UI**: `http://127.0.0.1:8090/_/`
+
+### Step 3: Create Initial Admin Account
+
+1. **Access PocketBase Admin UI**:
+   - Open: `http://127.0.0.1:8090/_/`
    - PocketBase will prompt you to create the first admin account
-   - Enter your email and password
-   - Save these credentials securely
 
-3. **Set environment variables**:
+2. **Create the admin account**:
+   - Enter your email (e.g., `admin@adiology.online`)
+   - Enter a secure password (e.g., `Admin@123!ChangeMe`)
+   - Click "Create admin"
+
+3. **Set environment variables** in your `.env` file:
    ```bash
-   POCKETBASE_ADMIN_EMAIL=your-admin-email@example.com
-   POCKETBASE_ADMIN_PASSWORD=your-secure-password
+   POCKETBASE_URL=http://127.0.0.1:8090
+   POCKETBASE_ADMIN_EMAIL=admin@adiology.online
+   POCKETBASE_ADMIN_PASSWORD=Admin@123!ChangeMe
+   VITE_POCKETBASE_URL=http://127.0.0.1:8090
    ```
+
+4. **Restart your application server** to load the new environment variables
+
+5. **Access the admin panel** through your app at `/admin`
 
 ### Option 2: Using Existing Admin Account
 
