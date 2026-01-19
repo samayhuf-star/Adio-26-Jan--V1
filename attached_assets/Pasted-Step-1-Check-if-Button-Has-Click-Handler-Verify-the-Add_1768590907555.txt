@@ -1,0 +1,72 @@
+Step 1: Check if Button Has Click Handler
+
+Verify the "+ Add project" button has an onClick event attached
+Check browser console for any JavaScript errors when clicking the button
+Ensure the click event is not being blocked by parent elements
+
+Step 2: Verify Dropdown Component is Imported
+
+Check if the ProjectAssignmentDropdown (or TagDropdown) component is imported in the Saved Keyword Lists page
+Verify the component file exists and has no syntax errors
+
+Step 3: Check State Management
+
+Verify there's a state variable to control dropdown open/close (like isDropdownOpen)
+Ensure clicking the button toggles this state
+Check if the dropdown component is conditionally rendered based on this state
+
+Step 4: Test Button Functionality
+
+Add a simple console.log("Button clicked") inside the onClick handler
+Click the button and check browser console to see if it logs
+This confirms if the click event is firing
+
+Step 5: Check Component Structure
+
+Verify the dropdown component is placed correctly in the DOM
+Check if dropdown has proper z-index to appear above other elements
+Ensure dropdown is not hidden by CSS (display: none, opacity: 0, etc.)
+
+Step 6: Verify API Connection
+
+Check if the component is fetching projects list when opened
+Look for API errors in browser Network tab
+Ensure the projects API endpoint is working
+
+Step 7: Check for Positioning Issues
+
+Verify the dropdown has position: absolute or position: fixed
+Check if parent container has proper positioning context
+Ensure dropdown is not rendering outside viewport
+
+Step 8: Test with Simple Alert
+
+Temporarily replace the onClick handler with onClick={() => alert('Clicked!')}
+If alert shows, the button works - issue is with the dropdown logic
+If alert doesn't show, the button click itself is broken
+
+Step 9: Review Component Props
+
+Verify correct props are passed to dropdown component:
+
+itemId (keyword list ID)
+itemType (should be 'keyword_list' or similar)
+currentProjects (array of assigned projects)
+onUpdate callback function
+
+
+
+Step 10: Check Browser Console and Network Tab
+
+Open browser Developer Tools (F12)
+Check Console tab for errors
+Check Network tab for failed API requests
+Share any error messages found
+
+
+Quick Debug Test:
+Replace the current button with this temporarily:
+<button onClick={() => console.log('Button works!', keywordList.id)}>
+  + Add project (TEST)
+</button>
+If this logs to console, the button itself works and the issue is with the dropdown component logic.

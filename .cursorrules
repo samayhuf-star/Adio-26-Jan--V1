@@ -1,0 +1,2 @@
+Always reference google_ads_rules.md when writing code related to Google Ads validation, schema, or API calls. Ensure all constraints (character limits, entity counts) are enforced in the frontend Zod schemas.
+

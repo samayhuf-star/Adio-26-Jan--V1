@@ -1,0 +1,160 @@
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+Error fetching website: TypeError: fetch failed
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+port: 443,
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+}
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+at endReadableNT (node:internal/streams/readable:1698:12)
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+code: 'ECONNRESET',
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+at TLSSocket.emit (node:events:536:35)
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+at TLSSocket.onConnectEnd (node:_tls_wrap:1730:19)
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+[cause]: Error: Client network socket disconnected before secure TLS connection was established
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+host: 'adiology.io',
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+}
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+at async (/home/runner/workspace/server/index.ts:2798:28) {
+2025-12-20 23:23:46.12
+cc50fdeb
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+2025-12-20 23:24:41.13
+cc50fdeb
+User
+Could not load refresh token
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+},
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+"error": {
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+}
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+"status": 401
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+"type": "invalid_request_error",
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+"param": null
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+"code": "invalid_api_key",
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+"message": "Incorrect API key provided: sk-proj-********************************************************************************************************************************************************PMgA. You can find your API key at https://platform.openai.com/account/api-keys.",
+2025-12-20 23:24:51.09
+cc50fdeb
+User
+OpenAI API error: {
+2025-12-20 23:29:55.72
+cc50fdeb
+User
+Could not load refresh token
+2025-12-21 00:49:45.07
+5ecc184d
+User
+'access-control-allow-credentials': 'true',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+'x-wc': 'ABGHIJ',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+'stripe-version': '2025-11-17.clover',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+doc_url: 'https://stripe.com/docs/error-codes/resource-missing',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+requestId: 'req_WRFAtyUkSViPCP'
+2025-12-21 00:49:45.07
+5ecc184d
+User
+param: 'webhook_endpoint',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+connection: 'keep-alive',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+{
+2025-12-21 00:49:45.07
+5ecc184d
+User
+'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=4OLXu0MbR437FBdeQQd8D6iDy2hov_gdEu6uREpXHP7Ydzd3YikQTpq_LlvHe9IyieC2SZWIXZaE9oQU",
+2025-12-21 00:49:45.07
+5ecc184d
+User
+},
+2025-12-21 00:49:45.07
+5ecc184d
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+2025-12-21 00:49:45.07
+5ecc184d
+User
+message: "No such webhook endpoint: 'we_1SgTs0AYv17Z995V8K3Gm75B'",
+2025-12-21 00:49:45.07
+5ecc184d
+User
+'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+'access-control-allow-origin': '*',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+webhookId: 'we_1SgTs0AYv17Z995V8K3Gm75B'
+2025-12-21 00:49:45.07
+5ecc184d
+User
+'content-type': 'application/json',
+2025-12-21 00:49:45.07
+5ecc184d
+User
+requestId: 'req_WRFAtyUkSViPCP',

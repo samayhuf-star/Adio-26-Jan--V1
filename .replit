@@ -1,0 +1,93 @@
+modules = ["web", "nodejs-20", "python-3.11", "postgresql-16"]
+[agent]
+expertMode = true
+integrations = [
+  "javascript_openai_ai_integrations:2.0.0",
+  "stripe:2.0.0",
+  "javascript_database:1.0.0",
+  "resend:1.0.0",
+]
+
+[nix]
+channel = "stable-25_05"
+packages = ["imagemagick_light", "mailutils", "nano", "psmisc", "speech-tools", "lsof", "u-root-cmds"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Frontend Dev Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Admin API Server"
+
+[[workflows.workflow]]
+name = "Frontend Dev Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx vite --host 0.0.0.0 --port 5000 --force"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Admin API Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx tsx server/index.ts"
+waitForPort = 3001
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3001
+externalPort = 3001
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start"]
+
+[userenv]
+
+[userenv.shared]
+SUPABASE_URL = "https://kkdnnrwhzofttzajnwlj.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrZG5ucndoem9mdHR6YWpud2xqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0Njk2ODAsImV4cCI6MjA3OTA0NTY4MH0.IVIEaP0Stc0AieekxDFMG_q76vu6KRRMsI_yIjOfmZM"
+VITE_SUPABASE_URL = "https://kkdnnrwhzofttzajnwlj.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrZG5ucndoem9mdHR6YWpud2xqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0Njk2ODAsImV4cCI6MjA3OTA0NTY4MH0.IVIEaP0Stc0AieekxDFMG_q76vu6KRRMsI_yIjOfmZM"
+VITE_RESELLERCLUB_CLIENT_ID = "1301617"
+VITE_RESELLERCLUB_API_URL = "https://httpapi.com/api"
+VITE_RESELLERCLUB_API_KEY = "3K0BpCJoVQvX2uCvbSeHS357hNdRsyZ4"
+VITE_NAMECOM_API_URL = "https://api.name.com"
+GOOGLE_ADS_CLIENT_ID = "301579464387-v6ls7i4r8b193s45de0vt5vc389o5b7i.apps.googleusercontent.com"
+GOOGLE_ADS_CLIENT_SECRET = "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"
+GOOGLE_ADS_DEVELOPER_TOKEN = "UzifgEs9SwOBo5bP_vmi2A"
+WEBSITE_DOMAIN = "adiology.io"
+SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrZG5ucndoem9mdHR6YWpud2xqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzQ2OTY4MCwiZXhwIjoyMDc5MDQ1NjgwfQ._pfgPzHV2k4MJxpe626aHf4CzWcfkD2RTYRtobvVymQ"
+OPENAI_API_KEY = "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"
+SUPABASE_DB_URL = "postgresql://postgres.kkdnnrwhzofttzajnwlj:${SUPABASE_DB_PASSWORD}@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
+DISCOURSE_URL = "https://adiology.discourse.group"
+DISCOURSE_API_KEY = "6cc5302765f2b7e91b927672bfe6b62ece69e09f826f3f4c909cc48dedfa7eb4"
+VITE_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYWRpb2xvZ3kuaW8k"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYWRpb2xvZ3kuaW8k"
+SUPABASE_DB_PASSWORD = "fJGSDy9SpYIkchu1"
+
+[userenv.production]
+DOMAIN = "https://adiology.io"

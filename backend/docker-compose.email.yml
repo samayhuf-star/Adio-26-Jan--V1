@@ -1,0 +1,30 @@
+# Docker Compose for Adiology Email API Service
+version: '3.8'
+
+services:
+  email-api:
+    build:
+      context: .
+      dockerfile: email-api.dockerfile
+    container_name: adiology-email-api
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - PORT=5001
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - adiology-network
+
+networks:
+  adiology-network:
+    driver: bridge

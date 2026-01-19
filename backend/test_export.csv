@@ -1,0 +1,7 @@
+﻿Row Type,Campaign,Campaign ID,Campaign Status,Campaign Type,Campaign Budget,Budget Type,Bidding Strategy Type,Start Date,End Date,Location Type,Location Code,AdGroup,AdGroup Status,Default Max CPC,Keyword,Match Type,Keyword Status,Keyword Max CPC,Keyword Final URL,Ad Type,Ad Status,Headline 1,Headline 2,Headline 3,Headline 4,Headline 5,Headline 6,Headline 7,Headline 8,Headline 9,Headline 10,Headline 11,Headline 12,Headline 13,Headline 14,Headline 15,Description 1,Description 2,Description 3,Description 4,Final URL,Final Mobile URL,Path1,Path2,Tracking Template,Custom Parameters,Asset Type,Asset Name,Asset URL,Negative Keyword,Operation
+CAMPAIGN,Test Campaign,,ENABLED,SEARCH,,DAILY,MANUAL_CPC,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,NEW
+ADGROUP,Test Campaign,,ENABLED,SEARCH,,DAILY,MANUAL_CPC,,,,,Test Ad Group,ENABLED,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,NEW
+KEYWORD,Test Campaign,,ENABLED,SEARCH,,DAILY,MANUAL_CPC,,,,,Test Ad Group,,,plumber,BROAD,ENABLED,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,NEW
+KEYWORD,Test Campaign,,ENABLED,SEARCH,,DAILY,MANUAL_CPC,,,,,Test Ad Group,,,electrician,BROAD,ENABLED,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,NEW
+KEYWORD,Test Campaign,,ENABLED,SEARCH,,DAILY,MANUAL_CPC,,,,,Test Ad Group,,,hvac,BROAD,ENABLED,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,NEW
+AD,Test Campaign,,ENABLED,SEARCH,,DAILY,MANUAL_CPC,,,,,Test Ad Group,,,,,,,,RESPONSIVE_SEARCH_AD,ENABLED,Professional Plumber,Expert Service,Licensed & Insured,,,,,,,,,,,,,Professional plumbing services you can trust.,"Fast, reliable service available 24/7.",,,https://example.com,,,,,,,,,,NEW

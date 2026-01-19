@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+If a requested change might affect other steps, files, or logic, you must NOT proceed automatically. You must respond: “This may affect other parts. Do you want me to continue?” No changes are allowed unless the user clearly approves.

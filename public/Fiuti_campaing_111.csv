@@ -1,0 +1,32 @@
+﻿Bid Strategy Type,Budget,Campaign status,Campaign type,Campaign,Ad group status,Ad group,Keyword,Type,Ad Type,Final URL,Final mobile URL,Path 1,Path 2,Verification URL,Display URL,Business name,Country,Phone number,Headline 1,Headline 1 position,Headline 2,Headline 2 position,Headline 3,Headline 3 position,Description 1,Description 1 position,Description 2,Description 2 position
+cpc,100,Paused,Search Only,campaing 111
+,,,,campaing 111,enabled,airline number
+,,,,campaing 111,,airline number,airline number,exact
+,,,,campaing 111,,airline number,airline number,phrase
+,,,,campaing 111,,airline number,airline number,broad
+,,,,campaing 111,,airline number,airline phone number,Negative Phrase
+,,,,campaing 111,,airline number,contact airline,Negative Phrase
+,,,,campaing 111,,airline number,,,Expanded text ad,https://books.com/?q=airline-number,,,,,,,,,Airline Number,,Online Store,,Free Delivery,,Buy online airline number,,Vast collection of airline number,
+,,,,campaing 111,,airline number,,,Call-only ad,,,,,https://books.com/contacts,books.com,Acme Book Shop,US,123 456 789,,,,,,,,,,
+,,,,campaing 111,,airline number,,,Responsive search ad,,,,,,,,,,,1,,2,,3,,1,,2
+,,,,campaing 111,,airline number,,,Responsive search ad,wdwdwdw.com,,,,,,,,,wdwwd,1,wdwdw,2,wdwdww,3,dwdwd,1,wdwwdww,2
+,,,,campaing 111,enabled,airline phone number
+,,,,campaing 111,,airline phone number,airline phone number,exact
+,,,,campaing 111,,airline phone number,airline phone number,phrase
+,,,,campaing 111,,airline phone number,airline phone number,broad
+,,,,campaing 111,,airline phone number,airline number,Negative Phrase
+,,,,campaing 111,,airline phone number,contact airline,Negative Phrase
+,,,,campaing 111,,airline phone number,,,Expanded text ad,https://books.com/?q=airline-phone-number,,,,,,,,,Airline Phone Number,,Online Store,,Free Delivery,,Buy online airline phone number,,Vast collection of airline phone number,
+,,,,campaing 111,,airline phone number,,,Call-only ad,,,,,https://books.com/contacts,books.com,Acme Book Shop,US,123 456 789,,,,,,,,,,
+,,,,campaing 111,,airline phone number,,,Responsive search ad,,,,,,,,,,,1,,2,,3,,1,,2
+,,,,campaing 111,,airline phone number,,,Responsive search ad,wdwdwdw.com,,,,,,,,,wdwwd,1,wdwdw,2,wdwdww,3,dwdwd,1,wdwwdww,2
+,,,,campaing 111,enabled,contact airline
+,,,,campaing 111,,contact airline,contact airline,exact
+,,,,campaing 111,,contact airline,contact airline,phrase
+,,,,campaing 111,,contact airline,contact airline,broad
+,,,,campaing 111,,contact airline,airline number,Negative Phrase
+,,,,campaing 111,,contact airline,airline phone number,Negative Phrase
+,,,,campaing 111,,contact airline,,,Expanded text ad,https://books.com/?q=contact-airline,,,,,,,,,Contact Airline,,Online Store,,Free Delivery,,Buy online contact airline,,Vast collection of contact airline,
+,,,,campaing 111,,contact airline,,,Call-only ad,,,,,https://books.com/contacts,books.com,Acme Book Shop,US,123 456 789,,,,,,,,,,
+,,,,campaing 111,,contact airline,,,Responsive search ad,,,,,,,,,,,1,,2,,3,,1,,2
+,,,,campaing 111,,contact airline,,,Responsive search ad,wdwdwdw.com,,,,,,,,,wdwwd,1,wdwdw,2,wdwdww,3,dwdwd,1,wdwwdww,2

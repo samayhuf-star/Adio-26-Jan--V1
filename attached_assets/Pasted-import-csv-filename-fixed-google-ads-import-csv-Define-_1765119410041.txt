@@ -1,0 +1,103 @@
+import csv
+
+filename = 'fixed_google_ads_import.csv'
+
+# Define headers explicitly to match Google Ads Editor English headers
+headers = [
+    'Campaign', 'Campaign Daily Budget', 'Campaign Type', 'Bid Strategy Type',
+    'Ad Group', 'Max CPC', 
+    'Keyword', 'Criterion Type',
+    'Ad Type', 
+    # RSA Fields
+    'Headline 1', 'Headline 2', 'Headline 3', 
+    'Description 1', 'Description 2', 
+    'Path 1', 'Path 2', 
+    # Call Only Fields
+    'PhoneNumber', 'VerificationURL',
+    # DSA Fields
+    'Dynamic Search Ad Description 1', 'Dynamic Search Ad Description 2',
+    # Asset Fields
+    'Sitelink Text', 'Sitelink Description 1', 'Sitelink Description 2', 'Sitelink Final URL',
+    'Callout Text', 
+    'Structured Snippet Header', 'Structured Snippet Values',
+    'Price Extension Type', 'Price Extension Price Qualifier', 'Price Extension Item Header', 'Price Extension Item Price', 'Price Extension Item Final URL',
+    'Promotion Target', 'Promotion Discount Modifier', 'Promotion Percent Off',
+    # App Assets
+    'App ID', 'App Store', 'App Link Text', 'App Final URL',
+    # Image Assets
+    'Image Asset Name', 'Image Asset URL',
+    # Location
+    'Location'
+]
+
+rows = []
+
+# Shared Campaign Name
+c_name = "Fixed Ultimate Campaign"
+ag_name = "Main Ad Group"
+
+# 1. CAMPAIGN ROW
+rows.append({
+    'Campaign': c_name, 'Campaign Daily Budget': '100', 'Campaign Type': 'Search', 'Bid Strategy Type': 'Maximize Conversions'
+})
+
+# 2. AD GROUP ROW
+rows.append({
+    'Campaign': c_name, 'Ad Group': ag_name, 'Max CPC': '2.00'
+})
+
+# 3. KEYWORD ROWS
+rows.append({'Campaign': c_name, 'Ad Group': ag_name, 'Keyword': 'buy widgets', 'Criterion Type': 'Broad'})
+rows.append({'Campaign': c_name, 'Ad Group': ag_name, 'Keyword': 'best widgets', 'Criterion Type': 'Phrase'})
+
+# 4. AD ROWS (This fixes the "Ambiguous Row" error by being explicit)
+# RSA
+rows.append({
+    'Campaign': c_name, 'Ad Group': ag_name, 'Ad Type': 'Responsive search ad',
+    'Headline 1': 'Buy Premium Widgets', 'Headline 2': 'Top Rated Service', 'Headline 3': 'Shop Today',
+    'Description 1': 'Wide selection of widgets at great prices.', 'Description 2': 'Free shipping on all orders over $50.',
+    'Path 1': 'Shop', 'Path 2': 'Widgets'
+})
+
+# Call-Only
+rows.append({
+    'Campaign': c_name, 'Ad Group': ag_name, 'Ad Type': 'Call-only ad',
+    'Headline 1': 'Speak to an Expert', 'Headline 2': 'Call Widget Corp',
+    'Description 1': 'Get instant help.', 'Description 2': 'Available 24/7.',
+    'PhoneNumber': '555-0199', 'VerificationURL': 'www.example.com'
+})
+
+# 5. ASSET ROWS
+# Sitelink
+rows.append({
+    'Campaign': c_name, 
+    'Sitelink Text': 'View Catalog', 'Sitelink Description 1': 'See full range.', 'Sitelink Description 2': 'Updated daily.', 'Sitelink Final URL': 'http://www.example.com/catalog'
+})
+# Callout
+rows.append({'Campaign': c_name, 'Callout Text': '24/7 Customer Support'})
+# Snippet
+rows.append({'Campaign': c_name, 'Structured Snippet Header': 'Brands', 'Structured Snippet Values': 'Nike;Adidas'})
+# Promotion
+rows.append({'Campaign': c_name, 'Promotion Target': 'Winter Sale', 'Promotion Discount Modifier': 'Up to', 'Promotion Percent Off': '20'})
+
+# Image Asset (This fixes the "App Store" error)
+rows.append({
+    'Campaign': c_name,
+    'Image Asset Name': 'Lifestyle Image',
+    'Image Asset URL': 'https://www.example.com/images/widget.jpg'
+})
+
+# 6. LOCATION ROWS (Sample 5 Zips)
+zips = ['10001', '90210', '60601', '33101', '75001']
+for zip_code in zips:
+    rows.append({'Campaign': c_name, 'Location': zip_code})
+
+# Generate File
+try:
+    with open(filename, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Success! Created {filename}")
+except Exception as e:
+    print(e)

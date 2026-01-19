@@ -1,0 +1,17 @@
+Campaign,Campaign Daily Budget,Campaign Type,Bid Strategy Type,Ad Group,Max CPC,Keyword,Criterion Type,Ad Type,Headline 1,Headline 2,Headline 3,Description 1,Description 2,Path 1,Path 2,PhoneNumber,VerificationURL,Dynamic Search Ad Description 1,Dynamic Search Ad Description 2,Sitelink Text,Sitelink Description 1,Sitelink Description 2,Sitelink Final URL,Callout Text,Structured Snippet Header,Structured Snippet Values,Price Extension Type,Price Extension Price Qualifier,Price Extension Item Header,Price Extension Item Price,Price Extension Item Final URL,Promotion Target,Promotion Discount Modifier,Promotion Percent Off,App ID,App Store,App Link Text,App Final URL,Image Asset Name,Image Asset URL,Location
+Fixed Ultimate Campaign,100,Search,Maximize Conversions,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,Main Ad Group,2.00,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,Main Ad Group,,buy widgets,Broad,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,Main Ad Group,,best widgets,Phrase,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,Main Ad Group,,,,Responsive search ad,Buy Premium Widgets,Top Rated Service,Shop Today,Wide selection of widgets at great prices.,Free shipping on all orders over $50.,Shop,Widgets,,,,,,,,,,,,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,Main Ad Group,,,,Call-only ad,Speak to an Expert,Call Widget Corp,,Get instant help.,Available 24/7.,,,555-0199,www.example.com,,,,,,,,,,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,View Catalog,See full range.,Updated daily.,http://www.example.com/catalog,,,,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,24/7 Customer Support,,,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,,Brands,Nike;Adidas,,,,,,,,,,,,,,,
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Winter Sale,Up to,20,,,,,,,
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Lifestyle Image,https://www.example.com/images/widget.jpg,
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,10001
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,90210
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,60601
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,33101
+Fixed Ultimate Campaign,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,75001

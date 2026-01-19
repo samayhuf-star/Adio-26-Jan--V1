@@ -1,0 +1,14 @@
+client:802 Connecting to 'wss://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev:5000/?token=dg_4qiQyCjAB' violates the following Content Security Policy directive: "connect-src 'self' *.stripe.com https://*.supabase.co https://googleads.googleapis.com https://generativelanguage.googleapis.com https://vercel.live https://9eab4c72-e572-466b-9c9b-eeb8b9b0ac49-00-1tos4g4wuqgec.pike.replit.dev ws://* wss://* ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:*". The action has been blocked.
+createConnection @ client:802Understand this error
+loggingService.ts:63 AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at handleError3 (@supabase_supabase-js.js?v=b7ddf1da:7541:9)
+    at async _handleRequest3 (@supabase_supabase-js.js?v=b7ddf1da:7582:5)
+    at async _request (@supabase_supabase-js.js?v=b7ddf1da:7566:16)
+    at async @supabase_supabase-js.js?v=b7ddf1da:10570:16
+    at async @supabase_supabase-js.js?v=b7ddf1da:7352:26
+console.error @ loggingService.ts:63Understand this error
+grapesjs.js?v=b7ddf1da:22066 Loading the stylesheet 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css' violates the following Content Security Policy directive: "style-src 'self' 'unsafe-inline'". Note that 'style-src-elem' was not explicitly set, so 'style-src' is used as a fallback. The action has been blocked.
+appendStyles @ grapesjs.js?v=b7ddf1da:22066Understand this error
+loggingService.ts:93 Connecting to 'https://app.grapesjs.com/api/gjs/telemetry/collect' violates the following Content Security Policy directive: "connect-src 'self' *.stripe.com https://*.supabase.co https://googleads.googleapis.com https://generativelanguage.googleapis.com https://vercel.live https://9eab4c72-e572-466b-9c9b-eeb8b9b0ac49-00-1tos4g4wuqgec.pike.replit.dev ws://* wss://* ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:*". The action has been blocked.
+window.fetch @ loggingService.ts:93Understand this error
+loggingService.ts:93 Fetch API cannot load https://app.grapesjs.com/api/gjs/telemetry/collect. Refused to connect because it violates the document's Content Security Policy.

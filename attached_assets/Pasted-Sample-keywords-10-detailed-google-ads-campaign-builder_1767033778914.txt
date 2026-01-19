@@ -1,0 +1,259 @@
+Sample keywords: (10) ['detailed google ads campaign builder', '[call intent advertising for business]', '[high end call intent advertising]', 'inexpensive google ads campaign builder', '[google ads campaign builder affordable]', 'google ads campaign builder for me', '"affordable google ads campaign builder local"', 'call intent advertising now', '[call intent advertising small business]', '"recommended call intent advertising"']
+injected.js:37 [Keyword Planner] Fetching metrics for 50 unique keywords
+injected.js:37 [Keyword Planner] Enriched keywords with fallback data
+injected.js:214  POST https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/api/campaign-history 500 (Internal Server Error)
+apply @ injected.js:214
+window.fetch @ loggingService.ts:93
+save @ historyService.ts:29
+await in save
+autoSaveDraft @ CampaignBuilder3.tsx:1413
+handleGenerateKeywords @ CampaignBuilder3.tsx:1163
+await in handleGenerateKeywords
+(anonymous) @ CampaignBuilder3.tsx:3552
+setTimeout
+onClick @ CampaignBuilder3.tsx:3552
+callCallback2 @ chunk-UVXKGGW7.js?v=c3cfc979:3680
+invokeGuardedCallbackDev @ chunk-UVXKGGW7.js?v=c3cfc979:3705
+invokeGuardedCallback @ chunk-UVXKGGW7.js?v=c3cfc979:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-UVXKGGW7.js?v=c3cfc979:3742
+executeDispatch @ chunk-UVXKGGW7.js?v=c3cfc979:7046
+processDispatchQueueItemsInOrder @ chunk-UVXKGGW7.js?v=c3cfc979:7066
+processDispatchQueue @ chunk-UVXKGGW7.js?v=c3cfc979:7075
+dispatchEventsForPlugins @ chunk-UVXKGGW7.js?v=c3cfc979:7083
+(anonymous) @ chunk-UVXKGGW7.js?v=c3cfc979:7206
+batchedUpdates$1 @ chunk-UVXKGGW7.js?v=c3cfc979:18966
+batchedUpdates @ chunk-UVXKGGW7.js?v=c3cfc979:3585
+dispatchEventForPluginEventSystem @ chunk-UVXKGGW7.js?v=c3cfc979:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UVXKGGW7.js?v=c3cfc979:5484
+dispatchEvent @ chunk-UVXKGGW7.js?v=c3cfc979:5478
+dispatchDiscreteEvent @ chunk-UVXKGGW7.js?v=c3cfc979:5455Understand this error
+injected.js:37 Failed to save to database: {error: 'insert or update on table "campaign_history" viola…constraint "campaign_history_user_id_users_id_fk"'}
+(anonymous) @ injected.js:37
+console.warn @ loggingService.ts:68
+(anonymous) @ injected.js:37
+save @ historyService.ts:40
+await in save
+autoSaveDraft @ CampaignBuilder3.tsx:1413
+handleGenerateKeywords @ CampaignBuilder3.tsx:1163
+await in handleGenerateKeywords
+(anonymous) @ CampaignBuilder3.tsx:3552
+setTimeout
+onClick @ CampaignBuilder3.tsx:3552
+callCallback2 @ chunk-UVXKGGW7.js?v=c3cfc979:3680
+invokeGuardedCallbackDev @ chunk-UVXKGGW7.js?v=c3cfc979:3705
+invokeGuardedCallback @ chunk-UVXKGGW7.js?v=c3cfc979:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-UVXKGGW7.js?v=c3cfc979:3742
+executeDispatch @ chunk-UVXKGGW7.js?v=c3cfc979:7046
+processDispatchQueueItemsInOrder @ chunk-UVXKGGW7.js?v=c3cfc979:7066
+processDispatchQueue @ chunk-UVXKGGW7.js?v=c3cfc979:7075
+dispatchEventsForPlugins @ chunk-UVXKGGW7.js?v=c3cfc979:7083
+(anonymous) @ chunk-UVXKGGW7.js?v=c3cfc979:7206
+batchedUpdates$1 @ chunk-UVXKGGW7.js?v=c3cfc979:18966
+batchedUpdates @ chunk-UVXKGGW7.js?v=c3cfc979:3585
+dispatchEventForPluginEventSystem @ chunk-UVXKGGW7.js?v=c3cfc979:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UVXKGGW7.js?v=c3cfc979:5484
+dispatchEvent @ chunk-UVXKGGW7.js?v=c3cfc979:5478
+dispatchDiscreteEvent @ chunk-UVXKGGW7.js?v=c3cfc979:5455Understand this warning
+injected.js:37 Falling back to localStorage storage
+injected.js:37 ✅ Saved to local storage as draft: 80e6a54a-e90b-42f7-9740-3b5b741f9f26
+injected.js:37 Saved to localStorage: 80e6a54a-e90b-42f7-9740-3b5b741f9f26
+injected.js:214  POST https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/api/campaign-history 500 (Internal Server Error)
+apply @ injected.js:214
+window.fetch @ loggingService.ts:93
+save @ historyService.ts:29
+await in save
+(anonymous) @ CampaignBuilder3.tsx:555
+setTimeout
+(anonymous) @ CampaignBuilder3.tsx:553
+commitHookEffectListMount @ chunk-UVXKGGW7.js?v=c3cfc979:16963
+commitPassiveMountOnFiber @ chunk-UVXKGGW7.js?v=c3cfc979:18206
+commitPassiveMountEffects_complete @ chunk-UVXKGGW7.js?v=c3cfc979:18179
+commitPassiveMountEffects_begin @ chunk-UVXKGGW7.js?v=c3cfc979:18169
+commitPassiveMountEffects @ chunk-UVXKGGW7.js?v=c3cfc979:18159
+flushPassiveEffectsImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19543
+flushPassiveEffects @ chunk-UVXKGGW7.js?v=c3cfc979:19500
+performSyncWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18921
+flushSyncCallbacks @ chunk-UVXKGGW7.js?v=c3cfc979:9166
+commitRootImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19485
+commitRoot @ chunk-UVXKGGW7.js?v=c3cfc979:19330
+finishConcurrentRender @ chunk-UVXKGGW7.js?v=c3cfc979:18858
+performConcurrentWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18768
+workLoop @ chunk-UVXKGGW7.js?v=c3cfc979:197
+flushWork @ chunk-UVXKGGW7.js?v=c3cfc979:176
+performWorkUntilDeadline @ chunk-UVXKGGW7.js?v=c3cfc979:384Understand this error
+injected.js:37 Failed to save to database: {error: 'insert or update on table "campaign_history" viola…constraint "campaign_history_user_id_users_id_fk"'}
+(anonymous) @ injected.js:37
+console.warn @ loggingService.ts:68
+(anonymous) @ injected.js:37
+save @ historyService.ts:40
+await in save
+(anonymous) @ CampaignBuilder3.tsx:555
+setTimeout
+(anonymous) @ CampaignBuilder3.tsx:553
+commitHookEffectListMount @ chunk-UVXKGGW7.js?v=c3cfc979:16963
+commitPassiveMountOnFiber @ chunk-UVXKGGW7.js?v=c3cfc979:18206
+commitPassiveMountEffects_complete @ chunk-UVXKGGW7.js?v=c3cfc979:18179
+commitPassiveMountEffects_begin @ chunk-UVXKGGW7.js?v=c3cfc979:18169
+commitPassiveMountEffects @ chunk-UVXKGGW7.js?v=c3cfc979:18159
+flushPassiveEffectsImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19543
+flushPassiveEffects @ chunk-UVXKGGW7.js?v=c3cfc979:19500
+performSyncWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18921
+flushSyncCallbacks @ chunk-UVXKGGW7.js?v=c3cfc979:9166
+commitRootImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19485
+commitRoot @ chunk-UVXKGGW7.js?v=c3cfc979:19330
+finishConcurrentRender @ chunk-UVXKGGW7.js?v=c3cfc979:18858
+performConcurrentWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18768
+workLoop @ chunk-UVXKGGW7.js?v=c3cfc979:197
+flushWork @ chunk-UVXKGGW7.js?v=c3cfc979:176
+performWorkUntilDeadline @ chunk-UVXKGGW7.js?v=c3cfc979:384Understand this warning
+injected.js:37 Falling back to localStorage storage
+injected.js:37 localStorage quota exceeded, saving to backend instead...
+(anonymous) @ injected.js:37
+console.warn @ loggingService.ts:68
+(anonymous) @ injected.js:37
+save @ localStorageHistory.ts:62
+save @ historyService.ts:52
+await in save
+(anonymous) @ CampaignBuilder3.tsx:555
+setTimeout
+(anonymous) @ CampaignBuilder3.tsx:553
+commitHookEffectListMount @ chunk-UVXKGGW7.js?v=c3cfc979:16963
+commitPassiveMountOnFiber @ chunk-UVXKGGW7.js?v=c3cfc979:18206
+commitPassiveMountEffects_complete @ chunk-UVXKGGW7.js?v=c3cfc979:18179
+commitPassiveMountEffects_begin @ chunk-UVXKGGW7.js?v=c3cfc979:18169
+commitPassiveMountEffects @ chunk-UVXKGGW7.js?v=c3cfc979:18159
+flushPassiveEffectsImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19543
+flushPassiveEffects @ chunk-UVXKGGW7.js?v=c3cfc979:19500
+performSyncWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18921
+flushSyncCallbacks @ chunk-UVXKGGW7.js?v=c3cfc979:9166
+commitRootImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19485
+commitRoot @ chunk-UVXKGGW7.js?v=c3cfc979:19330
+finishConcurrentRender @ chunk-UVXKGGW7.js?v=c3cfc979:18858
+performConcurrentWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18768
+workLoop @ chunk-UVXKGGW7.js?v=c3cfc979:197
+flushWork @ chunk-UVXKGGW7.js?v=c3cfc979:176
+performWorkUntilDeadline @ chunk-UVXKGGW7.js?v=c3cfc979:384Understand this warning
+injected.js:37 ✅ Saved to backend database: f8e53673-7a92-416d-98ec-ddc49fa45c9e
+injected.js:37 Saved to localStorage: 1abf7be3-4be4-4e94-942c-9e4f6e1629f1
+injected.js:37 📝 Campaign auto-saved at step 3
+injected.js:214  POST https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/api/campaign-history 500 (Internal Server Error)
+apply @ injected.js:214
+window.fetch @ loggingService.ts:93
+save @ historyService.ts:29
+await in save
+(anonymous) @ CampaignBuilder3.tsx:555
+setTimeout
+(anonymous) @ CampaignBuilder3.tsx:553
+commitHookEffectListMount @ chunk-UVXKGGW7.js?v=c3cfc979:16963
+commitPassiveMountOnFiber @ chunk-UVXKGGW7.js?v=c3cfc979:18206
+commitPassiveMountEffects_complete @ chunk-UVXKGGW7.js?v=c3cfc979:18179
+commitPassiveMountEffects_begin @ chunk-UVXKGGW7.js?v=c3cfc979:18169
+commitPassiveMountEffects @ chunk-UVXKGGW7.js?v=c3cfc979:18159
+flushPassiveEffectsImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19543
+flushPassiveEffects @ chunk-UVXKGGW7.js?v=c3cfc979:19500
+commitRootImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19469
+commitRoot @ chunk-UVXKGGW7.js?v=c3cfc979:19330
+performSyncWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18948
+flushSyncCallbacks @ chunk-UVXKGGW7.js?v=c3cfc979:9166
+(anonymous) @ chunk-UVXKGGW7.js?v=c3cfc979:18677Understand this error
+injected.js:37 Failed to save to database: {error: 'insert or update on table "campaign_history" viola…constraint "campaign_history_user_id_users_id_fk"'}
+(anonymous) @ injected.js:37
+console.warn @ loggingService.ts:68
+(anonymous) @ injected.js:37
+save @ historyService.ts:40
+await in save
+(anonymous) @ CampaignBuilder3.tsx:555
+setTimeout
+(anonymous) @ CampaignBuilder3.tsx:553
+commitHookEffectListMount @ chunk-UVXKGGW7.js?v=c3cfc979:16963
+commitPassiveMountOnFiber @ chunk-UVXKGGW7.js?v=c3cfc979:18206
+commitPassiveMountEffects_complete @ chunk-UVXKGGW7.js?v=c3cfc979:18179
+commitPassiveMountEffects_begin @ chunk-UVXKGGW7.js?v=c3cfc979:18169
+commitPassiveMountEffects @ chunk-UVXKGGW7.js?v=c3cfc979:18159
+flushPassiveEffectsImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19543
+flushPassiveEffects @ chunk-UVXKGGW7.js?v=c3cfc979:19500
+commitRootImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19469
+commitRoot @ chunk-UVXKGGW7.js?v=c3cfc979:19330
+performSyncWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18948
+flushSyncCallbacks @ chunk-UVXKGGW7.js?v=c3cfc979:9166
+(anonymous) @ chunk-UVXKGGW7.js?v=c3cfc979:18677Understand this warning
+injected.js:37 Falling back to localStorage storage
+injected.js:37 localStorage quota exceeded, saving to backend instead...
+(anonymous) @ injected.js:37
+console.warn @ loggingService.ts:68
+(anonymous) @ injected.js:37
+save @ localStorageHistory.ts:62
+save @ historyService.ts:52
+await in save
+(anonymous) @ CampaignBuilder3.tsx:555
+setTimeout
+(anonymous) @ CampaignBuilder3.tsx:553
+commitHookEffectListMount @ chunk-UVXKGGW7.js?v=c3cfc979:16963
+commitPassiveMountOnFiber @ chunk-UVXKGGW7.js?v=c3cfc979:18206
+commitPassiveMountEffects_complete @ chunk-UVXKGGW7.js?v=c3cfc979:18179
+commitPassiveMountEffects_begin @ chunk-UVXKGGW7.js?v=c3cfc979:18169
+commitPassiveMountEffects @ chunk-UVXKGGW7.js?v=c3cfc979:18159
+flushPassiveEffectsImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19543
+flushPassiveEffects @ chunk-UVXKGGW7.js?v=c3cfc979:19500
+commitRootImpl @ chunk-UVXKGGW7.js?v=c3cfc979:19469
+commitRoot @ chunk-UVXKGGW7.js?v=c3cfc979:19330
+performSyncWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18948
+flushSyncCallbacks @ chunk-UVXKGGW7.js?v=c3cfc979:9166
+(anonymous) @ chunk-UVXKGGW7.js?v=c3cfc979:18677Understand this warning
+injected.js:37 ✅ Saved to backend database: 9556ed0f-2d3f-41c9-9437-4544e12d24b1
+injected.js:37 Saved to localStorage: 1f7f85bf-ab52-4abe-baca-7daa7717d29c
+injected.js:37 📝 Campaign auto-saved at step 4
+injected.js:37 Warning: Encountered two children with the same key, `tree-service-skag`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at CampaignPresets (https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/src/components/CampaignPresets.tsx:56:35)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/src/App.tsx:172:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at ErrorBoundary (https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/src/components/ErrorBoundary.tsx:233:5)
+(anonymous) @ injected.js:37
+console.error @ loggingService.ts:63
+(anonymous) @ injected.js:37
+console.error @ main.tsx:103
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+printWarning @ chunk-UVXKGGW7.js?v=c3cfc979:521
+error @ chunk-UVXKGGW7.js?v=c3cfc979:505
+warnOnInvalidKey @ chunk-UVXKGGW7.js?v=c3cfc979:10266
+reconcileChildrenArray @ chunk-UVXKGGW7.js?v=c3cfc979:10282
+reconcileChildFibers2 @ chunk-UVXKGGW7.js?v=c3cfc979:10606
+reconcileChildren @ chunk-UVXKGGW7.js?v=c3cfc979:14338
+updateHostComponent @ chunk-UVXKGGW7.js?v=c3cfc979:14855
+beginWork @ chunk-UVXKGGW7.js?v=c3cfc979:15983
+beginWork$1 @ chunk-UVXKGGW7.js?v=c3cfc979:19806
+performUnitOfWork @ chunk-UVXKGGW7.js?v=c3cfc979:19251
+workLoopConcurrent @ chunk-UVXKGGW7.js?v=c3cfc979:19242
+renderRootConcurrent @ chunk-UVXKGGW7.js?v=c3cfc979:19217
+performConcurrentWorkOnRoot @ chunk-UVXKGGW7.js?v=c3cfc979:18728
+workLoop @ chunk-UVXKGGW7.js?v=c3cfc979:197
+flushWork @ chunk-UVXKGGW7.js?v=c3cfc979:176
+performWorkUntilDeadline @ chunk-UVXKGGW7.js?v=c3cfc979:384Understand this error
+2injected.js:37 Warning: Encountered two children with the same key, `tree-service-skag`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at CampaignPresets (https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/src/components/CampaignPresets.tsx:56:35)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/src/App.tsx:172:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at ErrorBoundary (https://1f29dadd-4334-46a0-8198-ab8af3241dec-00-2vlm6hannxoc2.janeway.replit.dev/src/components/ErrorBoundary.tsx:233:5)

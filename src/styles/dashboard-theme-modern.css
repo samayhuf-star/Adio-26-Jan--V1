@@ -1,0 +1,286 @@
+/* Modern Blue Dashboard Theme - Clean & Professional */
+/* This theme is applied only to dashboard components */
+
+.dashboard-modern-theme {
+  /* Modern Blue Color Palette */
+  --dash-primary: #2563eb;
+  --dash-primary-light: #3b82f6;
+  --dash-primary-dark: #1d4ed8;
+  --dash-primary-50: #eff6ff;
+  --dash-primary-100: #dbeafe;
+  --dash-primary-200: #bfdbfe;
+  
+  --dash-secondary: #6366f1;
+  --dash-secondary-light: #818cf8;
+  --dash-secondary-dark: #4f46e5;
+  
+  --dash-accent: #06b6d4;
+  --dash-accent-light: #22d3ee;
+  --dash-accent-dark: #0891b2;
+  
+  /* Neutral Colors */
+  --dash-slate-50: #f8fafc;
+  --dash-slate-100: #f1f5f9;
+  --dash-slate-200: #e2e8f0;
+  --dash-slate-300: #cbd5e1;
+  --dash-slate-400: #94a3b8;
+  --dash-slate-500: #64748b;
+  --dash-slate-600: #475569;
+  --dash-slate-700: #334155;
+  --dash-slate-800: #1e293b;
+  --dash-slate-900: #0f172a;
+  
+  /* Spacing Scale - Generous */
+  --dash-space-xs: 0.5rem;    /* 8px */
+  --dash-space-sm: 0.75rem;   /* 12px */
+  --dash-space-md: 1rem;      /* 16px */
+  --dash-space-lg: 1.5rem;    /* 24px */
+  --dash-space-xl: 2rem;      /* 32px */
+  --dash-space-2xl: 2.5rem;   /* 40px */
+  --dash-space-3xl: 3rem;     /* 48px */
+  --dash-space-4xl: 4rem;     /* 64px */
+  
+  /* Typography */
+  --dash-text-xs: 0.75rem;    /* 12px */
+  --dash-text-sm: 0.875rem;   /* 14px */
+  --dash-text-base: 1rem;     /* 16px */
+  --dash-text-lg: 1.125rem;   /* 18px */
+  --dash-text-xl: 1.25rem;    /* 20px */
+  --dash-text-2xl: 1.5rem;    /* 24px */
+  --dash-text-3xl: 1.875rem;  /* 30px */
+  --dash-text-4xl: 2.25rem;    /* 36px */
+  
+  /* Border Radius */
+  --dash-radius-sm: 0.5rem;
+  --dash-radius-md: 0.75rem;
+  --dash-radius-lg: 1rem;
+  --dash-radius-xl: 1.25rem;
+  --dash-radius-2xl: 1.5rem;
+  
+  /* Shadows */
+  --dash-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --dash-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --dash-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --dash-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Dashboard Container - Generous Padding */
+.dashboard-modern-theme {
+  padding: var(--dash-space-2xl) var(--dash-space-xl);
+  background: linear-gradient(135deg, var(--dash-slate-50) 0%, #ffffff 50%, var(--dash-primary-50) 100%);
+  min-height: 100vh;
+}
+
+/* Section Spacing */
+.dashboard-modern-theme > * + * {
+  margin-top: var(--dash-space-3xl);
+}
+
+.dashboard-modern-theme section + section {
+  margin-top: var(--dash-space-3xl);
+}
+
+/* Card Spacing */
+.dashboard-modern-theme .card,
+.dashboard-modern-theme [class*="Card"] {
+  padding: var(--dash-space-2xl);
+  margin-bottom: var(--dash-space-xl);
+  border-radius: var(--dash-radius-xl);
+  box-shadow: var(--dash-shadow-md);
+}
+
+.dashboard-modern-theme .card-header,
+.dashboard-modern-theme [class*="CardHeader"] {
+  padding-bottom: var(--dash-space-lg);
+  margin-bottom: var(--dash-space-lg);
+  border-bottom: 1px solid var(--dash-slate-200);
+}
+
+.dashboard-modern-theme .card-content,
+.dashboard-modern-theme [class*="CardContent"] {
+  padding-top: var(--dash-space-lg);
+}
+
+/* Form Field Spacing */
+.dashboard-modern-theme .form-field,
+.dashboard-modern-theme [class*="space-y"] > * + * {
+  margin-top: var(--dash-space-lg);
+}
+
+.dashboard-modern-theme input,
+.dashboard-modern-theme textarea,
+.dashboard-modern-theme select {
+  padding: var(--dash-space-md) var(--dash-space-lg);
+  margin-bottom: var(--dash-space-lg);
+  min-height: 3rem;
+  font-size: var(--dash-text-base);
+  border-radius: var(--dash-radius-md);
+}
+
+.dashboard-modern-theme label {
+  margin-bottom: var(--dash-space-sm);
+  font-size: var(--dash-text-base);
+  font-weight: 500;
+  display: block;
+}
+
+/* Button Spacing */
+.dashboard-modern-theme button,
+.dashboard-modern-theme [class*="Button"] {
+  padding: var(--dash-space-md) var(--dash-space-xl);
+  margin: var(--dash-space-sm) var(--dash-space-sm) var(--dash-space-sm) 0;
+  min-height: 2.75rem;
+  font-size: var(--dash-text-base);
+  border-radius: var(--dash-radius-md);
+}
+
+/* Grid Spacing */
+.dashboard-modern-theme .grid {
+  gap: var(--dash-space-xl);
+}
+
+.dashboard-modern-theme .grid > * {
+  margin-bottom: var(--dash-space-xl);
+}
+
+/* Text Spacing */
+.dashboard-modern-theme h1 {
+  font-size: var(--dash-text-4xl);
+  margin-bottom: var(--dash-space-lg);
+  line-height: 1.2;
+}
+
+.dashboard-modern-theme h2 {
+  font-size: var(--dash-text-3xl);
+  margin-bottom: var(--dash-space-lg);
+  margin-top: var(--dash-space-2xl);
+  line-height: 1.3;
+}
+
+.dashboard-modern-theme h3 {
+  font-size: var(--dash-text-2xl);
+  margin-bottom: var(--dash-space-md);
+  margin-top: var(--dash-space-lg);
+  line-height: 1.4;
+}
+
+.dashboard-modern-theme p {
+  font-size: var(--dash-text-base);
+  margin-bottom: var(--dash-space-md);
+  line-height: 1.6;
+}
+
+/* List Spacing */
+.dashboard-modern-theme ul,
+.dashboard-modern-theme ol {
+  margin: var(--dash-space-lg) 0;
+  padding-left: var(--dash-space-2xl);
+}
+
+.dashboard-modern-theme li {
+  margin-bottom: var(--dash-space-md);
+  line-height: 1.6;
+}
+
+/* Prevent Text Overlap */
+.dashboard-modern-theme * {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.dashboard-modern-theme .text-overflow-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Icon Spacing */
+.dashboard-modern-theme svg {
+  margin: 0 var(--dash-space-sm);
+}
+
+.dashboard-modern-theme [class*="icon"] + * {
+  margin-left: var(--dash-space-md);
+}
+
+/* Badge/Pill Spacing */
+.dashboard-modern-theme [class*="Badge"],
+.dashboard-modern-theme [class*="badge"] {
+  padding: var(--dash-space-xs) var(--dash-space-md);
+  margin: 0 var(--dash-space-sm);
+  font-size: var(--dash-text-sm);
+}
+
+/* Tab Spacing */
+.dashboard-modern-theme [class*="TabsList"] {
+  margin-bottom: var(--dash-space-2xl);
+  padding: var(--dash-space-sm);
+}
+
+.dashboard-modern-theme [class*="TabsContent"] {
+  margin-top: var(--dash-space-2xl);
+  padding-top: var(--dash-space-2xl);
+}
+
+/* Alert/Notification Spacing */
+.dashboard-modern-theme [class*="Alert"],
+.dashboard-modern-theme [class*="alert"] {
+  padding: var(--dash-space-lg);
+  margin-bottom: var(--dash-space-xl);
+  border-radius: var(--dash-radius-md);
+}
+
+/* Table Spacing */
+.dashboard-modern-theme table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dashboard-modern-theme th,
+.dashboard-modern-theme td {
+  padding: var(--dash-space-md) var(--dash-space-lg);
+  text-align: left;
+  border-bottom: 1px solid var(--dash-slate-200);
+}
+
+.dashboard-modern-theme th {
+  padding-top: var(--dash-space-lg);
+  padding-bottom: var(--dash-space-lg);
+  font-weight: 600;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .dashboard-modern-theme {
+    padding: var(--dash-space-lg) var(--dash-space-md);
+  }
+  
+  .dashboard-modern-theme .card,
+  .dashboard-modern-theme [class*="Card"] {
+    padding: var(--dash-space-lg);
+  }
+  
+  .dashboard-modern-theme h1 {
+    font-size: var(--dash-text-3xl);
+  }
+  
+  .dashboard-modern-theme h2 {
+    font-size: var(--dash-text-2xl);
+  }
+}
+
+/* Modern Blue Gradient Backgrounds */
+.dashboard-modern-theme .gradient-primary {
+  background: linear-gradient(135deg, var(--dash-primary) 0%, var(--dash-secondary) 100%);
+}
+
+.dashboard-modern-theme .gradient-accent {
+  background: linear-gradient(135deg, var(--dash-accent) 0%, var(--dash-primary-light) 100%);
+}
+
+/* Smooth Transitions */
+.dashboard-modern-theme * {
+  transition: all 0.2s ease-in-out;
+}
+

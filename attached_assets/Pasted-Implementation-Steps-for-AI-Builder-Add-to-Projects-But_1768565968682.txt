@@ -1,0 +1,55 @@
+Implementation Steps for AI Builder: Add to Projects Button in Campaign Listing
+Step 1: Verify Database Structure
+	∙	Check if tags table exists with fields for storing projects (name, color, user_id)
+	∙	Check if tag_items junction table exists to link campaigns with projects
+	∙	Verify there’s a way to identify which tags are “projects” (type field or separate table)
+Step 2: Verify/Create Backend APIs
+	∙	Ensure API endpoint exists to GET all projects for logged-in user
+	∙	Ensure API endpoint exists to POST (create) new project
+	∙	Ensure API endpoint exists to POST (assign) projects to a campaign
+	∙	Ensure API endpoint exists to GET projects already assigned to a specific campaign
+Step 3: Create Project Assignment Dropdown Component
+	∙	Build a reusable dropdown component that opens when button is clicked
+	∙	Component should have input field at top to create new project on-the-fly
+	∙	Component should display list of all existing projects with checkboxes
+	∙	Component should show which projects are already assigned (pre-checked)
+	∙	Component should allow selecting/deselecting multiple projects
+	∙	Component should have Save and Cancel buttons at bottom
+Step 4: Add “Add to Projects” Button in Campaign Listing
+	∙	Add new button in each campaign row (in Actions column or separate Projects column)
+	∙	Button should show count of assigned projects, like “Projects (2)”
+	∙	Clicking button should open the Project Assignment Dropdown component
+	∙	Pass campaign ID to the dropdown component
+Step 5: Display Assigned Projects in Campaign Listing
+	∙	Add a new column called “Projects” in the campaign table
+	∙	Display assigned projects as colored pills/badges in this column
+	∙	Show project name and use project color for the pill background
+Step 6: Update Campaign Listing Data Fetch
+	∙	Modify the API call that fetches campaigns to also include assigned projects
+	∙	Each campaign object should include array of project objects (id, name, color)
+Step 7: Handle Create New Project On-the-Fly
+	∙	When user types project name and presses Enter or clicks Create button
+	∙	Call API to create new project
+	∙	Add newly created project to the dropdown list immediately
+	∙	Automatically check/select the newly created project
+	∙	Clear the input field after creation
+Step 8: Handle Save Projects
+	∙	When user clicks Save button in dropdown
+	∙	Send all selected project IDs to the backend API
+	∙	Update the campaign row to show newly assigned projects
+	∙	Close the dropdown
+	∙	Refresh the project pills display
+Step 9: Test the Complete Flow
+	∙	Open dropdown on any campaign
+	∙	Create a new project from the dropdown
+	∙	Assign multiple existing projects to campaign
+	∙	Click Save and verify projects appear as pills
+	∙	Refresh page and verify projects are still assigned
+	∙	Test with multiple campaigns
+Step 10: Add Loading States and Error Handling
+	∙	Show loading indicator when fetching projects
+	∙	Show loading indicator when saving assignments
+	∙	Display error message if API calls fail
+	∙	Disable Save button while request is in progress
+
+That’s it. These 10 steps cover the complete implementation.

@@ -1,0 +1,196 @@
+// GOOD keyword templates for home services
+const keywordTemplates = {
+  // High-intent emergency (Tier 1)
+  emergency: [
+    "emergency {service} {location}",
+    "24/7 {service} {location}",
+    "24 hour {service} {location}",
+    "{service} emergency service {location}",
+    "same day {service} {location}",
+    "emergency {service} repair {location}"
+  ],
+  
+  // Service + location (Tier 1)
+  serviceLocation: [
+    "{service} {location}",
+    "{service} services {location}",
+    "{service} company {location}",
+    "professional {service} {location}",
+    "licensed {service} {location}",
+    "best {service} {location}",
+    "top rated {service} {location}",
+    "affordable {service} {location}"
+  ],
+  
+  // Specific services (Tier 2)
+  specificService: [
+    "{specific_service} {location}",
+    "{specific_service} repair {location}",
+    "{specific_service} installation {location}",
+    "{specific_service} replacement {location}"
+  ],
+  
+  // Cost research (Tier 2)
+  costResearch: [
+    "{service} cost {location}",
+    "how much does {service} cost {location}",
+    "{service} prices {location}",
+    "{service} estimate {location}",
+    "cheap {service} {location}",
+    "affordable {service} {location}"
+  ],
+  
+  // Comparison/research (Tier 3)
+  research: [
+    "best {service} companies {location}",
+    "{service} reviews {location}",
+    "top {service} contractors {location}",
+    "{service} near me reviews"
+  ]
+};
+
+// Service variations
+const serviceTerms = {
+  primary: ["plumber", "plumbing"],
+  specific: [
+    "drain cleaning",
+    "water heater repair",
+    "leak detection",
+    "pipe repair",
+    "emergency plumbing",
+    "sewer repair",
+    "bathroom plumbing",
+    "kitchen plumbing"
+  ]
+};
+
+// Location modifiers
+const locationModifiers = [
+  "near me",
+  "in [city]",
+  "[city]",
+  "[city] [state]"
+];
+
+// VALIDATION RULES - Keywords must pass ALL checks
+function isValidKeyword(keyword) {
+  // Rule 1: Must contain core service term
+  const hasServiceTerm = serviceTerms.primary.some(term => 
+    keyword.toLowerCase().includes(term)
+  ) || serviceTerms.specific.some(term => 
+    keyword.toLowerCase().includes(term)
+  );
+  
+  if (!hasServiceTerm) return false;
+  
+  // Rule 2: No duplicate words
+  const words = keyword.toLowerCase().split(' ');
+  const uniqueWords = new Set(words);
+  if (words.length !== uniqueWords.size) return false;
+  
+  // Rule 3: No nonsense question patterns
+  const invalidPatterns = [
+    /^what is.*near me$/,
+    /^where to.*near me$/,
+    /^can plumber/,
+    /^does plumber/,
+    /^why is/,
+    /number(?!.*phone)/  // "number" alone without "phone"
+  ];
+  
+  if (invalidPatterns.some(pattern => pattern.test(keyword.toLowerCase()))) {
+    return false;
+  }
+  
+  // Rule 4: Must make natural language sense
+  // Keywords should be 2-6 words typically
+  if (words.length < 2 || words.length > 6) return false;
+  
+  // Rule 5: No generic spam words as standalone
+  const spamWords = ['cheap', 'discount', 'free', 'job', 'apply', 'brand', 'information'];
+  if (spamWords.includes(keyword.trim().toLowerCase())) return false;
+  
+  return true;
+}
+
+// Generate keywords properly
+function generateKeywords(businessUrl, location = "near me") {
+  const keywords = [];
+  
+  // Determine primary service from URL
+  const primaryService = "plumber"; // extracted from plumbingservices.com
+  
+  // Generate from templates
+  for (const category in keywordTemplates) {
+    keywordTemplates[category].forEach(template => {
+      // Replace placeholders
+      let keyword = template
+        .replace('{service}', primaryService)
+        .replace('{location}', location);
+      
+      // Validate before adding
+      if (isValidKeyword(keyword)) {
+        keywords.push({
+          keyword: keyword,
+          category: category,
+          intent: getIntentLevel(category)
+        });
+      }
+    });
+  }
+  
+  // Add specific services
+  serviceTerms.specific.forEach(specific => {
+    const keyword = `${specific} ${location}`;
+    if (isValidKeyword(keyword)) {
+      keywords.push({
+        keyword: keyword,
+        category: 'specificService',
+        intent: 'high'
+      });
+    }
+  });
+  
+  return keywords;
+}
+
+function getIntentLevel(category) {
+  const intentMap = {
+    emergency: 'very-high',
+    serviceLocation: 'high',
+    specificService: 'high',
+    costResearch: 'medium',
+    research: 'medium'
+  };
+  return intentMap[category] || 'low';
+}
+```
+
+## Expected Output (GOOD keywords):
+```
+High Intent:
+- emergency plumber near me
+- 24/7 plumber near me
+- plumber near me
+- emergency plumbing service near me
+- same day plumber near me
+- licensed plumber near me
+- best plumber near me
+
+Specific Services:
+- drain cleaning near me
+- water heater repair near me
+- leak detection near me
+- pipe repair near me
+- sewer repair near me
+
+Cost Research:
+- plumber cost near me
+- how much does plumbing cost near me
+- plumbing prices near me
+- affordable plumber near me
+
+Comparison:
+- best plumbing companies near me
+- plumber reviews near me
+- top plumbing contractors near me

@@ -1,0 +1,126 @@
+Run 1 of 4 - Sat Jan 17 08:51:41 PM UTC 2026
+==============================================
+============================================================
+DISCOURSE COMMENT PLACEHOLDER FIX
+============================================================
+Discourse URL: https://community.adiology.io
+
+Searching for posts with placeholder text...
+Found 0 posts containing {timeframe}
+Found 4 posts containing {activity}
+Found 50 posts containing {additional_tip}
+Found 50 posts containing {key_point}
+Found 50 posts containing {outcome}
+Found 50 posts containing {extra_insight}
+
+Found 153 posts with placeholder issues
+  Fixing post 656...
+    Before: Excellent breakdown. The key insight here is {key_point}, which often gets overl...
+    After:  Excellent breakdown. The key insight here is conversion tracking is critical, wh...
+      API Response: 429 - {"errors":["You’ve performed this action too many times. Please wait 44 seconds before trying again."],"error_type":"rate_limit","extras":{"wait_seconds":44,"time_left":"44 seconds"}}
+    ✗ Failed to update
+  Could not fetch post 274
+  Could not fetch post 62
+  Could not fetch post 494
+  Could not fetch post 270
+  Could not fetch post 186
+  Could not fetch post 336
+  Could not fetch post 48
+  Could not fetch post 249
+  Could not fetch post 709
+  Could not fetch post 265
+  Could not fetch post 613
+  Could not fetch post 139
+  Could not fetch post 259
+  Could not fetch post 101
+  Could not fetch post 448
+  Could not fetch post 545
+  Could not fetch post 69
+  Could not fetch post 202
+  Could not fetch post 377
+  Could not fetch post 284
+  Could not fetch post 173
+  Could not fetch post 290
+  Could not fetch post 645
+  Could not fetch post 507
+  Could not fetch post 221
+  Could not fetch post 153
+  Could not fetch post 463
+  Could not fetch post 712
+  Could not fetch post 390
+  Could not fetch post 367
+  Could not fetch post 87
+  Could not fetch post 142
+  Could not fetch post 564
+  Could not fetch post 401
+  Could not fetch post 409
+  Could not fetch post 328
+  Could not fetch post 539
+  Could not fetch post 252
+  Could not fetch post 216
+  Could not fetch post 31
+  Could not fetch post 674
+  Could not fetch post 466
+  Could not fetch post 413
+  Could not fetch post 398
+  Could not fetch post 559
+  Could not fetch post 73
+  Could not fetch post 29
+  Could not fetch post 505
+  Could not fetch post 461
+  Could not fetch post 629
+  Could not fetch post 575
+  Could not fetch post 457
+  Could not fetch post 207
+  Could not fetch post 587
+  Could not fetch post 426
+  Could not fetch post 64
+  Could not fetch post 517
+  Could not fetch post 369
+  Could not fetch post 95
+  Could not fetch post 225
+  Could not fetch post 124
+  Could not fetch post 22
+  Could not fetch post 488
+  Could not fetch post 474
+  Could not fetch post 419
+  Could not fetch post 453
+  Could not fetch post 686
+  Could not fetch post 78
+  Could not fetch post 404
+  Could not fetch post 137
+  Could not fetch post 482
+  Could not fetch post 502
+  Could not fetch post 315
+  Could not fetch post 36
+  Could not fetch post 234
+  Could not fetch post 283
+  Could not fetch post 174
+  Could not fetch post 292
+  Could not fetch post 646
+  Could not fetch post 549
+  Could not fetch post 18
+  Could not fetch post 616
+  Could not fetch post 462
+  Could not fetch post 713
+  Could not fetch post 411
+  Could not fetch post 212
+  Could not fetch post 536
+  Could not fetch post 400
+  Could not fetch post 231
+  Could not fetch post 408
+  Could not fetch post 637
+  Could not fetch post 345
+  Could not fetch post 567
+  Could not fetch post 253
+  Could not fetch post 363
+  Could not fetch post 67
+  Could not fetch post 414
+  Could not fetch post 382
+  Could not fetch post 361
+
+============================================================
+SUMMARY
+============================================================
+Posts fixed: 0
+Posts failed: 100

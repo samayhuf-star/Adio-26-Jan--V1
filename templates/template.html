@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{seo.title}}</title>
+    <meta name="description" content="{{seo.description}}">
+    <meta name="keywords" content="{{seo.keywords}}">
+    
+    <!-- CSS Variables for Theming -->
+    <style>
+        :root {
+            --accent: {{accent}};
+            --accent-alt: {{accentAlt}};
+            --accent-light: {{accentLight}};
+            --accent-dark: {{accentDark}};
+            --bg-hero: {{bgHero}};
+            --text-primary: {{textPrimary}};
+            --text-secondary: {{textSecondary}};
+            --bg-primary: {{bgPrimary}};
+            --bg-secondary: {{bgSecondary}};
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: var(--bg-hero);
+            background-size: cover;
+            background-position: center;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(0,0,0,0.3));
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            padding: 40px 20px;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--accent);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: var(--bg-secondary);
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        /* Services Section */
+        .services {
+            padding: 80px 0;
+            background: var(--bg-primary);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .service-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .service-content {
+            padding: 1.5rem;
+        }
+
+        .service-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .service-price {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-top: 1rem;
+        }
+
+        /* Testimonials Section */
+        .testimonials {
+            padding: 80px 0;
+            background: var(--bg-secondary);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .testimonial-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .testimonial-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .testimonial-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 1rem;
+        }
+
+        .testimonial-rating {
+            color: #fbbf24;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 80px 0;
+            background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+            color: white;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a1a1a;
+            color: #ccc;
+            padding: 60px 0 20px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-column h4 {
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .footer-column ul {
+            list-style: none;
+        }
+
+        .footer-column ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-column a {
+            color: #ccc;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-column a:hover {
+            color: var(--accent);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid #333;
+        }
+
+        /* Policy Pages */
+        .policy-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        .policy-page h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .policy-page h2 {
+            font-size: 1.8rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .policy-page p, .policy-page li {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .policy-page ul {
+            margin-left: 2rem;
+        }
+
+        /* Mobile-First Responsive Design */
+        /* Base styles are for mobile (320px+) */
+        
+        /* Mobile styles (default) */
+        .hero {
+            min-height: 400px;
+            padding: 2rem 1rem;
+        }
+
+        .hero h1 {
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .hero-content {
+            padding: 2rem 1rem;
+        }
+
+        .cta-buttons {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.875rem 1.5rem;
+            font-size: 1rem;
+            min-height: 44px; /* Touch-friendly */
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .features, .services, .testimonials {
+            padding: 3rem 1rem;
+        }
+
+        .features-grid, .services-grid, .testimonials-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .feature-card, .service-card, .testimonial-card {
+            padding: 1.5rem;
+        }
+
+        .service-image {
+            height: 180px;
+        }
+
+        .cta-section {
+            padding: 3rem 1rem;
+        }
+
+        .cta-section h2 {
+            font-size: 1.75rem;
+        }
+
+        .cta-section p {
+            font-size: 1rem;
+        }
+
+        .contact-info {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .footer {
+            padding: 3rem 1rem 1.5rem;
+        }
+
+        .footer-content {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .nav-content {
+            padding: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-logo {
+            font-size: 1.25rem;
+        }
+
+        .container {
+            padding: 0 1rem;
+        }
+
+        /* Tablet styles (640px+) */
+        @media (min-width: 640px) {
+            .hero {
+                min-height: 500px;
+                padding: 3rem 1.5rem;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1.25rem;
+            }
+
+            .hero-content {
+                padding: 3rem 1.5rem;
+            }
+
+            .cta-buttons {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .btn {
+                width: auto;
+                min-width: 200px;
+            }
+
+            .section-title {
+                font-size: 2.25rem;
+            }
+
+            .features, .services, .testimonials {
+                padding: 4rem 1.5rem;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .testimonials-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .cta-section {
+                padding: 4rem 1.5rem;
+            }
+
+            .cta-section h2 {
+                font-size: 2.25rem;
+            }
+
+            .footer-content {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .container {
+                padding: 0 1.5rem;
+            }
+        }
+
+        /* Desktop styles (768px+) */
+        @media (min-width: 768px) {
+            .hero {
+                min-height: 600px;
+            }
+
+            .hero h1 {
+                font-size: 3.5rem;
+            }
+
+            .hero p {
+                font-size: 1.5rem;
+            }
+
+            .section-title {
+                font-size: 2.5rem;
+            }
+
+            .features, .services, .testimonials {
+                padding: 5rem 2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .services-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .testimonials-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .cta-section h2 {
+                font-size: 2.5rem;
+            }
+
+            .footer-content {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+
+            .nav-links {
+                display: flex;
+            }
+
+            .container {
+                padding: 0 2rem;
+            }
+        }
+
+        /* Large desktop (1024px+) */
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 1200px;
+            }
+        }
+
+        /* Navigation */
+        .nav {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 20px;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        /* Mobile menu - hidden by default, shown on desktop */
+        .nav-links {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .nav-links {
+                display: flex;
+            }
+        }
+
+        /* Mobile menu button (if needed in future) */
+        .nav-menu-button {
+            display: block;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        @media (min-width: 768px) {
+            .nav-menu-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="#" class="nav-logo">{{title}}</a>
+            <ul class="nav-links">
+                <li><a href="#services">Services</a></li>
+                <li><a href="#testimonials">Reviews</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" style="background-image: url('{{hero_image}}');">
+        <div class="hero-content">
+            <h1>{{hero.heading}}</h1>
+            <p>{{hero.subheading}}</p>
+            <div class="cta-buttons">
+                <a href="#contact" class="btn btn-primary">{{hero.ctaText}}</a>
+                <a href="tel:{{contact.phone}}" class="btn btn-secondary">📞 {{contact.phone}}</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">{{features.heading}}</h2>
+            <div class="features-grid">
+                {{#each features.items}}
+                <div class="feature-card">
+                    <div class="feature-icon">{{icon}}</div>
+                    <h3>{{title}}</h3>
+                    <p>{{desc}}</p>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services" id="services">
+        <div class="container">
+            <h2 class="section-title">{{services.heading}}</h2>
+            {{#if services.subheading}}
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 3rem; color: var(--text-secondary);">{{services.subheading}}</p>
+            {{/if}}
+            <div class="services-grid">
+                {{#each services.items}}
+                <div class="service-card">
+                    {{#if image}}
+                    <img src="{{image}}" alt="{{title}}" class="service-image">
+                    {{/if}}
+                    <div class="service-content">
+                        <h3>{{title}}</h3>
+                        <p>{{desc}}</p>
+                        {{#if price}}
+                        <div class="service-price">{{price}}</div>
+                        {{/if}}
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    {{#if testimonials.items}}
+    <section class="testimonials" id="testimonials">
+        <div class="container">
+            <h2 class="section-title">{{testimonials.heading}}</h2>
+            <div class="testimonials-grid">
+                {{#each testimonials.items}}
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        {{#if avatar}}
+                        <img src="{{avatar}}" alt="{{name}}" class="testimonial-avatar">
+                        {{/if}}
+                        <div>
+                            <h4>{{name}}</h4>
+                            {{#if company}}
+                            <p style="font-size: 0.9rem; color: var(--text-secondary);">{{company}}</p>
+                            {{/if}}
+                        </div>
+                    </div>
+                    {{#if rating}}
+                    <div class="testimonial-rating">
+                        {{#times rating}}★{{/times}}
+                    </div>
+                    {{/if}}
+                    <p style="font-style: italic;">"{{text}}"</p>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </section>
+    {{/if}}
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="contact">
+        <div class="container">
+            <h2>{{cta.heading}}</h2>
+            {{#if cta.subheading}}
+            <p>{{cta.subheading}}</p>
+            {{/if}}
+            <div class="cta-buttons">
+                <a href="tel:{{contact.phone}}" class="btn btn-secondary">{{cta.ctaText}} {{contact.phone}}</a>
+                {{#if contact.email}}
+                <a href="mailto:{{contact.email}}" class="btn btn-secondary">✉️ Email Us</a>
+                {{/if}}
+            </div>
+            {{#if contact.hours}}
+            <div class="contact-info">
+                <div class="contact-item">
+                    <span>🕐 {{contact.hours}}</span>
+                </div>
+            </div>
+            {{/if}}
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h4>{{footer.companyName}}</h4>
+                    <p>{{footer.tagline}}</p>
+                    <p style="margin-top: 1rem;">{{footer.address}}</p>
+                </div>
+                <div class="footer-column">
+                    <h4>Contact</h4>
+                    <ul>
+                        <li>📞 <a href="tel:{{contact.phone}}">{{contact.phone}}</a></li>
+                        {{#if contact.email}}
+                        <li>✉️ <a href="mailto:{{contact.email}}">{{contact.email}}</a></li>
+                        {{/if}}
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        {{#each footer.links}}
+                        <li><a href="{{href}}">{{text}}</a></li>
+                        {{/each}}
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>{{footer.copyright}}</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Structured Data (LD+JSON) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "{{title}}",
+        "description": "{{seo.description}}",
+        "telephone": "{{contact.phone}}",
+        {{#if contact.email}}
+        "email": "{{contact.email}}",
+        {{/if}}
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "{{footer.address}}"
+        }
+    }
+    </script>
+</body>
+</html>
+

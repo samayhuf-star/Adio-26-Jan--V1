@@ -1,0 +1,98 @@
+Looking at your analysis results, the AI is extracting basic metadata (intent, vertical, CTA, keywords) but missing deeper content insights. Here's how to enhance your website analysis feature:
+
+## Key Approaches to Get More Details
+
+**1. Structured Prompt Engineering**
+Modify your AI prompt to explicitly request comprehensive extraction:
+
+```
+Analyze the website URL provided and extract the following details:
+- Page title, meta description, H1-H6 headings
+- Main content copy (first 500 words)
+- All CTA buttons and links with anchor text
+- Form fields and input types
+- Images/media with alt text
+- Navigation structure
+- Schema markup (JSON-LD, structured data)
+- Technical SEO signals (canonical, robots, viewport)
+- Call-to-action patterns and placement
+- Value propositions and key messaging
+- Target audience indicators
+- Competitor mentions
+- FAQ sections if present
+- Testimonials/social proof elements
+```
+
+**2. Web Scraping Enhancement**
+Add DOM parsing to extract more granular data before sending to AI:
+
+```javascript
+// Use a tool like Cheerio or Puppeteer
+const elements = {
+  headings: document.querySelectorAll('h1, h2, h3'),
+  ctaButtons: document.querySelectorAll('[role="button"], button, a.cta'),
+  forms: document.querySelectorAll('form'),
+  images: document.querySelectorAll('img'),
+  textContent: document.body.innerText,
+  links: document.querySelectorAll('a'),
+  schemas: document.querySelectorAll('script[type="application/ld+json"]')
+};
+```
+
+**3. Multi-Stage Analysis**
+Break analysis into phases:
+- **Stage 1**: Fetch raw HTML + metadata
+- **Stage 2**: Parse DOM structure, extract all text nodes
+- **Stage 3**: Run AI analysis on accumulated data
+- **Stage 4**: Extract specific patterns (forms, CTAs, FAQs)
+
+**4. API Integration Enhancement**
+If using an API service, specify parameters:
+
+```javascript
+// Example with a content extraction API
+const response = await fetch('api/analyze', {
+  method: 'POST',
+  body: JSON.stringify({
+    url: 'adiology.io',
+    extractionDepth: 'comprehensive',
+    includeMetadata: true,
+    includeForms: true,
+    includeImages: true,
+    includeStructuredData: true,
+    contentLength: 'full',
+    analysisType: ['seo', 'marketing', 'technical']
+  })
+});
+```
+
+**5. Data Enrichment After Analysis**
+Add these post-processing steps:
+
+```javascript
+const enrichedAnalysis = {
+  ...basicAnalysis,
+  headingHierarchy: extractHeadings(html),
+  formFields: extractFormFields(html),
+  imageAnalysis: extractImages(html),
+  linkStructure: extractLinks(html),
+  contentTopics: extractKeyTopics(text),
+  readability: calculateReadability(text),
+  seoElements: extractSEOData(html),
+  marketingElements: identifyMarketingPatterns(html)
+};
+```
+
+## For Your Adiology Platform
+
+Add these extraction features to your analyzer:
+
+1. **Full page content** - Get complete copy, not just metadata
+2. **Visual hierarchy** - Map heading structure and layouts
+3. **Form analysis** - Fields, validation, submission behavior
+4. **CTA mapping** - All conversion points, placement, copy
+5. **Trust signals** - Reviews, testimonials, certifications
+6. **Technical audit** - Page speed, mobile responsiveness, accessibility
+7. **Competitor content** - If analyzing competitor sites
+
+Would you like me to help you build out a more comprehensive website analyzer with detailed extraction? I can create the code for fetching and parsing full page content with AI analysis.

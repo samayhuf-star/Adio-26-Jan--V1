@@ -1,0 +1,18 @@
+>Currently keywords generator generating lot of garbage keywords and some keywords does not even has any connectin from URL or seed keywords, hence we need to fix this -
+
+Implementation Steps:
+Here are 5 steps to give your AI builder to correct the keyword generation system:
+Step 1: Implement Core Service Term Validation
+Every generated keyword MUST contain at least one primary service term (e.g., "plumber", "plumbing", "drain cleaning", "water heater repair"). Add a validation check that rejects any keyword that doesn't include a core service term before it gets added to the final list.
+Step 2: Create Template-Based Generation Instead of Random Combinations
+Replace the current random token combination approach with predefined keyword templates. Use placeholders like {service} {location} or emergency {service} {location} that get filled with appropriate values. Stop generating keywords by randomly mixing modifier words together.
+Step 3: Add Natural Language Validation Rules
+Implement checks that reject nonsensical patterns such as:
+Question words creating unnatural phrases ("why is plumber number", "can plumber number")
+Duplicate words in the same keyword ("24/7 24/7 plumber")
+Standalone modifiers without service terms ("near price", "contact services", "24/7 price")
+Keywords that don't form grammatically correct phrases
+Step 4: Remove or Fix Tokenization Issues
+The term "plumber number" appears to be incorrectly tokenized - it should either be "plumber phone number" as a complete phrase or just use "plumber" without "number". Review how the system is breaking down seed keywords and ensure it's not creating fragments that don't make sense on their own.
+Step 5: Filter Out Generic Spam and Irrelevant Terms
+Remove keywords that are just generic words without context ("cheap", "discount", "job", "apply", "brand", "information"). These should either be part of longer, meaningful phrases ("affordable plumber near me") or excluded entirely. Add a blacklist of standalone terms that should never appear as complete keywords.

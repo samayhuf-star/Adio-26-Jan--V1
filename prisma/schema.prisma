@@ -1,0 +1,382 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ad_search_requests {
+  id                Int                 @id @default(autoincrement())
+  keywords          String[]
+  date_range        String?             @default("last_30_days") @db.VarChar(50)
+  status            String?             @default("pending") @db.VarChar(20)
+  user_id           String?             @db.VarChar(255)
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamp(6)
+  processed_at      DateTime?           @db.Timestamp(6)
+  error_message     String?
+  name              String?             @db.VarChar(255)
+  ad_search_results ad_search_results[]
+
+  @@index([status], map: "idx_ad_search_requests_status")
+}
+
+model ad_search_results {
+  id                 Int                 @id @default(autoincrement())
+  request_id         Int?
+  keyword            String              @db.VarChar(255)
+  advertiser         String?             @db.VarChar(500)
+  headline           String?
+  description        String?
+  destination_url    String?
+  ad_format          String?             @db.VarChar(50)
+  platform           String?             @db.VarChar(50)
+  first_shown        DateTime?           @db.Date
+  last_shown         DateTime?           @db.Date
+  region             String?             @db.VarChar(100)
+  raw_data           Json?
+  created_at         DateTime?           @default(now()) @db.Timestamp(6)
+  ad_search_requests ad_search_requests? @relation(fields: [request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([keyword], map: "idx_ad_search_results_keyword")
+  @@index([request_id], map: "idx_ad_search_results_request_id")
+}
+
+model admin_deployments {
+  id         String    @id @db.VarChar(255)
+  site       String    @db.VarChar(255)
+  user_email String?   @db.VarChar(255)
+  status     String?   @default("Pending") @db.VarChar(50)
+  url        String?   @db.VarChar(500)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model admin_expenses {
+  id           String    @id @db.VarChar(255)
+  service      String    @db.VarChar(100)
+  category     String?   @db.VarChar(100)
+  amount       Decimal?  @default(0) @db.Decimal(10, 2)
+  expense_date DateTime? @db.Date
+  description  String?
+  status       String?   @default("paid") @db.VarChar(50)
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model admin_templates {
+  id          String    @id @db.VarChar(255)
+  name        String    @db.VarChar(255)
+  vertical    String?   @db.VarChar(100)
+  version     String?   @default("1.0") @db.VarChar(20)
+  enabled     Boolean?  @default(true)
+  description String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model admin_websites {
+  id         String    @id @db.VarChar(255)
+  name       String    @db.VarChar(255)
+  user_email String?   @db.VarChar(255)
+  status     String?   @default("Draft") @db.VarChar(50)
+  domain     String?   @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model campaign_history {
+  id             Int       @id @default(autoincrement())
+  user_id        String
+  campaign_name  String?   @db.VarChar(255)
+  structure_type String?   @db.VarChar(100)
+  step           Int?      @default(1)
+  url            String?
+  analysis_data  Json?
+  keywords_data  Json?
+  ads_data       Json?
+  targeting_data Json?
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([user_id], map: "idx_campaign_history_user_id")
+}
+
+model campaign_structures {
+  id          String    @id @db.VarChar(255)
+  name        String    @db.VarChar(255)
+  description String?
+  usage_count Int?      @default(0)
+  active      Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model google_ads_tokens {
+  id            String    @id @db.VarChar(50)
+  refresh_token String?
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model support_tickets {
+  id         String    @id @db.VarChar(255)
+  subject    String    @db.VarChar(500)
+  user_email String?   @db.VarChar(255)
+  status     String?   @default("Open") @db.VarChar(50)
+  priority   String?   @default("Medium") @db.VarChar(50)
+  message    String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model user_notifications {
+  id          Int       @id @default(autoincrement())
+  user_id     String
+  title       String    @db.VarChar(255)
+  message     String
+  type        String?   @default("info") @db.VarChar(50)
+  read        Boolean?  @default(false)
+  action_type String?   @db.VarChar(100)
+  action_data Json?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([user_id, read], map: "idx_notifications_read")
+  @@index([user_id], map: "idx_notifications_user_id")
+}
+
+model users {
+  id                     String              @id @db.Uuid
+  email                  String              @db.VarChar(255)
+  full_name              String?             @db.VarChar(255)
+  subscription_plan      String?             @default("free") @db.VarChar(50)
+  subscription_status    String?             @default("active") @db.VarChar(50)
+  role                   String?             @default("user") @db.VarChar(50)
+  ai_usage               Int?                @default(0)
+  created_at             DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?           @default(now()) @db.Timestamp(6)
+  stripe_customer_id     String?
+  stripe_subscription_id String?
+  
+  // Workspace relationships
+  owned_workspaces       workspaces[]        @relation("WorkspaceOwner")
+  workspace_memberships  workspace_members[] @relation("WorkspaceMember")
+  invited_memberships    workspace_members[] @relation("WorkspaceInviter")
+  
+  // VM relationships
+  vms                    vms[]
+  vm_billing_records     vm_billing_records[]
+  vm_usage_tracking      vm_usage_tracking[]
+  billing_account        billing_accounts?
+}
+
+model workspaces {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  description         String?
+  owner_id            String              @db.Uuid
+  is_admin_workspace  Boolean?            @default(false)
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  
+  // Relationships
+  owner               users               @relation("WorkspaceOwner", fields: [owner_id], references: [id], onDelete: Cascade)
+  members             workspace_members[]
+  modules             workspace_modules[]
+  
+  // VM relationships
+  vms                 vms[]
+  vm_billing_records  vm_billing_records[]
+  vm_usage_tracking   vm_usage_tracking[]
+  billing_accounts    billing_accounts[]
+  
+  @@index([owner_id], map: "idx_workspaces_owner_id")
+  @@index([is_admin_workspace], map: "idx_workspaces_is_admin")
+}
+
+model workspace_members {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspace_id String    @db.Uuid
+  user_id      String    @db.Uuid
+  role         String?   @default("member") @db.VarChar(50)
+  invited_by   String?   @db.Uuid
+  invited_at   DateTime? @default(now()) @db.Timestamptz(6)
+  joined_at    DateTime? @db.Timestamptz(6)
+  status       String?   @default("pending") @db.VarChar(50)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relationships
+  workspace    workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  user         users      @relation("WorkspaceMember", fields: [user_id], references: [id], onDelete: Cascade)
+  inviter      users?     @relation("WorkspaceInviter", fields: [invited_by], references: [id], onDelete: SetNull)
+  
+  @@unique([workspace_id, user_id])
+  @@index([workspace_id], map: "idx_workspace_members_workspace_id")
+  @@index([user_id], map: "idx_workspace_members_user_id")
+  @@index([status], map: "idx_workspace_members_status")
+}
+
+model workspace_modules {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspace_id String    @db.Uuid
+  module_name  String
+  enabled      Boolean?  @default(true)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relationships
+  workspace    workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  
+  @@unique([workspace_id, module_name])
+  @@index([workspace_id], map: "idx_workspace_modules_workspace_id")
+  @@index([module_name], map: "idx_workspace_modules_module_name")
+}
+
+// VM Management Models
+model vms {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String   @db.Uuid
+  workspace_id         String?  @db.Uuid
+  name                 String   @db.VarChar(255)
+  description          String?
+  
+  // AWS Configuration
+  aws_instance_id      String?  @unique @db.VarChar(255)
+  aws_region           String   @db.VarChar(50)
+  instance_type        String   @db.VarChar(50)
+  ami_id               String   @db.VarChar(255)
+  
+  // VM Configuration
+  operating_system     String   @db.VarChar(100) // "windows-2022", "ubuntu-22.04", etc.
+  cpu_cores           Int
+  memory_gb           Int
+  storage_gb          Int
+  
+  // Status and Lifecycle
+  status              String   @default("creating") @db.VarChar(50) // "creating", "running", "stopped", "terminated", "error"
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
+  last_started_at     DateTime? @db.Timestamptz(6)
+  last_stopped_at     DateTime? @db.Timestamptz(6)
+  
+  // Pricing and Billing
+  hourly_rate_cents   Int
+  monthly_estimate_cents Int
+  
+  // Connection Information
+  public_ip           String?  @db.VarChar(45) // IPv4 or IPv6
+  private_ip          String?  @db.VarChar(45)
+  rdp_port            Int?     @default(3389)
+  ssh_port            Int?     @default(22)
+  admin_username      String?  @db.VarChar(100)
+  admin_password_hash String?  @db.VarChar(255)
+  ssh_key_pair_name   String?  @db.VarChar(255)
+  
+  // Relationships
+  user                users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace           workspaces? @relation(fields: [workspace_id], references: [id], onDelete: SetNull)
+  billing_records     vm_billing_records[]
+  usage_records       vm_usage_tracking[]
+  
+  @@index([user_id], map: "idx_vms_user_id")
+  @@index([workspace_id], map: "idx_vms_workspace_id")
+  @@index([status], map: "idx_vms_status")
+  @@index([aws_instance_id], map: "idx_vms_aws_instance_id")
+  @@index([created_at], map: "idx_vms_created_at")
+}
+
+model vm_billing_records {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vm_id           String   @db.Uuid
+  user_id         String   @db.Uuid
+  workspace_id    String?  @db.Uuid
+  
+  // Billing Details
+  amount_cents    Int
+  type            String   @db.VarChar(50) // "hourly_usage", "creation_fee", "storage_fee", "refund"
+  description     String
+  billing_period_start DateTime? @db.Timestamptz(6)
+  billing_period_end   DateTime? @db.Timestamptz(6)
+  
+  // Metadata
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  stripe_charge_id String? @db.VarChar(255)
+  
+  // Relationships
+  vm              vms      @relation(fields: [vm_id], references: [id], onDelete: Cascade)
+  user            users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace       workspaces? @relation(fields: [workspace_id], references: [id], onDelete: SetNull)
+  
+  @@index([vm_id], map: "idx_vm_billing_records_vm_id")
+  @@index([user_id], map: "idx_vm_billing_records_user_id")
+  @@index([workspace_id], map: "idx_vm_billing_records_workspace_id")
+  @@index([type], map: "idx_vm_billing_records_type")
+  @@index([created_at], map: "idx_vm_billing_records_created_at")
+}
+
+model billing_accounts {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String   @unique @db.Uuid
+  workspace_id         String?  @db.Uuid
+  
+  // Balance Management
+  balance_cents        Int      @default(0)
+  auto_recharge_enabled Boolean @default(false)
+  auto_recharge_amount_cents Int @default(2000) // $20
+  auto_recharge_threshold_cents Int @default(500) // $5
+  
+  // Stripe Integration
+  stripe_customer_id   String?  @unique @db.VarChar(255)
+  default_payment_method_id String? @db.VarChar(255)
+  
+  // Limits and Controls
+  spending_limit_cents Int?
+  daily_limit_cents    Int?
+  
+  // Metadata
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime @default(now()) @db.Timestamptz(6)
+  
+  // Relationships
+  user                 users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace            workspaces? @relation(fields: [workspace_id], references: [id], onDelete: SetNull)
+  
+  @@index([user_id], map: "idx_billing_accounts_user_id")
+  @@index([workspace_id], map: "idx_billing_accounts_workspace_id")
+  @@index([stripe_customer_id], map: "idx_billing_accounts_stripe_customer_id")
+}
+
+model vm_usage_tracking {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vm_id           String   @db.Uuid
+  user_id         String   @db.Uuid
+  workspace_id    String?  @db.Uuid
+  
+  // Usage Metrics
+  start_time      DateTime @db.Timestamptz(6)
+  end_time        DateTime? @db.Timestamptz(6)
+  duration_minutes Int?
+  
+  // Resource Usage
+  cpu_usage_percent    Float?
+  memory_usage_percent Float?
+  network_in_bytes     BigInt?
+  network_out_bytes    BigInt?
+  storage_read_bytes   BigInt?
+  storage_write_bytes  BigInt?
+  
+  // Cost Calculation
+  cost_cents      Int?
+  
+  // Metadata
+  recorded_at     DateTime @default(now()) @db.Timestamptz(6)
+  
+  // Relationships
+  vm              vms      @relation(fields: [vm_id], references: [id], onDelete: Cascade)
+  user            users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace       workspaces? @relation(fields: [workspace_id], references: [id], onDelete: SetNull)
+  
+  @@index([vm_id], map: "idx_vm_usage_tracking_vm_id")
+  @@index([user_id], map: "idx_vm_usage_tracking_user_id")
+  @@index([workspace_id], map: "idx_vm_usage_tracking_workspace_id")
+  @@index([start_time], map: "idx_vm_usage_tracking_start_time")
+  @@index([recorded_at], map: "idx_vm_usage_tracking_recorded_at")
+}

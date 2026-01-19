@@ -1,0 +1,512 @@
+/* User Preferences CSS - Spacing, Font Size, and Color Themes */
+
+/* Spacing Multiplier - Applied via CSS variable */
+:root {
+  --user-spacing-multiplier: 1;
+  --user-font-size-multiplier: 1;
+}
+
+/* Apply spacing multiplier to common spacing classes */
+[style*="--user-spacing-multiplier"] .space-y-1 > * + * {
+  margin-top: calc(0.25rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .space-y-2 > * + * {
+  margin-top: calc(0.5rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .space-y-3 > * + * {
+  margin-top: calc(0.75rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .space-y-4 > * + * {
+  margin-top: calc(1rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .space-y-5 > * + * {
+  margin-top: calc(1.25rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .space-y-6 > * + * {
+  margin-top: calc(1.5rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .space-y-8 > * + * {
+  margin-top: calc(2rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .gap-2 {
+  gap: calc(0.5rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .gap-3 {
+  gap: calc(0.75rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .gap-4 {
+  gap: calc(1rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .gap-5 {
+  gap: calc(1.25rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .gap-6 {
+  gap: calc(1.5rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .gap-8 {
+  gap: calc(2rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .p-4 {
+  padding: calc(1rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .p-5 {
+  padding: calc(1.25rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .p-6 {
+  padding: calc(1.5rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .p-8 {
+  padding: calc(2rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .mb-4 {
+  margin-bottom: calc(1rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .mb-6 {
+  margin-bottom: calc(1.5rem * var(--user-spacing-multiplier));
+}
+
+[style*="--user-spacing-multiplier"] .mb-8 {
+  margin-bottom: calc(2rem * var(--user-spacing-multiplier));
+}
+
+/* Font Size Multiplier */
+[style*="--user-font-size-multiplier"] {
+  font-size: calc(1rem * var(--user-font-size-multiplier));
+}
+
+[style*="--user-font-size-multiplier"] .text-sm {
+  font-size: calc(0.875rem * var(--user-font-size-multiplier));
+}
+
+[style*="--user-font-size-multiplier"] .text-base {
+  font-size: calc(1rem * var(--user-font-size-multiplier));
+}
+
+[style*="--user-font-size-multiplier"] .text-lg {
+  font-size: calc(1.125rem * var(--user-font-size-multiplier));
+}
+
+[style*="--user-font-size-multiplier"] .text-xl {
+  font-size: calc(1.25rem * var(--user-font-size-multiplier));
+}
+
+[style*="--user-font-size-multiplier"] .text-2xl {
+  font-size: calc(1.5rem * var(--user-font-size-multiplier));
+}
+
+[style*="--user-font-size-multiplier"] .text-3xl {
+  font-size: calc(1.875rem * var(--user-font-size-multiplier));
+}
+
+[style*="--user-font-size-multiplier"] .text-4xl {
+  font-size: calc(2.25rem * var(--user-font-size-multiplier));
+}
+
+/* Color Themes */
+
+/* Default Theme (Indigo/Purple) - Already applied via existing theme system */
+[data-color-theme="default"] {
+  --theme-primary: #4f46e5; /* indigo-600 */
+  --theme-primary-light: #eef2ff; /* indigo-50 */
+  --theme-primary-dark: #4338ca; /* indigo-700 */
+  --theme-secondary: #9333ea; /* purple-600 */
+  --theme-secondary-light: #faf5ff; /* purple-50 */
+  --theme-accent: #a855f7; /* purple-500 */
+}
+
+/* Blue Theme */
+[data-color-theme="blue"] {
+  --theme-primary: #2563eb; /* blue-600 */
+  --theme-primary-light: #eff6ff; /* blue-50 */
+  --theme-primary-dark: #1d4ed8; /* blue-700 */
+  --theme-secondary: #0ea5e9; /* sky-500 */
+  --theme-secondary-light: #f0f9ff; /* sky-50 */
+  --theme-accent: #3b82f6; /* blue-500 */
+}
+
+/* Green Theme */
+[data-color-theme="green"] {
+  --theme-primary: #059669; /* emerald-600 */
+  --theme-primary-light: #ecfdf5; /* emerald-50 */
+  --theme-primary-dark: #047857; /* emerald-700 */
+  --theme-secondary: #10b981; /* emerald-500 */
+  --theme-secondary-light: #f0fdf4; /* green-50 */
+  --theme-accent: #22c55e; /* green-500 */
+}
+
+/* Custom Theme */
+[data-color-theme="custom"] {
+  --theme-primary: var(--custom-primary-color, #6366f1);
+  --theme-primary-light: color-mix(in srgb, var(--custom-primary-color, #6366f1) 10%, white);
+  --theme-primary-dark: color-mix(in srgb, var(--custom-primary-color, #6366f1) 80%, black);
+  --theme-secondary: var(--custom-secondary-color, #9333ea);
+  --theme-secondary-light: color-mix(in srgb, var(--custom-secondary-color, #9333ea) 10%, white);
+  --theme-accent: var(--custom-primary-color, #6366f1);
+}
+
+/* Color Combination Themes */
+[data-color-theme="ocean-breeze"],
+[data-color-theme="sunset-glow"],
+[data-color-theme="forest-canopy"],
+[data-color-theme="royal-purple"],
+[data-color-theme="rose-gold"],
+[data-color-theme="midnight-blue"],
+[data-color-theme="tropical-paradise"] {
+  --theme-primary: var(--custom-primary-color, #6366f1);
+  --theme-primary-light: color-mix(in srgb, var(--custom-primary-color, #6366f1) 10%, white);
+  --theme-primary-dark: color-mix(in srgb, var(--custom-primary-color, #6366f1) 80%, black);
+  --theme-secondary: var(--custom-secondary-color, #9333ea);
+  --theme-secondary-light: color-mix(in srgb, var(--custom-secondary-color, #9333ea) 10%, white);
+  --theme-accent: var(--custom-tertiary-color, var(--custom-primary-color, #6366f1));
+}
+
+/* Custom Theme - Sidebar and Menu */
+[data-color-theme="custom"] aside {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, color-mix(in srgb, var(--custom-primary-color, #6366f1) 5%, white) 100%) !important;
+  border-color: color-mix(in srgb, var(--custom-primary-color, #6366f1) 20%, transparent) !important;
+}
+
+[data-color-theme="custom"] aside button[class*="bg-gradient-to-r"][class*="from-indigo"],
+[data-color-theme="custom"] aside button[class*="bg-gradient-to-r"][class*="to-purple"] {
+  background: linear-gradient(to right, var(--custom-primary-color, #6366f1), var(--custom-secondary-color, #9333ea)) !important;
+  box-shadow: 0 4px 6px -1px color-mix(in srgb, var(--custom-primary-color, #6366f1) 40%, transparent) !important;
+}
+
+/* Apply color combinations to all sidebar elements */
+[data-color-theme="custom"] aside button[class*="bg-indigo-100"],
+[data-color-theme="ocean-breeze"] aside button[class*="bg-indigo-100"],
+[data-color-theme="sunset-glow"] aside button[class*="bg-indigo-100"],
+[data-color-theme="forest-canopy"] aside button[class*="bg-indigo-100"],
+[data-color-theme="royal-purple"] aside button[class*="bg-indigo-100"],
+[data-color-theme="rose-gold"] aside button[class*="bg-indigo-100"],
+[data-color-theme="midnight-blue"] aside button[class*="bg-indigo-100"],
+[data-color-theme="tropical-paradise"] aside button[class*="bg-indigo-100"] {
+  background-color: color-mix(in srgb, var(--custom-primary-color, #6366f1) 10%, white) !important;
+  border-color: color-mix(in srgb, var(--custom-primary-color, #6366f1) 30%, transparent) !important;
+  color: var(--custom-primary-color, #6366f1) !important;
+}
+
+[data-color-theme="custom"] aside .bg-indigo-50,
+[data-color-theme="custom"] aside .hover\:bg-indigo-50:hover,
+[data-color-theme="ocean-breeze"] aside .bg-indigo-50,
+[data-color-theme="ocean-breeze"] aside .hover\:bg-indigo-50:hover,
+[data-color-theme="sunset-glow"] aside .bg-indigo-50,
+[data-color-theme="sunset-glow"] aside .hover\:bg-indigo-50:hover,
+[data-color-theme="forest-canopy"] aside .bg-indigo-50,
+[data-color-theme="forest-canopy"] aside .hover\:bg-indigo-50:hover,
+[data-color-theme="royal-purple"] aside .bg-indigo-50,
+[data-color-theme="royal-purple"] aside .hover\:bg-indigo-50:hover,
+[data-color-theme="rose-gold"] aside .bg-indigo-50,
+[data-color-theme="rose-gold"] aside .hover\:bg-indigo-50:hover,
+[data-color-theme="midnight-blue"] aside .bg-indigo-50,
+[data-color-theme="midnight-blue"] aside .hover\:bg-indigo-50:hover,
+[data-color-theme="tropical-paradise"] aside .bg-indigo-50,
+[data-color-theme="tropical-paradise"] aside .hover\:bg-indigo-50:hover {
+  background-color: color-mix(in srgb, var(--custom-primary-color, #6366f1) 10%, white) !important;
+}
+
+[data-color-theme="custom"] aside .text-indigo-600,
+[data-color-theme="custom"] aside .text-indigo-700,
+[data-color-theme="ocean-breeze"] aside .text-indigo-600,
+[data-color-theme="ocean-breeze"] aside .text-indigo-700,
+[data-color-theme="sunset-glow"] aside .text-indigo-600,
+[data-color-theme="sunset-glow"] aside .text-indigo-700,
+[data-color-theme="forest-canopy"] aside .text-indigo-600,
+[data-color-theme="forest-canopy"] aside .text-indigo-700,
+[data-color-theme="royal-purple"] aside .text-indigo-600,
+[data-color-theme="royal-purple"] aside .text-indigo-700,
+[data-color-theme="rose-gold"] aside .text-indigo-600,
+[data-color-theme="rose-gold"] aside .text-indigo-700,
+[data-color-theme="midnight-blue"] aside .text-indigo-600,
+[data-color-theme="midnight-blue"] aside .text-indigo-700,
+[data-color-theme="tropical-paradise"] aside .text-indigo-600,
+[data-color-theme="tropical-paradise"] aside .text-indigo-700 {
+  color: var(--custom-primary-color, #6366f1) !important;
+}
+
+[data-color-theme="custom"] aside .text-indigo-900,
+[data-color-theme="ocean-breeze"] aside .text-indigo-900,
+[data-color-theme="sunset-glow"] aside .text-indigo-900,
+[data-color-theme="forest-canopy"] aside .text-indigo-900,
+[data-color-theme="royal-purple"] aside .text-indigo-900,
+[data-color-theme="rose-gold"] aside .text-indigo-900,
+[data-color-theme="midnight-blue"] aside .text-indigo-900,
+[data-color-theme="tropical-paradise"] aside .text-indigo-900 {
+  color: var(--custom-primary-color, #6366f1) !important;
+}
+
+[data-color-theme="custom"] aside [class*="bg-gradient-to-br"][class*="from-indigo"],
+[data-color-theme="ocean-breeze"] aside [class*="bg-gradient-to-br"][class*="from-indigo"],
+[data-color-theme="sunset-glow"] aside [class*="bg-gradient-to-br"][class*="from-indigo"],
+[data-color-theme="forest-canopy"] aside [class*="bg-gradient-to-br"][class*="from-indigo"],
+[data-color-theme="royal-purple"] aside [class*="bg-gradient-to-br"][class*="from-indigo"],
+[data-color-theme="rose-gold"] aside [class*="bg-gradient-to-br"][class*="from-indigo"],
+[data-color-theme="midnight-blue"] aside [class*="bg-gradient-to-br"][class*="from-indigo"],
+[data-color-theme="tropical-paradise"] aside [class*="bg-gradient-to-br"][class*="from-indigo"] {
+  background: linear-gradient(to bottom right, var(--custom-primary-color, #6366f1), var(--custom-secondary-color, #9333ea)) !important;
+  box-shadow: 0 4px 6px -1px color-mix(in srgb, var(--custom-primary-color, #6366f1) 40%, transparent) !important;
+}
+
+[data-color-theme="custom"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"],
+[data-color-theme="ocean-breeze"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"],
+[data-color-theme="sunset-glow"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"],
+[data-color-theme="forest-canopy"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"],
+[data-color-theme="royal-purple"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"],
+[data-color-theme="rose-gold"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"],
+[data-color-theme="midnight-blue"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"],
+[data-color-theme="tropical-paradise"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"] {
+  background: linear-gradient(to right, var(--custom-primary-color, #6366f1), var(--custom-secondary-color, #9333ea)) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Apply theme colors to sidebar and menu */
+
+/* Blue Theme - Sidebar */
+[data-color-theme="blue"] aside {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(239, 246, 255, 0.95) 100%) !important;
+  border-color: rgba(37, 99, 235, 0.2) !important;
+}
+
+[data-color-theme="blue"] aside .border-indigo-100\/60 {
+  border-color: rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Blue Theme - Active Menu Items (Main & Submenu) */
+[data-color-theme="blue"] aside button[class*="bg-gradient-to-r"][class*="from-indigo"],
+[data-color-theme="blue"] aside button[class*="bg-gradient-to-r"][class*="to-purple"] {
+  background: linear-gradient(to right, #2563eb, #0ea5e9) !important;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3) !important;
+}
+
+[data-color-theme="blue"] aside button[class*="bg-indigo-100"] {
+  background-color: #eff6ff !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
+  color: #1e40af !important;
+}
+
+[data-color-theme="blue"] aside .bg-indigo-50,
+[data-color-theme="blue"] aside .hover\:bg-indigo-50:hover {
+  background-color: #eff6ff !important;
+}
+
+[data-color-theme="blue"] aside .text-indigo-600,
+[data-color-theme="blue"] aside .text-indigo-700 {
+  color: #2563eb !important;
+}
+
+[data-color-theme="blue"] aside .text-indigo-900 {
+  color: #1e40af !important;
+}
+
+/* Blue Theme - Logo Icon */
+[data-color-theme="blue"] aside [class*="bg-gradient-to-br"][class*="from-indigo"] {
+  background: linear-gradient(to bottom right, #2563eb, #0ea5e9) !important;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4) !important;
+}
+
+[data-color-theme="blue"] aside [class*="shadow-indigo"] {
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4) !important;
+}
+
+/* Blue Theme - Text Gradients */
+[data-color-theme="blue"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"] {
+  background: linear-gradient(to right, #2563eb, #0ea5e9) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Green Theme - Sidebar */
+[data-color-theme="green"] aside {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(236, 253, 245, 0.95) 100%) !important;
+  border-color: rgba(5, 150, 105, 0.2) !important;
+}
+
+[data-color-theme="green"] aside .border-indigo-100\/60 {
+  border-color: rgba(5, 150, 105, 0.2) !important;
+}
+
+/* Green Theme - Active Menu Items (Main & Submenu) */
+[data-color-theme="green"] aside button[class*="bg-gradient-to-r"][class*="from-indigo"],
+[data-color-theme="green"] aside button[class*="bg-gradient-to-r"][class*="to-purple"] {
+  background: linear-gradient(to right, #059669, #10b981) !important;
+  box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3) !important;
+}
+
+[data-color-theme="green"] aside button[class*="bg-indigo-100"] {
+  background-color: #ecfdf5 !important;
+  border-color: rgba(5, 150, 105, 0.3) !important;
+  color: #065f46 !important;
+}
+
+[data-color-theme="green"] aside .bg-indigo-50,
+[data-color-theme="green"] aside .hover\:bg-indigo-50:hover {
+  background-color: #ecfdf5 !important;
+}
+
+[data-color-theme="green"] aside .text-indigo-600,
+[data-color-theme="green"] aside .text-indigo-700 {
+  color: #059669 !important;
+}
+
+[data-color-theme="green"] aside .text-indigo-900 {
+  color: #065f46 !important;
+}
+
+/* Green Theme - Logo Icon */
+[data-color-theme="green"] aside [class*="bg-gradient-to-br"][class*="from-indigo"] {
+  background: linear-gradient(to bottom right, #059669, #10b981) !important;
+  box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.4) !important;
+}
+
+[data-color-theme="green"] aside [class*="shadow-indigo"] {
+  box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.4) !important;
+}
+
+/* Green Theme - Text Gradients */
+[data-color-theme="green"] aside [class*="bg-gradient-to-r"][class*="from-indigo"][class*="bg-clip-text"] {
+  background: linear-gradient(to right, #059669, #10b981) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Apply theme colors to main content area */
+[data-color-theme="blue"] .bg-gradient-to-br[class*="from-indigo"] {
+  background: linear-gradient(to bottom right, #eff6ff, #f0f9ff) !important;
+}
+
+[data-color-theme="green"] .bg-gradient-to-br[class*="from-indigo"] {
+  background: linear-gradient(to bottom right, #ecfdf5, #f0fdf4) !important;
+}
+
+/* Apply theme to buttons and interactive elements */
+[data-color-theme="blue"] button[class*="bg-indigo"],
+[data-color-theme="blue"] .bg-indigo-600 {
+  background-color: #2563eb !important;
+}
+
+[data-color-theme="blue"] button[class*="bg-indigo"]:hover {
+  background-color: #1d4ed8 !important;
+}
+
+[data-color-theme="green"] button[class*="bg-indigo"],
+[data-color-theme="green"] .bg-indigo-600 {
+  background-color: #059669 !important;
+}
+
+[data-color-theme="green"] button[class*="bg-indigo"]:hover {
+  background-color: #047857 !important;
+}
+
+/* Apply theme to badges */
+[data-color-theme="blue"] .badge[class*="indigo"] {
+  background-color: #eff6ff !important;
+  color: #1e40af !important;
+  border-color: #3b82f6 !important;
+}
+
+[data-color-theme="green"] .badge[class*="indigo"] {
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-color: #10b981 !important;
+}
+
+/* Additional comprehensive menu styling */
+
+/* Blue Theme - All menu hover states */
+[data-color-theme="blue"] aside button:hover:not([class*="bg-gradient-to-r"]):not([class*="bg-indigo-100"]) {
+  background-color: #eff6ff !important;
+}
+
+[data-color-theme="blue"] aside button[class*="text-slate-700"]:hover {
+  color: #1e40af !important;
+}
+
+[data-color-theme="blue"] aside button[class*="text-slate-600"]:hover {
+  color: #1e40af !important;
+}
+
+/* Blue Theme - Icon colors in menu */
+[data-color-theme="blue"] aside button:not([class*="bg-gradient-to-r"]) .text-slate-500:hover,
+[data-color-theme="blue"] aside button:not([class*="bg-gradient-to-r"]) .text-slate-400:hover {
+  color: #2563eb !important;
+}
+
+/* Blue Theme - Submenu text colors */
+[data-color-theme="blue"] aside button[class*="text-slate-600"]:not([class*="bg-gradient-to-r"]) {
+  color: #475569 !important;
+}
+
+[data-color-theme="blue"] aside button[class*="text-slate-600"]:not([class*="bg-gradient-to-r"]):hover {
+  color: #1e40af !important;
+}
+
+/* Green Theme - All menu hover states */
+[data-color-theme="green"] aside button:hover:not([class*="bg-gradient-to-r"]):not([class*="bg-indigo-100"]) {
+  background-color: #ecfdf5 !important;
+}
+
+[data-color-theme="green"] aside button[class*="text-slate-700"]:hover {
+  color: #065f46 !important;
+}
+
+[data-color-theme="green"] aside button[class*="text-slate-600"]:hover {
+  color: #065f46 !important;
+}
+
+/* Green Theme - Icon colors in menu */
+[data-color-theme="green"] aside button:not([class*="bg-gradient-to-r"]) .text-slate-500:hover,
+[data-color-theme="green"] aside button:not([class*="bg-gradient-to-r"]) .text-slate-400:hover {
+  color: #059669 !important;
+}
+
+/* Green Theme - Submenu text colors */
+[data-color-theme="green"] aside button[class*="text-slate-600"]:not([class*="bg-gradient-to-r"]) {
+  color: #475569 !important;
+}
+
+[data-color-theme="green"] aside button[class*="text-slate-600"]:not([class*="bg-gradient-to-r"]):hover {
+  color: #065f46 !important;
+}
+
+/* Default Theme - Ensure it stays indigo/purple */
+[data-color-theme="default"] aside {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(238, 242, 255, 0.95) 100%) !important;
+  border-color: rgba(79, 70, 229, 0.2) !important;
+}
+
+[data-color-theme="default"] aside .border-indigo-100\/60 {
+  border-color: rgba(79, 70, 229, 0.2) !important;
+}
+
+/* Purple Theme (default) - Explicit styling */
+[data-color-theme="purple"] aside {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(238, 242, 255, 0.95) 100%) !important;
+  border-color: rgba(79, 70, 229, 0.2) !important;
+}
+
+[data-color-theme="purple"] aside .border-indigo-100\/60 {
+  border-color: rgba(79, 70, 229, 0.2) !important;
+}
+

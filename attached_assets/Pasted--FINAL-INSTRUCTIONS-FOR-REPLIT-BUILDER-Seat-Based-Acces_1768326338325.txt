@@ -1,0 +1,112 @@
+
+
+✅ FINAL INSTRUCTIONS FOR REPLIT BUILDER
+Seat-Based Access (ALL SEATS ARE PAID)
+Using Clerk Organizations + Stripe
+
+1️⃣ CORE MODEL
+Authentication
+* Use Clerk for authentication.
+* Use Clerk Organizations as workspaces.
+* Each user belongs to exactly one Organization.
+Organization = Paying Account
+* Each Organization maps to one Stripe subscription.
+* Seat limits are enforced at the Organization level.
+
+2️⃣ ORGANIZATION ROLES (POWER, NOT PRICING)
+Define these Clerk Organization roles:
+Role	Purpose
+org:owner	Billing, upgrade, delete organization
+org:admin	Invite/remove users, manage settings
+org:member	Normal product usage
+org:viewer	Read-only access
+🚨 ALL roles count as paid seats. There are no free users.
+
+3️⃣ ORGANIZATION METADATA (SOURCE OF TRUTH)
+Store this on Organization publicMetadata:
+{
+  "plan": "lifetime | basic | pro",
+  "baseSeatLimit": number,
+  "extraSeats": number,
+  "totalSeatLimit": number,
+  "stripeCustomerId": string,
+  "stripeSubscriptionId": string
+}
+Base seat limits:
+* Lifetime → 1 seat
+* Basic ($69.99 / month) → 2 seats
+* Pro ($129.99 / month) → 5 seats
+Extra seats cost $29.99 / seat / month.
+
+4️⃣ STRIPE INTEGRATION
+Stripe Products
+Create these products:
+* Basic Plan (2 seats)
+* Pro Plan (5 seats)
+* Extra Seat Add-On ($29.99 / seat / month)
+Stripe Webhooks (Required)
+Listen to:
+* checkout.session.completed
+* customer.subscription.updated
+* customer.subscription.deleted
+On webhook events:
+* Update Organization metadata:
+    * plan
+    * baseSeatLimit
+    * extraSeats
+    * totalSeatLimit
+* Save stripeCustomerId and stripeSubscriptionId
+
+5️⃣ SEAT COUNTING LOGIC (SIMPLIFIED)
+Count ALL members as paid seats:
+paidSeatsUsed = organization.memberships.length;
+🚫 No role filtering.
+
+6️⃣ SEAT ENFORCEMENT (CRITICAL)
+Before:
+* Inviting a user
+* Accepting an invite
+* Changing a user’s role
+* Re-enabling a removed user
+Run this check:
+if (paidSeatsUsed >= organization.totalSeatLimit) {
+  blockAction();
+  showAddSeatOrUpgradeModal();
+}
+This rule must be enforced both in UI and backend.
+
+7️⃣ USER INVITE FLOW
+* Only org:owner and org:admin can invite users.
+* Every invite consumes 1 paid seat, regardless of role.
+* If seat limit is reached:
+    * Block invite
+    * Prompt to buy extra seat
+
+8️⃣ EXTRA SEAT PURCHASE FLOW ($29.99)
+When user clicks “Add Seat”:
+1. Create Stripe Checkout Session for Extra Seat Add-On
+2. On successful payment:
+    * Increment extraSeats
+    * Recalculate totalSeatLimit
+3. Allow inviting one additional user
+
+9️⃣ ROLE-BASED ACCESS CONTROL (IN-APP)
+Roles only control permissions, not pricing.
+Examples:
+* org:viewer → read-only UI
+* org:member → normal usage
+* org:admin → user management
+* org:owner → billing + org deletion
+All app data must be scoped by:
+organizationId
+
+🔟 EDGE CASES & SAFETY
+* Prevent plan downgrade if current seat usage > new plan limit
+* Prevent extra seat removal if users exceed base limit
+* Lifetime plan:
+    * No recurring subscription
+    * Extra seats optional (only if enabled intentionally)
+
+FINAL SYSTEM RULE (DO NOT VIOLATE)
+Every Organization member consumes exactly one paid seat. Roles define access, not billing. Seat limits are enforced strictly by application logic.
+

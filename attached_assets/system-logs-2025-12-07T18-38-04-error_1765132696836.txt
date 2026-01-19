@@ -1,0 +1,1855 @@
+System Logs Export
+Generated: 2025-12-07T18:38:04.056Z
+Filter: ERROR
+Total Logs: 109
+
+================================================================================
+
+[1] ERROR - Console
+Timestamp: 2025-12-07T18:35:50.268Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[2] ERROR - Console
+Timestamp: 2025-12-07T18:35:50.669Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[3] ERROR - Console
+Timestamp: 2025-12-07T18:35:50.985Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[4] ERROR - Console
+Timestamp: 2025-12-07T18:35:51.293Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[5] ERROR - Console
+Timestamp: 2025-12-07T18:35:51.602Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[6] ERROR - Console
+Timestamp: 2025-12-07T18:35:51.912Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[7] ERROR - Console
+Timestamp: 2025-12-07T18:35:52.231Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[8] ERROR - Console
+Timestamp: 2025-12-07T18:35:52.539Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[9] ERROR - Console
+Timestamp: 2025-12-07T18:35:52.865Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[10] ERROR - Console
+Timestamp: 2025-12-07T18:35:53.185Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[11] ERROR - Console
+Timestamp: 2025-12-07T18:35:53.494Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[12] ERROR - Console
+Timestamp: 2025-12-07T18:35:53.802Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[13] ERROR - Console
+Timestamp: 2025-12-07T18:35:54.111Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[14] ERROR - Console
+Timestamp: 2025-12-07T18:35:54.419Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[15] ERROR - Console
+Timestamp: 2025-12-07T18:35:54.732Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[16] ERROR - Console
+Timestamp: 2025-12-07T18:35:55.044Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[17] ERROR - Console
+Timestamp: 2025-12-07T18:35:55.355Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[18] ERROR - Console
+Timestamp: 2025-12-07T18:35:55.664Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[19] ERROR - Console
+Timestamp: 2025-12-07T18:35:55.973Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[20] ERROR - Console
+Timestamp: 2025-12-07T18:35:56.280Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[21] ERROR - Console
+Timestamp: 2025-12-07T18:35:56.589Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[22] ERROR - Console
+Timestamp: 2025-12-07T18:35:56.896Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[23] ERROR - Console
+Timestamp: 2025-12-07T18:35:57.204Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[24] ERROR - Console
+Timestamp: 2025-12-07T18:35:57.553Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[25] ERROR - Console
+Timestamp: 2025-12-07T18:35:57.894Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[26] ERROR - Console
+Timestamp: 2025-12-07T18:35:58.204Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[27] ERROR - Console
+Timestamp: 2025-12-07T18:35:58.602Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[28] ERROR - Console
+Timestamp: 2025-12-07T18:35:58.921Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[29] ERROR - Console
+Timestamp: 2025-12-07T18:35:59.231Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[30] ERROR - Console
+Timestamp: 2025-12-07T18:35:59.543Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[31] ERROR - Console
+Timestamp: 2025-12-07T18:35:59.849Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[32] ERROR - Console
+Timestamp: 2025-12-07T18:36:00.164Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[33] ERROR - Console
+Timestamp: 2025-12-07T18:36:00.473Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[34] ERROR - Console
+Timestamp: 2025-12-07T18:36:00.786Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[35] ERROR - Console
+Timestamp: 2025-12-07T18:36:01.095Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[36] ERROR - Console
+Timestamp: 2025-12-07T18:36:01.406Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[37] ERROR - Console
+Timestamp: 2025-12-07T18:36:01.714Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[38] ERROR - Console
+Timestamp: 2025-12-07T18:36:02.021Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[39] ERROR - Console
+Timestamp: 2025-12-07T18:36:02.337Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[40] ERROR - Console
+Timestamp: 2025-12-07T18:36:02.653Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[41] ERROR - Console
+Timestamp: 2025-12-07T18:36:02.962Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[42] ERROR - Console
+Timestamp: 2025-12-07T18:36:03.270Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[43] ERROR - Console
+Timestamp: 2025-12-07T18:36:03.579Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[44] ERROR - Console
+Timestamp: 2025-12-07T18:36:03.895Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[45] ERROR - Console
+Timestamp: 2025-12-07T18:36:04.225Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[46] ERROR - Console
+Timestamp: 2025-12-07T18:36:04.587Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[47] ERROR - Console
+Timestamp: 2025-12-07T18:36:04.914Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[48] ERROR - Console
+Timestamp: 2025-12-07T18:36:05.314Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[49] ERROR - Console
+Timestamp: 2025-12-07T18:36:05.785Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[50] ERROR - Console
+Timestamp: 2025-12-07T18:36:06.105Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[51] ERROR - Console
+Timestamp: 2025-12-07T18:36:06.419Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[52] ERROR - Console
+Timestamp: 2025-12-07T18:36:06.729Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[53] ERROR - Console
+Timestamp: 2025-12-07T18:36:07.046Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[54] ERROR - Console
+Timestamp: 2025-12-07T18:36:07.354Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[55] ERROR - Console
+Timestamp: 2025-12-07T18:36:07.663Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[56] ERROR - Console
+Timestamp: 2025-12-07T18:36:07.970Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[57] ERROR - Console
+Timestamp: 2025-12-07T18:36:08.277Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[58] ERROR - Console
+Timestamp: 2025-12-07T18:36:08.585Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[59] ERROR - Console
+Timestamp: 2025-12-07T18:36:08.920Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[60] ERROR - Console
+Timestamp: 2025-12-07T18:36:09.254Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[61] ERROR - Console
+Timestamp: 2025-12-07T18:36:09.607Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[62] ERROR - Console
+Timestamp: 2025-12-07T18:36:09.931Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[63] ERROR - Console
+Timestamp: 2025-12-07T18:36:10.240Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[64] ERROR - Console
+Timestamp: 2025-12-07T18:36:10.551Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[65] ERROR - Console
+Timestamp: 2025-12-07T18:36:10.868Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[66] ERROR - Console
+Timestamp: 2025-12-07T18:36:11.181Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[67] ERROR - Console
+Timestamp: 2025-12-07T18:36:11.492Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[68] ERROR - Console
+Timestamp: 2025-12-07T18:36:11.802Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[69] ERROR - Console
+Timestamp: 2025-12-07T18:36:12.112Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[70] ERROR - Console
+Timestamp: 2025-12-07T18:36:12.421Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[71] ERROR - Console
+Timestamp: 2025-12-07T18:36:12.731Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[72] ERROR - Console
+Timestamp: 2025-12-07T18:36:13.038Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[73] ERROR - Console
+Timestamp: 2025-12-07T18:36:13.397Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[74] ERROR - Console
+Timestamp: 2025-12-07T18:36:13.712Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[75] ERROR - Console
+Timestamp: 2025-12-07T18:36:14.020Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[76] ERROR - Console
+Timestamp: 2025-12-07T18:36:14.330Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[77] ERROR - Console
+Timestamp: 2025-12-07T18:36:14.636Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[78] ERROR - Console
+Timestamp: 2025-12-07T18:36:14.946Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[79] ERROR - Console
+Timestamp: 2025-12-07T18:36:15.255Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[80] ERROR - Console
+Timestamp: 2025-12-07T18:36:15.562Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[81] ERROR - Console
+Timestamp: 2025-12-07T18:36:15.870Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[82] ERROR - Console
+Timestamp: 2025-12-07T18:36:16.178Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[83] ERROR - Console
+Timestamp: 2025-12-07T18:36:16.490Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[84] ERROR - Console
+Timestamp: 2025-12-07T18:36:16.798Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[85] ERROR - Console
+Timestamp: 2025-12-07T18:36:17.107Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[86] ERROR - Console
+Timestamp: 2025-12-07T18:36:17.619Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[87] ERROR - Console
+Timestamp: 2025-12-07T18:36:17.934Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[88] ERROR - Console
+Timestamp: 2025-12-07T18:36:18.245Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[89] ERROR - Console
+Timestamp: 2025-12-07T18:36:18.553Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[90] ERROR - Console
+Timestamp: 2025-12-07T18:36:18.865Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[91] ERROR - Console
+Timestamp: 2025-12-07T18:36:19.174Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[92] ERROR - Console
+Timestamp: 2025-12-07T18:36:19.485Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[93] ERROR - Console
+Timestamp: 2025-12-07T18:36:19.796Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[94] ERROR - Console
+Timestamp: 2025-12-07T18:36:20.104Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[95] ERROR - Console
+Timestamp: 2025-12-07T18:36:20.415Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[96] ERROR - Console
+Timestamp: 2025-12-07T18:36:20.723Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[97] ERROR - Console
+Timestamp: 2025-12-07T18:36:21.033Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[98] ERROR - Console
+Timestamp: 2025-12-07T18:36:21.342Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[99] ERROR - Console
+Timestamp: 2025-12-07T18:36:21.651Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[100] ERROR - Console
+Timestamp: 2025-12-07T18:36:21.959Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[101] ERROR - Console
+Timestamp: 2025-12-07T18:36:22.269Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[102] ERROR - Console
+Timestamp: 2025-12-07T18:36:22.584Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[103] ERROR - Console
+Timestamp: 2025-12-07T18:36:22.902Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[104] ERROR - Console
+Timestamp: 2025-12-07T18:36:23.211Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[105] ERROR - Console
+Timestamp: 2025-12-07T18:36:23.518Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[106] ERROR - Console
+Timestamp: 2025-12-07T18:36:23.827Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[107] ERROR - Console
+Timestamp: 2025-12-07T18:36:24.136Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[108] ERROR - Console
+Timestamp: 2025-12-07T18:36:24.445Z
+Message: No ads were generated! allGeneratedAds: [] adGroups: [] cleanKeywords sample: undefined
+Details:
+{
+  "args": [
+    "No ads were generated! allGeneratedAds:",
+    [],
+    "adGroups:",
+    [],
+    "cleanKeywords sample:",
+    null
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[109] ERROR - Console
+Timestamp: 2025-12-07T18:37:06.850Z
+Message: CSV export error: validation is not defined
+Details:
+ReferenceError: validation is not defined
+    at handleExportCSV (https://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev/src/components/CampaignBuilder2.tsx:11959:41)
+Stack Trace:
+ReferenceError: validation is not defined
+    at handleExportCSV (https://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev/src/components/CampaignBuilder2.tsx:11959:41)
+
+--------------------------------------------------------------------------------
+

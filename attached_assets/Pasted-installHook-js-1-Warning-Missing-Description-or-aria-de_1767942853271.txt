@@ -1,0 +1,81 @@
+installHook.js:1 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+overrideMethod @ installHook.js:1
+console.warn @ index-B8S8Feed.js:16
+(anonymous) @ VM617 host-console-events.js:1
+(anonymous) @ react-ui-D8eJnqma.js:653
+fl @ react-vendor-DIVmIdX0.js:40
+Ln @ react-vendor-DIVmIdX0.js:40
+pc @ react-vendor-DIVmIdX0.js:40
+rn @ react-vendor-DIVmIdX0.js:40
+ia @ react-vendor-DIVmIdX0.js:40
+It @ react-vendor-DIVmIdX0.js:38
+(anonymous) @ react-vendor-DIVmIdX0.js:40Understand this warning
+4index-B8S8Feed.js:16 Loaded 0 items from database
+VM625 host-network-events.js:1  POST https://adiology.io/api/campaign-history 500 (Internal Server Error)
+window.fetch @ VM625 host-network-events.js:1
+await in window.fetch
+window.fetch @ host-network-events.js:1
+await in window.fetch
+(anonymous) @ index-B8S8Feed.js:16
+(anonymous) @ index-B8S8Feed.js:2
+x @ index-B8S8Feed.js:2
+window.fetch @ index-B8S8Feed.js:16
+(anonymous) @ index-B8S8Feed.js:16
+i @ index-B8S8Feed.js:2
+Promise.then
+l @ index-B8S8Feed.js:2
+(anonymous) @ index-B8S8Feed.js:2
+x @ index-B8S8Feed.js:2
+save @ index-B8S8Feed.js:16
+(anonymous) @ KeywordMixer-B1epO18_.js:12
+(anonymous) @ KeywordMixer-B1epO18_.js:1
+N @ KeywordMixer-B1epO18_.js:1
+O @ KeywordMixer-B1epO18_.js:12
+Ra @ react-vendor-DIVmIdX0.js:37
+Da @ react-vendor-DIVmIdX0.js:37
+Ma @ react-vendor-DIVmIdX0.js:37
+Io @ react-vendor-DIVmIdX0.js:37
+Fo @ react-vendor-DIVmIdX0.js:37
+(anonymous) @ react-vendor-DIVmIdX0.js:37
+fi @ react-vendor-DIVmIdX0.js:40
+Bi @ react-vendor-DIVmIdX0.js:37
+fu @ react-vendor-DIVmIdX0.js:37
+Kl @ react-vendor-DIVmIdX0.js:37
+Za @ react-vendor-DIVmIdX0.js:37Understand this error
+installHook.js:1 Failed to save to database: {error: 'Failed to create campaign - all insert attempts failed'}
+overrideMethod @ installHook.js:1
+console.warn @ index-B8S8Feed.js:16
+(anonymous) @ VM617 host-console-events.js:1
+(anonymous) @ index-B8S8Feed.js:16
+i @ index-B8S8Feed.js:2
+Promise.then
+l @ index-B8S8Feed.js:2
+i @ index-B8S8Feed.js:2
+Promise.then
+l @ index-B8S8Feed.js:2
+i @ index-B8S8Feed.js:2
+Promise.then
+l @ index-B8S8Feed.js:2
+(anonymous) @ index-B8S8Feed.js:2
+x @ index-B8S8Feed.js:2
+save @ index-B8S8Feed.js:16
+(anonymous) @ KeywordMixer-B1epO18_.js:12
+(anonymous) @ KeywordMixer-B1epO18_.js:1
+N @ KeywordMixer-B1epO18_.js:1
+O @ KeywordMixer-B1epO18_.js:12
+Ra @ react-vendor-DIVmIdX0.js:37
+Da @ react-vendor-DIVmIdX0.js:37
+Ma @ react-vendor-DIVmIdX0.js:37
+Io @ react-vendor-DIVmIdX0.js:37
+Fo @ react-vendor-DIVmIdX0.js:37
+(anonymous) @ react-vendor-DIVmIdX0.js:37
+fi @ react-vendor-DIVmIdX0.js:40
+Bi @ react-vendor-DIVmIdX0.js:37
+fu @ react-vendor-DIVmIdX0.js:37
+Kl @ react-vendor-DIVmIdX0.js:37
+Za @ react-vendor-DIVmIdX0.js:37Understand this warning
+index-B8S8Feed.js:16 Falling back to localStorage storage
+index-B8S8Feed.js:16 ✅ Saved to local storage as completed: 98e13d6d-8d95-4183-b05c-df5bcfcc4f44
+index-B8S8Feed.js:16 Saved to localStorage: 98e13d6d-8d95-4183-b05c-df5bcfcc4f44
+index-B8S8Feed.js:16 Loaded 0 items from database
+index-B8S8Feed.js:16 Found 1 legacy items in localStorage

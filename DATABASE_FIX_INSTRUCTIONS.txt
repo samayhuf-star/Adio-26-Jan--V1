@@ -1,0 +1,121 @@
+================================================================================
+                    ADIOLOGY DATABASE FIX - QUICK GUIDE
+================================================================================
+
+ERRORS THIS FIXES:
+  - column "data" does not exist
+  - column "type" does not exist
+  - column "name" does not exist
+  - column "status" does not exist
+  - column "user_id" does not exist
+  - Failed to load from database
+
+================================================================================
+                         3-MINUTE FIX STEPS
+================================================================================
+
+1. OPEN YOUR DATABASE CONSOLE:
+
+   SUPABASE:
+   - Go to https://app.supabase.com
+   - Select your project
+   - Left sidebar -> "SQL Editor"
+   - Click "New Query"
+
+   PGADMIN:
+   - Open pgAdmin
+   - Right-click your database -> "Query Tool"
+
+   COMMAND LINE:
+   psql -U postgres -d your_database_name
+
+2. COPY THE SQL FILE:
+   - Open DATABASE_FIX_COMPLETE.sql
+   - Select all (Ctrl+A / Cmd+A)
+   - Copy (Ctrl+C / Cmd+C)
+
+3. PASTE AND RUN:
+   - Paste into SQL editor
+   - Click "RUN" or press F5
+   - Wait for "Success" or "DATABASE FIX COMPLETE!" message
+
+4. REFRESH YOUR BROWSER:
+   - Press Ctrl+F5 (Windows) or Cmd+Shift+R (Mac)
+   - Or clear cache and hard refresh
+
+5. DONE! 
+   All database errors should now be resolved.
+
+================================================================================
+                         WHAT THIS FIX DOES
+================================================================================
+
+ADDS MISSING COLUMNS TO campaign_history:
+  - type (VARCHAR) - Campaign type
+  - name (VARCHAR) - Campaign name
+  - data (JSONB) - Campaign data
+  - status (VARCHAR) - Campaign status
+  - user_id (UUID) - User reference
+  - workspace_id (UUID) - Workspace reference
+  - created_at (TIMESTAMP)
+  - updated_at (TIMESTAMP)
+
+ADDS MISSING COLUMNS TO users:
+  - stripe_customer_id
+  - stripe_subscription_id
+  - ai_usage
+  - is_blocked
+  - subscription_plan
+  - subscription_status
+
+CREATES MISSING TABLES:
+  - subscriptions
+  - payments
+  - invoices
+  - emails
+  - audit_logs
+  - security_rules
+  - feedback
+  - templates
+  - published_websites
+  - user_notifications
+  - ad_search_requests
+
+CREATES PERFORMANCE INDEXES:
+  - On all user_id columns
+  - On all status columns
+  - On all created_at columns
+
+================================================================================
+                         TROUBLESHOOTING
+================================================================================
+
+ERROR: "Already exists"
+  -> Safe to ignore! Column/table already exists.
+
+ERROR: "Syntax error"
+  -> Make sure you copied the ENTIRE SQL file.
+
+ERROR: "Connection refused"
+  -> Check your database is running.
+  -> Verify DATABASE_URL is correct.
+
+ERROR: "Permission denied"
+  -> Use an admin/owner database account.
+
+STILL SEEING ERRORS AFTER FIX?
+  1. Clear browser cache completely
+  2. Try incognito/private browsing mode
+  3. Check server logs for new error messages
+  4. Republish your app to production
+
+================================================================================
+                         NEED HELP?
+================================================================================
+
+If you're still having issues:
+1. Check the Admin API Server logs for specific errors
+2. Make sure you're connected to the correct database
+3. Verify the database URL matches your Supabase project
+
+================================================================================

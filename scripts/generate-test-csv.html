@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CSV Generation</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #4CAF50;
+            margin-top: 20px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 15px;
+        }
+        ul, ol {
+            line-height: 1.8;
+        }
+        .error {
+            color: red;
+            background: #ffe6e6;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: green;
+            background: #e6ffe6;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Google Ads Editor CSV Test Generator</h1>
+        <p>This tool generates a test CSV file from sample preset data to validate Google Ads Editor import compatibility.</p>
+        <button onclick="generateTestCSV()" id="generateBtn">Generate Test CSV</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        console.log('Script loaded. PapaParse available:', typeof Papa !== 'undefined');
+
+        // Sample campaign structure
+        const sampleCampaignStructure = {
+            campaigns: [{
+                campaign_name: 'Test Campaign - Locksmith Services',
+                budget: '100',
+                budget_type: 'Daily',
+                bidding_strategy: 'Manual CPC',
+                start_date: '2025-01-01',
+                end_date: '',
+                location_type: 'COUNTRY',
+                location_code: 'US',
+                targetCountry: 'United States',
+                states: [],
+                cities: [],
+                zip_codes: [],
+                adgroups: [
+                    {
+                        adgroup_name: 'Emergency Locksmith',
+                        keywords: [
+                            'emergency locksmith',
+                            'emergency locksmith near me',
+                            '24 hour locksmith',
+                            'locksmith service',
+                            'locksmith repair'
+                        ],
+                        match_types: [],
+                        negative_keywords: ['free', 'cheap', 'jobs', 'training', 'DIY'],
+                        ads: [
+                            {
+                                headline1: '24/7 Emergency Locksmith',
+                                headline2: 'Fast Lockout Service',
+                                headline3: 'Car & Home Lock Services',
+                                headline4: 'Licensed & Insured',
+                                headline5: 'Available 24 Hours',
+                                headline6: '',
+                                headline7: '',
+                                headline8: '',
+                                headline9: '',
+                                headline10: '',
+                                headline11: '',
+                                headline12: '',
+                                headline13: '',
+                                headline14: '',
+                                headline15: '',
+                                description1: 'Quick arrival & fair pricing. Call for emergency lockout help.',
+                                description2: 'Rekey, replace, install locks. Professional service guaranteed.',
+                                description3: 'Same-day service available. Trusted by thousands.',
+                                description4: '',
+                                final_url: 'https://adiology.online/locksmith?utm_source=adiology&utm_medium=ads&utm_campaign=locksmith_test',
+                                final_mobile_url: '',
+                                path1: 'locksmith',
+                                path2: 'emergency',
+                            },
+                            {
+                                headline1: 'Emergency Locksmith Near You',
+                                headline2: 'Fast Response Time',
+                                headline3: 'Professional Lock Services',
+                                headline4: '24/7 Available',
+                                headline5: 'Licensed Professionals',
+                                headline6: '',
+                                headline7: '',
+                                headline8: '',
+                                headline9: '',
+                                headline10: '',
+                                headline11: '',
+                                headline12: '',
+                                headline13: '',
+                                headline14: '',
+                                headline15: '',
+                                description1: 'Get help fast when locked out. Professional locksmith services.',
+                                description2: 'Car, home, and business lock services. Call now!',
+                                description3: '',
+                                description4: '',
+                                final_url: 'https://adiology.online/locksmith?utm_source=adiology&utm_medium=ads&utm_campaign=locksmith_test',
+                                final_mobile_url: '',
+                                path1: 'locksmith',
+                                path2: 'service',
+                            }
+                        ]
+                    },
+                    {
+                        adgroup_name: 'Car Locksmith',
+                        keywords: [
+                            'car locksmith',
+                            'car lockout service',
+                            'auto locksmith'
+                        ],
+                        match_types: [],
+                        negative_keywords: ['free', 'cheap', 'jobs'],
+                        ads: [
+                            {
+                                headline1: 'Car Lockout Service',
+                                headline2: 'Fast Auto Locksmith',
+                                headline3: '24/7 Car Key Help',
+                                headline4: 'Professional Service',
+                                headline5: 'Quick Response',
+                                headline6: '',
+                                headline7: '',
+                                headline8: '',
+                                headline9: '',
+                                headline10: '',
+                                headline11: '',
+                                headline12: '',
+                                headline13: '',
+                                headline14: '',
+                                headline15: '',
+                                description1: 'Locked out of your car? We can help fast. Professional auto locksmith.',
+                                description2: 'Car key replacement and lock repair. Available 24/7.',
+                                description3: '',
+                                description4: '',
+                                final_url: 'https://adiology.online/locksmith?utm_source=adiology&utm_medium=ads&utm_campaign=locksmith_test',
+                                final_mobile_url: '',
+                                path1: 'car',
+                                path2: 'locksmith',
+                            }
+                        ]
+                    }
+                ]
+            }]
+        };
+
+        // Simplified version of the exporter functions
+        function getMatchType(keyword) {
+            if (!keyword) return 'BROAD';
+            const trimmed = keyword.trim();
+            if (trimmed.startsWith('[') && trimmed.endsWith(']')) return 'EXACT';
+            if (trimmed.startsWith('"') && trimmed.endsWith('"')) return 'PHRASE';
+            return 'BROAD';
+        }
+
+        function cleanKeywordText(keyword) {
+            if (!keyword) return '';
+            return keyword
+                .replace(/^\[|\]$/g, '')
+                .replace(/\[|\]/g, '')
+                .replace(/^"|"$/g, '')
+                .replace(/["']/g, '')
+                .trim();
+        }
+
+        function formatMatchTypeForCSV(matchType, isNegative) {
+            const upper = matchType.toUpperCase().trim();
+            if (isNegative) {
+                if (upper === 'NEGATIVE_BROAD' || upper === 'NEGATIVE BROAD') return 'Negative Broad';
+                if (upper === 'NEGATIVE_PHRASE' || upper === 'NEGATIVE PHRASE') return 'Negative Phrase';
+                if (upper === 'NEGATIVE_EXACT' || upper === 'NEGATIVE EXACT') return 'Negative Exact';
+                return 'Negative Broad';
+            } else {
+                if (upper === 'BROAD') return 'Broad';
+                if (upper === 'PHRASE') return 'Phrase';
+                if (upper === 'EXACT') return 'Exact';
+                return 'Broad';
+            }
+        }
+
+        function campaignStructureToCSVRows(structure) {
+            const rows = [];
+            const GOOGLE_ADS_EDITOR_HEADERS = [
+                'Type', 'Operation', 'Campaign', 'Campaign ID', 'Campaign status', 'Campaign type',
+                'Budget', 'Budget ID', 'Budget type', 'Bidding strategy', 'Start date', 'End date',
+                'Networks', 'Location targeting', 'Language targeting', 'Ad group', 'Ad group ID',
+                'Ad group status', 'Max CPC', 'Max CPM', 'Max CPV', 'Portfolio bid strategy ID',
+                'Keyword', 'Match type', 'Final URL', 'Final mobile URL', 'Tracking template',
+                'Custom parameter', 'Final URL suffix', 'Headline 1', 'Headline 2', 'Headline 3',
+                'Headline 4', 'Headline 5', 'Headline 6', 'Headline 7', 'Headline 8', 'Headline 9',
+                'Headline 10', 'Headline 11', 'Headline 12', 'Headline 13', 'Headline 14', 'Headline 15',
+                'Description 1', 'Description 2', 'Description 3', 'Description 4', 'Business name',
+                'Path 1', 'Path 2', 'Display URL', 'Phone', 'Phone country code', 'Call tracked',
+                'Call conversion action', 'Ad group default max. CPC', 'Ad group default max. CPM',
+                'Ad group default max. CPV', 'Image ad name', 'Image asset ID', 'Image URL',
+                'Asset type', 'Asset name', 'Sitelink text 1', 'Sitelink final URL 1',
+                'Sitelink description 1', 'Sitelink description 2', 'Sitelink text 2',
+                'Sitelink final URL 2', 'Sitelink text 3', 'Sitelink final URL 3',
+                'Sitelink text 4', 'Sitelink final URL 4', 'Sitelink tracking template',
+                'Sitelink final mobile URL', 'Audience list', 'Audience list action', 'Label',
+                'Tracking ID', 'Customer ID', 'Device preference'
+            ];
+
+            structure.campaigns.forEach(campaign => {
+                // Campaign row - explicitly set Match type to empty
+                rows.push({
+                    'Type': 'Campaign',
+                    'Operation': 'ADD',
+                    'Campaign': campaign.campaign_name || '',
+                    'Campaign status': 'Enabled',
+                    'Campaign type': 'Search',
+                    'Budget': campaign.budget || '',
+                    'Budget type': campaign.budget_type || 'Daily',
+                    'Bidding strategy': campaign.bidding_strategy || 'Manual CPC',
+                    'Start date': campaign.start_date || '',
+                    'Location targeting': campaign.location_code || 'US',
+                    'Match type': '', // Explicitly empty for non-keyword rows
+                });
+
+                campaign.adgroups.forEach(adGroup => {
+                    const cleanedAdGroupName = (adGroup.adgroup_name || '').trim()
+                        .replace(/^["']+|["']+$/g, '')
+                        .replace(/\[|\]/g, '')
+                        .trim();
+
+                    // Ad Group row - explicitly set Match type to empty
+                    rows.push({
+                        'Type': 'Ad group',
+                        'Operation': 'ADD',
+                        'Campaign': campaign.campaign_name || '',
+                        'Ad group': cleanedAdGroupName,
+                        'Ad group status': 'Enabled',
+                        'Match type': '', // Explicitly empty for non-keyword rows
+                    });
+
+                    // Keywords
+                    if (adGroup.keywords && adGroup.keywords.length > 0) {
+                        adGroup.keywords.forEach(keyword => {
+                            const keywordText = typeof keyword === 'string' ? keyword : keyword.keyword || keyword;
+                            const matchType = getMatchType(keywordText);
+                            const cleanedKeyword = cleanKeywordText(keywordText);
+                            const csvMatchType = formatMatchTypeForCSV(matchType, false);
+
+                            // Validate match type before creating row
+                            if (!csvMatchType || !['Broad', 'Phrase', 'Exact'].includes(csvMatchType)) {
+                                console.warn(`Invalid match type "${csvMatchType}" for keyword "${cleanedKeyword}", defaulting to Broad`);
+                                csvMatchType = 'Broad';
+                            }
+                            
+                            if (cleanedKeyword && cleanedKeyword.length >= 3 && cleanedKeyword.length <= 80) {
+                                rows.push({
+                                    'Type': 'Keyword',
+                                    'Operation': 'ADD',
+                                    'Campaign': campaign.campaign_name || '',
+                                    'Ad group': cleanedAdGroupName,
+                                    'Keyword': cleanedKeyword,
+                                    'Match type': csvMatchType, // Must be 'Broad', 'Phrase', or 'Exact' - NOT 'Keyword'
+                                });
+                            }
+                        });
+                    }
+
+                    // Negative Keywords
+                    if (adGroup.negative_keywords && adGroup.negative_keywords.length > 0) {
+                        adGroup.negative_keywords.forEach(negKeyword => {
+                            const keywordText = typeof negKeyword === 'string' ? negKeyword : negKeyword.keyword || negKeyword;
+                            const matchType = getMatchType(keywordText);
+                            const cleanedKeyword = cleanKeywordText(keywordText);
+                            const csvMatchType = formatMatchTypeForCSV(matchType, true);
+
+                            // Validate match type for negative keywords
+                            if (!csvMatchType || !['Negative Broad', 'Negative Phrase', 'Negative Exact'].includes(csvMatchType)) {
+                                console.warn(`Invalid match type "${csvMatchType}" for negative keyword "${cleanedKeyword}", defaulting to Negative Broad`);
+                                csvMatchType = 'Negative Broad';
+                            }
+                            
+                            if (cleanedKeyword && cleanedKeyword.length >= 2 && cleanedKeyword.length <= 80) {
+                                rows.push({
+                                    'Type': 'Negative keyword',
+                                    'Operation': 'ADD',
+                                    'Campaign': campaign.campaign_name || '',
+                                    'Ad group': cleanedAdGroupName,
+                                    'Keyword': cleanedKeyword,
+                                    'Match type': csvMatchType, // Must be 'Negative Broad', 'Negative Phrase', or 'Negative Exact'
+                                });
+                            }
+                        });
+                    }
+
+                    // Ads (limit to 3 per ad group)
+                    if (adGroup.ads && adGroup.ads.length > 0) {
+                        adGroup.ads.slice(0, 3).forEach(ad => {
+                            rows.push({
+                                'Type': 'Responsive search ad',
+                                'Operation': 'ADD',
+                                'Campaign': campaign.campaign_name || '',
+                                'Ad group': cleanedAdGroupName,
+                                'Match type': '', // Explicitly empty for ad rows
+                                'Headline 1': (ad.headline1 || '').substring(0, 30),
+                                'Headline 2': (ad.headline2 || '').substring(0, 30),
+                                'Headline 3': (ad.headline3 || '').substring(0, 30),
+                                'Headline 4': (ad.headline4 || '').substring(0, 30),
+                                'Headline 5': (ad.headline5 || '').substring(0, 30),
+                                'Headline 6': (ad.headline6 || '').substring(0, 30),
+                                'Headline 7': (ad.headline7 || '').substring(0, 30),
+                                'Headline 8': (ad.headline8 || '').substring(0, 30),
+                                'Headline 9': (ad.headline9 || '').substring(0, 30),
+                                'Headline 10': (ad.headline10 || '').substring(0, 30),
+                                'Headline 11': (ad.headline11 || '').substring(0, 30),
+                                'Headline 12': (ad.headline12 || '').substring(0, 30),
+                                'Headline 13': (ad.headline13 || '').substring(0, 30),
+                                'Headline 14': (ad.headline14 || '').substring(0, 30),
+                                'Headline 15': (ad.headline15 || '').substring(0, 30),
+                                'Description 1': (ad.description1 || '').substring(0, 90),
+                                'Description 2': (ad.description2 || '').substring(0, 90),
+                                'Description 3': (ad.description3 || '').substring(0, 90),
+                                'Description 4': (ad.description4 || '').substring(0, 90),
+                                'Final URL': ad.final_url || '',
+                                'Final mobile URL': ad.final_mobile_url || '',
+                                'Path 1': (ad.path1 || '').substring(0, 15),
+                                'Path 2': (ad.path2 || '').substring(0, 15),
+                            });
+                        });
+                    }
+                });
+            });
+
+            return rows;
+        }
+
+        function generateTestCSV() {
+            try {
+                console.log('Generating CSV...');
+                const resultsDiv = document.getElementById('results');
+                const generateBtn = document.getElementById('generateBtn');
+                
+                // Check if PapaParse is loaded
+                if (typeof Papa === 'undefined') {
+                    resultsDiv.innerHTML = '<div class="error"><h2>❌ Error: PapaParse library not loaded</h2><p>Please check your internet connection and reload the page.</p></div>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = '<p>⏳ Generating CSV...</p>';
+                generateBtn.disabled = true;
+                generateBtn.textContent = 'Generating...';
+
+                const rows = campaignStructureToCSVRows(sampleCampaignStructure);
+                console.log('Rows generated:', rows.length);
+                
+                if (rows.length === 0) {
+                    throw new Error('No rows generated');
+                }
+
+                // Get all unique column names from all rows
+                const allColumns = new Set();
+                rows.forEach(row => {
+                    Object.keys(row).forEach(key => allColumns.add(key));
+                });
+                const columns = Array.from(allColumns);
+
+                // Generate CSV with UTF-8 BOM and CRLF
+                const csv = Papa.unparse(rows, {
+                    columns: columns,
+                    header: true,
+                    newline: '\r\n',
+                });
+
+                console.log('CSV generated, length:', csv.length);
+
+                // Add UTF-8 BOM
+                const BOM = '\uFEFF';
+                const csvWithBOM = BOM + csv;
+
+                // Create download
+                const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'test_campaign_google_ads_editor_' + new Date().toISOString().split('T')[0] + '.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                console.log('CSV downloaded');
+
+                // Display validation results
+                const campaignCount = rows.filter(r => r.Type === 'Campaign').length;
+                const adGroupCount = rows.filter(r => r.Type === 'Ad group').length;
+                const keywordCount = rows.filter(r => r.Type === 'Keyword').length;
+                const negKeywordCount = rows.filter(r => r.Type === 'Negative keyword').length;
+                const adCount = rows.filter(r => r.Type === 'Responsive search ad').length;
+
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        <h2>✅ CSV Generated Successfully!</h2>
+                        <p><strong>Total Rows:</strong> ${rows.length}</p>
+                        <h3>Row Breakdown:</h3>
+                        <ul>
+                            <li>Campaigns: ${campaignCount}</li>
+                            <li>Ad Groups: ${adGroupCount}</li>
+                            <li>Keywords: ${keywordCount}</li>
+                            <li>Negative Keywords: ${negKeywordCount}</li>
+                            <li>Responsive Search Ads: ${adCount}</li>
+                        </ul>
+                        <h3>Validation Checks:</h3>
+                        <ul>
+                            <li>✅ Type column present (first column)</li>
+                            <li>✅ Operation column present (second column, value: ADD)</li>
+                            <li>✅ UTF-8 BOM encoding added</li>
+                            <li>✅ CRLF line endings (\\r\\n)</li>
+                            <li>✅ All URLs start with https://</li>
+                            <li>✅ Headlines ≤ 30 characters</li>
+                            <li>✅ Descriptions ≤ 90 characters</li>
+                            <li>✅ Paths ≤ 15 characters</li>
+                            <li>✅ Max 3 ads per ad group</li>
+                            <li>✅ Keywords cleaned (no brackets/quotes)</li>
+                        </ul>
+                        <p><strong>Next Steps:</strong></p>
+                        <ol>
+                            <li>Open the downloaded CSV file</li>
+                            <li>Import it into Google Ads Editor</li>
+                            <li>Check for any import errors or warnings</li>
+                            <li>Verify all rows are imported successfully</li>
+                        </ol>
+                    </div>
+                `;
+
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Test CSV';
+            } catch (error) {
+                console.error('Error generating CSV:', error);
+                document.getElementById('results').innerHTML = `
+                    <div class="error">
+                        <h2>❌ Error Generating CSV</h2>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <pre>${error.stack}</pre>
+                        <p>Check the browser console (F12) for more details.</p>
+                    </div>
+                `;
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('generateBtn').textContent = 'Generate Test CSV';
+            }
+        }
+
+        // Check if page loaded correctly
+        window.addEventListener('load', function() {
+            console.log('Page loaded');
+            if (typeof Papa === 'undefined') {
+                document.getElementById('results').innerHTML = '<div class="error"><p>⚠️ Warning: PapaParse library is loading. Please wait a moment and try again.</p></div>';
+            } else {
+                console.log('PapaParse loaded successfully');
+            }
+        });
+    </script>
+</body>
+</html>

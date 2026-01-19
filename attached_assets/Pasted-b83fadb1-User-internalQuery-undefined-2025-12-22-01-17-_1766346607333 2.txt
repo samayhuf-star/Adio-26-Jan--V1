@@ -1,0 +1,139 @@
+b83fadb1
+User
+internalQuery: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at async dispatch (file:///home/runner/workspace/node_modules/hono/dist/compose.js:22:17)
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at async file:///home/runner/workspace/node_modules/hono/dist/hono-base.js:301:25
+2025-12-22 01:17:06.68
+b83fadb1
+User
+dataType: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+hint: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+line: '1449',
+2025-12-22 01:17:06.68
+b83fadb1
+User
+column: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+routine: 'parserOpenTable'
+2025-12-22 01:17:06.68
+b83fadb1
+User
+schema: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+constraint: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+internalPosition: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+length: 111,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+detail: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at /home/runner/workspace/node_modules/pg-pool/index.js:45:11
+2025-12-22 01:17:06.68
+b83fadb1
+User
+}
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at async dispatch (file:///home/runner/workspace/node_modules/hono/dist/compose.js:22:17)
+2025-12-22 01:17:06.68
+b83fadb1
+User
+where: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at async (/home/runner/workspace/server/index.ts:354:20)
+2025-12-22 01:17:06.68
+b83fadb1
+User
+severity: 'ERROR',
+2025-12-22 01:17:06.68
+b83fadb1
+User
+code: '42P01',
+2025-12-22 01:17:06.68
+b83fadb1
+User
+Promo status error: error: relation "promo_trials" does not exist
+2025-12-22 01:17:06.68
+b83fadb1
+User
+position: '50',
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at async Server. (file:///home/runner/workspace/node_modules/@hono/node-server/dist/index.mjs:551:14) {
+2025-12-22 01:17:06.68
+b83fadb1
+User
+table: undefined,
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at async cors2 (file:///home/runner/workspace/node_modules/hono/dist/middleware/cors/index.js:79:5)
+2025-12-22 01:17:06.68
+b83fadb1
+User
+file: 'parse_relation.c',
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at async responseViaResponseObject (file:///home/runner/workspace/node_modules/@hono/node-server/dist/index.mjs:412:13)
+2025-12-22 01:17:06.68
+b83fadb1
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-22 01:17:06.69
+b83fadb1
+User
+Stripe data synced
+2025-12-22 01:18:06.81
+b83fadb1
+User
+position: '50',
+2025-12-22 01:18:06.81
+b83fadb1
+User
+dataType: undefined,
+2025-12-22 01:18:06.81
+b83fadb1
+User
+length: 111,
+2025-12-22 01:18:06.81
+b83fadb1
+User
+at async responseViaResponseObject (file:///home/runner/workspace/node_modules/@hono/node-server/dist/index.mjs:412:13)
+2025-12-22 01:18:06.81
+b83fadb1
+User
+at /home/runner/workspace/node_modules/pg-pool/index.js:45:11
+2025-12-22 01:18:06.81
+b83fadb1
+User
+}

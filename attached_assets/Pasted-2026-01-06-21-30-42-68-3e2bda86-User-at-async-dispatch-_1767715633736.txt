@@ -1,0 +1,168 @@
+2026-01-06 21:30:42.68
+3e2bda86
+User
+at async dispatch (file:///home/runner/workspace/node_modules/hono/dist/compose.js:22:17)
+2026-01-06 21:30:42.68
+3e2bda86
+User
+routine: 'errorMissingColumn'
+2026-01-06 21:30:42.68
+3e2bda86
+User
+}
+2026-01-06 21:30:42.68
+3e2bda86
+User
+line: '3716',
+2026-01-06 21:30:42.68
+3e2bda86
+User
+internalPosition: undefined,
+2026-01-06 21:30:42.68
+3e2bda86
+User
+where: undefined,
+2026-01-06 21:30:42.68
+3e2bda86
+User
+internalQuery: undefined,
+2026-01-06 21:30:42.68
+3e2bda86
+User
+length: 104,
+2026-01-06 21:30:42.68
+3e2bda86
+User
+dataType: undefined,
+2026-01-06 21:30:42.68
+3e2bda86
+User
+hint: undefined,
+2026-01-06 21:30:42.68
+3e2bda86
+User
+at async dispatch (file:///home/runner/workspace/node_modules/hono/dist/compose.js:22:17)
+2026-01-06 21:30:42.68
+3e2bda86
+User
+column: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+severity: 'ERROR',
+2026-01-06 21:30:44.02
+3e2bda86
+User
+position: '12',
+2026-01-06 21:30:44.02
+3e2bda86
+User
+routine: 'errorMissingColumn'
+2026-01-06 21:30:44.02
+3e2bda86
+User
+file: 'parse_relation.c',
+2026-01-06 21:30:44.02
+3e2bda86
+User
+dataType: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+length: 104,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+detail: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at async (/home/runner/workspace/server/index.ts:136:3)
+2026-01-06 21:30:44.02
+3e2bda86
+User
+Error fetching dashboard data: error: column "name" does not exist
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at async dispatch (file:///home/runner/workspace/node_modules/hono/dist/compose.js:22:17) {
+2026-01-06 21:30:44.02
+3e2bda86
+User
+constraint: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at async dispatch (file:///home/runner/workspace/node_modules/hono/dist/compose.js:22:17)
+2026-01-06 21:30:44.02
+3e2bda86
+User
+where: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at /home/runner/workspace/node_modules/pg-pool/index.js:45:11
+2026-01-06 21:30:44.02
+3e2bda86
+User
+}
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at async (/home/runner/workspace/server/index.ts:164:3)
+2026-01-06 21:30:44.02
+3e2bda86
+User
+column: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+internalQuery: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+code: '42703',
+2026-01-06 21:30:44.02
+3e2bda86
+User
+internalPosition: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-01-06 21:30:44.02
+3e2bda86
+User
+[API] GET /api/dashboard/user_37tGyNtOQO8QJWeHPv8uMpyRowt - 500 - 97ms - Client: 122.161....
+2026-01-06 21:30:44.02
+3e2bda86
+User
+table: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+schema: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at async dispatch (file:///home/runner/workspace/node_modules/hono/dist/compose.js:22:17)
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at async (/home/runner/workspace/server/index.ts:154:3)
+2026-01-06 21:30:44.02
+3e2bda86
+User
+hint: undefined,
+2026-01-06 21:30:44.02
+3e2bda86
+User
+line: '3716',
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at async dispatch (file:///home/runner/workspace/node_modules/hono/dist/compose.js:22:17)
+2026-01-06 21:30:44.02
+3e2bda86
+User
+at async (/home/runner/workspace/server/index.ts:4009:35)

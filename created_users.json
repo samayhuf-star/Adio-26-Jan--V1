@@ -1,0 +1,992 @@
+[
+  {
+    "username": "jamieweb",
+    "name": "Jamie Weber",
+    "email": "jamieweb@example.com",
+    "password": "TempPass50514!",
+    "title": "Analytics Manager",
+    "company": "Scale Marketing",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "barbarakimsem",
+    "name": "Barbara Kim",
+    "email": "barbarakimsem@example.com",
+    "password": "TempPass70708!",
+    "title": "Ecommerce Manager",
+    "company": "Scale Marketing",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "davidrobppc",
+    "name": "David Roberts",
+    "email": "davidrobppc@example.com",
+    "password": "TempPass41947!",
+    "title": "Analytics Manager",
+    "company": "Conversion Kings",
+    "experience": "Started last year"
+  },
+  {
+    "username": "nancymeyGuru",
+    "name": "Nancy Meyer",
+    "email": "nancymeyGuru@example.com",
+    "password": "TempPass54568!",
+    "title": "Marketing Director",
+    "company": "Marketing Solutions",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "laneand",
+    "name": "Lane Anderson",
+    "email": "laneand@example.com",
+    "password": "TempPass57700!",
+    "title": "Analytics Manager",
+    "company": "Lead Gen Pro",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "marcusmitmarketing",
+    "name": "Marcus Mitchell",
+    "email": "marcusmitmarketing@example.com",
+    "password": "TempPass94335!",
+    "title": "Business Owner",
+    "company": "Digital Agency Co",
+    "experience": "Started last year"
+  },
+  {
+    "username": "masonmey",
+    "name": "Mason Meyer",
+    "email": "masonmey@example.com",
+    "password": "TempPass74301!",
+    "title": "Performance Marketing Manager",
+    "company": "Online Growth",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "donnaahmGrowth",
+    "name": "Donna Ahmed",
+    "email": "donnaahmGrowth@example.com",
+    "password": "TempPass76587!",
+    "title": "Digital Marketing Specialist",
+    "company": "Brand Builders",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "harperallsem",
+    "name": "Harper Allen",
+    "email": "harperallsem@example.com",
+    "password": "TempPass68345!",
+    "title": "Advertising Specialist",
+    "company": "Freelance",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "emersonyoumarketing",
+    "name": "Emerson Young",
+    "email": "emersonyoumarketing@example.com",
+    "password": "TempPass67887!",
+    "title": "Agency Owner",
+    "company": "Scale Marketing",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "kevintorppc",
+    "name": "Kevin Torres",
+    "email": "kevintorppc@example.com",
+    "password": "TempPass51665!",
+    "title": "Business Owner",
+    "company": "Growth Partners",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "riverjohads",
+    "name": "River Johnson",
+    "email": "riverjohads@example.com",
+    "password": "TempPass64576!",
+    "title": "Ecommerce Manager",
+    "company": "Commerce Hub",
+    "experience": "Marketing veteran"
+  },
+  {
+    "username": "danielleeGrowth",
+    "name": "Daniel Lee",
+    "email": "danielleeGrowth@example.com",
+    "password": "TempPass33775!",
+    "title": "Google Ads Expert",
+    "company": "Digital First",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "sarahaliGrowth",
+    "name": "Sarah Ali",
+    "email": "sarahaliGrowth@example.com",
+    "password": "TempPass79358!",
+    "title": "Business Owner",
+    "company": "Digital First",
+    "experience": "Former Google employee"
+  },
+  {
+    "username": "ruthgonppc",
+    "name": "Ruth Gonzalez",
+    "email": "ruthgonppc@example.com",
+    "password": "TempPass10057!",
+    "title": "Business Owner",
+    "company": "TechStartup Inc",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "spencerrodseo",
+    "name": "Spencer Rodriguez",
+    "email": "spencerrodseo@example.com",
+    "password": "TempPass61788!",
+    "title": "Business Owner",
+    "company": "Self-employed",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "wrenfloads",
+    "name": "Wren Flores",
+    "email": "wrenfloads@example.com",
+    "password": "TempPass93882!",
+    "title": "PPC Manager",
+    "company": "AdTech Ventures",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "priyaanddigital",
+    "name": "Priya Anderson",
+    "email": "priyaanddigital@example.com",
+    "password": "TempPass91025!",
+    "title": "Paid Search Analyst",
+    "company": "Campaign Central",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "laneschppc",
+    "name": "Lane Schmidt",
+    "email": "laneschppc@example.com",
+    "password": "TempPass16919!",
+    "title": "Performance Marketing Manager",
+    "company": "Click Conversions",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "blakewal",
+    "name": "Blake Walker",
+    "email": "blakewal@example.com",
+    "password": "TempPass64715!",
+    "title": "Performance Marketing Manager",
+    "company": "Freelance",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "drewsmiGuru",
+    "name": "Drew Smith",
+    "email": "drewsmiGuru@example.com",
+    "password": "TempPass16791!",
+    "title": "Media Buyer",
+    "company": "Freelance",
+    "experience": "Former Google employee"
+  },
+  {
+    "username": "marcusandsem",
+    "name": "Marcus Anderson",
+    "email": "marcusandsem@example.com",
+    "password": "TempPass70334!",
+    "title": "Paid Search Analyst",
+    "company": "Performance Lab",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "jasonwhippc",
+    "name": "Jason White",
+    "email": "jasonwhippc@example.com",
+    "password": "TempPass44580!",
+    "title": "Marketing Analyst",
+    "company": "Click Conversions",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "parkeradaseo",
+    "name": "Parker Adams",
+    "email": "parkeradaseo@example.com",
+    "password": "TempPass14968!",
+    "title": "Advertising Specialist",
+    "company": "ROI Masters",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "amandaharExpert",
+    "name": "Amanda Harris",
+    "email": "amandaharExpert@example.com",
+    "password": "TempPass83105!",
+    "title": "Content Strategist",
+    "company": "Marketing Solutions",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "brianlee",
+    "name": "Brian Lee",
+    "email": "brianlee@example.com",
+    "password": "TempPass69357!",
+    "title": "Google Ads Expert",
+    "company": "TechStartup Inc",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "justinsmiGuru",
+    "name": "Justin Smith",
+    "email": "justinsmiGuru@example.com",
+    "password": "TempPass54987!",
+    "title": "Media Buyer",
+    "company": "Campaign Central",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "michaeljonExpert",
+    "name": "Michael Jones",
+    "email": "michaeljonExpert@example.com",
+    "password": "TempPass35995!",
+    "title": "Google Ads Expert",
+    "company": "Performance Lab",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "emilymeyppc",
+    "name": "Emily Meyer",
+    "email": "emilymeyppc@example.com",
+    "password": "TempPass12840!",
+    "title": "Marketing Analyst",
+    "company": "Growth Partners",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "brianlopmarketing",
+    "name": "Brian Lopez",
+    "email": "brianlopmarketing@example.com",
+    "password": "TempPass33502!",
+    "title": "Marketing Coordinator",
+    "company": "AdScale Inc",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "laurawag",
+    "name": "Laura Wagner",
+    "email": "laurawag@example.com",
+    "password": "TempPass19467!",
+    "title": "Media Buyer",
+    "company": "Commerce Hub",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "alexscoads",
+    "name": "Alex Scott",
+    "email": "alexscoads@example.com",
+    "password": "TempPass32551!",
+    "title": "Media Buyer",
+    "company": "Media Max",
+    "experience": "Former Google employee"
+  },
+  {
+    "username": "emilyadappc",
+    "name": "Emily Adams",
+    "email": "emilyadappc@example.com",
+    "password": "TempPass48734!",
+    "title": "Digital Marketing Specialist",
+    "company": "Online Growth",
+    "experience": "Started last year"
+  },
+  {
+    "username": "priyachesem",
+    "name": "Priya Chen",
+    "email": "priyachesem@example.com",
+    "password": "TempPass21849!",
+    "title": "Ecommerce Manager",
+    "company": "Campaign Central",
+    "experience": "Marketing veteran"
+  },
+  {
+    "username": "rileybakdigital",
+    "name": "Riley Baker",
+    "email": "rileybakdigital@example.com",
+    "password": "TempPass97031!",
+    "title": "Agency Owner",
+    "company": "AdTech Ventures",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "edwardtanmarketing",
+    "name": "Edward Tanaka",
+    "email": "edwardtanmarketing@example.com",
+    "password": "TempPass62465!",
+    "title": "SEM Specialist",
+    "company": "Marketing Solutions",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "barbarahasppc",
+    "name": "Barbara Hassan",
+    "email": "barbarahasppc@example.com",
+    "password": "TempPass65798!",
+    "title": "Paid Search Analyst",
+    "company": "Marketing Solutions",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "hassanwhiseo",
+    "name": "Hassan White",
+    "email": "hassanwhiseo@example.com",
+    "password": "TempPass77396!",
+    "title": "Digital Marketing Specialist",
+    "company": "Conversion Kings",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "ashleysilppc",
+    "name": "Ashley Silva",
+    "email": "ashleysilppc@example.com",
+    "password": "TempPass83295!",
+    "title": "Growth Marketer",
+    "company": "Click Conversions",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "michaelferppc",
+    "name": "Michael Ferreira",
+    "email": "michaelferppc@example.com",
+    "password": "TempPass38037!",
+    "title": "Media Buyer",
+    "company": "AdScale Inc",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "rileycosExpert",
+    "name": "Riley Costa",
+    "email": "rileycosExpert@example.com",
+    "password": "TempPass18251!",
+    "title": "Business Owner",
+    "company": "Digital Agency Co",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "haydenrodseo",
+    "name": "Hayden Rodriguez",
+    "email": "haydenrodseo@example.com",
+    "password": "TempPass28536!",
+    "title": "Marketing Coordinator",
+    "company": "Performance Lab",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "alexkim",
+    "name": "Alex Kim",
+    "email": "alexkim@example.com",
+    "password": "TempPass20955!",
+    "title": "Brand Manager",
+    "company": "AdTech Ventures",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "skylerhasads",
+    "name": "Skyler Hassan",
+    "email": "skylerhasads@example.com",
+    "password": "TempPass39858!",
+    "title": "PPC Manager",
+    "company": "AdScale Inc",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "rajrobsem",
+    "name": "Raj Robinson",
+    "email": "rajrobsem@example.com",
+    "password": "TempPass99285!",
+    "title": "SEM Specialist",
+    "company": "Digital First",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "joshrodads",
+    "name": "Josh Rodriguez",
+    "email": "joshrodads@example.com",
+    "password": "TempPass78435!",
+    "title": "Google Ads Expert",
+    "company": "Conversion Kings",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "ishamarsem",
+    "name": "Isha Martin",
+    "email": "ishamarsem@example.com",
+    "password": "TempPass45494!",
+    "title": "Media Buyer",
+    "company": "Growth Partners",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "sambecMedia",
+    "name": "Sam Becker",
+    "email": "sambecMedia@example.com",
+    "password": "TempPass74534!",
+    "title": "Marketing Director",
+    "company": "Campaign Central",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "jordanbrosem",
+    "name": "Jordan Brown",
+    "email": "jordanbrosem@example.com",
+    "password": "TempPass87292!",
+    "title": "Analytics Manager",
+    "company": "AdTech Ventures",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "ruthcosdigital",
+    "name": "Ruth Costa",
+    "email": "ruthcosdigital@example.com",
+    "password": "TempPass86749!",
+    "title": "Brand Manager",
+    "company": "Brand Builders",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "jessemeyads",
+    "name": "Jesse Meyer",
+    "email": "jessemeyads@example.com",
+    "password": "TempPass61749!",
+    "title": "Marketing Director",
+    "company": "Conversion Kings",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "emilyyouMedia",
+    "name": "Emily Young",
+    "email": "emilyyouMedia@example.com",
+    "password": "TempPass41889!",
+    "title": "Marketing Analyst",
+    "company": "Online Growth",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "sanjaybecPro",
+    "name": "Sanjay Becker",
+    "email": "sanjaybecPro@example.com",
+    "password": "TempPass97978!",
+    "title": "Analytics Manager",
+    "company": "Growth Partners",
+    "experience": "Marketing veteran"
+  },
+  {
+    "username": "paultanads",
+    "name": "Paul Tanaka",
+    "email": "paultanads@example.com",
+    "password": "TempPass17535!",
+    "title": "Freelance Consultant",
+    "company": "Freelance",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "emersonkumExpert",
+    "name": "Emerson Kumar",
+    "email": "emersonkumExpert@example.com",
+    "password": "TempPass38496!",
+    "title": "Agency Owner",
+    "company": "AdTech Ventures",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "finleyleeads",
+    "name": "Finley Lee",
+    "email": "finleyleeads@example.com",
+    "password": "TempPass97909!",
+    "title": "SEM Specialist",
+    "company": "Commerce Hub",
+    "experience": "Former Google employee"
+  },
+  {
+    "username": "priyahofdigital",
+    "name": "Priya Hoffmann",
+    "email": "priyahofdigital@example.com",
+    "password": "TempPass57292!",
+    "title": "Media Buyer",
+    "company": "Click Conversions",
+    "experience": "Started last year"
+  },
+  {
+    "username": "williamespPro",
+    "name": "William Esposito",
+    "email": "williamespPro@example.com",
+    "password": "TempPass22096!",
+    "title": "Advertising Specialist",
+    "company": "Campaign Central",
+    "experience": "Marketing veteran"
+  },
+  {
+    "username": "elliottleeExpert",
+    "name": "Elliott Lee",
+    "email": "elliottleeExpert@example.com",
+    "password": "TempPass38417!",
+    "title": "Digital Marketing Specialist",
+    "company": "AdTech Ventures",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "jamierossem",
+    "name": "Jamie Rossi",
+    "email": "jamierossem@example.com",
+    "password": "TempPass78851!",
+    "title": "Media Buyer",
+    "company": "Growth Partners",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "williamrivMedia",
+    "name": "William Rivera",
+    "email": "williamrivMedia@example.com",
+    "password": "TempPass40214!",
+    "title": "Campaign Manager",
+    "company": "Campaign Central",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "wrenleeseo",
+    "name": "Wren Lee",
+    "email": "wrenleeseo@example.com",
+    "password": "TempPass70148!",
+    "title": "Paid Search Analyst",
+    "company": "TechStartup Inc",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "elliotttho",
+    "name": "Elliott Thomas",
+    "email": "elliotttho@example.com",
+    "password": "TempPass63824!",
+    "title": "Growth Marketer",
+    "company": "Growth Partners",
+    "experience": "Started last year"
+  },
+  {
+    "username": "amirrosExpert",
+    "name": "Amir Rossi",
+    "email": "amirrosExpert@example.com",
+    "password": "TempPass22952!",
+    "title": "Google Ads Expert",
+    "company": "Digital First",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "amirwilmarketing",
+    "name": "Amir Williams",
+    "email": "amirwilmarketing@example.com",
+    "password": "TempPass48234!",
+    "title": "Paid Search Analyst",
+    "company": "Conversion Kings",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "kennethkimseo",
+    "name": "Kenneth Kim",
+    "email": "kennethkimseo@example.com",
+    "password": "TempPass68648!",
+    "title": "Paid Search Analyst",
+    "company": "Growth Partners",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "robertthodigital",
+    "name": "Robert Thompson",
+    "email": "robertthodigital@example.com",
+    "password": "TempPass15259!",
+    "title": "Marketing Coordinator",
+    "company": "AdTech Ventures",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "masonrivPro",
+    "name": "Mason Rivera",
+    "email": "masonrivPro@example.com",
+    "password": "TempPass34161!",
+    "title": "Performance Marketing Manager",
+    "company": "Self-employed",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "ishatansem",
+    "name": "Isha Tanaka",
+    "email": "ishatansem@example.com",
+    "password": "TempPass59224!",
+    "title": "Content Strategist",
+    "company": "Click Conversions",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "johnhasdigital",
+    "name": "John Hassan",
+    "email": "johnhasdigital@example.com",
+    "password": "TempPass72711!",
+    "title": "Ecommerce Manager",
+    "company": "Lead Gen Pro",
+    "experience": "Started last year"
+  },
+  {
+    "username": "tatumahmppc",
+    "name": "Tatum Ahmed",
+    "email": "tatumahmppc@example.com",
+    "password": "TempPass10548!",
+    "title": "Analytics Manager",
+    "company": "Click Conversions",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "ryanhofExpert",
+    "name": "Ryan Hoffmann",
+    "email": "ryanhofExpert@example.com",
+    "password": "TempPass23298!",
+    "title": "Agency Owner",
+    "company": "Digital First",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "phoenixkumExpert",
+    "name": "Phoenix Kumar",
+    "email": "phoenixkumExpert@example.com",
+    "password": "TempPass44137!",
+    "title": "Analytics Manager",
+    "company": "Campaign Central",
+    "experience": "Marketing veteran"
+  },
+  {
+    "username": "kennethkim",
+    "name": "Kenneth Kim",
+    "email": "kennethkim@example.com",
+    "password": "TempPass85433!",
+    "title": "Agency Owner",
+    "company": "Media Max",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "sandrarobppc",
+    "name": "Sandra Robinson",
+    "email": "sandrarobppc@example.com",
+    "password": "TempPass46751!",
+    "title": "Marketing Analyst",
+    "company": "Conversion Kings",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "rachelespmarketing",
+    "name": "Rachel Esposito",
+    "email": "rachelespmarketing@example.com",
+    "password": "TempPass15522!",
+    "title": "Digital Marketing Specialist",
+    "company": "TechStartup Inc",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "frankahmGuru",
+    "name": "Frank Ahmed",
+    "email": "frankahmGuru@example.com",
+    "password": "TempPass65467!",
+    "title": "Marketing Director",
+    "company": "Online Growth",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "rileyflosem",
+    "name": "Riley Flores",
+    "email": "rileyflosem@example.com",
+    "password": "TempPass47538!",
+    "title": "Content Strategist",
+    "company": "Performance Lab",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "lindamardigital",
+    "name": "Linda Martinez",
+    "email": "lindamardigital@example.com",
+    "password": "TempPass61214!",
+    "title": "Growth Marketer",
+    "company": "Freelance",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "lisarivmarketing",
+    "name": "Lisa Rivera",
+    "email": "lisarivmarketing@example.com",
+    "password": "TempPass37133!",
+    "title": "Ecommerce Manager",
+    "company": "AdTech Ventures",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "sydneyrobMedia",
+    "name": "Sydney Robinson",
+    "email": "sydneyrobMedia@example.com",
+    "password": "TempPass99981!",
+    "title": "Growth Marketer",
+    "company": "AdTech Ventures",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "chrissatMedia",
+    "name": "Chris Sato",
+    "email": "chrissatMedia@example.com",
+    "password": "TempPass70883!",
+    "title": "Marketing Analyst",
+    "company": "Performance Lab",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "kaijonExpert",
+    "name": "Kai Jones",
+    "email": "kaijonExpert@example.com",
+    "password": "TempPass74670!",
+    "title": "Marketing Director",
+    "company": "TechStartup Inc",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "brandonmildigital",
+    "name": "Brandon Miller",
+    "email": "brandonmildigital@example.com",
+    "password": "TempPass91386!",
+    "title": "Ecommerce Manager",
+    "company": "Brand Builders",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "phoenixwilExpert",
+    "name": "Phoenix Wilson",
+    "email": "phoenixwilExpert@example.com",
+    "password": "TempPass46121!",
+    "title": "Ecommerce Manager",
+    "company": "Scale Marketing",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "samrivdigital",
+    "name": "Sam Rivera",
+    "email": "samrivdigital@example.com",
+    "password": "TempPass16599!",
+    "title": "Google Ads Expert",
+    "company": "Scale Marketing",
+    "experience": "5+ years Google Ads"
+  },
+  {
+    "username": "ishaoliGuru",
+    "name": "Isha Oliveira",
+    "email": "ishaoliGuru@example.com",
+    "password": "TempPass45546!",
+    "title": "Content Strategist",
+    "company": "Brand Builders",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "mingferMedia",
+    "name": "Ming Ferrari",
+    "email": "mingferMedia@example.com",
+    "password": "TempPass37878!",
+    "title": "Business Owner",
+    "company": "Brand Builders",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "emersonmilGrowth",
+    "name": "Emerson Miller",
+    "email": "emersonmilGrowth@example.com",
+    "password": "TempPass47716!",
+    "title": "Paid Search Analyst",
+    "company": "Conversion Kings",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "tylerhofmarketing",
+    "name": "Tyler Hoffmann",
+    "email": "tylerhofmarketing@example.com",
+    "password": "TempPass22979!",
+    "title": "Brand Manager",
+    "company": "TechStartup Inc",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "frankhalsem",
+    "name": "Frank Hall",
+    "email": "frankhalsem@example.com",
+    "password": "TempPass37568!",
+    "title": "Marketing Analyst",
+    "company": "AdTech Ventures",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "michellebroPro",
+    "name": "Michelle Brown",
+    "email": "michellebroPro@example.com",
+    "password": "TempPass26452!",
+    "title": "Advertising Specialist",
+    "company": "Marketing Solutions",
+    "experience": "10 years digital marketing"
+  },
+  {
+    "username": "sanjayallGuru",
+    "name": "Sanjay Allen",
+    "email": "sanjayallGuru@example.com",
+    "password": "TempPass37556!",
+    "title": "Freelance Consultant",
+    "company": "Freelance",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "rebeccahassem",
+    "name": "Rebecca Hassan",
+    "email": "rebeccahassem@example.com",
+    "password": "TempPass61707!",
+    "title": "Media Buyer",
+    "company": "Media Max",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "fatimakimExpert",
+    "name": "Fatima Kim",
+    "email": "fatimakimExpert@example.com",
+    "password": "TempPass45028!",
+    "title": "SEM Specialist",
+    "company": "Growth Partners",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "brandondavmarketing",
+    "name": "Brandon Davis",
+    "email": "brandondavmarketing@example.com",
+    "password": "TempPass22638!",
+    "title": "Campaign Manager",
+    "company": "Digital First",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "jordanrobExpert",
+    "name": "Jordan Robinson",
+    "email": "jordanrobExpert@example.com",
+    "password": "TempPass23404!",
+    "title": "SEM Specialist",
+    "company": "ROI Masters",
+    "experience": "2 years in PPC"
+  },
+  {
+    "username": "helenbakMedia",
+    "name": "Helen Baker",
+    "email": "helenbakMedia@example.com",
+    "password": "TempPass27811!",
+    "title": "Performance Marketing Manager",
+    "company": "Media Max",
+    "experience": "Former Google employee"
+  },
+  {
+    "username": "marcusshadigital",
+    "name": "Marcus Shah",
+    "email": "marcusshadigital@example.com",
+    "password": "TempPass88979!",
+    "title": "Marketing Coordinator",
+    "company": "Conversion Kings",
+    "experience": "3 years agency experience"
+  },
+  {
+    "username": "rowansmimarketing",
+    "name": "Rowan Smith",
+    "email": "rowansmimarketing@example.com",
+    "password": "TempPass51266!",
+    "title": "Campaign Manager",
+    "company": "AdScale Inc",
+    "experience": "Marketing veteran"
+  },
+  {
+    "username": "spencerallads",
+    "name": "Spencer Allen",
+    "email": "spencerallads@example.com",
+    "password": "TempPass89665!",
+    "title": "SEM Specialist",
+    "company": "Marketing Solutions",
+    "experience": "Started last year"
+  },
+  {
+    "username": "jamesnel",
+    "name": "James Nelson",
+    "email": "jamesnel@example.com",
+    "password": "TempPass55884!",
+    "title": "Ecommerce Manager",
+    "company": "Brand Builders",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "kevinallmarketing",
+    "name": "Kevin Allen",
+    "email": "kevinallmarketing@example.com",
+    "password": "TempPass19956!",
+    "title": "Growth Marketer",
+    "company": "Scale Marketing",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "drewtanGuru",
+    "name": "Drew Tanaka",
+    "email": "drewtanGuru@example.com",
+    "password": "TempPass96042!",
+    "title": "PPC Manager",
+    "company": "ROI Masters",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "danielwalsem",
+    "name": "Daniel Walker",
+    "email": "danielwalsem@example.com",
+    "password": "TempPass10741!",
+    "title": "Advertising Specialist",
+    "company": "Marketing Solutions",
+    "experience": "Running ads since 2015"
+  },
+  {
+    "username": "finleylopsem",
+    "name": "Finley Lopez",
+    "email": "finleylopsem@example.com",
+    "password": "TempPass76148!",
+    "title": "Media Buyer",
+    "company": "AdTech Ventures",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "mingwhiGrowth",
+    "name": "Ming White",
+    "email": "mingwhiGrowth@example.com",
+    "password": "TempPass32340!",
+    "title": "Performance Marketing Manager",
+    "company": "Digital First",
+    "experience": "Started last year"
+  },
+  {
+    "username": "weikimGuru",
+    "name": "Wei Kim",
+    "email": "weikimGuru@example.com",
+    "password": "TempPass54073!",
+    "title": "Brand Manager",
+    "company": "Scale Marketing",
+    "experience": "New to Google Ads"
+  },
+  {
+    "username": "micahahmdigital",
+    "name": "Micah Ahmed",
+    "email": "micahahmdigital@example.com",
+    "password": "TempPass19797!",
+    "title": "Brand Manager",
+    "company": "TechStartup Inc",
+    "experience": "Certified Google Ads specialist"
+  },
+  {
+    "username": "robertscodigital",
+    "name": "Robert Scott",
+    "email": "robertscodigital@example.com",
+    "password": "TempPass19703!",
+    "title": "Advertising Specialist",
+    "company": "Digital Agency Co",
+    "experience": "5+ years Google Ads"
+  }
+]

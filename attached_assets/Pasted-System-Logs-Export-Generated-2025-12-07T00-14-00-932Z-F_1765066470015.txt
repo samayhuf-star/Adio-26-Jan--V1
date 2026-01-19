@@ -1,0 +1,79 @@
+System Logs Export
+Generated: 2025-12-07T00:14:00.932Z
+Filter: ERROR
+Total Logs: 4
+
+================================================================================
+
+[1] ERROR - API
+Timestamp: 2025-12-07T00:13:06.253Z
+Message: POST https://kkdnnrwhzofttzajnwlj.supabase.co/functions/v1/make-server-6757d0ca/generate-ads → Failed: signal is aborted without reason (15013ms)
+Details:
+AbortError: signal is aborted without reason
+    at https://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev/src/utils/api.ts:54:57
+Stack Trace:
+AbortError: signal is aborted without reason
+    at https://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev/src/utils/api.ts:54:57
+
+--------------------------------------------------------------------------------
+
+[2] ERROR - API
+Timestamp: 2025-12-07T00:13:06.253Z
+Message: POST /generate-ads error: signal is aborted without reason
+Details:
+{
+  "endpoint": "/generate-ads",
+  "error": "signal is aborted without reason"
+}
+
+--------------------------------------------------------------------------------
+
+[3] ERROR - Console
+Timestamp: 2025-12-07T00:13:06.254Z
+Message: 🚨 Error Captured: {"message":"signal is aborted without reason","stack":"AbortError: signal is aborted without reason\n    at https://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev/src/utils/api.ts:54:57","context":{"module":"api","action":"post","metadata":{"endpoint":"/generate-ads"}},"timestamp":"2025-12-07T00:13:06.254Z"}
+Details:
+{
+  "args": [
+    "🚨 Error Captured:",
+    {
+      "message": "signal is aborted without reason",
+      "stack": "AbortError: signal is aborted without reason\n    at https://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev/src/utils/api.ts:54:57",
+      "context": {
+        "module": "api",
+        "action": "post",
+        "metadata": {
+          "endpoint": "/generate-ads"
+        }
+      },
+      "timestamp": "2025-12-07T00:13:06.254Z"
+    }
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[4] ERROR - Console
+Timestamp: 2025-12-07T00:13:07.008Z
+Message: [ERROR] signal is aborted without reason {"module":"api","action":"post","metadata":{"endpoint":"/generate-ads"},"error":{"message":"signal is aborted without reason","stack":"AbortError: signal is aborted without reason\n    at https://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev/src/utils/api.ts:54:57","name":"AbortError"}}
+Details:
+{
+  "args": [
+    "[ERROR]",
+    "signal is aborted without reason",
+    {
+      "module": "api",
+      "action": "post",
+      "metadata": {
+        "endpoint": "/generate-ads"
+      },
+      "error": {
+        "message": "signal is aborted without reason",
+        "stack": "AbortError: signal is aborted without reason\n    at https://a48c3f52-31ef-446b-b385-acb861a1f2dd-00-943icob60v7z.sisko.replit.dev/src/utils/api.ts:54:57",
+        "name": "AbortError"
+      }
+    }
+  ]
+}
+
+--------------------------------------------------------------------------------
+

@@ -1,0 +1,600 @@
+# **GOOGLE SEARCH ADS: RSA, DKI & CALL-ONLY RULES**
+
+---
+
+## **1. RESPONSIVE SEARCH ADS (RSA)**
+
+### **📏 Character Limits**
+
+| Element | Count | Character Limit | Required |
+|---------|-------|-----------------|----------|
+| Headlines | 3-15 | 30 chars each | Min 3 |
+| Descriptions | 2-4 | 90 chars each | Min 2 |
+| Display Path 1 | 0-1 | 15 chars | Optional |
+| Display Path 2 | 0-1 | 15 chars | Optional |
+
+**Display Behavior:**
+- Google shows up to **3 headlines** at once
+- Google shows up to **2 descriptions** at once
+- Headlines separated by "|" (pipe)
+- 3rd headline may not show on mobile devices
+- Google automatically tests combinations
+
+### **✅ RSA Requirements**
+
+**Uniqueness:**
+- All 3+ headlines must be substantially different
+- All 2+ descriptions must be substantially different
+- No duplicate or near-duplicate content
+- Variations must provide different information
+
+**Example of GOOD Headlines:**
+```
+1. "24/7 Emergency Plumbing Service"
+2. "Licensed Plumbers | Same Day Service"
+3. "Free Estimates on All Repairs"
+```
+
+**Example of BAD Headlines (Too Similar):**
+```
+❌ 1. "Emergency Plumbing Service"
+❌ 2. "Emergency Plumbing Services"
+❌ 3. "Emergency Plumbing Help"
+```
+
+### **🎯 RSA Best Practices**
+
+**Headline Strategy (15 Headlines):**
+1. **Headline 1-3**: Primary keywords + USP
+   - "Emergency Plumber | 24/7 Available"
+   - "Same-Day Plumbing Repairs"
+   - "Licensed & Insured Plumbers"
+
+2. **Headline 4-6**: Benefits & Offers
+   - "Free Estimates | No Hidden Fees"
+   - "Save 20% on First Service"
+   - "Satisfaction Guaranteed"
+
+3. **Headline 7-9**: Location & Urgency
+   - "Serving [City Name] Since 2010"
+   - "Fast Response Time | Call Now"
+   - "Open 24/7 Including Weekends"
+
+4. **Headline 10-12**: Social Proof
+   - "500+ 5-Star Reviews"
+   - "Trusted by 10,000+ Homeowners"
+   - "Award-Winning Service"
+
+5. **Headline 13-15**: Specific Services
+   - "Leak Repair Specialists"
+   - "Drain Cleaning & Unclogging"
+   - "Water Heater Installation"
+
+**Description Strategy (4 Descriptions):**
+1. **Description 1**: Primary value proposition (90 chars)
+   - "Need emergency plumbing? Our licensed plumbers arrive fast with upfront pricing. Call now!"
+
+2. **Description 2**: Benefits + CTA (90 chars)
+   - "Same-day service, free estimates, and satisfaction guaranteed. Available 24/7 for emergencies."
+
+3. **Description 3**: Credentials + Trust (90 chars)
+   - "Licensed, bonded & insured. Over 15 years serving [City]. No job too big or too small."
+
+4. **Description 4**: Specific offer (90 chars)
+   - "Get $50 off your first service. Expert repairs on all plumbing systems. Book online today!"
+
+### **📌 RSA Pinning Feature**
+
+**What is Pinning?**
+- Forces a headline/description to appear in specific position
+- Reduces flexibility but ensures key messaging
+
+**Pinning Rules:**
+- Can pin headlines to Position 1, 2, or 3
+- Can pin descriptions to Position 1 or 2
+- Each position can have multiple pinned assets (Google chooses best)
+- Unpinned assets fill remaining positions
+
+**When to Pin:**
+```
+✅ Legal disclaimers that must show
+✅ Brand name in Headline 1
+✅ Critical promotional offer
+✅ Location requirement (local ads)
+
+❌ Don't over-pin (reduces performance)
+❌ Don't pin all assets (defeats RSA purpose)
+```
+
+**Example Pinning Strategy:**
+```
+Headline 1 (Pinned): "Emergency Plumber | [Brand Name]"
+Headline 2 (Unpinned): Let Google optimize
+Headline 3 (Unpinned): Let Google optimize
+Description 1 (Pinned): Required legal disclaimer
+Description 2 (Unpinned): Let Google optimize
+```
+
+### **🚫 RSA Prohibited Practices**
+
+❌ Repeating same keywords across all headlines
+❌ Using similar headlines with minor variations
+❌ Keyword stuffing in descriptions
+❌ Creating headlines that only work in specific orders
+❌ Headlines that rely on other headlines for context
+❌ Incomplete sentences expecting continuation
+
+### **⚡ RSA Performance Tips**
+
+**Asset Rating System:**
+- Google rates each asset: Poor, Good, Excellent
+- Aim for "Good" or "Excellent" on all assets
+- Replace "Poor" performing assets
+- Monitor in Ad Strength indicator
+
+**Ad Strength Levels:**
+- Incomplete
+- Poor
+- Average
+- Good
+- Excellent (target this)
+
+**How to Improve Ad Strength:**
+✅ Add more unique headlines (aim for 10-15)
+✅ Add more unique descriptions (aim for 4)
+✅ Include keywords in headlines
+✅ Differentiate messaging
+✅ Use all available characters
+✅ Add relevant ad extensions
+
+---
+
+## **2. DYNAMIC KEYWORD INSERTION (DKI)**
+
+### **📏 DKI Syntax & Rules**
+
+**Basic Format:**
+```
+{KeyWord:Default Text}
+```
+
+**Capitalization Options:**
+
+| Syntax | Output Example | Use Case |
+|--------|----------------|----------|
+| `{keyword:...}` | emergency plumber | All lowercase |
+| `{Keyword:...}` | Emergency plumber | First word capital |
+| `{KeyWord:...}` | Emergency Plumber | Each word capital |
+| `{KEYWord:...}` | EMERGENCY Plumber | First letters caps |
+
+### **✅ DKI Requirements**
+
+**Default Text Rules:**
+- Default text must fit within character limits
+- Must be within 30 chars for headlines
+- Must be within 90 chars for descriptions
+- Default shows when keyword doesn't fit
+- Default shows when keyword violates policy
+
+**Example:**
+```
+Headline: "Buy {Keyword:Running Shoes} Online"
+
+When user searches "nike running shoes":
+Shows: "Buy Nike Running Shoes Online" (26 chars ✅)
+
+When user searches "high-performance marathon training shoes":
+Shows: "Buy Running Shoes Online" (24 chars - default used)
+```
+
+### **🎯 DKI Best Practices**
+
+**Where to Use DKI:**
+
+✅ **Good Placements:**
+```
+Headline 1: "{Keyword:Plumbing Service} in [City]"
+Headline 2: "Expert {Keyword:Plumbers} Available 24/7"
+Description: "Need {Keyword:plumbing repair}? Call us today for fast service."
+```
+
+❌ **Bad Placements:**
+```
+❌ Business name field
+❌ Display path (unreliable)
+❌ Multiple DKI in same ad element
+❌ In the middle of a sentence requiring grammar match
+```
+
+**DKI Safety Tips:**
+
+1. **Test Default Text First:**
+   - Always ensure default text makes sense
+   - Should be your strongest headline standalone
+   - Example: `{KeyWord:Emergency Plumber}` → "Emergency Plumber" works alone
+
+2. **Grammar Considerations:**
+   ```
+   ✅ GOOD: "Get {Keyword:Fast Service} Today"
+   ❌ BAD: "Getting {Keyword:Fast Service}" 
+   (What if keyword is "plumber"? "Getting plumber" is wrong)
+   ```
+
+3. **Character Planning:**
+   ```
+   Headline limit: 30 chars
+   Your text: "Buy " (4) + " Online" (7) = 11 chars used
+   Available for DKI: 19 chars
+   Default: "Running Shoes" (13 chars) ✅ Fits
+   ```
+
+### **🚫 DKI Prohibited Practices**
+
+❌ **Will Result in Default Text Showing:**
+- Keyword contains prohibited content
+- Keyword contains excessive punctuation
+- Keyword is all caps (when using {keyword})
+- Keyword doesn't match capitalization rules
+- Keyword exceeds character limit
+- Keyword contains symbols (@, *, #, etc.)
+
+**Example of Violations:**
+```
+User search: "CHEAP PLUMBER!!!"
+Your DKI: "{Keyword:Affordable Plumber}"
+Result: Shows "Affordable Plumber" (policy violation in search)
+
+User search: "best emergency plumbing services available"
+Your DKI: "{Keyword:Plumber}" in 30-char headline
+Result: Shows "Plumber" (search term too long)
+```
+
+### **⚠️ DKI Limitations**
+
+**Does NOT Work:**
+- Cannot use multiple DKI in same text field
+- Cannot nest DKI within DKI
+- Cannot use in sitelink extensions
+- Cannot use in structured snippets
+- Limited control over exact output
+
+**Quality Concerns:**
+- Can create awkward ad copy
+- May insert irrelevant long-tail keywords
+- Can reduce ad relevance if mismatched
+- May trigger policy violations from user searches
+
+### **🎯 DKI Strategy Examples**
+
+**E-commerce:**
+```
+Headline: "Shop {Keyword:Designer Bags} Online"
+Description: "Huge selection of {keyword:bags}. Free shipping on orders over $50. Shop now!"
+```
+
+**Local Services:**
+```
+Headline: "{Keyword:Plumbing Service} in Chicago"
+Description: "Need {keyword:plumbing repairs}? Our licensed team offers same-day service. Call now!"
+```
+
+**B2B Services:**
+```
+Headline: "{Keyword:CRM Software} for Enterprise"
+Description: "Powerful {keyword:customer management} solution. Start your free trial today."
+```
+
+### **📊 When to Use vs. Avoid DKI**
+
+**✅ Use DKI When:**
+- You have large keyword lists
+- Products/services have clear names
+- Search terms are consistent
+- You need scale across SKAGs
+- Keywords match naturally in sentences
+
+**❌ Avoid DKI When:**
+- Brand-focused campaigns
+- Keywords require specific grammar
+- You need full creative control
+- Running small, tightly targeted campaigns
+- Industry terms need specific positioning
+
+---
+
+## **3. CALL-ONLY ADS**
+
+### **📏 Character Limits**
+
+| Element | Count | Character Limit | Required |
+|---------|-------|-----------------|----------|
+| Headlines | 2 | 30 chars each | Yes (2) |
+| Descriptions | 2 | 90 chars each | Yes (2) |
+| Business Name | 1 | 25 chars | Yes |
+| Phone Number | 1 | Valid format | Yes |
+| Verification URL | 1 | Valid URL | Yes |
+
+**Display Behavior:**
+- Only shows on mobile devices
+- Desktop shows regular ads instead
+- Tapping anywhere on ad initiates call
+- Large, tap-friendly format
+
+### **☎️ Call-Only Requirements**
+
+**Phone Number Rules:**
+✅ Must be valid, working number
+✅ Must route to business during ad hours
+✅ Can include extensions
+✅ Must answer during specified hours
+✅ Should have call tracking
+
+**Formats Accepted:**
+```
+USA: (555) 123-4567
+International: +1-555-123-4567
+Toll-free: 1-800-PLUMBER (1-800-758-6237)
+With extension: (555) 123-4567 x100
+```
+
+**Verification URL:**
+- Must be valid, accessible website
+- Should contain business info
+- Must load properly on mobile
+- Can be homepage or dedicated landing page
+- No redirects to phone dialers
+
+### **✅ Call-Only Best Practices**
+
+**Headline Strategy:**
+```
+Headline 1: "Call Now - 24/7 Emergency Plumber"
+Headline 2: "Same-Day Service | Free Estimate"
+
+OR
+
+Headline 1: "Tap to Call Our Expert Plumbers"
+Headline 2: "Available Now | No Job Too Small"
+```
+
+**Description Strategy:**
+```
+Description 1: "Licensed plumbers ready to help with any emergency. Fast response, upfront pricing, satisfaction guaranteed."
+
+Description 2: "Serving [City] for 15+ years. No overtime charges. Call now for immediate assistance with all plumbing needs."
+```
+
+**Business Name:**
+```
+✅ "ABC Plumbing"
+✅ "Smith & Sons Plumbing"
+✅ "AllHours Emergency Plumbers"
+
+❌ "Best Plumber in Town" (promotional)
+❌ "Call Now!!!" (not a business name)
+❌ "24/7 Available" (descriptive text)
+```
+
+### **🎯 Call-Only Optimization**
+
+**Call Extensions vs Call-Only Ads:**
+
+| Feature | Call Extension | Call-Only Ad |
+|---------|---------------|--------------|
+| Device | All devices | Mobile only |
+| Click behavior | Click = website OR call button | Click = call |
+| Format | Added to existing ad | Standalone ad |
+| Use case | Dual objective | Call-focused only |
+
+**When to Use Call-Only:**
+✅ Emergency services (plumber, locksmith, towing)
+✅ Appointment booking (doctor, dentist, salon)
+✅ High-value consultations (lawyer, financial advisor)
+✅ Phone orders preferred (restaurants, delivery)
+✅ Complex services requiring discussion
+
+**When NOT to Use Call-Only:**
+❌ E-commerce with online checkout
+❌ B2B with long sales cycles
+❌ Services requiring online forms/quotes
+❌ When targeting desktop users primarily
+❌ Brand awareness campaigns
+
+### **📞 Call Tracking Best Practices**
+
+**Requirements for Success:**
+- Implement call tracking numbers
+- Set up call forwarding properly
+- Configure business hours accurately
+- Train staff to handle Google Ads calls
+- Record calls for quality assurance
+
+**Call Tracking Setup:**
+```
+1. Use dynamic call tracking numbers
+2. Configure forwarding to main line
+3. Set up voicemail for after-hours
+4. Enable call recording (with disclosure)
+5. Track conversion in Google Ads
+```
+
+**Conversion Tracking:**
+- Set minimum call length (e.g., 60 seconds)
+- Count only first-time callers (optional)
+- Track during business hours only
+- Exclude hang-ups and wrong numbers
+
+### **⏰ Call Schedule Settings**
+
+**Ad Scheduling:**
+```
+✅ GOOD:
+Monday-Friday: 8 AM - 6 PM (business hours)
+Saturday: 9 AM - 3 PM (limited hours)
+Sunday: Paused (closed)
+
+❌ BAD:
+Running 24/7 when business closed
+No voicemail or after-hours message
+Wrong timezone configuration
+```
+
+**After-Hours Strategy:**
+- Pause ads when closed OR
+- Use voicemail with callback promise
+- Adjust bids lower after hours
+- Clear messaging about availability
+
+### **🚫 Call-Only Prohibited Practices**
+
+❌ Fake or disconnected phone numbers
+❌ Premium-rate phone numbers (900, 976)
+❌ Phone numbers that don't route to business
+❌ Automatic pre-recorded messages without option to speak to person
+❌ Phone numbers requiring payment to call
+❌ Misleading availability claims
+
+**Example Violations:**
+```
+❌ "24/7 Available" but phone only answered 9-5
+❌ "Immediate Service" but 2-day wait
+❌ "Free Consultation" but charges on call
+❌ Phone rings to competitor
+❌ Automated system with no human option
+```
+
+### **📊 Call-Only Performance Metrics**
+
+**Key Metrics to Track:**
+1. **Call-through Rate (CTR)** - % of impressions → calls
+2. **Cost per Call** - Total spend ÷ total calls
+3. **Conversion Rate** - % of calls → customers
+4. **Call Duration** - Average length of calls
+5. **Call Quality** - % of qualified leads
+
+**Optimization Benchmarks:**
+```
+Good CTR: 8-15% (higher than regular search ads)
+Average Call Duration: 2-5 minutes
+Conversion Rate: 10-30% depending on industry
+Call Quality: 60%+ qualified leads
+```
+
+### **💡 Call-Only Creative Tips**
+
+**Urgency Words:**
+```
+✅ "Call Now"
+✅ "Immediate Service"
+✅ "Available Today"
+✅ "Same-Day Appointments"
+✅ "Limited Availability"
+```
+
+**Trust Indicators:**
+```
+✅ "Licensed & Insured"
+✅ "BBB A+ Rated"
+✅ "500+ 5-Star Reviews"
+✅ "Serving [City] Since 1995"
+✅ "Family-Owned & Operated"
+```
+
+**Offers in Call-Only:**
+```
+✅ "Call for Free Estimate"
+✅ "Mention Ad for 20% Off"
+✅ "First-Time Customer Discount"
+✅ "Free Diagnostic Call"
+```
+
+### **📱 Mobile-Specific Considerations**
+
+**Mobile User Behavior:**
+- High intent (ready to call now)
+- Often in urgent situations
+- May be on-the-go
+- Expect immediate answer
+- Want fast solutions
+
+**Copy Adjustments for Mobile:**
+```
+✅ GOOD:
+"Emergency Plumber | Tap to Call Now"
+"Get Help Fast | Same-Day Service"
+
+❌ BAD:
+"Visit Our Website for More Information"
+"Fill Out Online Form for Quote"
+```
+
+---
+
+## **COMPARISON TABLE: RSA vs DKI vs CALL-ONLY**
+
+| Feature | RSA | RSA with DKI | Call-Only |
+|---------|-----|--------------|-----------|
+| Headlines | 3-15 (30 chars) | 3-15 (30 chars) | 2 (30 chars) |
+| Descriptions | 2-4 (90 chars) | 2-4 (90 chars) | 2 (90 chars) |
+| Device | All | All | Mobile only |
+| Click Result | Website | Website | Phone call |
+| Best For | General campaigns | Large keyword lists | Immediate calls |
+| Automation | High | Medium | Low |
+| Control | Medium | Low | High |
+| Testing | Automatic | Limited | Manual |
+| Setup Time | Medium | Quick | Quick |
+
+---
+
+## **VALIDATION CHECKLIST BY AD TYPE**
+
+### **✅ RSA Validation:**
+```
+☐ 3-15 headlines (min 3 required)
+☐ 2-4 descriptions (min 2 required)
+☐ Each headline ≤30 characters
+☐ Each description ≤90 characters
+☐ All headlines unique/substantially different
+☐ All descriptions unique/substantially different
+☐ No policy violations in any asset
+☐ Proper capitalization
+☐ No excessive punctuation
+☐ Ad strength = "Good" or "Excellent"
+☐ Keywords in headlines
+☐ Clear call-to-action in descriptions
+☐ Display paths ≤15 chars each (if used)
+```
+
+### **✅ DKI Validation:**
+```
+☐ Default text fits character limits
+☐ Default text makes grammatical sense
+☐ Syntax correct: {KeyWord:Default}
+☐ Capitalization format chosen appropriately
+☐ Only one DKI per text field
+☐ Not used in business name
+☐ Tested with longest expected keyword
+☐ Grammar works with various keywords
+☐ No special characters in default
+☐ Works with keyword match types
+```
+
+### **✅ Call-Only Validation:**
+```
+☐ Exactly 2 headlines (30 chars each)
+☐ Exactly 2 descriptions (90 chars each)
+☐ Business name ≤25 characters
+☐ Valid phone number format
+☐ Phone number is working/tested
+☐ Verification URL is valid
+☐ Mobile-optimized landing page
+☐ Call tracking implemented
+☐ Business hours configured
+☐ Conversion tracking set up
+☐ Voicemail for after-hours (if running 24/7)
+☐ Staff trained to handle calls
+```
+
+---
+
+This comprehensive guide covers all the specific rules and best practices for RSA, DKI, and Call-Only ads. Would you like me to create a JSON schema or implementation code for these validation rules in your Adiology builder?

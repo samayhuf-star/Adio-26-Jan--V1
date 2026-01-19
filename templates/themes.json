@@ -1,0 +1,83 @@
+{
+  "themes": [
+    {
+      "id": "green-edge",
+      "name": "GreenEdge",
+      "accent": "#16a34a",
+      "accentAlt": "#059669",
+      "accentLight": "#86efac",
+      "accentDark": "#15803d",
+      "bgHero": "linear-gradient(135deg, #16a34a 0%, #059669 100%)",
+      "textPrimary": "#1f2937",
+      "textSecondary": "#6b7280",
+      "bgPrimary": "#ffffff",
+      "bgSecondary": "#f9fafb"
+    },
+    {
+      "id": "blue-ocean",
+      "name": "Blue Ocean",
+      "accent": "#3b82f6",
+      "accentAlt": "#2563eb",
+      "accentLight": "#93c5fd",
+      "accentDark": "#1e40af",
+      "bgHero": "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+      "textPrimary": "#1f2937",
+      "textSecondary": "#6b7280",
+      "bgPrimary": "#ffffff",
+      "bgSecondary": "#f0f9ff"
+    },
+    {
+      "id": "purple-royal",
+      "name": "Purple Royal",
+      "accent": "#9333ea",
+      "accentAlt": "#7e22ce",
+      "accentLight": "#c084fc",
+      "accentDark": "#6b21a8",
+      "bgHero": "linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)",
+      "textPrimary": "#1f2937",
+      "textSecondary": "#6b7280",
+      "bgPrimary": "#ffffff",
+      "bgSecondary": "#faf5ff"
+    },
+    {
+      "id": "orange-fire",
+      "name": "Orange Fire",
+      "accent": "#f97316",
+      "accentAlt": "#ea580c",
+      "accentLight": "#fdba74",
+      "accentDark": "#c2410c",
+      "bgHero": "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+      "textPrimary": "#1f2937",
+      "textSecondary": "#6b7280",
+      "bgPrimary": "#ffffff",
+      "bgSecondary": "#fff7ed"
+    },
+    {
+      "id": "teal-fresh",
+      "name": "Teal Fresh",
+      "accent": "#14b8a6",
+      "accentAlt": "#0d9488",
+      "accentLight": "#5eead4",
+      "accentDark": "#0f766e",
+      "bgHero": "linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)",
+      "textPrimary": "#1f2937",
+      "textSecondary": "#6b7280",
+      "bgPrimary": "#ffffff",
+      "bgSecondary": "#f0fdfa"
+    },
+    {
+      "id": "red-bold",
+      "name": "Red Bold",
+      "accent": "#ef4444",
+      "accentAlt": "#dc2626",
+      "accentLight": "#fca5a5",
+      "accentDark": "#b91c1c",
+      "bgHero": "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+      "textPrimary": "#1f2937",
+      "textSecondary": "#6b7280",
+      "bgPrimary": "#ffffff",
+      "bgSecondary": "#fef2f2"
+    }
+  ]
+}
+

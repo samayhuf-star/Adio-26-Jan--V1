@@ -1,0 +1,74 @@
+Loaded 0 items from database
+index-ql9yOy7H.js:16 Found 5 legacy items in localStorage
+host-network-events.js:1  GET https://kkdnnrwhzofttzajnwlj.supabase.co/rest/v1/published_websites?select=*&user_id=eq.user_37tJBNWaTljnLXzeiS9glb8S2Vl&order=created_at.desc 404 (Not Found)
+window.fetch @ host-network-events.js:1
+await in window.fetch
+(anonymous) @ index-ql9yOy7H.js:16
+(anonymous) @ index-ql9yOy7H.js:2
+x @ index-ql9yOy7H.js:2
+window.fetch @ index-ql9yOy7H.js:16
+(anonymous) @ services-Cgc8zqKu.js:43
+(anonymous) @ services-Cgc8zqKu.js:43
+i @ services-Cgc8zqKu.js:1
+Promise.then
+l @ services-Cgc8zqKu.js:1
+(anonymous) @ services-Cgc8zqKu.js:1
+c @ services-Cgc8zqKu.js:1
+(anonymous) @ services-Cgc8zqKu.js:43
+then @ services-Cgc8zqKu.js:1Understand this error
+index-ql9yOy7H.js:16 Loaded 0 items from database
+index-ql9yOy7H.js:16 Found 5 legacy items in localStorage
+index-ql9yOy7H.js:16 Loaded 0 items from database
+index-ql9yOy7H.js:16 Found 5 legacy items in localStorage
+host-network-events.js:1  GET https://kkdnnrwhzofttzajnwlj.supabase.co/rest/v1/published_websites?select=*&user_id=eq.user_37tJBNWaTljnLXzeiS9glb8S2Vl&order=created_at.desc 404 (Not Found)
+window.fetch @ host-network-events.js:1
+await in window.fetch
+(anonymous) @ index-ql9yOy7H.js:16
+(anonymous) @ index-ql9yOy7H.js:2
+x @ index-ql9yOy7H.js:2
+window.fetch @ index-ql9yOy7H.js:16
+(anonymous) @ services-Cgc8zqKu.js:43
+(anonymous) @ services-Cgc8zqKu.js:43
+i @ services-Cgc8zqKu.js:1
+Promise.then
+l @ services-Cgc8zqKu.js:1
+(anonymous) @ services-Cgc8zqKu.js:1
+c @ services-Cgc8zqKu.js:1
+(anonymous) @ services-Cgc8zqKu.js:43
+then @ services-Cgc8zqKu.js:1Understand this error
+host-network-events.js:1  GET https://adiology.io/api/google-ads/accounts 401 (Unauthorized)
+window.fetch @ host-network-events.js:1
+await in window.fetch
+(anonymous) @ index-ql9yOy7H.js:16
+(anonymous) @ index-ql9yOy7H.js:2
+x @ index-ql9yOy7H.js:2
+window.fetch @ index-ql9yOy7H.js:16
+(anonymous) @ CampaignBuilder3-DZmRrL7C.js:15
+(anonymous) @ CampaignBuilder3-DZmRrL7C.js:1
+et @ CampaignBuilder3-DZmRrL7C.js:1
+(anonymous) @ CampaignBuilder3-DZmRrL7C.js:15
+fl @ react-vendor-DIVmIdX0.js:40
+Ln @ react-vendor-DIVmIdX0.js:40
+ia @ react-vendor-DIVmIdX0.js:40
+It @ react-vendor-DIVmIdX0.js:38
+pc @ react-vendor-DIVmIdX0.js:40
+rn @ react-vendor-DIVmIdX0.js:40
+ua @ react-vendor-DIVmIdX0.js:40
+qe @ react-vendor-DIVmIdX0.js:25
+st @ react-vendor-DIVmIdX0.js:25Understand this error
+host-network-events.js:1  GET https://kkdnnrwhzofttzajnwlj.supabase.co/rest/v1/published_websites?select=*&user_id=eq.user_37tJBNWaTljnLXzeiS9glb8S2Vl&order=created_at.desc 404 (Not Found)
+window.fetch @ host-network-events.js:1
+await in window.fetch
+(anonymous) @ index-ql9yOy7H.js:16
+(anonymous) @ index-ql9yOy7H.js:2
+x @ index-ql9yOy7H.js:2
+window.fetch @ index-ql9yOy7H.js:16
+(anonymous) @ services-Cgc8zqKu.js:43
+(anonymous) @ services-Cgc8zqKu.js:43
+i @ services-Cgc8zqKu.js:1
+Promise.then
+l @ services-Cgc8zqKu.js:1
+(anonymous) @ services-Cgc8zqKu.js:1
+c @ services-Cgc8zqKu.js:1
+(anonymous) @ services-Cgc8zqKu.js:43
+then @ services-Cgc8zqKu.js:1Understand this error

@@ -1,0 +1,136 @@
+{
+  "slug": "lawn-care",
+  "title": "GreenEdge Lawn Care",
+  "themeId": "green-edge",
+  "hero": {
+    "heading": "Professional Lawn Care Services",
+    "subheading": "Transform your yard with expert lawn care and landscaping services",
+    "ctaText": "Get Free Quote"
+  },
+  "hero_image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&h=600&fit=crop",
+  "features": {
+    "heading": "Why Choose GreenEdge",
+    "items": [
+      {
+        "icon": "🌱",
+        "title": "Expert Care",
+        "desc": "Professional lawn care specialists with years of experience"
+      },
+      {
+        "icon": "💚",
+        "title": "Eco-Friendly",
+        "desc": "Sustainable and environmentally friendly solutions"
+      },
+      {
+        "icon": "⚡",
+        "title": "Fast Service",
+        "desc": "Quick response times and efficient service"
+      },
+      {
+        "icon": "✅",
+        "title": "Satisfaction Guaranteed",
+        "desc": "100% satisfaction guarantee on all services"
+      }
+    ]
+  },
+  "services": {
+    "heading": "Our Services",
+    "subheading": "Complete lawn care solutions for your property",
+    "items": [
+      {
+        "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop",
+        "title": "Lawn Mowing",
+        "desc": "Regular lawn mowing and trimming to keep your yard looking perfect",
+        "price": "From $59/visit"
+      },
+      {
+        "image": "https://images.unsplash.com/photo-1599629954294-2f46e0b87b02?w=400&h=300&fit=crop",
+        "title": "Landscape Design",
+        "desc": "Custom landscape design and planning services",
+        "price": "From $499"
+      },
+      {
+        "image": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&h=300&fit=crop",
+        "title": "Hardscaping",
+        "desc": "Patios, walkways, retaining walls, and more",
+        "price": "Custom Quote"
+      }
+    ]
+  },
+  "testimonials": {
+    "heading": "What Our Customers Say",
+    "items": [
+      {
+        "name": "John Smith",
+        "company": "Homeowner",
+        "rating": 5,
+        "text": "Excellent service! Our lawn has never looked better. The team is professional and always on time.",
+        "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"
+      },
+      {
+        "name": "Sarah Johnson",
+        "company": "Property Manager",
+        "rating": 5,
+        "text": "Professional and reliable. Highly recommend GreenEdge for all landscaping needs!",
+        "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop"
+      },
+      {
+        "name": "Michael Brown",
+        "company": "Business Owner",
+        "rating": 5,
+        "text": "Best landscaping company in the area. They transformed our commercial property beautifully.",
+        "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"
+      }
+    ]
+  },
+  "cta": {
+    "heading": "Ready to Transform Your Lawn?",
+    "subheading": "Contact us today for a free consultation and estimate",
+    "ctaText": "Call Now"
+  },
+  "contact": {
+    "phone": "+1-800-GREEN-GO",
+    "email": "info@greenedge.com",
+    "hours": "Mon-Sat: 7AM-6PM"
+  },
+  "footer": {
+    "companyName": "GreenEdge Lawn Care",
+    "tagline": "Creating Beautiful Outdoor Spaces",
+    "address": "123 Garden Lane, Your City, ST 12345",
+    "links": [
+      {
+        "text": "Privacy Policy",
+        "href": "/policies/privacy.html"
+      },
+      {
+        "text": "Terms of Service",
+        "href": "/policies/terms.html"
+      },
+      {
+        "text": "Services",
+        "href": "#services"
+      },
+      {
+        "text": "Contact",
+        "href": "#contact"
+      }
+    ],
+    "copyright": "© 2024 GreenEdge Lawn Care. All rights reserved."
+  },
+  "seo": {
+    "title": "GreenEdge Lawn Care - Professional Lawn Care Services",
+    "description": "Professional lawn care and landscaping services. Expert mowing, design, and hardscaping. Free quotes available.",
+    "keywords": "lawn care, landscaping, lawn mowing, landscape design, hardscaping, yard maintenance"
+  },
+  "policies": {
+    "privacy": {
+      "lastUpdated": "2024-01-15",
+      "content": "<h2>Privacy Policy</h2><p>Last Updated: January 15, 2024</p><h3>Introduction</h3><p>We value your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, and safeguard your data.</p><h3>Information We Collect</h3><ul><li><strong>Contact Information:</strong> Name, email address, phone number, service address</li><li><strong>Usage Data:</strong> How you interact with our website and services</li><li><strong>Technical Data:</strong> IP address, browser type, device information</li><li><strong>Communication Data:</strong> Records of your communications with us</li><li><strong>Service Data:</strong> Details about services requested and provided</li></ul><h3>How We Use Your Information</h3><ul><li>To provide and improve our services</li><li>To respond to your inquiries and service requests</li><li>To schedule appointments and send reminders</li><li>To send important updates and notifications</li><li>To process payments securely</li><li>To comply with legal obligations</li></ul><h3>Data Security</h3><p>We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p><h3>Your Rights</h3><p>You have the right to access, correct, or delete your personal data. You may also opt-out of marketing communications at any time.</p>"
+    },
+    "terms": {
+      "lastUpdated": "2024-01-15",
+      "content": "<h2>Terms of Service</h2><p>Last Updated: January 15, 2024</p><h3>Agreement to Terms</h3><p>By accessing or using our services, you agree to be bound by these Terms of Service.</p><h3>Service Description</h3><p>We provide professional lawn care and landscaping services as described on our website. Service details, pricing, and availability are subject to change without notice.</p><h3>Payment Terms</h3><ul><li>All prices are in USD unless otherwise stated</li><li>Payment is due upon completion of services or as agreed</li><li>We accept major credit cards, debit cards, and other payment methods</li><li>Service quotes are estimates and may vary based on actual work required</li></ul><h3>Service Guarantee</h3><p>We stand behind our services with a satisfaction guarantee. If you're not satisfied, contact us within 30 days for resolution.</p><h3>Cancellation Policy</h3><p>Cancellations must be made at least 24 hours in advance. Late cancellations may be subject to a cancellation fee.</p><h3>Limitation of Liability</h3><p>To the fullest extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of our services.</p>"
+    }
+  }
+}
+

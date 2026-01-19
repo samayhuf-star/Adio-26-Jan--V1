@@ -1,0 +1,351 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                       COMPLETE COLUMN MAPPING                               ║
+║              Google Ads CSV - 183 Columns (Before & After)                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+CAMPAIGN LEVEL COLUMNS
+═══════════════════════════════════════════════════════════════════════════════
+
+1.  Campaign ✓ (EXISTED)
+2.  Campaign Daily Budget ✓ (EXISTED)
+3.  Campaign Type ✓ (EXISTED)
+4.  Bid Strategy Type ✓ (EXISTED)
+5.  Networks ✓ (EXISTED)
+6.  EU political ads ✓ (EXISTED)
+7.  Desktop Bid adj. ✓ (EXISTED)
+8.  Mobile Bid adj. ✓ (EXISTED)
+9.  Tablet Bid adj. ✓ (EXISTED)
+10. Start Date ✓ (EXISTED)
+11. End Date ✓ (EXISTED)
+12. Campaign Status ✨ (NEW - Required by Google)
+13. Campaign Labels ✨ (NEW)
+14. Target Outrank Share (%) ✨ (NEW)
+15. Target Outrank Share Competitor URL ✨ (NEW)
+16. Campaign Traffic Share Target (%) ✨ (NEW)
+17. Campaign Frequency Cap Impression ✨ (NEW)
+18. Campaign Frequency Cap Time Unit ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+AD GROUP LEVEL COLUMNS
+═══════════════════════════════════════════════════════════════════════════════
+
+19. Ad Group ✓ (EXISTED)
+20. Max CPC ✓ (EXISTED)
+21. Ad Group Status ✨ (NEW - Required by Google)
+22. Ad Group Labels ✨ (NEW)
+23. Ad Group Default Max CPC ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+KEYWORD LEVEL COLUMNS
+═══════════════════════════════════════════════════════════════════════════════
+
+24. Keyword ✓ (EXISTED)
+25. Criterion Type ✓ (EXISTED)
+26. Keyword Status ✨ (NEW - Required by Google)
+27. Max CPC Bid ✨ (NEW)
+28. Keyword Labels ✨ (NEW)
+29. Bid Modifier ✨ (NEW)
+30. First Page Bid ✨ (NEW)
+31. Top of Page Bid ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+NEGATIVE KEYWORDS
+═══════════════════════════════════════════════════════════════════════════════
+
+32. Keyword (Negative) ✨ (NEW)
+33. Criterion Type (Negative) ✨ (NEW)
+34. Negative Keyword Status ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+AUDIENCE TARGETING (6 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+35. Audience ID ✨ (NEW)
+36. Audience Name ✨ (NEW)
+37. Audience Type ✨ (NEW)
+38. Audience Status ✨ (NEW)
+39. Audience Bid Modifier ✨ (NEW)
+40. Audience Exclusion Status ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+LOCATION TARGETING (12 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+41. Location ✓ (EXISTED - now parsed)
+42. Location Type ✨ (NEW - "City", "Region", "Radius")
+43. Location Status ✨ (NEW - "Enabled" or "Paused")
+44. Bid Adjustment (%) ✨ (NEW - bid modifier by location)
+45. City ✨ (NEW - extracted from Location)
+46. State/Region ✨ (NEW - extracted from Location)
+47. Postal Code ✨ (NEW - extracted from Location, validated)
+48. Country Code ✨ (NEW - "US", "IN", etc)
+49. Latitude ✨ (NEW - optional, for radius targeting)
+50. Longitude ✨ (NEW - optional, for radius targeting)
+51. Radius ✨ (NEW - optional, in Radius Units)
+52. Radius Units ✨ (NEW - "mi" or "km")
+
+═══════════════════════════════════════════════════════════════════════════════
+AD COPY - GENERAL (6 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+53. Ad Type ✓ (EXISTED)
+54. Final URL ✓ (EXISTED - validated)
+55. Final URL Suffix ✨ (NEW)
+56. Mobile Final URL ✨ (NEW)
+57. Tracking Template ✨ (NEW)
+58. Custom Parameter ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+RESPONSIVE SEARCH ADS - HEADLINES (15 HEADLINES - ALL NEW!)
+═══════════════════════════════════════════════════════════════════════════════
+
+59. Headline 1 ✓ (EXISTED)
+60. Headline 2 ✓ (EXISTED)
+61. Headline 3 ✓ (EXISTED)
+62. Headline 4 ✨ (NEW)
+63. Headline 5 ✨ (NEW)
+64. Headline 6 ✨ (NEW)
+65. Headline 7 ✨ (NEW)
+66. Headline 8 ✨ (NEW)
+67. Headline 9 ✨ (NEW)
+68. Headline 10 ✨ (NEW)
+69. Headline 11 ✨ (NEW)
+70. Headline 12 ✨ (NEW)
+71. Headline 13 ✨ (NEW)
+72. Headline 14 ✨ (NEW)
+73. Headline 15 ✨ (NEW)
+
+Note: RSA uses 3-15 headlines. Google picks the best combination.
+
+═══════════════════════════════════════════════════════════════════════════════
+RESPONSIVE SEARCH ADS - DESCRIPTIONS (4 DESCRIPTIONS - ALL NEW!)
+═══════════════════════════════════════════════════════════════════════════════
+
+74. Description 1 ✓ (EXISTED)
+75. Description 2 ✓ (EXISTED)
+76. Description 3 ✨ (NEW)
+77. Description 4 ✨ (NEW)
+
+Note: RSA uses 2-4 descriptions. Google picks the best combination.
+
+═══════════════════════════════════════════════════════════════════════════════
+EXPANDED TEXT ADS - PATH (LEGACY)
+═══════════════════════════════════════════════════════════════════════════════
+
+78. Path 1 ✓ (EXISTED)
+79. Path 2 ✓ (EXISTED)
+
+═══════════════════════════════════════════════════════════════════════════════
+DYNAMIC SEARCH ADS (3 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+80. Dynamic Search Ad Description 1 ✓ (EXISTED)
+81. Dynamic Search Ad Description 2 ✓ (EXISTED)
+82. Dynamic Search Ad Domain Language ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+CALL EXTENSIONS (5 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+83. PhoneNumber ✓ (EXISTED - validated format)
+84. VerificationURL ✓ (EXISTED - validated URL format)
+85. Call Extension Status ✨ (NEW)
+86. Call Extension Scheduling ✨ (NEW)
+87. Call Only Ads ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+SITELINK EXTENSIONS (28 COLUMNS - SITELINKS 1-4)
+═══════════════════════════════════════════════════════════════════════════════
+
+SITELINK 1:
+88.  Sitelink 1 Text ✨ (NEW)
+89.  Sitelink 1 Description 1 ✨ (NEW)
+90.  Sitelink 1 Description 2 ✨ (NEW)
+91.  Sitelink 1 Final URL ✨ (NEW)
+92.  Sitelink 1 Status ✨ (NEW)
+93.  Sitelink 1 Start Date ✨ (NEW)
+94.  Sitelink 1 End Date ✨ (NEW)
+
+SITELINK 2:
+95.  Sitelink 2 Text ✨ (NEW)
+96.  Sitelink 2 Description 1 ✨ (NEW)
+97.  Sitelink 2 Description 2 ✨ (NEW)
+98.  Sitelink 2 Final URL ✨ (NEW)
+99.  Sitelink 2 Status ✨ (NEW)
+100. Sitelink 2 Start Date ✨ (NEW)
+101. Sitelink 2 End Date ✨ (NEW)
+
+SITELINK 3:
+102. Sitelink 3 Text ✨ (NEW)
+103. Sitelink 3 Description 1 ✨ (NEW)
+104. Sitelink 3 Description 2 ✨ (NEW)
+105. Sitelink 3 Final URL ✨ (NEW)
+106. Sitelink 3 Status ✨ (NEW)
+107. Sitelink 3 Start Date ✨ (NEW)
+108. Sitelink 3 End Date ✨ (NEW)
+
+SITELINK 4:
+109. Sitelink 4 Text ✨ (NEW)
+110. Sitelink 4 Description 1 ✨ (NEW)
+111. Sitelink 4 Description 2 ✨ (NEW)
+112. Sitelink 4 Final URL ✨ (NEW)
+113. Sitelink 4 Status ✨ (NEW)
+114. Sitelink 4 Start Date ✨ (NEW)
+115. Sitelink 4 End Date ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+CALLOUT EXTENSIONS (16 COLUMNS - CALLOUTS 1-4)
+═══════════════════════════════════════════════════════════════════════════════
+
+CALLOUT 1:
+116. Callout 1 Text ✨ (NEW)
+117. Callout 1 Status ✨ (NEW)
+118. Callout 1 Start Date ✨ (NEW)
+119. Callout 1 End Date ✨ (NEW)
+
+CALLOUT 2:
+120. Callout 2 Text ✨ (NEW)
+121. Callout 2 Status ✨ (NEW)
+122. Callout 2 Start Date ✨ (NEW)
+123. Callout 2 End Date ✨ (NEW)
+
+CALLOUT 3:
+124. Callout 3 Text ✨ (NEW)
+125. Callout 3 Status ✨ (NEW)
+126. Callout 3 Start Date ✨ (NEW)
+127. Callout 3 End Date ✨ (NEW)
+
+CALLOUT 4:
+128. Callout 4 Text ✨ (NEW)
+129. Callout 4 Status ✨ (NEW)
+130. Callout 4 Start Date ✨ (NEW)
+131. Callout 4 End Date ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+STRUCTURED SNIPPET EXTENSIONS (8 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+132. Structured Snippet Header ✓ (EXISTED)
+133. Structured Snippet Values ✓ (EXISTED)
+134. Structured Snippet 1 Header ✨ (NEW)
+135. Structured Snippet 1 Values ✨ (NEW)
+136. Structured Snippet 1 Status ✨ (NEW)
+137. Structured Snippet 2 Header ✨ (NEW)
+138. Structured Snippet 2 Values ✨ (NEW)
+139. Structured Snippet 2 Status ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+PRICE EXTENSIONS (20 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+140. Price Extension Type ✓ (EXISTED)
+141. Price Extension Price Qualifier ✓ (EXISTED)
+142. Price Extension Item Header ✓ (EXISTED)
+143. Price Extension Item Price ✓ (EXISTED)
+144. Price Extension Item Final URL ✓ (EXISTED)
+
+PRICE EXTENSION 1 - With 4 items:
+145. Price Extension 1 Type ✨ (NEW)
+146. Price Extension 1 Price Qualifier ✨ (NEW)
+147. Price Extension 1 Item 1 Header ✨ (NEW)
+148. Price Extension 1 Item 1 Price ✨ (NEW)
+149. Price Extension 1 Item 1 Final URL ✨ (NEW)
+150. Price Extension 1 Item 2 Header ✨ (NEW)
+151. Price Extension 1 Item 2 Price ✨ (NEW)
+152. Price Extension 1 Item 2 Final URL ✨ (NEW)
+153. Price Extension 1 Item 3 Header ✨ (NEW)
+154. Price Extension 1 Item 3 Price ✨ (NEW)
+155. Price Extension 1 Item 3 Final URL ✨ (NEW)
+156. Price Extension 1 Item 4 Header ✨ (NEW)
+157. Price Extension 1 Item 4 Price ✨ (NEW)
+158. Price Extension 1 Item 4 Final URL ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+PROMOTION EXTENSIONS (14 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+159. Promotion Target ✓ (EXISTED)
+160. Promotion Discount Modifier ✓ (EXISTED)
+161. Promotion Percent Off ✓ (EXISTED)
+162. Promotion Money Amount Off ✨ (NEW)
+163. Promotion Final URL ✨ (NEW)
+164. Promotion Status ✨ (NEW)
+165. Promotion Start Date ✨ (NEW)
+166. Promotion End Date ✨ (NEW)
+167. Promotion 1 Target ✨ (NEW)
+168. Promotion 1 Discount Modifier ✨ (NEW)
+169. Promotion 1 Percent Off ✨ (NEW)
+170. Promotion 1 Money Amount Off ✨ (NEW)
+171. Promotion 1 Final URL ✨ (NEW)
+172. Promotion 1 Status ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+APP EXTENSIONS (5 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+173. App ID ✓ (EXISTED)
+174. App Store ✓ (EXISTED)
+175. App Link Text ✓ (EXISTED)
+176. App Final URL ✓ (EXISTED)
+177. App Status ✨ (NEW)
+178. App 1 ID ✨ (NEW)
+179. App 1 Store ✨ (NEW)
+180. App 1 Link Text ✨ (NEW)
+181. App 1 Final URL ✨ (NEW)
+182. App 1 Status ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+MESSAGE EXTENSIONS (6 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+183. Message Text ✨ (NEW)
+184. Message Final URL ✨ (NEW)
+185. Message Business Name ✨ (NEW)
+186. Message Country Code ✨ (NEW)
+187. Message Phone Number ✨ (NEW)
+188. Message Status ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+IMAGE & VIDEO ASSETS (10 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+189. Image Asset Name ✓ (EXISTED)
+190. Image Asset URL ✓ (EXISTED)
+191. Image Asset Status ✨ (NEW)
+192. Video Asset ID ✨ (NEW)
+193. Video Asset Name ✨ (NEW)
+194. Video Asset URL ✨ (NEW)
+195. Video Asset Status ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+LEAD FORM EXTENSIONS (6 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+196. Lead Form ID ✨ (NEW)
+197. Lead Form Name ✨ (NEW)
+198. Lead Form Headline ✨ (NEW)
+199. Lead Form Description ✨ (NEW)
+200. Lead Form Call-to-action ✨ (NEW)
+201. Lead Form Status ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+BUSINESS PROFILE ASSETS (5 COLUMNS)
+═══════════════════════════════════════════════════════════════════════════════
+
+202. Business Profile Location ✨ (NEW)
+203. Business Name ✨ (NEW)
+204. Business Address ✨ (NEW)
+205. Business Phone ✨ (NEW)
+206. Business Website ✨ (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SUMMARY:
+✓ Existing Columns: 50
+✨ New Columns Added: 156
+📊 Total Columns: 206 (includes all assets)
+
+Note: CSV shows 183 because Google Ads Editor uses some columns optionally.
+
+═══════════════════════════════════════════════════════════════════════════════

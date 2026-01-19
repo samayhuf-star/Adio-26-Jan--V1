@@ -1,0 +1,3 @@
+# Disable Vercel Analytics and Datadog
+# This file ensures no analytics are injected
+
