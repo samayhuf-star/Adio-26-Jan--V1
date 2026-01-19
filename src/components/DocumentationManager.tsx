@@ -43,7 +43,7 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
     status: 'draft'
   });
 
-  // Load docs from Supabase
+  // Load docs from PocketBase
   useEffect(() => {
     loadDocumentation();
   }, []);
@@ -51,27 +51,39 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
   const loadDocumentation = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Transform support_tickets to documentation format (from localStorage for now)
-      const stored = localStorage.getItem('admin_docs');
-      let formattedDocs: DocumentationItem[] = [];
-      
-      if (stored) {
-        try {
-          formattedDocs = JSON.parse(stored);
-        } catch (e) {
-          console.error('Error parsing stored docs:', e);
+      // Load from PocketBase support_tickets collection
+      try {
+        const tickets = await pb.collection('support_tickets').getList(1, 100, {
+          sort: '-created',
+        });
+        
+        // Transform support_tickets to documentation format
+        const formattedDocs: DocumentationItem[] = tickets.items.map((ticket: any) => ({
+          id: ticket.id,
+          title: ticket.subject || 'Untitled',
+          category: ticket.category || 'Getting Started',
+          content: ticket.message || '',
+          images: ticket.images || [],
+          videos: ticket.videos || [],
+          status: ticket.status === 'published' ? 'published' : 'draft',
+          created_at: ticket.created || new Date().toISOString(),
+          updated_at: ticket.updated || new Date().toISOString(),
+        }));
+        
+        setDocs(formattedDocs);
+        console.log(`📚 Loaded ${formattedDocs.length} documentation items`);
+      } catch (pbError) {
+        console.error('Error loading from PocketBase:', pbError);
+        // Fallback to localStorage
+        const stored = localStorage.getItem('admin_docs');
+        if (stored) {
+          try {
+            setDocs(JSON.parse(stored));
+          } catch {
+            setDocs([]);
+          }
         }
       }
-      
-      setDocs(formattedDocs);
-      console.log(`📚 Loaded ${formattedDocs.length} documentation items`);
     } catch (error) {
       console.error('Error loading documentation:', error);
       const stored = localStorage.getItem('admin_docs');
@@ -87,7 +99,7 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
     }
   };
 
-  // Save docs to localStorage and Supabase
+  // Save docs to localStorage and PocketBase
   const saveDocs = async (newDoc?: Partial<DocumentationItem>, docId?: string) => {
     if (!newDoc) return;
 
@@ -103,6 +115,19 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
           updated_at: new Date().toISOString()
         } as DocumentationItem : d);
         notifications.success('Documentation updated');
+        
+        // Update in PocketBase
+        try {
+          await pb.collection('support_tickets').update(docId, {
+            subject: newDoc.title,
+            message: newDoc.content,
+            status: newDoc.status === 'published' ? 'published' : 'draft',
+            category: newDoc.category,
+            priority: 'medium'
+          });
+        } catch (pbError) {
+          console.error('Error updating in PocketBase:', pbError);
+        }
       } else {
         // Create new
         const newDocItem: DocumentationItem = {
@@ -118,23 +143,24 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
         };
         updatedDocs = [newDocItem, ...updatedDocs];
         notifications.success('Documentation created');
+        
+        // Save to PocketBase
+        try {
+          await pb.collection('support_tickets').create({
+            subject: newDoc.title,
+            message: newDoc.content,
+            status: newDoc.status === 'published' ? 'published' : 'draft',
+            category: newDoc.category,
+            priority: 'medium'
+          });
+        } catch (pbError) {
+          console.error('Error creating in PocketBase:', pbError);
+        }
       }
       
       // Save to localStorage
       localStorage.setItem('admin_docs', JSON.stringify(updatedDocs));
       setDocs(updatedDocs);
-      
-      // Also save to Supabase support_tickets for persistence
-      const docToSave = {
-        subject: newDoc.title,
-        message: newDoc.content,
-        status: newDoc.status === 'published' ? 'published' : 'draft',
-        priority: 'medium'
-      };
-
-      if (docId) {
-        await supabase.from('support_tickets').update(docToSave).eq('id', docId);
-      }
     } catch (error) {
       console.error('Error saving documentation:', error);
       notifications.error('Failed to save documentation');
@@ -163,10 +189,11 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
   const handleDeleteDoc = async (id: string) => {
     if (confirm('Are you sure you want to delete this documentation?')) {
       try {
-        await supabase.from('support_tickets').delete().eq('id', id);
+        await pb.collection('support_tickets').delete(id);
         notifications.success('Documentation deleted');
         await loadDocumentation();
       } catch (error) {
+        console.error('Error deleting from PocketBase:', error);
         notifications.error('Failed to delete documentation');
       }
     }

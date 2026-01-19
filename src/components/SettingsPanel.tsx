@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser, useAuth } from '../../utils/authCompat';
 import { getCurrentUserProfile } from '../utils/auth';
-import { supabase } from '../utils/supabase/client';
+import { pb } from '../utils/pocketbase/client';
 import { 
   User, Mail, Lock, Globe,
   Save, Eye, EyeOff,
@@ -31,7 +31,7 @@ interface SettingsPanelProps {
 }
 
 export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) => {
-  const { user: clerkUser } = useUserCompat();
+  const { user: currentUser } = useUserCompat();
   const { getToken } = useAuthCompat();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -134,12 +134,10 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
       const userProfile = await getCurrentUserProfile();
       if (!userProfile) throw new Error('User not found');
       
-      const { error } = await supabase
-        .from('users')
-        .update({ google_ads_default_account: defaultAccount })
-        .eq('id', userProfile.id);
+      await pb.collection('users').update(userProfile.id, { 
+        google_ads_default_account: defaultAccount 
+      });
       
-      if (error) throw error;
       notifications.success('Default account saved', { title: 'Success' });
     } catch (err) {
       console.error('Failed to save default account:', err);
@@ -216,18 +214,8 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
     const trimmedNewPassword = newPassword.trim();
     const trimmedConfirmPassword = confirmPassword.trim();
     
-    if (!clerkUser) {
+    if (!currentUser) {
       setSaveMessage({ type: 'error', text: 'You must be signed in to change your password.' });
-      return;
-    }
-    
-    // Check if user signed up with OAuth (no password)
-    const hasPassword = clerkUser.passwordEnabled;
-    if (!hasPassword) {
-      setSaveMessage({ 
-        type: 'error', 
-        text: 'Password change is not available for accounts signed in with Google or other social providers. Your account is secured by your social login provider.' 
-      });
       return;
     }
     
@@ -260,9 +248,14 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
     setSaveMessage(null);
     
     try {
-      await clerkUser.updatePassword({
-        currentPassword: trimmedCurrentPassword,
-        newPassword: trimmedNewPassword,
+      const userProfile = await getCurrentUserProfile();
+      if (!userProfile) throw new Error('User not found');
+      
+      // Update password via PocketBase
+      await pb.collection('users').update(userProfile.id, {
+        password: trimmedNewPassword,
+        passwordConfirm: trimmedConfirmPassword,
+        oldPassword: trimmedCurrentPassword,
       });
       
       setCurrentPassword('');
@@ -273,18 +266,14 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error: any) {
       console.error('Error changing password:', error);
-      // Handle specific Clerk error codes
-      const errorCode = error.errors?.[0]?.code;
       let errorMessage = 'Failed to change password. Please try again.';
       
-      if (errorCode === 'form_password_incorrect') {
-        errorMessage = 'Current password is incorrect. Please try again.';
-      } else if (errorCode === 'form_password_pwned') {
-        errorMessage = 'This password has been compromised in a data breach. Please choose a different password.';
-      } else if (errorCode === 'form_password_not_strong_enough') {
-        errorMessage = 'Password is not strong enough. Please use a mix of letters, numbers, and symbols.';
-      } else if (error.errors?.[0]?.longMessage || error.errors?.[0]?.message) {
-        errorMessage = error.errors[0].longMessage || error.errors[0].message;
+      if (error.message) {
+        if (error.message.includes('incorrect') || error.message.includes('invalid')) {
+          errorMessage = 'Current password is incorrect. Please try again.';
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       setSaveMessage({ type: 'error', text: errorMessage });
@@ -321,7 +310,7 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
           <div className="space-y-1.5">
             <TerminalLine prefix="$" label="user:" value={name || 'NOT_SET'} valueColor={name ? 'green' : 'yellow'} />
             <TerminalLine prefix="$" label="email:" value={email ? email.substring(0, 20) + (email.length > 20 ? '...' : '') : 'NOT_SET'} valueColor={email ? 'cyan' : 'yellow'} />
-            <TerminalLine prefix="$" label="auth_provider:" value="CLERK" valueColor="purple" />
+            <TerminalLine prefix="$" label="auth_provider:" value="POCKETBASE" valueColor="purple" />
             <TerminalLine prefix="$" label="status:" value={user ? 'AUTHENTICATED' : 'NOT_LOGGED_IN'} valueColor={user ? 'green' : 'yellow'} />
           </div>
         </TerminalCard>

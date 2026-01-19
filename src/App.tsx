@@ -64,6 +64,7 @@ const Teams = lazy(() => import('./components/Teams').then(m => ({ default: m.Te
 const Blog = lazy(() => import('./components/Blog').then(m => ({ default: m.default })));
 const BlogGenerator = lazy(() => import('./components/BlogGenerator').then(m => ({ default: m.default })));
 const SuperAdminPanel = lazy(() => import('./components/SuperAdminPanel').then(m => ({ default: m.SuperAdminPanel })));
+const PocketBaseAdmin = lazy(() => import('./components/PocketBaseAdmin').then(m => ({ default: m.PocketBaseAdmin })));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
 const TermsOfService = lazy(() => import('./components/TermsOfService').then(m => ({ default: m.TermsOfService })));
 const CookiePolicy = lazy(() => import('./components/CookiePolicy').then(m => ({ default: m.CookiePolicy })));
@@ -1225,6 +1226,20 @@ const AppContent = () => {
   }
 
   if (appView === 'admin-panel') {
+    // Check if we're on the /admin path for PocketBase admin
+    const path = window.location.pathname;
+    const isPocketBaseAdmin = path.startsWith('/admin');
+    
+    if (isPocketBaseAdmin) {
+      // Render PocketBase admin panel
+      return (
+        <Suspense fallback={<ComponentLoader />}>
+          <PocketBaseAdmin />
+        </Suspense>
+      );
+    }
+    
+    // Otherwise render the custom SuperAdminPanel
     return (
       <SuperAdminPanel
         user={user}
@@ -1318,7 +1333,7 @@ const AppContent = () => {
   }
 
   // Protect user view - require authentication
-  // If Clerk hasn't loaded or user isn't signed in on user view, redirect to auth
+  // If PocketBase user isn't signed in on user view, redirect to auth
   if (appView === 'user') {
     if (loading) {
       return (

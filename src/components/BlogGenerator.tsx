@@ -4,7 +4,7 @@ import {
   Copy, Check, Loader2, Settings, Image, Code, BarChart3,
   Quote, Target, Lightbulb, ChevronDown, ChevronUp, Eye, Send
 } from 'lucide-react';
-import { supabase } from '../utils/supabase/client';
+import { getSessionToken, getCurrentUser } from '../utils/pocketbase/auth';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -78,9 +78,9 @@ export default function BlogGenerator({ onBack }: BlogGeneratorProps) {
       return;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getSessionToken();
     
-    if (!session?.access_token) {
+    if (!token) {
       setError('Please log in to use the blog generator.');
       return;
     }
@@ -144,9 +144,9 @@ export default function BlogGenerator({ onBack }: BlogGeneratorProps) {
   const handlePublish = async () => {
     if (!generatedBlog) return;
     
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getSessionToken();
     
-    if (!session?.access_token) {
+    if (!token) {
       setError('Please log in to publish blogs.');
       return;
     }

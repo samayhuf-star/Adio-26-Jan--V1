@@ -67,7 +67,7 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Get Clerk auth context for token retrieval
+  // Get PocketBase auth context for token retrieval
   const { getToken } = useAuthCompat();
   
   // Helper to get admin headers for API calls
@@ -77,14 +77,14 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
       'X-Admin-Email': user?.email || ''
     };
     
-    // Get Clerk JWT token for authentication
+    // Get PocketBase token for authentication
     try {
       const token = await getToken();
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('Failed to get Clerk token:', error);
+      console.error('Failed to get PocketBase token:', error);
     }
     
     return headers;

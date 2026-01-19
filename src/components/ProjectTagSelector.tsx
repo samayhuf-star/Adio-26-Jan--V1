@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../utils/authCompat';
+import { useAuthCompat } from '../../utils/authCompat';
 import { Tag, Plus, Check, X, Search, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -40,8 +40,7 @@ export function ProjectTagSelector({
   onProjectsChange,
   size = 'md'
 }: ProjectTagSelectorProps) {
-  const auth = useAuthCompat();
-  const { getToken, isSignedIn } = auth || { getToken: async () => null, isSignedIn: false };
+  const { getToken } = useAuthCompat();
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Project[]>(linkedProjects);
@@ -57,11 +56,11 @@ export function ProjectTagSelector({
 
   // Fetch linked projects for this item on mount
   useEffect(() => {
-    if (isSignedIn && !hasFetched.current && itemId) {
+    if (!hasFetched.current && itemId) {
       hasFetched.current = true;
       fetchLinkedProjects();
     }
-  }, [isSignedIn, itemId]);
+  }, [itemId]);
 
   useEffect(() => {
     if (linkedProjects.length > 0) {

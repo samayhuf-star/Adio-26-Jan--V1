@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Eye, Download, Star, Phone, Mail, Clock, Edit3, Trash2, FolderOpen, Plus, Sparkles, X, Search, Filter, Globe, Copy, Check, CheckCircle, AlertCircle, Loader, RefreshCw, ExternalLink, Calendar, Shield } from 'lucide-react';
 import TemplateEditorBuilder from './TemplateEditorBuilder';
-import { supabase } from '../utils/supabase/client';
+import { getSessionToken } from '../utils/pocketbase/auth';
 import { 
   TemplateData, 
   SavedWebsite, 
@@ -3143,8 +3143,7 @@ const ConnectedDomainsTab = ({ savedWebsites }: { savedWebsites: SavedWebsite[] 
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   const getAuthToken = async () => {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token;
+    return getSessionToken();
   };
 
   const loadDomains = async () => {

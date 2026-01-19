@@ -317,11 +317,10 @@ process.on('SIGTERM', async () => {
 const requestCounts: Record<string, { count: number; resetAt: number }> = {};
 
 // Super Admin Authentication Helper - PRODUCTION READY
-// Supports both Clerk (primary) and Supabase (fallback) authentication
+// PocketBase authentication only
 // Only allows access via:
-// 1. Valid Clerk JWT token + superadmin role in database (primary)
-// 2. Valid Supabase token + superadmin/super_admin role in database (fallback)
-// 3. X-Admin-Email header with verified super admin email (for Clerk)
+// 1. Valid PocketBase token + superadmin role in database (primary)
+// 2. X-Admin-Email header with verified super admin email (fallback)
 // 4. ADMIN_SECRET_KEY header for server-to-server calls (if configured)
 async function verifySuperAdmin(c: any): Promise<{ authorized: boolean; error?: string; userId?: string }> {
   try {
@@ -2223,25 +2222,24 @@ app.get('/api/admin/services-billing', async (c) => {
     });
   }
 
-  // Supabase - check if we can get usage from API
-  const supabaseUrl = process.env.SUPABASE_URL;
-  if (supabaseUrl) {
-    // Supabase Pro plan is $25/mo base, can't easily get real usage without management API
+  // PocketBase - check if configured
+  const pocketbaseUrl = process.env.POCKETBASE_URL;
+  if (pocketbaseUrl) {
     services.push({
-      name: 'Supabase',
+      name: 'PocketBase',
       description: 'Database & Auth',
-      monthlyBudget: 75,
-      currentSpend: 25, // Pro plan base cost
+      monthlyBudget: 0, // Self-hosted, no monthly cost
+      currentSpend: 0,
       status: 'active',
-      lastBilled: today,
-      isManual: true, // Real usage requires Management API access
+      lastBilled: 'N/A',
+      isManual: true,
       apiConnected: true
     });
   } else {
     services.push({
-      name: 'Supabase',
+      name: 'PocketBase',
       description: 'Database & Auth',
-      monthlyBudget: 75,
+      monthlyBudget: 0,
       currentSpend: 0,
       status: 'not_configured',
       lastBilled: 'N/A',
@@ -5137,7 +5135,7 @@ async function getUserFromAuth(c: any): Promise<{ id: string; email: string } | 
   return { id: auth.userId, email: auth.userEmail || '' };
 }
 
-// Endpoint to sync Clerk user to local database (called after sign in)
+// Endpoint to sync PocketBase user to local database (called after sign in)
 app.post('/api/user/sync', async (c) => {
   try {
     const auth = await verifyUserToken(c);
@@ -6991,11 +6989,9 @@ app.get('/api/admin/config-status', async (c) => {
         adminService: status,
         environment: {
           nodeEnv: process.env.NODE_ENV,
-          hasSupabaseUrl: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
-          hasSupabaseAnonKey: !!(process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY),
-          hasSupabaseServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+          hasPocketBaseUrl: !!process.env.POCKETBASE_URL,
+          hasPocketBaseAdminEmail: !!process.env.POCKETBASE_ADMIN_EMAIL,
           hasDatabaseUrl: !!process.env.DATABASE_URL,
-          hasSupabaseDbPassword: !!process.env.SUPABASE_DB_PASSWORD,
         },
         adminUser: {
           id: adminContext.user.id,
@@ -7012,13 +7008,13 @@ app.get('/api/admin/config-status', async (c) => {
 app.get('/api/admin/stats', async (c) => {
   return withAdminAuth(c, async (adminContext) => {
     try {
-      const supabase = adminContext.adminClient;
-      if (!supabase) {
+      const pbAdmin = await getPocketBaseAdmin();
+      if (!pbAdmin) {
         return c.json({
           success: false,
           error: 'Admin client not available',
           code: 'CONFIG_ERROR',
-          details: { message: 'Supabase admin client not initialized' },
+          details: { message: 'PocketBase admin client not initialized' },
           timestamp: new Date().toISOString()
         }, 500);
       }
@@ -7035,7 +7031,7 @@ app.get('/api/admin/stats', async (c) => {
 
       const errors: string[] = [];
 
-      // Get total users from Replit PostgreSQL (where Clerk users are synced)
+      // Get total users from PostgreSQL (where PocketBase users are synced)
       try {
         const userResult = await pool.query('SELECT COUNT(*) as count FROM users');
         stats.totalUsers = parseInt(userResult.rows[0]?.count || '0', 10);
@@ -7150,7 +7146,7 @@ app.get('/api/admin/stats', async (c) => {
   });
 });
 
-// Get all users for admin (from Replit PostgreSQL where Clerk users are synced)
+// Get all users for admin (from PostgreSQL where PocketBase users are synced)
 app.get('/api/admin/users', async (c) => {
   return withAdminAuth(c, async (adminContext) => {
     try {
@@ -7283,8 +7279,8 @@ app.post('/api/admin/users/:userId/block', async (c) => {
         }, 400);
       }
       
-      const supabase = adminContext.adminClient;
-      if (!supabase) {
+      const pbAdmin = await getPocketBaseAdmin();
+      if (!pbAdmin) {
         return c.json({
           success: false,
           error: 'Admin client not available',
@@ -7293,18 +7289,12 @@ app.post('/api/admin/users/:userId/block', async (c) => {
         }, 500);
       }
       
-      // Update user blocked status
-      const { data, error } = await supabase
-        .from('users')
-        .update({ 
+      try {
+        // Update user blocked status in PocketBase
+        await pbAdmin.collection('users').update(userId, { 
           is_blocked: blocked,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
-        .select()
-        .single();
-      
-      if (error) {
+        });
+      } catch (error: any) {
         await logAdminAction(
           adminContext.user.id,
           'block_user_error',
@@ -7318,7 +7308,7 @@ app.post('/api/admin/users/:userId/block', async (c) => {
           success: false,
           error: 'Failed to update user status',
           code: 'DATABASE_ERROR',
-          details: { message: error.message },
+          details: { message: error.message || 'Unknown error' },
           timestamp: new Date().toISOString()
         }, 500);
       }
@@ -7398,8 +7388,8 @@ app.post('/api/admin/users/:userId/role', async (c) => {
         }, 400);
       }
       
-      const supabase = adminContext.adminClient;
-      if (!supabase) {
+      const pbAdmin = await getPocketBaseAdmin();
+      if (!pbAdmin) {
         return c.json({
           success: false,
           error: 'Admin client not available',
@@ -7408,25 +7398,16 @@ app.post('/api/admin/users/:userId/role', async (c) => {
         }, 500);
       }
       
-      // Get current user data for logging
-      const { data: currentUser } = await supabase
-        .from('users')
-        .select('email, role')
-        .eq('id', userId)
-        .single();
-      
-      // Update user role
-      const { data, error } = await supabase
-        .from('users')
-        .update({ 
+      try {
+        // Get current user data for logging
+        const currentUser = await pbAdmin.collection('users').getOne(userId);
+        
+        // Update user role in PocketBase
+        const updatedUser = await pbAdmin.collection('users').update(userId, { 
           role,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
-        .select()
-        .single();
-      
-      if (error) {
+        });
+        
+        return c.json({
         await logAdminAction(
           adminContext.user.id,
           'update_user_role_error',
@@ -7440,10 +7421,10 @@ app.post('/api/admin/users/:userId/role', async (c) => {
           success: false,
           error: 'Failed to update user role',
           code: 'DATABASE_ERROR',
-          details: { message: error.message },
+          details: { message: error instanceof Error ? error.message : 'Unknown error' },
           timestamp: new Date().toISOString()
         }, 500);
-      }
+      } catch (error: any) {
       
       // Log the admin action
       await logAdminAction(

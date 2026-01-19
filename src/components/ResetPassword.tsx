@@ -5,7 +5,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { supabase } from '../utils/supabase/client';
+import { pb } from '../utils/pocketbase/client';
+import { getSessionToken } from '../utils/pocketbase/auth';
 import { updatePassword } from '../utils/auth';
 import { notifications } from '../utils/notifications';
 
@@ -25,28 +26,26 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
   const [isValidSession, setIsValidSession] = useState(false);
 
   useEffect(() => {
-    // Check if we have a valid password reset session
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
+    // Check if we have a valid password reset token in URL
+    const checkResetToken = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const tokenHash = urlParams.get('token_hash');
+      
+      if (token || tokenHash) {
         setIsValidSession(true);
       } else {
-        setError('Invalid or expired password reset link. Please request a new one.');
+        // Check if user is already authenticated
+        const sessionToken = getSessionToken();
+        if (sessionToken) {
+          setIsValidSession(true);
+        } else {
+          setError('Invalid or expired password reset link. Please request a new one.');
+        }
       }
     };
 
-    checkSession();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        setIsValidSession(true);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    checkResetToken();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,7 +65,15 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
     setIsLoading(true);
 
     try {
-      await updatePassword(password);
+      // Get token from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token') || urlParams.get('token_hash');
+      
+      if (!token) {
+        throw new Error('Missing reset token');
+      }
+      
+      await updatePassword(token, password, confirmPassword);
       
       setIsSuccess(true);
       notifications.success('Password reset successfully!', {

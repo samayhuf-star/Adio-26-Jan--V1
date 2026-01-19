@@ -454,7 +454,8 @@ export const HelpSupport = () => {
 
     useEffect(() => {
         const loadUserAndImages = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { getCurrentUser } = await import('../utils/pocketbase/auth');
+            const user = getCurrentUser();
             setUserEmail(user?.email || null);
             
             try {

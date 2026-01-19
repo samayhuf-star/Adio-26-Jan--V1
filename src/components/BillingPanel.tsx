@@ -51,12 +51,12 @@ export const BillingPanel = () => {
                     setInfo(data);
                     setLoading(false);
                 } catch (apiError) {
-                    // Fallback: Read from Supabase user profile
-                    console.log('ℹ️ Using Supabase user profile data (API unavailable)');
+                    // Fallback: Read from PocketBase user profile
+                    console.log('ℹ️ Using PocketBase user profile data (API unavailable)');
                     
                     try {
                         const userProfile = await getCurrentUserProfile();
-                        const { supabase } = await import('../utils/supabase/client');
+                        const { pb } = await import('../utils/pocketbase/client');
                     
                         let userPlan = "Free";
                         let nextBillingDate: string | null = null;
@@ -64,29 +64,33 @@ export const BillingPanel = () => {
                         let invoices: any[] = [];
                     
                         if (userProfile) {
-                            // Fetch subscription from subscriptions table
-                            const { data: subscription, error: subError } = await supabase
-                                .from('subscriptions')
-                                .select('*')
-                                .eq('user_id', userProfile.id)
-                                .order('created_at', { ascending: false })
-                                .limit(1)
-                                .single();
-                            
-                            if (!subError && subscription) {
-                                userPlan = subscription.plan_name || "Free";
-                                subscriptionStatus = subscription.status || "inactive";
+                            // Fetch subscription from subscriptions collection
+                            try {
+                                const subscriptions = await pb.collection('subscriptions').getList(1, 1, {
+                                    filter: `user_id = "${userProfile.id}"`,
+                                    sort: '-created',
+                                });
                                 
-                                if (subscription.current_period_end) {
-                                    nextBillingDate = new Date(subscription.current_period_end).toISOString().split('T')[0];
-                                } else if (userPlan.includes('Monthly')) {
-                                    // Calculate next billing date if not set
-                                    const nextDate = new Date();
-                                    nextDate.setMonth(nextDate.getMonth() + 1);
-                                    nextBillingDate = nextDate.toISOString().split('T')[0];
+                                if (subscriptions.items && subscriptions.items.length > 0) {
+                                    const subscription = subscriptions.items[0];
+                                    userPlan = subscription.plan_name || "Free";
+                                    subscriptionStatus = subscription.status || "inactive";
+                                    
+                                    if (subscription.current_period_end) {
+                                        nextBillingDate = new Date(subscription.current_period_end).toISOString().split('T')[0];
+                                    } else if (userPlan.includes('Monthly')) {
+                                        // Calculate next billing date if not set
+                                        const nextDate = new Date();
+                                        nextDate.setMonth(nextDate.getMonth() + 1);
+                                        nextBillingDate = nextDate.toISOString().split('T')[0];
+                                    }
                                 }
-                            } else {
-                                // Fallback to user profile data
+                            } catch (subError) {
+                                console.error('Error fetching subscription:', subError);
+                            }
+                            
+                            // Fallback to user profile data if subscription not found
+                            if (userPlan === "Free") {
                                 const planMap: Record<string, string> = {
                                     'free': 'Free',
                                     'starter': 'Monthly Limited',
@@ -99,20 +103,22 @@ export const BillingPanel = () => {
                             }
                             
                             // Fetch invoices
-                            const { data: invoiceData, error: invError } = await supabase
-                                .from('invoices')
-                                .select('*')
-                                .eq('user_id', userProfile.id)
-                                .order('created_at', { ascending: false })
-                                .limit(10);
-                            
-                            if (!invError && invoiceData) {
-                                invoices = invoiceData.map((inv: any) => ({
-                                    id: inv.stripe_invoice_id || inv.id,
-                                    date: new Date(inv.created_at).toISOString().split('T')[0],
-                                    amount: `$${inv.amount.toFixed(2)}`,
-                                    status: inv.status === 'paid' ? 'Paid' : 'Pending'
-                                }));
+                            try {
+                                const invoiceData = await pb.collection('invoices').getList(1, 10, {
+                                    filter: `user_id = "${userProfile.id}"`,
+                                    sort: '-created',
+                                });
+                                
+                                if (invoiceData.items) {
+                                    invoices = invoiceData.items.map((inv: any) => ({
+                                        id: inv.stripe_invoice_id || inv.id,
+                                        date: new Date(inv.created).toISOString().split('T')[0],
+                                        amount: `$${inv.amount?.toFixed(2) || '0.00'}`,
+                                        status: inv.status === 'paid' ? 'Paid' : 'Pending'
+                                    }));
+                                }
+                            } catch (invError) {
+                                console.error('Error fetching invoices:', invError);
                             }
                         }
                     

@@ -271,7 +271,7 @@ export const KeywordSavedLists = () => {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-slate-500">storage:</span>
-              <span className="text-emerald-400">Supabase Cloud</span>
+              <span className="text-emerald-400">PocketBase Cloud</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-slate-500">actions:</span>

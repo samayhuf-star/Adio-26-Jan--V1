@@ -6,7 +6,7 @@ import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Textarea } from '../../ui/textarea';
 import { getCurrentUserProfile } from '../../../utils/auth';
-import { supabase } from '../../../utils/supabase/client';
+import { pb } from '../../../utils/pocketbase/client';
 import { useOnboarding } from '../../../contexts/OnboardingContext';
 import { useNotification } from '../../../contexts/NotificationContext';
 
@@ -103,25 +103,17 @@ export const ProfileStep: React.FC = () => {
         return;
       }
 
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          full_name: profileData.full_name.trim(),
-          company_name: profileData.company_name.trim() || null,
-          job_title: profileData.job_title.trim() || null,
-          industry: profileData.industry || null,
-          company_size: profileData.company_size || null,
-          phone: profileData.phone.trim() || null,
-          website: profileData.website.trim() || null,
-          country: profileData.country || null,
-          bio: profileData.bio.trim() || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', profile.id);
-
-      if (updateError) {
-        throw updateError;
-      }
+      await pb.collection('users').update(profile.id, {
+        name: profileData.full_name.trim(),
+        company_name: profileData.company_name.trim() || null,
+        job_title: profileData.job_title.trim() || null,
+        industry: profileData.industry || null,
+        company_size: profileData.company_size || null,
+        phone: profileData.phone.trim() || null,
+        website: profileData.website.trim() || null,
+        country: profileData.country || null,
+        bio: profileData.bio.trim() || null,
+      });
 
       success('Profile updated successfully!');
       markStepCompleted('profile');

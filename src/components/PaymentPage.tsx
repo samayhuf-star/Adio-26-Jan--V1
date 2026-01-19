@@ -181,9 +181,9 @@ const PaymentForm: React.FC<{
 
   const createPaymentIntent = async () => {
     try {
-      // Get current user ID from Supabase
-      const { getCurrentAuthUser } = await import('../utils/auth');
-      const user = await getCurrentAuthUser();
+      // Get current user ID from PocketBase
+      const { getCurrentUser } = await import('../utils/pocketbase/auth');
+      const user = getCurrentUser();
       const userId = user?.id;
 
       // Call backend API to create payment intent
@@ -240,10 +240,10 @@ const PaymentForm: React.FC<{
     }));
 
     try {
-      // Get user email from Supabase
+      // Get user email from PocketBase
       let userEmail: string | undefined;
       try {
-        const user = await getCurrentAuthUser();
+        const user = getCurrentUser();
         userEmail = user?.email;
       } catch (e) {
         console.error('Error getting user email:', e);
@@ -376,12 +376,12 @@ const PaymentForm: React.FC<{
   };
 
   const handlePaymentSuccess = async () => {
-    // Update user subscription status in database via Supabase
+    // Update user subscription status in database via PocketBase
     // Note: The webhook will also update this, but we update here for immediate UI feedback
     try {
-      const { getCurrentAuthUser } = await import('../utils/auth');
-      const { userHelpers } = await import('../utils/supabase');
-      const user = await getCurrentAuthUser();
+      const { getCurrentUser } = await import('../utils/pocketbase/auth');
+      const { pb } = await import('../utils/pocketbase/client');
+      const user = getCurrentUser();
       
       if (user) {
         // Map plan name to subscription plan format
@@ -392,10 +392,36 @@ const PaymentForm: React.FC<{
           'Monthly Unlimited': 'monthly_unlimited',
         };
 
-        await userHelpers.updateUserSubscription(user.id, {
-          plan: planMap[plan.name] || plan.name.toLowerCase().replace(/\s+/g, '_'),
-          status: 'active',
+        const planValue = planMap[plan.name] || plan.name.toLowerCase().replace(/\s+/g, '_');
+        
+        // Update user subscription in PocketBase
+        await pb.collection('users').update(user.id, {
+          subscription_plan: planValue,
+          subscription_status: 'active',
         });
+        
+        // Also create/update subscription record
+        try {
+          const existingSubs = await pb.collection('subscriptions').getList(1, 1, {
+            filter: `user_id = "${user.id}"`,
+            sort: '-created',
+          });
+          
+          if (existingSubs.items && existingSubs.items.length > 0) {
+            await pb.collection('subscriptions').update(existingSubs.items[0].id, {
+              plan: planValue,
+              status: 'active',
+            });
+          } else {
+            await pb.collection('subscriptions').create({
+              user_id: user.id,
+              plan: planValue,
+              status: 'active',
+            });
+          }
+        } catch (subError) {
+          console.error('Error updating subscription record:', subError);
+        }
       }
     } catch (e) {
       console.error('Error updating subscription:', e);

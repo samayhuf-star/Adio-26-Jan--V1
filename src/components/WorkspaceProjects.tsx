@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../utils/authCompat';
+import { useAuthCompat } from '../../utils/authCompat';
 import { 
   FolderOpen, Plus, Edit2, Trash2, Zap, Key, MinusCircle, 
   Shuffle, BarChart3, Settings, X, Loader2,

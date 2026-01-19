@@ -1,5 +1,7 @@
+// DEPRECATED: This component is no longer used. PocketBase auth is handled via Auth.tsx
+// Keeping for backwards compatibility but should be removed
 import React from 'react';
-import { SignIn, SignUp, useAuth } from '../../utils/authCompat';
+import { useAuth } from '../../utils/authCompat';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -9,7 +11,7 @@ interface ClerkAuthProps {
 }
 
 export const ClerkAuth: React.FC<ClerkAuthProps> = ({ onBackToHome, mode = 'sign-in' }) => {
-  const { isLoaded } = useAuthCompat();
+  const { isLoaded } = useAuth();
 
   if (!isLoaded) {
     return (

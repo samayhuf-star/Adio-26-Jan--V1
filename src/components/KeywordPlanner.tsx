@@ -13,7 +13,7 @@ import { TerminalCard, TerminalLine } from './ui/terminal-card';
 import { generateKeywords as generateKeywordsFromGoogleAds } from '../utils/api/googleAds';
 import { getKeywordIdeas, getKeywordMetrics, KeywordMetrics } from '../utils/keywordPlannerApi';
 import { historyService } from '../utils/historyService';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+// Removed Supabase info import - using PocketBase instead
 import { copyToClipboard } from '../utils/clipboard';
 import { notifications } from '../utils/notifications';
 import { DEFAULT_SEED_KEYWORDS, DEFAULT_NEGATIVE_KEYWORDS as DEFAULT_NEG_KW } from '../utils/defaultExamples';

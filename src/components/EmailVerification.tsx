@@ -4,10 +4,9 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { notifications } from '../utils/notifications';
-import { supabase } from '../utils/supabase/client';
+import { pb } from '../utils/pocketbase/client';
+import { getCurrentUser } from '../utils/pocketbase/auth';
 import { resendVerificationEmail } from '../utils/auth';
-// Supabase removed - using PocketBase
-type Session = any;
 
 interface EmailVerificationProps {
   onVerificationSuccess: () => void;
@@ -32,42 +31,17 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
       setEmail(emailParam);
     }
 
-    // Handle email verification from Supabase
-    const { data: subscription } = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        // User has verified their email
-        if (session.user.email_confirmed_at) {
-            setIsVerified(true);
-          // Bug_74: Show success message and redirect to login
-            notifications.success('Email verified successfully!', {
-              title: 'Verification Complete',
-            description: 'Your email has been verified. Redirecting to login...',
-            });
-
-            setTimeout(() => {
-              onVerificationSuccess();
-          }, 2000);
-        }
-      }
-    });
-
     // Check if user is already verified
     const checkVerification = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email_confirmed_at) {
+      const user = getCurrentUser();
+      if (user) {
+        // PocketBase users are verified after email confirmation
         setIsVerified(true);
         if (user.email) setEmail(user.email);
-      } else if (user?.email && !email) {
-        setEmail(user.email);
       }
     };
 
     checkVerification();
-
-    // Cleanup: unsubscribe from auth state changes
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [onVerificationSuccess]);
 
   const handleResendEmail = async () => {
