@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthCompat } from '../../utils/authCompat';
+import { useAuthCompat } from '../../utils/authCompat.tsx';
 import { Sparkles, Copy, Save, AlertCircle, Download, Trash2, FileDown, ArrowRight, Lightbulb, Plus, Link, TrendingUp, DollarSign, BarChart3, RefreshCw, Globe, Target, Zap, Building, Phone, Mail, MapPin, FileText, CheckCircle2, FolderOpen } from 'lucide-react';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
