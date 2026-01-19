@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuthCompat } from "../utils/authCompat"';
+import { useAuthCompat } from "../utils/authCompat";
 import { Tag, Plus, Check, X, Search, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
