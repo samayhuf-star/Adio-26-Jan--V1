@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../utils/authCompat';
+import { useAuth } from '../utils/authCompat';
 import { 
   ArrowRight, ArrowLeft, Check, Globe, Link2, Sparkles, Brain, 
   Hash, MapPin, FileText, Download, AlertCircle, CheckCircle2,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../utils/authCompat';
+import { useAuth } from '../utils/authCompat';
 import { Shuffle, Plus, X, Download, Save, Sparkles, Trash2, Clock, FolderOpen } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
 import { Textarea } from './ui/textarea';

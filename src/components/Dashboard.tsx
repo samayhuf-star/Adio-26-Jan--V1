@@ -83,6 +83,13 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   const fetchDashboardData = async () => {
     if (!user) return;
     
+    // Skip API calls in test admin mode
+    const testAdminMode = sessionStorage.getItem('test_admin_mode');
+    if (testAdminMode === 'true' || user.id?.startsWith('test-admin-')) {
+      setDefaultStats();
+      return;
+    }
+    
     // Prevent duplicate calls - if already loading, skip
     if (fetchInProgress.current) return;
     fetchInProgress.current = true;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser, useAuth } from '../../utils/authCompat';
+import { useUser, useAuth } from '../utils/authCompat';
 import { getCurrentUserProfile } from '../utils/auth';
 import { pb } from '../utils/pocketbase/client';
 import { 

@@ -1,7 +1,7 @@
 // DEPRECATED: This component is no longer used. PocketBase auth is handled via Auth.tsx
 // Keeping for backwards compatibility but should be removed
 import React from 'react';
-import { useAuth } from '../../utils/authCompat';
+import { useAuth } from '../utils/authCompat';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../utils/authCompat';
+import { useAuth } from '../utils/authCompat';
 import {
   Plus, Check, Trash2, Edit2, FolderOpen, Calendar, Star, GripVertical,
   ChevronDown, ChevronRight, MoreHorizontal, Search, Filter, X, Inbox,

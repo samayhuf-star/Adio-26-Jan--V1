@@ -327,6 +327,13 @@ const AppContent = () => {
   const fetchNotifications = async () => {
     if (!user?.id) return;
     
+    // Skip API calls in test admin mode
+    const testAdminMode = sessionStorage.getItem('test_admin_mode');
+    if (testAdminMode === 'true' || user.id.startsWith('test-admin-')) {
+      setNotificationsLoading(false);
+      return;
+    }
+    
     try {
       setNotificationsLoading(true);
       const response = await fetch(`/api/notifications/${user.id}`);

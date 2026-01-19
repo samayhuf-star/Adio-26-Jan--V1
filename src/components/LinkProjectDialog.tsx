@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../utils/authCompat';
+import { useAuth } from '../utils/authCompat';
 import { FolderOpen, Plus, Check, Loader2, X, Link } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
