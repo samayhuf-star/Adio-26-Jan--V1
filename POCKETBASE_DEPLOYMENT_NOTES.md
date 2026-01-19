@@ -42,12 +42,18 @@ vercel --prod
    VITE_POCKETBASE_URL=https://your-pocketbase-server.com
    ```
 
-### Option 2: Use PocketBase Cloud
+### Option 2: Use PocketBase Cloud (Third-Party Managed Hosting)
 
-1. Sign up at https://pocketbase.io/cloud
+**Note:** PocketBase Cloud is a third-party managed hosting service, not an official PocketBase product.
+
+1. Sign up at https://pocketbasecloud.com (NOT pocketbase.io/cloud)
 2. Create a new instance
-3. Get your instance URL
-4. Set environment variables in Vercel with your PocketBase Cloud URL
+3. Get your instance URL from the dashboard
+4. Set environment variables in Vercel with your PocketBase Cloud instance URL
+
+**Alternative Third-Party Options:**
+- **PocketHost**: https://pockethost.io (Popular community option)
+- **Self-host on a VPS**: Use DigitalOcean, AWS EC2, or similar (Recommended for production)
 
 ### Option 3: Docker Deployment
 
