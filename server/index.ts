@@ -862,10 +862,19 @@ app.get('/api/stripe/products', async (c) => {
 app.post('/api/stripe/checkout', async (c) => {
   try {
     const body = await c.req.json();
-    const { priceId, planName, userId, email, successUrl, cancelUrl } = body;
+    let { priceId, planName, userId, email, successUrl, cancelUrl } = body;
+
+    // Get user from auth token if not provided
+    if (!userId || !email) {
+      const auth = await verifyUserToken(c);
+      if (auth.authorized && auth.userId && auth.userEmail) {
+        userId = userId || auth.userId;
+        email = email || auth.userEmail;
+      }
+    }
 
     if (!email) {
-      return c.json({ error: 'Missing required fields' }, 400);
+      return c.json({ error: 'Missing required fields. Please sign in or provide email.' }, 400);
     }
 
     // Get actual price ID from Stripe by product name if placeholder priceId is used
@@ -971,10 +980,18 @@ app.post('/api/stripe/checkout', async (c) => {
 app.post('/api/stripe/portal', async (c) => {
   try {
     const body = await c.req.json();
-    const { email, returnUrl } = body;
+    let { email, returnUrl } = body;
+
+    // Get user from auth token if email not provided
+    if (!email) {
+      const auth = await verifyUserToken(c);
+      if (auth.authorized && auth.userEmail) {
+        email = auth.userEmail;
+      }
+    }
 
     if (!email) {
-      return c.json({ error: 'Email required' }, 400);
+      return c.json({ error: 'Email required. Please sign in or provide email.' }, 400);
     }
 
     const user = await stripeService.getUserByEmail(email);
@@ -1191,9 +1208,22 @@ app.post('/api/promo/lifetime-direct', async (c) => {
   }
 });
 
-app.get('/api/stripe/subscription/:email', async (c) => {
+app.get('/api/stripe/subscription/:email?', async (c) => {
   try {
-    const email = c.req.param('email');
+    let email = c.req.param('email');
+    
+    // Get email from auth token if not provided in URL
+    if (!email) {
+      const auth = await verifyUserToken(c);
+      if (auth.authorized && auth.userEmail) {
+        email = auth.userEmail;
+      }
+    }
+
+    if (!email) {
+      return c.json({ error: 'Email required. Please sign in or provide email in URL.' }, 400);
+    }
+
     const user = await stripeService.getUserByEmail(email);
 
     if (!user?.stripe_subscription_id) {

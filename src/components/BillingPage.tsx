@@ -69,7 +69,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [currentPlan, setCurrentPlan] = useState<string>('free');
   
-  const userEmail = user?.primaryEmailAddress?.emailAddress || '';
+  // Get email from user object (works with new auth system)
+  const userEmail = user?.email || user?.primaryEmailAddress?.emailAddress || '';
 
   useEffect(() => {
     loadProducts();
@@ -98,7 +99,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
     if (!userEmail) return;
     try {
       const token = await getToken();
-      const response = await fetch(`/api/stripe/subscription/${encodeURIComponent(userEmail)}`, {
+      // Use auth token - email is optional in URL now
+      const url = token 
+        ? `/api/stripe/subscription` 
+        : `/api/stripe/subscription/${encodeURIComponent(userEmail)}`;
+      const response = await fetch(url, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       const data = await response.json();
