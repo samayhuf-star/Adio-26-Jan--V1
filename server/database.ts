@@ -30,17 +30,32 @@ export const pbAdmin = {
 };
 
 /**
- * Verify a user token - stub implementation
- * TODO: Replace with Nhost token verification
- * For now, this is a placeholder that will need proper token verification
+ * Verify a user token - DEVELOPMENT STUB
+ *
+ * This is a temporary implementation so that auth-protected routes
+ * (Projects, Teams, etc.) work without a real auth provider.
+ *
+ * IMPORTANT: This treats ANY non-empty token as a valid user.
+ * Do NOT rely on this for production security.
  */
 export async function verifyUserToken(
   token: string
 ): Promise<{ authorized: boolean; userId?: string; userEmail?: string; error?: string }> {
-  // TODO: Implement proper token verification with Nhost
-  // For now, return false - this will need to be replaced with actual Nhost token verification
-  console.warn('Database: verifyUserToken not implemented. Please integrate Nhost authentication.');
-  return { authorized: false, error: 'Authentication not configured' };
+  if (!token) {
+    return { authorized: false, error: 'Missing auth token' };
+  }
+
+  // Dev-mode: trust any token and derive a synthetic user from it
+  console.warn('Database: using development stub for verifyUserToken - all non-empty tokens are treated as valid.');
+
+  const userId = token;
+  const userEmail = `${token}@local.dev`;
+
+  return {
+    authorized: true,
+    userId,
+    userEmail,
+  };
 }
 
 /**
