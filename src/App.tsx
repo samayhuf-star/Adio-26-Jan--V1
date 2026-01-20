@@ -30,8 +30,7 @@ import { getUserPreferences, applyUserPreferences } from './utils/userPreference
 import { notifications as notificationService } from './utils/notifications';
 import { setCurrentUserId } from './utils/localStorageHistory';
 import { getCurrentUserProfile, signOut, getSessionToken } from './utils/auth';
-import { getCurrentUser, isAuthenticated } from './utils/pocketbase/auth';
-import { pb } from './utils/pocketbase/client';
+import { getCurrentUser, isAuthenticated } from './utils/auth';
 import { DataSourceIndicator } from './components/DataSourceIndicator';
 import { useDataSource } from './hooks/useDataSource';
 import { initStorageManager, clearStorageNow } from './utils/storageManager';
@@ -64,7 +63,7 @@ const Teams = lazy(() => import('./components/Teams').then(m => ({ default: m.Te
 const Blog = lazy(() => import('./components/Blog').then(m => ({ default: m.default })));
 const BlogGenerator = lazy(() => import('./components/BlogGenerator').then(m => ({ default: m.default })));
 const SuperAdminPanel = lazy(() => import('./components/SuperAdminPanel').then(m => ({ default: m.SuperAdminPanel })));
-const PocketBaseAdmin = lazy(() => import('./components/PocketBaseAdmin').then(m => ({ default: m.PocketBaseAdmin })));
+// PocketBaseAdmin removed
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
 const TermsOfService = lazy(() => import('./components/TermsOfService').then(m => ({ default: m.TermsOfService })));
 const CookiePolicy = lazy(() => import('./components/CookiePolicy').then(m => ({ default: m.CookiePolicy })));
@@ -105,7 +104,7 @@ const AppContent = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // Initialize PocketBase auth state
+  // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
@@ -139,23 +138,18 @@ const AppContent = () => {
     };
     
     initAuth();
-  
-    // Listen for auth changes
-    const unsubscribe = pb.authStore.onChange((token, model) => {
-      if (model) {
+    
+    // Listen for auth changes via storage events
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'auth_token' || e.key === 'user') {
         initAuth();
-      } else {
-        // Only clear if not in test admin mode
-        const testAdminMode = sessionStorage.getItem('test_admin_mode');
-        if (testAdminMode !== 'true') {
-          setUser(null);
-          setCurrentUserId(null);
-        }
       }
-    });
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
-      unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
   
@@ -1233,16 +1227,25 @@ const AppContent = () => {
   }
 
   if (appView === 'admin-panel') {
-    // Check if we're on the /admin path for PocketBase admin
+    // Admin panel - PocketBase removed
     const path = window.location.pathname;
-    const isPocketBaseAdmin = path.startsWith('/admin');
+    const isAdminPath = path.startsWith('/admin');
     
-    if (isPocketBaseAdmin) {
-      // Render PocketBase admin panel
+    if (isAdminPath) {
+      // Render SuperAdminPanel instead
       return (
-        <Suspense fallback={<ComponentLoader />}>
-          <PocketBaseAdmin />
-        </Suspense>
+        <SuperAdminPanel
+          user={user}
+          onLogout={() => {
+            signOut().then(() => {
+              window.history.pushState({}, '', '/');
+              setAppView('homepage');
+            }).catch((err) => {
+              console.error('Signout error:', err);
+              setAppView('homepage');
+            });
+          }}
+        />
       );
     }
     
@@ -1340,7 +1343,7 @@ const AppContent = () => {
   }
 
   // Protect user view - require authentication
-  // If PocketBase user isn't signed in on user view, redirect to auth
+  // If user isn't signed in on user view, redirect to auth
   if (appView === 'user') {
     if (loading) {
       return (

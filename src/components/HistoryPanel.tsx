@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { projectId, publicAnonKey } from "../../utils/auth"/info';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca`;
 

@@ -1,4 +1,4 @@
-import { supabase } from './supabase/client';
+// Supabase removed - using API endpoints instead
 import { getCurrentAuthUser } from './auth';
 import { api } from './api';
 

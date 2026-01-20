@@ -1,20 +1,18 @@
-import { projectId, publicAnonKey } from './supabase/info';
+// Supabase removed - using direct API endpoints
+const projectId = ''; // Not used anymore
+const publicAnonKey = ''; // Not used anymore
 import { captureError } from './errorTracking';
 import { loggingService } from './loggingService';
 
-// Base URL for API calls
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca`;
+// Base URL for API calls - using relative paths for same-origin requests
+const API_BASE = '/api';
 
 export const api = {
   // Health check to verify server availability
   async healthCheck() {
     try {
       loggingService.logProcessing('Health check started', { endpoint: '/health' });
-      const response = await fetch(`${API_BASE}/health`, {
-        headers: {
-          'Authorization': `Bearer ${publicAnonKey}`
-        }
-      });
+      const response = await fetch(`${API_BASE}/health`);
       const isHealthy = response.ok;
       loggingService.logSystemEvent('Health check completed', { status: response.status, healthy: isHealthy });
       return isHealthy;
@@ -29,12 +27,7 @@ export const api = {
   },
 
   async post(endpoint: string, body: any) {
-    // Check if projectId exists
-    if (!projectId || projectId === 'undefined') {
-      const error = new Error('Project ID not configured');
-      loggingService.addLog('error', 'API', 'POST request failed: Project ID not configured', { endpoint });
-      throw error;
-    }
+    // API endpoint validation
 
     try {
       // Only log transaction for non-404 endpoints to reduce noise

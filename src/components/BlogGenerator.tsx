@@ -4,7 +4,7 @@ import {
   Copy, Check, Loader2, Settings, Image, Code, BarChart3,
   Quote, Target, Lightbulb, ChevronDown, ChevronUp, Eye, Send
 } from 'lucide-react';
-import { getSessionToken, getCurrentUser } from '../utils/pocketbase/auth';
+import { getSessionToken, getCurrentUser } from "../utils/auth";
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';

@@ -1,5 +1,5 @@
-import { projectId } from '../supabase/info';
-import { supabase } from '../supabase/client';
+import { projectId } from "./auth"/info';
+import { supabase } from "./auth"/client';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca`;
 

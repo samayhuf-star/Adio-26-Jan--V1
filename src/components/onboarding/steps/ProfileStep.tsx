@@ -6,7 +6,7 @@ import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Textarea } from '../../ui/textarea';
 import { getCurrentUserProfile } from '../../../utils/auth';
-import { pb } from '../../../utils/pocketbase/client';
+import { pb } from "../utils/auth";
 import { useOnboarding } from '../../../contexts/OnboardingContext';
 import { useNotification } from '../../../contexts/NotificationContext';
 

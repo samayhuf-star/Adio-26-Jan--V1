@@ -1,17 +1,13 @@
 import { defineConfig } from "drizzle-kit";
 
 function getDatabaseUrl(): string {
+  // PostgreSQL connection - Supabase client/auth removed
   const supabasePassword = process.env.SUPABASE_DB_PASSWORD;
   if (supabasePassword) {
     return `postgresql://postgres.kkdnnrwhzofttzajnwlj:${supabasePassword}@aws-1-us-east-1.pooler.supabase.com:5432/postgres`;
   }
   
-  const supabaseDbUrl = process.env.SUPABASE_DATABASE_URL;
-  if (supabaseDbUrl) {
-    return supabaseDbUrl;
-  }
-  
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
   if (databaseUrl) {
     return databaseUrl;
   }

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useUser, useAuth } from '../utils/authCompat';
+import { useUserCompat, useAuthCompat } from '../utils/authCompat';
 import { getCurrentUserProfile } from '../utils/auth';
-import { pb } from '../utils/pocketbase/client';
 import { 
   User, Mail, Lock, Globe,
   Save, Eye, EyeOff,
@@ -134,9 +133,21 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
       const userProfile = await getCurrentUserProfile();
       if (!userProfile) throw new Error('User not found');
       
-      await pb.collection('users').update(userProfile.id, { 
-        google_ads_default_account: defaultAccount 
+      const token = await getToken();
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          google_ads_default_account: defaultAccount 
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to save default account');
+      }
       
       notifications.success('Default account saved', { title: 'Success' });
     } catch (err) {
@@ -251,12 +262,25 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
       const userProfile = await getCurrentUserProfile();
       if (!userProfile) throw new Error('User not found');
       
-      // Update password via PocketBase
-      await pb.collection('users').update(userProfile.id, {
-        password: trimmedNewPassword,
-        passwordConfirm: trimmedConfirmPassword,
-        oldPassword: trimmedCurrentPassword,
+      // Update password via API
+      const token = await getToken();
+      const response = await fetch('/api/user/password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: trimmedCurrentPassword,
+          newPassword: trimmedNewPassword,
+          confirmPassword: trimmedConfirmPassword,
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to change password');
+      }
       
       setCurrentPassword('');
       setNewPassword('');
@@ -310,7 +334,7 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
           <div className="space-y-1.5">
             <TerminalLine prefix="$" label="user:" value={name || 'NOT_SET'} valueColor={name ? 'green' : 'yellow'} />
             <TerminalLine prefix="$" label="email:" value={email ? email.substring(0, 20) + (email.length > 20 ? '...' : '') : 'NOT_SET'} valueColor={email ? 'cyan' : 'yellow'} />
-            <TerminalLine prefix="$" label="auth_provider:" value="POCKETBASE" valueColor="purple" />
+            <TerminalLine prefix="$" label="auth_provider:" value="NHOST" valueColor="purple" />
             <TerminalLine prefix="$" label="status:" value={user ? 'AUTHENTICATED' : 'NOT_LOGGED_IN'} valueColor={user ? 'green' : 'yellow'} />
           </div>
         </TerminalCard>

@@ -16,7 +16,7 @@ import { validateEnvironment } from "./utils/envCheck";
 import { loggingService } from "./utils/loggingService";
 import { initVersionCheck, handleChunkLoadError } from "./utils/versionCheck";
 
-const POCKETBASE_URL = import.meta.env.VITE_POCKETBASE_URL || 'http://127.0.0.1:8090';
+// PocketBase removed - using Nhost or other auth provider
 
 // Initialize notification service
 notifications.setToastInstance(toast);

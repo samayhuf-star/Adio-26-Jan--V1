@@ -1,38 +1,99 @@
 /**
- * Auth utilities for PocketBase authentication
- * This module provides helper functions for authentication with PocketBase
+ * Auth utilities - Stub implementation
+ * Authentication will be handled by Nhost or another provider
  */
 
-import {
-  signUpWithEmail as pbSignUp,
-  signInWithEmail as pbSignIn,
-  signOut as pbSignOut,
-  getCurrentUser as pbGetCurrentUser,
-  isAuthenticated as pbIsAuthenticated,
-  getSessionToken as pbGetSessionToken,
-  resetPassword as pbResetPassword,
-  updatePassword as pbUpdatePassword,
-  updateUserProfile as pbUpdateUserProfile,
-  getUserProfile as pbGetUserProfile,
-  isSuperAdmin as pbIsSuperAdmin,
-  type User,
-} from './pocketbase/auth';
+export interface User {
+  id: string;
+  email: string;
+  username?: string;
+  name?: string;
+  avatar?: string;
+  role?: string;
+  subscription_plan?: string;
+  subscription_status?: string;
+  google_ads_default_account?: string | null;
+  company_name?: string;
+  job_title?: string;
+  industry?: string;
+  company_size?: string;
+  phone?: string;
+  website?: string;
+  country?: string;
+  bio?: string;
+  created?: string;
+  updated?: string;
+}
 
-// Re-export PocketBase auth functions
-export const signUpWithEmail = pbSignUp;
-export const signInWithEmail = pbSignIn;
-export const signOut = pbSignOut;
-export const resetPassword = pbResetPassword;
-export const updatePassword = pbUpdatePassword;
-export const isSuperAdmin = pbIsSuperAdmin;
-export const getSessionToken = pbGetSessionToken;
+// Stub functions - to be replaced with Nhost implementation
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  passwordConfirm?: string,
+  name?: string
+): Promise<{ data: User | null; error: { message: string } | null }> {
+  console.warn('Auth: signUpWithEmail not implemented. Please integrate Nhost authentication.');
+  return { data: null, error: { message: 'Authentication not configured' } };
+}
+
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<{ data: { user: User; session: any } | null; error: { message: string } | null }> {
+  console.warn('Auth: signInWithEmail not implemented. Please integrate Nhost authentication.');
+  return { data: null, error: { message: 'Authentication not configured' } };
+}
+
+export async function signOut(): Promise<{ error: { message: string } | null }> {
+  console.warn('Auth: signOut not implemented.');
+  return { error: null };
+}
+
+export function getSessionToken(): string | null {
+  // Check localStorage for token
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('auth_token') || null;
+  }
+  return null;
+}
+
+export async function resetPassword(email: string): Promise<{ error: { message: string } | null }> {
+  console.warn('Auth: resetPassword not implemented.');
+  return { error: { message: 'Password reset not configured' } };
+}
+
+export async function updatePassword(
+  newPassword: string,
+  token?: string
+): Promise<{ error: { message: string } | null }> {
+  console.warn('Auth: updatePassword not implemented.');
+  return { error: { message: 'Password update not configured' } };
+}
+
+export function getCurrentUser(): User | null {
+  if (typeof window !== 'undefined') {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+export function isAuthenticated(): boolean {
+  return getSessionToken() !== null && getCurrentUser() !== null;
+}
 
 export function clearProfileCache() {
-  // PocketBase handles caching internally
+  // No-op
 }
 
 export async function getCurrentAuthUser(): Promise<{ id: string; email: string } | null> {
-  const user = pbGetCurrentUser();
+  const user = getCurrentUser();
   if (!user) {
     return null;
   }
@@ -43,80 +104,56 @@ export async function getCurrentAuthUser(): Promise<{ id: string; email: string 
 }
 
 export async function getCurrentUserProfile(): Promise<User | null> {
-  const user = pbGetCurrentUser();
-  if (!user) {
-    return null;
-  }
-  
-  // Try to get full profile from database
-  try {
-    const fullProfile = await pbGetUserProfile(user.id);
-    if (fullProfile) {
-      return fullProfile;
-    }
-  } catch (error) {
-    console.error('Failed to fetch full user profile:', error);
-  }
-  
-  // Return basic profile from auth store
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name || user.email.split('@')[0],
-    username: user.username,
-    avatar: user.avatar,
-    role: user.role || 'user',
-    subscription_plan: user.subscription_plan || 'free',
-    subscription_status: user.subscription_status || 'active',
-    google_ads_default_account: user.google_ads_default_account || null,
-    company_name: user.company_name,
-    job_title: user.job_title,
-    industry: user.industry,
-    company_size: user.company_size,
-    phone: user.phone,
-    website: user.website,
-    country: user.country,
-    bio: user.bio,
-    created: user.created,
-    updated: user.updated,
-  };
+  return getCurrentUser();
 }
 
-export async function isAuthenticated(): Promise<boolean> {
-  return pbIsAuthenticated();
+export async function isAuthenticatedAsync(): Promise<boolean> {
+  return isAuthenticated();
 }
 
 export async function getSession() {
   const token = getSessionToken();
-    if (token) {
-      return { access_token: token };
-    }
-    return null;
+  if (token) {
+    return { access_token: token };
+  }
+  return null;
 }
 
-export async function createUserProfile(userId: string, email: string, fullName: string): Promise<User> {
-  const result = await pbUpdateUserProfile(userId, {
-    name: fullName,
+export async function createUserProfile(
+  userId: string,
+  email: string,
+  fullName: string
+): Promise<User> {
+  const user: User = {
+    id: userId,
     email,
-  });
+    name: fullName,
+    role: 'user',
+    subscription_plan: 'free',
+    subscription_status: 'active',
+  };
   
-  if (result.error) {
-    throw new Error(result.error.message);
-}
-
-  return result.data!;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+  
+  return user;
 }
 
 export async function resendVerificationEmail(_email: string) {
-  // PocketBase handles email verification automatically on signup
   return { error: null };
 }
 
-// Legacy Clerk compatibility functions (for gradual migration)
+export function isSuperAdmin(): boolean {
+  const user = getCurrentUser();
+  return user?.role === 'superadmin' || user?.role === 'super_admin' || false;
+}
+
+// Legacy compatibility functions
 export function setClerkUser(_user: any) {
-  // No-op for PocketBase
+  // No-op
 }
 
 export function setClerkAuth(_auth: any) {
-  // No-op for PocketBase
+  // No-op
 }

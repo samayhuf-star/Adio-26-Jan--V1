@@ -5,8 +5,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { pb } from '../utils/pocketbase/client';
-import { getSessionToken } from '../utils/pocketbase/auth';
+import { pb } from "../utils/auth";
+import { getSessionToken } from "../utils/auth";
 import { updatePassword } from '../utils/auth';
 import { notifications } from '../utils/notifications';
 

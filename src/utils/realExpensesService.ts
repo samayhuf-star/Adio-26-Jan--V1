@@ -1,4 +1,4 @@
-import { supabase } from './supabase/client';
+import { supabase } from "./auth"/client';
 
 export interface RealExpense {
   id: string;

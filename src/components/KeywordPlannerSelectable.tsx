@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Slider } from './ui/slider';
 import { api } from '../utils/api';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { projectId, publicAnonKey } from "../../utils/auth"/info';
 import { generateComprehensiveNegativeKeywords } from '../utils/negativeKeywords';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';

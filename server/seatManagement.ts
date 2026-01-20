@@ -1,14 +1,11 @@
 import { getUncachableStripeClient } from './stripeClient';
-import { pbAdmin } from './pocketbase';
+// PocketBase removed - using database directly
+// import { pbAdmin } from './pocketbase';
 
-// Stub for organization management - will be replaced with PocketBase collections
-const getOrganizationFromPocketBase = async (organizationId: string) => {
-  try {
-    const org = await pbAdmin.collection('organizations').getOne(organizationId);
-    return org;
-  } catch (error) {
-    return null;
-  }
+// Stub for organization management - PocketBase removed
+const getOrganizationFromPocketBase = async (_organizationId: string) => {
+  // TODO: Replace with database query
+  return null;
 };
 
 export type PlanType = 'lifetime' | 'basic' | 'pro';

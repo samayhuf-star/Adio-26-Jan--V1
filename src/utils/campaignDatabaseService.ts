@@ -3,7 +3,7 @@
  * Bypasses edge functions and saves directly to database
  */
 
-import { supabase } from './supabase/client';
+import { supabase } from "./auth"/client';
 
 export interface CampaignDatabaseItem {
   id?: string;

@@ -5,7 +5,7 @@
 
 import { api } from './api';
 import { notifications } from './notifications';
-import { projectId, publicAnonKey } from './supabase/info';
+import { projectId, publicAnonKey } from "./auth"/info';
 import { validateAndFixAds, formatValidationReport } from './adValidationUtils';
 
 // API Base URL

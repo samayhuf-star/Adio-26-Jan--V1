@@ -181,8 +181,8 @@ const PaymentForm: React.FC<{
 
   const createPaymentIntent = async () => {
     try {
-      // Get current user ID from PocketBase
-      const { getCurrentUser } = await import('../utils/pocketbase/auth');
+      // Get current user ID
+      const { getCurrentUser } = await import('../utils/auth');
       const user = getCurrentUser();
       const userId = user?.id;
 
@@ -240,7 +240,7 @@ const PaymentForm: React.FC<{
     }));
 
     try {
-      // Get user email from PocketBase
+      // Get user email
       let userEmail: string | undefined;
       try {
         const user = getCurrentUser();
@@ -336,7 +336,7 @@ const PaymentForm: React.FC<{
         }
       } else {
         // Fallback: Use Stripe Checkout
-        // Get current user ID from Supabase
+        // Get current user ID
         const { getCurrentAuthUser } = await import('../utils/auth');
         const user = await getCurrentAuthUser();
         const userId = user?.id;
@@ -376,52 +376,16 @@ const PaymentForm: React.FC<{
   };
 
   const handlePaymentSuccess = async () => {
-    // Update user subscription status in database via PocketBase
-    // Note: The webhook will also update this, but we update here for immediate UI feedback
+    // Update user subscription status in database
+    // Note: Subscription updates are handled by Stripe webhook
+    // This is just for immediate UI feedback
     try {
-      const { getCurrentUser } = await import('../utils/pocketbase/auth');
-      const { pb } = await import('../utils/pocketbase/client');
+      const { getCurrentUser } = await import('../utils/auth');
       const user = getCurrentUser();
       
       if (user) {
-        // Map plan name to subscription plan format
-        const planMap: Record<string, string> = {
-          'Lifetime Limited': 'lifetime_limited',
-          'Lifetime Unlimited': 'lifetime_unlimited',
-          'Monthly Limited': 'monthly_limited',
-          'Monthly Unlimited': 'monthly_unlimited',
-        };
-
-        const planValue = planMap[plan.name] || plan.name.toLowerCase().replace(/\s+/g, '_');
-        
-        // Update user subscription in PocketBase
-        await pb.collection('users').update(user.id, {
-          subscription_plan: planValue,
-          subscription_status: 'active',
-        });
-        
-        // Also create/update subscription record
-        try {
-          const existingSubs = await pb.collection('subscriptions').getList(1, 1, {
-            filter: `user_id = "${user.id}"`,
-            sort: '-created',
-          });
-          
-          if (existingSubs.items && existingSubs.items.length > 0) {
-            await pb.collection('subscriptions').update(existingSubs.items[0].id, {
-              plan: planValue,
-              status: 'active',
-            });
-          } else {
-            await pb.collection('subscriptions').create({
-              user_id: user.id,
-              plan: planValue,
-              status: 'active',
-            });
-          }
-        } catch (subError) {
-          console.error('Error updating subscription record:', subError);
-        }
+        // Subscription will be updated via Stripe webhook
+        console.log('Subscription update will be handled by Stripe webhook');
       }
     } catch (e) {
       console.error('Error updating subscription:', e);

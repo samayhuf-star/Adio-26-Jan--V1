@@ -51,12 +51,11 @@ export const BillingPanel = () => {
                     setInfo(data);
                     setLoading(false);
                 } catch (apiError) {
-                    // Fallback: Read from PocketBase user profile
-                    console.log('ℹ️ Using PocketBase user profile data (API unavailable)');
+                    // Fallback: Read from user profile
+                    console.log('ℹ️ Using user profile data (API unavailable)');
                     
                     try {
                         const userProfile = await getCurrentUserProfile();
-                        const { pb } = await import('../utils/pocketbase/client');
                     
                         let userPlan = "Free";
                         let nextBillingDate: string | null = null;
@@ -64,62 +63,18 @@ export const BillingPanel = () => {
                         let invoices: any[] = [];
                     
                         if (userProfile) {
-                            // Fetch subscription from subscriptions collection
-                            try {
-                                const subscriptions = await pb.collection('subscriptions').getList(1, 1, {
-                                    filter: `user_id = "${userProfile.id}"`,
-                                    sort: '-created',
-                                });
-                                
-                                if (subscriptions.items && subscriptions.items.length > 0) {
-                                    const subscription = subscriptions.items[0];
-                                    userPlan = subscription.plan_name || "Free";
-                                    subscriptionStatus = subscription.status || "inactive";
-                                    
-                                    if (subscription.current_period_end) {
-                                        nextBillingDate = new Date(subscription.current_period_end).toISOString().split('T')[0];
-                                    } else if (userPlan.includes('Monthly')) {
-                                        // Calculate next billing date if not set
-                                        const nextDate = new Date();
-                                        nextDate.setMonth(nextDate.getMonth() + 1);
-                                        nextBillingDate = nextDate.toISOString().split('T')[0];
-                                    }
-                                }
-                            } catch (subError) {
-                                console.error('Error fetching subscription:', subError);
-                            }
+                            // Use user profile data
+                            const planMap: Record<string, string> = {
+                                'free': 'Free',
+                                'starter': 'Monthly Limited',
+                                'professional': 'Monthly Unlimited',
+                                'enterprise': 'Lifetime Unlimited'
+                            };
                             
-                            // Fallback to user profile data if subscription not found
-                            if (userPlan === "Free") {
-                                const planMap: Record<string, string> = {
-                                    'free': 'Free',
-                                    'starter': 'Monthly Limited',
-                                    'professional': 'Monthly Unlimited',
-                                    'enterprise': 'Lifetime Unlimited'
-                                };
-                                
-                                userPlan = planMap[userProfile.subscription_plan] || userProfile.subscription_plan || "Free";
-                                subscriptionStatus = userProfile.subscription_status || "inactive";
-                            }
+                            userPlan = planMap[userProfile.subscription_plan || 'free'] || userProfile.subscription_plan || "Free";
+                            subscriptionStatus = userProfile.subscription_status || "inactive";
                             
-                            // Fetch invoices
-                            try {
-                                const invoiceData = await pb.collection('invoices').getList(1, 10, {
-                                    filter: `user_id = "${userProfile.id}"`,
-                                    sort: '-created',
-                                });
-                                
-                                if (invoiceData.items) {
-                                    invoices = invoiceData.items.map((inv: any) => ({
-                                        id: inv.stripe_invoice_id || inv.id,
-                                        date: new Date(inv.created).toISOString().split('T')[0],
-                                        amount: `$${inv.amount?.toFixed(2) || '0.00'}`,
-                                        status: inv.status === 'paid' ? 'Paid' : 'Pending'
-                                    }));
-                                }
-                            } catch (invError) {
-                                console.error('Error fetching invoices:', invError);
-                            }
+                            // Invoices will be fetched via API endpoint
                         }
                     
                         setInfo({
@@ -448,9 +403,8 @@ export const BillingPanel = () => {
         try {
             // Try to fetch invoice PDF from API using fetch directly for blob response
             try {
-                const { projectId, publicAnonKey } = await import('../utils/supabase/info');
-                const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca`;
-                const response = await fetch(`${API_BASE}/billing/invoices/${invoiceId}/download`, {
+                // Use API endpoint instead of Supabase
+                const response = await fetch(`/api/billing/invoices/${invoiceId}/download`, {
                     headers: {
                         'Authorization': `Bearer ${publicAnonKey}`
                     }

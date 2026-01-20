@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Eye, Download, Star, Phone, Mail, Clock, Edit3, Trash2, FolderOpen, Plus, Sparkles, X, Search, Filter, Globe, Copy, Check, CheckCircle, AlertCircle, Loader, RefreshCw, ExternalLink, Calendar, Shield } from 'lucide-react';
 import TemplateEditorBuilder from './TemplateEditorBuilder';
-import { getSessionToken } from '../utils/pocketbase/auth';
+import { getSessionToken } from "../utils/auth";
 import { 
   TemplateData, 
   SavedWebsite, 

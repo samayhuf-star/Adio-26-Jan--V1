@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Save, X, FileText, ImageIcon, Film, Loader } from 'lucide-react';
 import { notifications } from '../utils/notifications';
-import { supabase } from '../utils/supabase/client';
+import { supabase } from "../utils/auth";
 
 interface DocumentationItem {
   id: string;

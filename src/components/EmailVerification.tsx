@@ -4,9 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { notifications } from '../utils/notifications';
-import { pb } from '../utils/pocketbase/client';
-import { getCurrentUser } from '../utils/pocketbase/auth';
-import { resendVerificationEmail } from '../utils/auth';
+import { getCurrentUser, resendVerificationEmail } from '../utils/auth';
 
 interface EmailVerificationProps {
   onVerificationSuccess: () => void;
@@ -35,7 +33,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
     const checkVerification = async () => {
       const user = getCurrentUser();
       if (user) {
-        // PocketBase users are verified after email confirmation
+        // Users are verified after email confirmation
         setIsVerified(true);
         if (user.email) setEmail(user.email);
       }

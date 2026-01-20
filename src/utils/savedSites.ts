@@ -3,7 +3,7 @@
  * Handles CRUD operations for saved sites with workspace isolation
  */
 
-import { supabase } from './supabase';
+import { supabase } from "../utils/auth";
 import { createWorkspaceQuery, getCurrentWorkspaceContext, logSecurityViolation } from './workspace-api';
 
 export interface SavedSite {

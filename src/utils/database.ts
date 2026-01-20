@@ -1,4 +1,4 @@
-import { supabase } from './supabase/client';
+// Supabase removed - using API endpoints instead
 
 const API_BASE = '/api';
 
@@ -75,9 +75,9 @@ export async function deleteFromDatabase(table: string, id: string): Promise<DbR
 
 export async function loadAdminUsers() {
   try {
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
+    const response = await fetch(`${API_BASE}/admin/users`);
+    if (!response.ok) throw new Error('Failed to fetch users');
+    return await response.json();
   } catch (error) {
     console.error('Error loading users:', error);
     return [];

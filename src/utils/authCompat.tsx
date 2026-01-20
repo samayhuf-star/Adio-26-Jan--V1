@@ -4,8 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { getSessionToken, getCurrentUserProfile } from './auth';
-import { getCurrentUser, isAuthenticated } from './pocketbase/auth';
+import { getSessionToken, getCurrentUserProfile, getCurrentUser, isAuthenticated } from './auth';
 
 /**
  * Hook-like function that returns getToken (for components that used useAuth)

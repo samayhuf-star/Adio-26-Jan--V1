@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Badge } from './ui/badge';
-import { supabase } from '../utils/supabase';
+import { supabase } from "../utils/auth";
 
 
 const documentationSections = [
@@ -454,7 +454,7 @@ export const HelpSupport = () => {
 
     useEffect(() => {
         const loadUserAndImages = async () => {
-            const { getCurrentUser } = await import('../utils/pocketbase/auth');
+            const { getCurrentUser } = await import('../utils/auth');
             const user = getCurrentUser();
             setUserEmail(user?.email || null);
             

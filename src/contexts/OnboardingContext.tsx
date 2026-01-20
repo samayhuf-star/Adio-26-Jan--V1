@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getCurrentAuthUser, getCurrentUserProfile } from '../utils/auth';
-import { supabase } from '../utils/supabase/client';
+// Supabase removed - using auth utilities instead
 
 export interface OnboardingStep {
   id: string;

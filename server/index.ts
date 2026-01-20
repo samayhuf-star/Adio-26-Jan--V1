@@ -317,16 +317,14 @@ process.on('SIGTERM', async () => {
 const requestCounts: Record<string, { count: number; resetAt: number }> = {};
 
 // Super Admin Authentication Helper - PRODUCTION READY
-// PocketBase authentication only
+// Authentication - Database removed
 // Only allows access via:
-// 1. Valid PocketBase token + superadmin role in database (primary)
-// 2. X-Admin-Email header with verified super admin email (fallback)
-// 4. ADMIN_SECRET_KEY header for server-to-server calls (if configured)
+// 1. ADMIN_SECRET_KEY header for server-to-server calls (if configured)
+// 2. Bearer token + database user lookup (to be replaced with Nhost)
 async function verifySuperAdmin(c: any): Promise<{ authorized: boolean; error?: string; userId?: string }> {
   try {
     const authHeader = c.req.header('Authorization');
     const adminKey = c.req.header('X-Admin-Key');
-    const adminEmail = c.req.header('X-Admin-Email');
     
     // Server-to-server authentication via secret key (for cron jobs, webhooks, etc.)
     if (adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY) {
@@ -334,38 +332,38 @@ async function verifySuperAdmin(c: any): Promise<{ authorized: boolean; error?: 
       return { authorized: true, userId: 'system' };
     }
     
-    // Primary authentication: PocketBase token verification
+    // Token-based authentication - check database for user
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       
       try {
-        const { verifyUserToken: pbVerifyToken, getUserById } = await import('./pocketbase');
-        const authResult = await pbVerifyToken(token);
+        // Check database for user with this token
+        // TODO: Replace with Nhost token verification
+        const result = await pool.query(
+          'SELECT id, email, role FROM users WHERE id = $1 OR email = $2 LIMIT 1',
+          [token, token] // Simple lookup - replace with proper token verification
+        );
         
-        if (authResult.authorized && authResult.userId) {
-          // Get user from PocketBase to check role
-          const user = await getUserById(authResult.userId);
+        if (result.rows.length > 0) {
+          const user = result.rows[0];
+          const userRole = user.role;
+          const userEmail = user.email;
           
-          if (user) {
-            const userRole = user.role;
-            const userEmail = user.email || authResult.userEmail;
-            
-            if (userRole === 'superadmin' || userRole === 'super_admin') {
-              console.log(`[Admin Auth] PocketBase auth successful for user ${authResult.userId}`);
-              return { authorized: true, userId: authResult.userId };
-            }
-            
-            // Also check if email is the hardcoded super admin
-            if (userEmail === 'samayhuf@gmail.com' || userEmail === 'oadiology@gmail.com') {
-              console.log(`[Admin Auth] PocketBase auth successful for super admin email: ${userEmail}`);
-              return { authorized: true, userId: authResult.userId };
-            }
-            
-            console.warn(`[Admin Auth] PocketBase user ${authResult.userId} not a super admin (role: ${userRole || 'none'})`);
+          if (userRole === 'superadmin' || userRole === 'super_admin') {
+            console.log(`[Admin Auth] Auth successful for user ${user.id}`);
+            return { authorized: true, userId: user.id };
           }
+          
+          // Also check if email is the hardcoded super admin
+          if (userEmail === 'samayhuf@gmail.com' || userEmail === 'oadiology@gmail.com') {
+            console.log(`[Admin Auth] Auth successful for super admin email: ${userEmail}`);
+            return { authorized: true, userId: user.id };
+          }
+          
+          console.warn(`[Admin Auth] User ${user.id} not a super admin (role: ${userRole || 'none'})`);
         }
-      } catch (pbError: any) {
-        console.log('[Admin Auth] PocketBase verification failed:', pbError.message);
+      } catch (error: any) {
+        console.log('[Admin Auth] Token verification failed:', error.message);
       }
       
       return { authorized: false, error: 'Invalid or expired token' };
@@ -2222,13 +2220,12 @@ app.get('/api/admin/services-billing', async (c) => {
     });
   }
 
-  // PocketBase - check if configured
-  const pocketbaseUrl = process.env.POCKETBASE_URL;
-  if (pocketbaseUrl) {
-    services.push({
-      name: 'PocketBase',
-      description: 'Database & Auth',
-      monthlyBudget: 0, // Self-hosted, no monthly cost
+  // Database services - Database removed
+  // Database connection is configured via DATABASE_URL
+  services.push({
+    name: 'PostgreSQL Database',
+    description: 'Database',
+    monthlyBudget: 0, // Database costs vary by provider
       currentSpend: 0,
       status: 'active',
       lastBilled: 'N/A',
@@ -2237,7 +2234,7 @@ app.get('/api/admin/services-billing', async (c) => {
     });
   } else {
     services.push({
-      name: 'PocketBase',
+      name: 'Database',
       description: 'Database & Auth',
       monthlyBudget: 0,
       currentSpend: 0,
@@ -3770,7 +3767,7 @@ app.post('/api/ai/generate-blog', async (c) => {
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       try {
-        const { verifyUserToken } = await import('./pocketbase');
+        const { verifyUserToken } = await import("./database");
         const authResult = await verifyUserToken(token);
         if (authResult.authorized && authResult.userId) {
           authenticatedUserId = authResult.userId;
@@ -3896,7 +3893,7 @@ app.post('/api/admin/blogs', async (c) => {
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       try {
-        const { verifyUserToken } = await import('./pocketbase');
+        const { verifyUserToken } = await import("./database");
         const authResult = await verifyUserToken(token);
         if (authResult.authorized && authResult.userId) {
           authenticatedUserId = authResult.userId;
@@ -3989,7 +3986,7 @@ app.delete('/api/admin/blogs/:id', async (c) => {
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       try {
-        const { verifyUserToken } = await import('./pocketbase');
+        const { verifyUserToken } = await import("./database");
         const authResult = await verifyUserToken(token);
         if (authResult.authorized && authResult.userId) {
           userEmail = authResult.userEmail || null;
@@ -5072,7 +5069,7 @@ app.post('/api/campaigns/save', async (c) => {
 // CAMPAIGN HISTORY CRUD ENDPOINTS
 // ============================================
 
-// Helper to verify user from PocketBase token
+// Helper to verify user from Database token
 async function verifyUserToken(c: any): Promise<{ authorized: boolean; userId?: string; userEmail?: string; error?: string }> {
   try {
     const authHeader = c.req.header('Authorization');
@@ -5082,13 +5079,13 @@ async function verifyUserToken(c: any): Promise<{ authorized: boolean; userId?: 
     
     const token = authHeader.substring(7);
     
-    // Use PocketBase token verification
-    const { verifyUserToken: pbVerifyToken } = await import('./pocketbase');
+    // Use Database token verification
+    const { verifyUserToken: pbVerifyToken } = await import("./database");
     const result = await pbVerifyToken(token);
     
     return result;
   } catch (error: any) {
-    console.error('[PocketBase Token Verification] Error:', error.message);
+    console.error('[Database Token Verification] Error:', error.message);
     return { authorized: false, error: 'Authentication failed' };
   }
 }
@@ -5135,7 +5132,7 @@ async function getUserFromAuth(c: any): Promise<{ id: string; email: string } | 
   return { id: auth.userId, email: auth.userEmail || '' };
 }
 
-// Endpoint to sync PocketBase user to local database (called after sign in)
+// Endpoint to sync Database user to local database (called after sign in)
 app.post('/api/user/sync', async (c) => {
   try {
     const auth = await verifyUserToken(c);
@@ -5175,8 +5172,8 @@ app.put('/api/user/profile', async (c) => {
       return c.json({ error: 'Full name is required' }, 400);
     }
     
-    // Update the user's name in PocketBase
-    const { updateUserProfile, getUserById } = await import('./pocketbase');
+    // Update the user's name in Database
+    const { updateUserProfile, getUserById } = await import("./database");
     
     const user = await getUserById(auth.userId!);
     if (!user) {
@@ -6958,26 +6955,8 @@ app.delete('/api/tasks/:id', async (c) => {
 // SUPER ADMIN API ENDPOINTS
 // ============================================
 
-// Helper to get PocketBase admin client for admin queries
-async function getPocketBaseAdmin() {
-  const { pbAdmin } = await import('./pocketbase');
-  // Ensure admin is authenticated
-  if (!pbAdmin.authStore.isValid) {
-    const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
-    const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD;
-    if (adminEmail && adminPassword) {
-      try {
-        await pbAdmin.admins.authWithPassword(adminEmail, adminPassword);
-      } catch (error) {
-        console.error('Failed to authenticate PocketBase admin:', error);
-        return null;
-      }
-    } else {
-      return null;
-    }
-  }
-  return pbAdmin;
-}
+// Helper to get Database admin client for admin queries
+// getDatabaseAdmin() removed - PocketBase removed, using direct pool queries instead
 
 // Admin Configuration Status (for debugging)
 app.get('/api/admin/config-status', async (c) => {
@@ -6989,8 +6968,6 @@ app.get('/api/admin/config-status', async (c) => {
         adminService: status,
         environment: {
           nodeEnv: process.env.NODE_ENV,
-          hasPocketBaseUrl: !!process.env.POCKETBASE_URL,
-          hasPocketBaseAdminEmail: !!process.env.POCKETBASE_ADMIN_EMAIL,
           hasDatabaseUrl: !!process.env.DATABASE_URL,
         },
         adminUser: {
@@ -7008,16 +6985,7 @@ app.get('/api/admin/config-status', async (c) => {
 app.get('/api/admin/stats', async (c) => {
   return withAdminAuth(c, async (adminContext) => {
     try {
-      const pbAdmin = await getPocketBaseAdmin();
-      if (!pbAdmin) {
-        return c.json({
-          success: false,
-          error: 'Admin client not available',
-          code: 'CONFIG_ERROR',
-          details: { message: 'PocketBase admin client not initialized' },
-          timestamp: new Date().toISOString()
-        }, 500);
-      }
+      // Database admin - using direct pool queries instead of PocketBase
 
       // Initialize stats object
       const stats = {
@@ -7031,7 +6999,7 @@ app.get('/api/admin/stats', async (c) => {
 
       const errors: string[] = [];
 
-      // Get total users from PostgreSQL (where PocketBase users are synced)
+      // Get total users from PostgreSQL (where Database users are synced)
       try {
         const userResult = await pool.query('SELECT COUNT(*) as count FROM users');
         stats.totalUsers = parseInt(userResult.rows[0]?.count || '0', 10);
@@ -7146,7 +7114,7 @@ app.get('/api/admin/stats', async (c) => {
   });
 });
 
-// Get all users for admin (from PostgreSQL where PocketBase users are synced)
+// Get all users for admin (from PostgreSQL where Database users are synced)
 app.get('/api/admin/users', async (c) => {
   return withAdminAuth(c, async (adminContext) => {
     try {
@@ -7279,24 +7247,15 @@ app.post('/api/admin/users/:userId/block', async (c) => {
         }, 400);
       }
       
-      const pbAdmin = await getPocketBaseAdmin();
-      if (!pbAdmin) {
-        return c.json({
-          success: false,
-          error: 'Admin client not available',
-          code: 'CONFIG_ERROR',
-          timestamp: new Date().toISOString()
-        }, 500);
-      }
+      // Database admin - using direct pool queries instead of PocketBase
       
       try {
         // Get user data first for logging
-        const userData = await pbAdmin.collection('users').getOne(userId);
+        const userResult = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [userId]);
+        const userData = userResult.rows[0];
         
-        // Update user blocked status in PocketBase
-        await pbAdmin.collection('users').update(userId, { 
-          is_blocked: blocked,
-        });
+        // Update user blocked status in Database
+        await pool.query('UPDATE users SET is_blocked = $1 WHERE id = $2', [blocked, userId]);
         
         // Log the admin action
         await logAdminAction(
@@ -7401,24 +7360,15 @@ app.post('/api/admin/users/:userId/role', async (c) => {
         }, 400);
       }
       
-      const pbAdmin = await getPocketBaseAdmin();
-      if (!pbAdmin) {
-        return c.json({
-          success: false,
-          error: 'Admin client not available',
-          code: 'CONFIG_ERROR',
-          timestamp: new Date().toISOString()
-        }, 500);
-      }
+      // Database admin - using direct pool queries instead of PocketBase
       
       try {
         // Get current user data for logging
-        const currentUser = await pbAdmin.collection('users').getOne(userId);
+        const userResult = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [userId]);
+        const currentUser = userResult.rows[0];
         
-        // Update user role in PocketBase
-        const updatedUser = await pbAdmin.collection('users').update(userId, { 
-          role,
-        });
+        // Update user role in Database
+        await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, userId]);
         
         // Log the admin action
         await logAdminAction(
@@ -7449,8 +7399,8 @@ app.post('/api/admin/users/:userId/role', async (c) => {
         // Try to get current user for logging
         let currentUserRole = 'unknown';
         try {
-          const currentUser = await pbAdmin.collection('users').getOne(userId);
-          currentUserRole = currentUser?.role || 'unknown';
+          const userResult = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+          currentUserRole = userResult.rows[0]?.role || 'unknown';
         } catch (e) {
           // Ignore error getting user
         }
@@ -8092,8 +8042,8 @@ app.post('/api/email/team-invite', async (c) => {
     
     const token = authHeader.replace('Bearer ', '');
     
-    // Verify token with PocketBase
-    const { verifyUserToken } = await import('./pocketbase');
+    // Verify token with Database
+    const { verifyUserToken } = await import("./database");
     const authResult = await verifyUserToken(token);
     
     if (!authResult.authorized) {
@@ -8441,7 +8391,7 @@ app.post('/api/email/send', async (c) => {
     }
     
     const token = authHeader.substring(7);
-    const { verifyUserToken } = await import('./pocketbase');
+    const { verifyUserToken } = await import("./database");
     const authResult = await verifyUserToken(token);
     
     if (!authResult.authorized) {
@@ -10181,106 +10131,9 @@ app.use('/api/admin/*', async (c, next) => {
 });
 
 // ============================================================================
-// POCKETBASE ADMIN PANEL PROXY
+// ADMIN PANEL - Database removed, using custom admin panel
 // ============================================================================
-// Proxy route for PocketBase admin UI at /admin
-// This forwards requests to PocketBase's built-in admin interface
-const POCKETBASE_URL = process.env.POCKETBASE_URL || 'http://127.0.0.1:8090';
-
-app.all('/admin/*', async (c) => {
-  try {
-    // Get the path after /admin
-    let adminPath = c.req.path.replace('/admin', '') || '/';
-    
-    // If path is empty or just '/', redirect to PocketBase admin root
-    if (adminPath === '/' || adminPath === '') {
-      adminPath = '/_/';
-    } else if (!adminPath.startsWith('/_/')) {
-      // If path doesn't start with /_/, prepend it
-      adminPath = `/_${adminPath}`;
-    }
-    
-    // Construct the PocketBase admin URL
-    const targetUrl = `${POCKETBASE_URL}${adminPath}`;
-    
-    // Get query parameters
-    const queryString = c.req.url.split('?')[1] || '';
-    const fullUrl = queryString ? `${targetUrl}?${queryString}` : targetUrl;
-    
-    // Forward the request to PocketBase
-    const method = c.req.method;
-    const headers: HeadersInit = {};
-    
-    // Copy relevant headers
-    const authHeader = c.req.header('Authorization');
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
-    
-    const contentType = c.req.header('Content-Type');
-    if (contentType) {
-      headers['Content-Type'] = contentType;
-    }
-    
-    // Copy cookie header for session management
-    const cookieHeader = c.req.header('Cookie');
-    if (cookieHeader) {
-      headers['Cookie'] = cookieHeader;
-    }
-    
-    // Get request body if it exists
-    let body: BodyInit | undefined;
-    if (method !== 'GET' && method !== 'HEAD') {
-      try {
-        const bodyText = await c.req.text();
-        if (bodyText) {
-          body = bodyText;
-        }
-      } catch (e) {
-        // No body
-      }
-    }
-    
-    // Make the request to PocketBase
-    const response = await fetch(fullUrl, {
-      method,
-      headers,
-      body,
-    });
-    
-    // Get response body
-    const responseBody = await response.text();
-    
-    // Get response headers
-    const responseHeaders: HeadersInit = {};
-    response.headers.forEach((value, key) => {
-      // Filter out headers that shouldn't be forwarded
-      const lowerKey = key.toLowerCase();
-      if (!['content-encoding', 'transfer-encoding', 'connection', 'content-length'].includes(lowerKey)) {
-        responseHeaders[key] = value;
-      }
-    });
-    
-    // Set CORS headers for admin panel
-    responseHeaders['Access-Control-Allow-Origin'] = '*';
-    responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS';
-    responseHeaders['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie';
-    responseHeaders['Access-Control-Allow-Credentials'] = 'true';
-    
-    return new Response(responseBody, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-    });
-  } catch (error: any) {
-    console.error('PocketBase admin proxy error:', error);
-    return c.json({
-      error: 'Failed to proxy to PocketBase admin',
-      message: error.message,
-      pocketbaseUrl: POCKETBASE_URL,
-    }, 500);
-  }
-});
+// Admin routes are handled by the frontend SuperAdminPanel component
 
 // In production, serve static files from build/ - MUST be registered LAST after all API routes
 if (isProduction) {
@@ -10295,8 +10148,19 @@ if (isProduction) {
       return c.json({ success: false, error: 'API endpoint not found' }, 404);
     }
     
-    // Skip admin routes (handled by proxy above)
+    // Skip admin routes (handled by frontend)
     if (reqPath.startsWith('/admin')) {
+      // Serve index.html for admin routes (SPA routing)
+      const indexPath = path.join(process.cwd(), 'build', 'index.html');
+      if (fs.existsSync(indexPath)) {
+        const content = fs.readFileSync(indexPath, 'utf-8');
+        return new Response(content, {
+          headers: { 
+            'Content-Type': 'text/html',
+            'Cache-Control': 'no-cache'
+          }
+        });
+      }
       return c.json({ error: 'Admin route not found' }, 404);
     }
     

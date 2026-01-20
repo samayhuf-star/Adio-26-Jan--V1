@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/
 import { Alert, AlertDescription } from './ui/alert';
 import { signUpWithEmail, signInWithEmail, resetPassword } from '../utils/auth';
 import { notifications } from '../utils/notifications';
-import { isAuthenticated } from '../utils/pocketbase/auth';
+import { isAuthenticated } from '../utils/auth';
 
 interface AuthProps {
   onLoginSuccess: () => void;

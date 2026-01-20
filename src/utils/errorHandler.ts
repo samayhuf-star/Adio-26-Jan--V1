@@ -1,4 +1,5 @@
-import { supabase } from './supabase/client';
+// Supabase removed - using API endpoints instead
+import { getCurrentUser } from './auth';
 
 export interface ErrorReport {
   id: string;
@@ -92,7 +93,8 @@ class ErrorHandlerClass {
       let userId = context.userId;
       if (!userId) {
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          // Get user from auth utility
+          const user = getCurrentUser();
           userId = user?.id;
         } catch (e) {
           // Ignore auth errors when capturing errors
