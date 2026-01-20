@@ -2220,30 +2220,17 @@ app.get('/api/admin/services-billing', async (c) => {
     });
   }
 
-  // Database services - Database removed
-  // Database connection is configured via DATABASE_URL
+  // Database service - using DATABASE_URL (no external billing API)
   services.push({
     name: 'PostgreSQL Database',
     description: 'Database',
-    monthlyBudget: 0, // Database costs vary by provider
-      currentSpend: 0,
-      status: 'active',
-      lastBilled: 'N/A',
-      isManual: true,
-      apiConnected: true
-    });
-  } else {
-    services.push({
-      name: 'Database',
-      description: 'Database & Auth',
-      monthlyBudget: 0,
-      currentSpend: 0,
-      status: 'not_configured',
-      lastBilled: 'N/A',
-      isManual: true,
-      apiConnected: false
-    });
-  }
+    monthlyBudget: 0, // Database costs vary by provider and hosting
+    currentSpend: 0,
+    status: 'active',
+    lastBilled: 'N/A',
+    isManual: true,
+    apiConnected: !!process.env.DATABASE_URL,
+  });
 
   // Stripe - calculate from actual payments processed (we have full API access)
   try {
