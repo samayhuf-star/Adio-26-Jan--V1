@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../utils/authCompat';
+import { useAuthCompat } from '../utils/authCompat';
 import { 
   FileText, Clock, Trash2, Download, Play, Pencil,
   RefreshCw, Search, Filter, ChevronDown, Sparkles, Zap,

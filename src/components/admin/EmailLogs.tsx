@@ -7,7 +7,7 @@ import {
   Mail, Search, RefreshCw, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, Eye, MousePointer, AlertTriangle
 } from 'lucide-react';
-import { useAuth } from '../utils/authCompat';
+import { useAuthCompat } from '../../utils/authCompat';
 
 interface EmailLog {
   id: string;

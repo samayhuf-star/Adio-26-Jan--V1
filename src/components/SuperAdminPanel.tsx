@@ -11,7 +11,7 @@ import {
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
-import { useAuth } from '../utils/authCompat';
+import { useAuthCompat } from '../utils/authCompat';
 import BlogGenerator from './BlogGenerator';
 import EmailFlows from './admin/EmailFlows';
 import EmailLogs from './admin/EmailLogs';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../utils/authCompat';
+import { useAuthCompat } from '../utils/authCompat';
 import { Sparkles, Download, Globe, Type, ShieldAlert, Save, Filter, BarChart3, FileText, RefreshCw, Trash2, Clock, Zap, Brain, ChevronDown, ChevronUp, X, FolderOpen } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';

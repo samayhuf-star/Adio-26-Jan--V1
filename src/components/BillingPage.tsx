@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, Zap, Star, Crown, Loader2 } from 'lucide-react';
-import { useUser, useAuth } from '../utils/authCompat';
+import { useUser, useAuthCompat } from '../utils/authCompat';
 import { notifications } from '../utils/notifications';
 
 interface Price {
