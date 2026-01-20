@@ -189,8 +189,8 @@ export default defineConfig({
           'utils': ['class-variance-authority', 'tailwind-merge', 'clsx'],
           // Editor (large, separate chunk)
           'editor': ['grapesjs', '@grapesjs/react'],
-          // Backend services
-          'services': ['pocketbase'],
+          // Backend services (pocketbase removed)
+          // 'services': [],
           // Payment
           'stripe': ['@stripe/stripe-js', '@stripe/react-stripe-js']
         },
