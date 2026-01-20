@@ -5,9 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { pb } from "../utils/auth";
-import { getSessionToken } from "../utils/auth";
-import { updatePassword } from '../utils/auth';
+import { getSessionTokenSync, updatePassword } from '../utils/auth';
 import { notifications } from '../utils/notifications';
 
 interface ResetPasswordProps {
@@ -36,7 +34,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
         setIsValidSession(true);
       } else {
         // Check if user is already authenticated
-        const sessionToken = getSessionToken();
+        const sessionToken = getSessionTokenSync();
         if (sessionToken) {
           setIsValidSession(true);
         } else {
@@ -73,7 +71,12 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
         throw new Error('Missing reset token');
       }
       
-      await updatePassword(token, password, confirmPassword);
+      const result = await updatePassword(password, token);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      
+      setIsLoading(false);
       
       setIsSuccess(true);
       notifications.success('Password reset successfully!', {

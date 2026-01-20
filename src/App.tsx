@@ -159,7 +159,7 @@ const AppContent = () => {
       if (!user) return;
       
       try {
-        const token = getSessionToken();
+        const token = await getSessionToken();
         if (!token) return;
         
         const response = await fetch('/api/user/sync', {

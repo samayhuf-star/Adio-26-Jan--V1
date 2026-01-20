@@ -5,9 +5,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { signUpWithEmail, signInWithEmail, resetPassword } from '../utils/auth';
+import { signUpWithEmail, signInWithEmail, resetPassword, isAuthenticatedAsync } from '../utils/auth';
 import { notifications } from '../utils/notifications';
-import { isAuthenticated } from '../utils/auth';
 
 interface AuthProps {
   onLoginSuccess: () => void;
@@ -120,18 +119,22 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
             title: 'Login Successful',
           });
           
-          // Clear loading state first so UI doesn't hang
-          setIsLoading(false);
-          
           // Verify session exists before proceeding
           // Wait a bit longer for auth state to propagate
           let attempts = 0;
-          while (!isAuthenticated() && attempts < 10) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-          }
+          const checkAuth = async (): Promise<boolean> => {
+            const authenticated = await isAuthenticatedAsync();
+            if (!authenticated && attempts < 10) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+              attempts++;
+              return checkAuth();
+            }
+            return authenticated;
+          };
           
-          if (!isAuthenticated()) {
+          const authenticated = await checkAuth();
+          
+          if (!authenticated) {
             throw new Error('Session not established after login');
           }
           
@@ -199,8 +202,9 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
             // Wait a bit for auth state to update
             await new Promise(resolve => setTimeout(resolve, 200));
             
-            // Check if user is authenticated (PocketBase auto-signs in after signup)
-            if (isAuthenticated()) {
+            // Check if user is authenticated (Supabase auto-signs in after signup in some cases)
+            const authenticated = await isAuthenticatedAsync();
+            if (authenticated) {
               // User is signed in, navigate to dashboard
               notifications.success('Account created successfully!', {
                 title: 'Welcome to Adiology!',

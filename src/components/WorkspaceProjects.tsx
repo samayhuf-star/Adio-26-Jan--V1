@@ -165,9 +165,9 @@ export function WorkspaceProjects() {
       }
       
       const data = await response.json();
-      if (data.success) {
-        setProjects(data.data);
-        if (data.data.length > 0 && !selectedProject) {
+      if (data.success && data.data) {
+        setProjects(Array.isArray(data.data) ? data.data : []);
+        if (Array.isArray(data.data) && data.data.length > 0 && !selectedProject) {
           fetchProjectDetail(data.data[0].id);
         }
       } else {

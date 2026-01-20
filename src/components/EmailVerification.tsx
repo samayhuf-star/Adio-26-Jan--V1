@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { notifications } from '../utils/notifications';
-import { getCurrentUser, resendVerificationEmail } from '../utils/auth';
+import { getCurrentUser, getCurrentUserAsync, resendVerificationEmail, supabase } from '../utils/auth';
 
 interface EmailVerificationProps {
   onVerificationSuccess: () => void;
@@ -29,13 +29,46 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
       setEmail(emailParam);
     }
 
-    // Check if user is already verified
+    // Check if user is already verified and handle Supabase email verification
     const checkVerification = async () => {
-      const user = getCurrentUser();
-      if (user) {
-        // Users are verified after email confirmation
-        setIsVerified(true);
-        if (user.email) setEmail(user.email);
+      try {
+        // Check for Supabase email verification hash in URL
+        if (supabase) {
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (data?.session?.user) {
+            const user = await getCurrentUserAsync();
+            if (user) {
+              // Check if email is confirmed
+              if (user.email_confirmed_at || data.session.user.email_confirmed_at) {
+                setIsVerified(true);
+                if (user.email) setEmail(user.email);
+                
+                // Trigger success callback after a short delay
+                setTimeout(() => {
+                  onVerificationSuccess();
+                }, 2000);
+                return;
+              }
+              
+              // If user exists but not verified, show email
+              if (user.email) setEmail(user.email);
+            }
+          }
+        }
+
+        // Fallback to localStorage user
+        const localUser = getCurrentUser();
+        if (localUser) {
+          if (localUser.email) setEmail(localUser.email);
+        }
+      } catch (err) {
+        console.error('Error checking verification status:', err);
+        // Fallback to localStorage user
+        const localUser = getCurrentUser();
+        if (localUser && localUser.email) {
+          setEmail(localUser.email);
+        }
       }
     };
 
@@ -52,12 +85,16 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
     setError('');
 
     try {
-      await resendVerificationEmail(email);
+      const result = await resendVerificationEmail(email);
+      
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
 
-        notifications.success('Verification email sent!', {
-          title: 'Email Sent',
-          description: 'Please check your email inbox (and spam folder) for the verification link.',
-        });
+      notifications.success('Verification email sent!', {
+        title: 'Email Sent',
+        description: 'Please check your email inbox (and spam folder) for the verification link.',
+      });
     } catch (err: any) {
       let errorMessage = 'Failed to resend verification email. Please try again.';
       

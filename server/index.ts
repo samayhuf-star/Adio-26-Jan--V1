@@ -346,22 +346,22 @@ async function verifySuperAdmin(c: any): Promise<{ authorized: boolean; error?: 
         
         if (result.rows.length > 0) {
           const user = result.rows[0];
-          const userRole = user.role;
+            const userRole = user.role;
           const userEmail = user.email;
-          
-          if (userRole === 'superadmin' || userRole === 'super_admin') {
+            
+            if (userRole === 'superadmin' || userRole === 'super_admin') {
             console.log(`[Admin Auth] Auth successful for user ${user.id}`);
             return { authorized: true, userId: user.id };
-          }
-          
-          // Also check if email is the hardcoded super admin
-          if (userEmail === 'samayhuf@gmail.com' || userEmail === 'oadiology@gmail.com') {
+            }
+            
+            // Also check if email is the hardcoded super admin
+            if (userEmail === 'samayhuf@gmail.com' || userEmail === 'oadiology@gmail.com') {
             console.log(`[Admin Auth] Auth successful for super admin email: ${userEmail}`);
             return { authorized: true, userId: user.id };
-          }
-          
+            }
+            
           console.warn(`[Admin Auth] User ${user.id} not a super admin (role: ${userRole || 'none'})`);
-        }
+          }
       } catch (error: any) {
         console.log('[Admin Auth] Token verification failed:', error.message);
       }
@@ -2251,14 +2251,14 @@ app.get('/api/admin/services-billing', async (c) => {
   }
 
   // Database service - using DATABASE_URL (no external billing API)
-  services.push({
+    services.push({
     name: 'PostgreSQL Database',
     description: 'Database',
     monthlyBudget: 0, // Database costs vary by provider and hosting
-    currentSpend: 0,
-    status: 'active',
-    lastBilled: 'N/A',
-    isManual: true,
+      currentSpend: 0,
+      status: 'active',
+      lastBilled: 'N/A',
+      isManual: true,
     apiConnected: !!process.env.DATABASE_URL,
   });
 
@@ -5673,7 +5673,7 @@ app.get('/api/workspace-projects', async (c) => {
   try {
     const auth = await verifyUserToken(c);
     if (!auth.authorized) {
-      return c.json({ error: auth.error }, 401);
+      return c.json({ success: false, error: auth.error }, 401);
     }
     
     const result = await pool.query(
@@ -5702,7 +5702,7 @@ app.get('/api/workspace-projects', async (c) => {
     return c.json({ success: true, data: result.rows });
   } catch (error: any) {
     console.error('Error fetching workspace projects:', error);
-    return c.json({ error: error.message || 'Failed to fetch projects' }, 500);
+    return c.json({ success: false, error: error.message || 'Failed to fetch projects' }, 500);
   }
 });
 
@@ -5711,7 +5711,7 @@ app.post('/api/workspace-projects', async (c) => {
   try {
     const auth = await verifyUserToken(c);
     if (!auth.authorized) {
-      return c.json({ error: auth.error }, 401);
+      return c.json({ success: false, error: auth.error }, 401);
     }
     
     await ensureUserExists(auth.userId!, auth.userEmail);
@@ -5720,7 +5720,7 @@ app.post('/api/workspace-projects', async (c) => {
     const { name, description = '', color = '#6366f1', icon = 'folder' } = body;
     
     if (!name) {
-      return c.json({ error: 'Project name is required' }, 400);
+      return c.json({ success: false, error: 'Project name is required' }, 400);
     }
     
     const result = await pool.query(
@@ -5734,7 +5734,7 @@ app.post('/api/workspace-projects', async (c) => {
     return c.json({ success: true, data: result.rows[0] });
   } catch (error: any) {
     console.error('Error creating workspace project:', error);
-    return c.json({ error: error.message || 'Failed to create project' }, 500);
+    return c.json({ success: false, error: error.message || 'Failed to create project' }, 500);
   }
 });
 
@@ -5743,7 +5743,7 @@ app.put('/api/workspace-projects/:id', async (c) => {
   try {
     const auth = await verifyUserToken(c);
     if (!auth.authorized) {
-      return c.json({ error: auth.error }, 401);
+      return c.json({ success: false, error: auth.error }, 401);
     }
     
     const id = c.req.param('id');
@@ -5787,13 +5787,13 @@ app.put('/api/workspace-projects/:id', async (c) => {
     );
     
     if (result.rows.length === 0) {
-      return c.json({ error: 'Project not found or access denied' }, 404);
+      return c.json({ success: false, error: 'Project not found or access denied' }, 404);
     }
     
     return c.json({ success: true, data: result.rows[0] });
   } catch (error: any) {
     console.error('Error updating workspace project:', error);
-    return c.json({ error: error.message || 'Failed to update project' }, 500);
+    return c.json({ success: false, error: error.message || 'Failed to update project' }, 500);
   }
 });
 
@@ -5802,7 +5802,7 @@ app.delete('/api/workspace-projects/:id', async (c) => {
   try {
     const auth = await verifyUserToken(c);
     if (!auth.authorized) {
-      return c.json({ error: auth.error }, 401);
+      return c.json({ success: false, error: auth.error }, 401);
     }
     
     const id = c.req.param('id');
@@ -5813,13 +5813,13 @@ app.delete('/api/workspace-projects/:id', async (c) => {
     );
     
     if (result.rows.length === 0) {
-      return c.json({ error: 'Project not found or access denied' }, 404);
+      return c.json({ success: false, error: 'Project not found or access denied' }, 404);
     }
     
     return c.json({ success: true, message: 'Project deleted successfully' });
   } catch (error: any) {
     console.error('Error deleting workspace project:', error);
-    return c.json({ error: error.message || 'Failed to delete project' }, 500);
+    return c.json({ success: false, error: error.message || 'Failed to delete project' }, 500);
   }
 });
 
@@ -5828,7 +5828,7 @@ app.get('/api/workspace-projects/:id', async (c) => {
   try {
     const auth = await verifyUserToken(c);
     if (!auth.authorized) {
-      return c.json({ error: auth.error }, 401);
+      return c.json({ success: false, error: auth.error }, 401);
     }
     
     const id = c.req.param('id');
@@ -5843,7 +5843,7 @@ app.get('/api/workspace-projects/:id', async (c) => {
     );
     
     if (projectResult.rows.length === 0) {
-      return c.json({ error: 'Project not found' }, 404);
+      return c.json({ success: false, error: 'Project not found' }, 404);
     }
     
     // Get all linked items
@@ -5890,7 +5890,7 @@ app.get('/api/workspace-projects/:id', async (c) => {
     });
   } catch (error: any) {
     console.error('Error fetching workspace project:', error);
-    return c.json({ error: error.message || 'Failed to fetch project' }, 500);
+    return c.json({ success: false, error: error.message || 'Failed to fetch project' }, 500);
   }
 });
 
@@ -5899,7 +5899,7 @@ app.post('/api/workspace-projects/:projectId/items', async (c) => {
   try {
     const auth = await verifyUserToken(c);
     if (!auth.authorized) {
-      return c.json({ error: auth.error }, 401);
+      return c.json({ success: false, error: auth.error }, 401);
     }
     
     const projectId = c.req.param('projectId');
@@ -5907,7 +5907,7 @@ app.post('/api/workspace-projects/:projectId/items', async (c) => {
     const { itemType, itemId, itemName, itemMetadata = {} } = body;
     
     if (!itemType || !itemId) {
-      return c.json({ error: 'Item type and ID are required' }, 400);
+      return c.json({ success: false, error: 'Item type and ID are required' }, 400);
     }
     
     // Verify project belongs to user
@@ -5917,7 +5917,7 @@ app.post('/api/workspace-projects/:projectId/items', async (c) => {
     );
     
     if (projectCheck.rows.length === 0) {
-      return c.json({ error: 'Project not found or access denied' }, 404);
+      return c.json({ success: false, error: 'Project not found or access denied' }, 404);
     }
     
     const result = await pool.query(
@@ -5933,7 +5933,7 @@ app.post('/api/workspace-projects/:projectId/items', async (c) => {
     return c.json({ success: true, data: result.rows[0] });
   } catch (error: any) {
     console.error('Error linking item to project:', error);
-    return c.json({ error: error.message || 'Failed to link item' }, 500);
+    return c.json({ success: false, error: error.message || 'Failed to link item' }, 500);
   }
 });
 
@@ -5942,7 +5942,7 @@ app.delete('/api/workspace-projects/:projectId/items/:itemId', async (c) => {
   try {
     const auth = await verifyUserToken(c);
     if (!auth.authorized) {
-      return c.json({ error: auth.error }, 401);
+      return c.json({ success: false, error: auth.error }, 401);
     }
     
     const projectId = c.req.param('projectId');
@@ -5956,7 +5956,7 @@ app.delete('/api/workspace-projects/:projectId/items/:itemId', async (c) => {
     );
     
     if (projectCheck.rows.length === 0) {
-      return c.json({ error: 'Project not found or access denied' }, 404);
+      return c.json({ success: false, error: 'Project not found or access denied' }, 404);
     }
     
     // Delete with item_type check if provided for safety, otherwise delete by project_id and item_id
@@ -5975,7 +5975,7 @@ app.delete('/api/workspace-projects/:projectId/items/:itemId', async (c) => {
     return c.json({ success: true, message: 'Item unlinked successfully' });
   } catch (error: any) {
     console.error('Error unlinking item from project:', error);
-    return c.json({ error: error.message || 'Failed to unlink item' }, 500);
+    return c.json({ success: false, error: error.message || 'Failed to unlink item' }, 500);
   }
 });
 
@@ -9743,47 +9743,23 @@ app.get('/api/forms/:formId/submissions/export', async (c) => {
 app.get('/api/admin/billing', async (c) => {
   return withAdminAuth(c, async (adminContext) => {
     try {
-      const adminClient = adminContext.adminClient;
-      
-      // Get subscription data
-      const { data: subscriptions, error: subsError } = await adminClient
-        .from('subscriptions')
-        .select(`
-          id,
-          user_id,
-          plan_id,
-          status,
-          current_period_start,
-          current_period_end,
-          amount,
-          currency,
-          created_at
-        `)
-        .order('created_at', { ascending: false });
+      // Get subscription data using direct database query
+      const subscriptionsResult = await pool.query(`
+        SELECT id, user_id, plan_id, status, current_period_start, current_period_end, 
+               amount, currency, created_at
+        FROM subscriptions
+        ORDER BY created_at DESC
+      `);
+      const subscriptions = subscriptionsResult.rows || [];
 
-      if (subsError) {
-        console.error('Error fetching subscriptions:', subsError);
-      }
-
-      // Get payment data
-      const { data: payments, error: paymentsError } = await adminClient
-        .from('payments')
-        .select(`
-          id,
-          user_id,
-          amount,
-          currency,
-          status,
-          payment_method,
-          description,
-          created_at
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (paymentsError) {
-        console.error('Error fetching payments:', paymentsError);
-      }
+      // Get payment data using direct database query
+      const paymentsResult = await pool.query(`
+        SELECT id, user_id, amount, currency, status, payment_method, description, created_at
+        FROM payments
+        ORDER BY created_at DESC
+        LIMIT 100
+      `);
+      const payments = paymentsResult.rows || [];
 
       // Calculate revenue metrics
       const totalRevenue = payments?.reduce((sum: number, payment: any) => {
@@ -9834,40 +9810,30 @@ app.get('/api/admin/billing', async (c) => {
 app.get('/api/admin/billing/subscriptions', async (c) => {
   return withAdminAuth(c, async (adminContext) => {
     try {
-      const adminClient = adminContext.adminClient;
       const limit = parseInt(c.req.query('limit') || '50');
       const offset = parseInt(c.req.query('offset') || '0');
       const status = c.req.query('status');
 
-      let query = adminClient
-        .from('subscriptions')
-        .select(`
-          id,
-          user_id,
-          plan_id,
-          status,
-          current_period_start,
-          current_period_end,
-          amount,
-          currency,
-          trial_end,
-          cancel_at_period_end,
-          created_at,
-          updated_at,
-          users!inner(email, full_name)
-        `)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+      let query = `
+        SELECT s.id, s.user_id, s.plan_id, s.status, s.current_period_start, 
+               s.current_period_end, s.amount, s.currency, s.trial_end, 
+               s.cancel_at_period_end, s.created_at, s.updated_at,
+               u.email, u.full_name
+        FROM subscriptions s
+        LEFT JOIN users u ON s.user_id = u.id
+      `;
+      const params: any[] = [];
 
       if (status) {
-        query = query.eq('status', status);
+        query += ` WHERE s.status = $1`;
+        params.push(status);
       }
 
-      const { data: subscriptions, error } = await query;
+      query += ` ORDER BY s.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      params.push(limit, offset);
 
-      if (error) {
-        throw error;
-      }
+      const result = await pool.query(query, params);
+      const subscriptions = result.rows || [];
 
       return c.json({
         success: true,
@@ -9899,38 +9865,29 @@ app.get('/api/admin/billing/subscriptions', async (c) => {
 app.get('/api/admin/billing/payments', async (c) => {
   return withAdminAuth(c, async (adminContext) => {
     try {
-      const adminClient = adminContext.adminClient;
       const limit = parseInt(c.req.query('limit') || '50');
       const offset = parseInt(c.req.query('offset') || '0');
       const status = c.req.query('status');
 
-      let query = adminClient
-        .from('payments')
-        .select(`
-          id,
-          user_id,
-          amount,
-          currency,
-          status,
-          payment_method,
-          description,
-          stripe_payment_intent_id,
-          created_at,
-          updated_at,
-          users!inner(email, full_name)
-        `)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+      let query = `
+        SELECT p.id, p.user_id, p.amount, p.currency, p.status, p.payment_method,
+               p.description, p.stripe_payment_intent_id, p.created_at, p.updated_at,
+               u.email, u.full_name
+        FROM payments p
+        LEFT JOIN users u ON p.user_id = u.id
+      `;
+      const params: any[] = [];
 
       if (status) {
-        query = query.eq('status', status);
+        query += ` WHERE p.status = $1`;
+        params.push(status);
       }
 
-      const { data: payments, error } = await query;
+      query += ` ORDER BY p.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      params.push(limit, offset);
 
-      if (error) {
-        throw error;
-      }
+      const result = await pool.query(query, params);
+      const payments = result.rows || [];
 
       return c.json({
         success: true,
@@ -9966,34 +9923,18 @@ app.get('/api/admin/billing/payments', async (c) => {
 app.get('/api/admin/emails', async (c) => {
   return withAdminAuth(c, async (adminContext) => {
     try {
-      const adminClient = adminContext.adminClient;
-      
-      // Get email logs
-      const { data: emailLogs, error: emailError } = await adminClient
-        .from('emails')
-        .select(`
-          id,
-          user_id,
-          to_email,
-          from_email,
-          subject,
-          template_id,
-          status,
-          sent_at,
-          delivered_at,
-          opened_at,
-          clicked_at,
-          bounced_at,
-          error_message,
-          created_at,
-          users!inner(email, full_name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (emailError) {
-        console.error('Error fetching emails:', emailError);
-      }
+      // Get email logs using direct database query
+      const result = await pool.query(`
+        SELECT e.id, e.user_id, e.to_email, e.from_email, e.subject, e.template_id,
+               e.status, e.sent_at, e.delivered_at, e.opened_at, e.clicked_at,
+               e.bounced_at, e.error_message, e.created_at,
+               u.email, u.full_name
+        FROM emails e
+        LEFT JOIN users u ON e.user_id = u.id
+        ORDER BY e.created_at DESC
+        LIMIT 100
+      `);
+      const emailLogs = result.rows || [];
 
       // Calculate email metrics
       const totalSent = emailLogs?.length || 0;
@@ -10110,25 +10051,24 @@ app.use('/api/admin/*', async (c, next) => {
   } catch (error) {
     console.error('Admin API Error:', error);
     
-    // Log the error to audit logs if possible
+    // Log the error to audit logs using direct database query
     try {
-      const adminClient = getAdminClient();
-      if (adminClient) {
-        await adminClient
-          .from('audit_logs')
-          .insert({
-            action: 'api_error',
-            resource_type: 'admin_api',
-            level: 'error',
-            details: {
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action, resource_type, details, level, created_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [
+          'system',
+          'api_error',
+          'admin_api',
+          JSON.stringify({
               path: c.req.path,
               method: c.req.method,
               error: error instanceof Error ? error.message : 'Unknown error',
               stack: error instanceof Error ? error.stack : undefined
-            },
-            created_at: new Date().toISOString()
-          });
-      }
+          }),
+          'error'
+        ]
+      );
     } catch (logError) {
       console.error('Failed to log admin error:', logError);
     }

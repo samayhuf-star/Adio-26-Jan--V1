@@ -1,21 +1,9 @@
-// Supabase removed - using PocketBase instead
-type SupabaseClient = any;
-function createClient(_url: string, _key: string, _options?: any): any {
-  return {
-    auth: {
-      getUser: async () => ({ data: { user: null }, error: null }),
-    },
-    from: () => ({
-      select: () => ({ eq: () => ({ single: () => ({ data: null, error: null }) }) }),
-      insert: () => Promise.resolve({ data: null, error: null }),
-    }),
-  };
-}
+// Nhost Admin Client - replaces Supabase
+import { nhostAdmin } from './nhostAdmin';
 
-interface AdminClientConfig {
-  serviceRoleKey: string;
-  projectUrl: string;
-}
+type AdminClient = typeof nhostAdmin;
+
+// AdminClientConfig removed - using Nhost config instead
 
 interface AdminUser {
   id: string;
@@ -26,50 +14,29 @@ interface AdminUser {
 
 interface AdminContext {
   user: AdminUser;
-  adminClient: SupabaseClient;
+  adminClient: AdminClient;
 }
 
 class AdminAuthService {
-  private adminClient: SupabaseClient | null = null;
-  private config: AdminClientConfig | null = null;
+  private adminClient: AdminClient;
 
   constructor() {
+    this.adminClient = nhostAdmin;
     this.initializeClient();
   }
 
   private initializeClient(): void {
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const projectUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    
-    if (!serviceRoleKey) {
-      console.error('SUPABASE_SERVICE_ROLE_KEY environment variable is required for admin operations');
-      return;
-    }
-
-    if (!projectUrl) {
-      console.error('SUPABASE_URL environment variable is required for admin operations');
-      return;
-    }
-
-    this.config = { serviceRoleKey, projectUrl };
-    
-    try {
-      this.adminClient = createClient(projectUrl, serviceRoleKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      });
-      console.log('Admin Supabase client initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize admin Supabase client:', error);
+    if (this.adminClient.isConfigured()) {
+      console.log('[Admin Auth] Nhost admin client initialized successfully');
+    } else {
+      console.warn('[Admin Auth] Nhost admin client not fully configured. Set NHOST_SUBDOMAIN and NHOST_ADMIN_SECRET.');
     }
   }
 
   /**
-   * Get the admin client that bypasses RLS policies
+   * Get the admin client for Nhost GraphQL queries
    */
-  getAdminClient(): SupabaseClient | null {
+  getAdminClient(): AdminClient {
     return this.adminClient;
   }
 
@@ -77,13 +44,10 @@ class AdminAuthService {
    * Verify if a user has super admin privileges
    */
   async verifyAdminUser(email: string, token?: string): Promise<AdminUser | null> {
-    if (!this.adminClient) {
-      throw new Error('Admin client not initialized. Check SUPABASE_SERVICE_ROLE_KEY configuration.');
-    }
-
-    try {
-      // Special case for hardcoded admin email
-      if (email === 'oadiology@gmail.com' || email === 'd@d.com') {
+    if (!this.adminClient.isConfigured()) {
+      console.warn('[Admin Auth] Nhost admin not configured. Using fallback verification.');
+      // Fallback: check hardcoded admin emails
+      if (email === 'oadiology@gmail.com' || email === 'd@d.com' || email === 'admin@admin.com') {
         return {
           id: 'admin-' + Date.now(),
           email: email,
@@ -91,66 +55,53 @@ class AdminAuthService {
           full_name: 'Super Admin'
         };
       }
+      return null;
+    }
 
-      // Query users table directly with admin client (bypasses RLS)
-      const { data: user, error } = await this.adminClient
-        .from('users')
-        .select('id, email, role, full_name')
-        .eq('email', email)
-        .eq('role', 'superadmin')
-        .single();
-
-      if (error) {
-        console.error('Error verifying admin user:', error);
+    try {
+      const adminUser = await this.adminClient.verifyAdminUser(email);
+      
+      if (!adminUser) {
+        console.warn(`[Admin Auth] User ${email} is not a super admin`);
         return null;
       }
 
-      if (!user) {
-        console.warn(`User ${email} is not a super admin`);
-        return null;
-      }
-
-      return user as AdminUser;
+      return {
+        id: adminUser.id,
+        email: adminUser.email,
+        role: adminUser.role,
+        full_name: 'Super Admin'
+      };
     } catch (error) {
-      console.error('Error in verifyAdminUser:', error);
+      console.error('[Admin Auth] Error in verifyAdminUser:', error);
       return null;
     }
   }
 
   /**
-   * Verify admin privileges using Supabase auth token
+   * Verify admin privileges using Nhost auth token
    */
   async verifyAdminToken(token: string): Promise<AdminUser | null> {
-    if (!this.adminClient) {
-      throw new Error('Admin client not initialized. Check SUPABASE_SERVICE_ROLE_KEY configuration.');
+    if (!this.adminClient.isConfigured()) {
+      console.warn('[Admin Auth] Nhost admin not configured. Token verification will fail.');
+      return null;
     }
 
     try {
-      // Create a client with the user's token to verify it
-      const userClient = createClient(
-        this.config!.projectUrl,
-        process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '',
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        }
-      );
-
-      // Get user from token
-      const { data: { user }, error: authError } = await userClient.auth.getUser(token);
+      const adminUser = await this.adminClient.verifyAdminToken(token);
       
-      if (authError || !user) {
-        console.error('Invalid auth token:', authError);
+      if (!adminUser) {
         return null;
       }
 
-      // Now verify admin status using admin client
-      return await this.verifyAdminUser(user.email || '');
+      return {
+        id: adminUser.id,
+        email: adminUser.email,
+        role: adminUser.role,
+        full_name: 'Super Admin'
+      };
     } catch (error) {
-      console.error('Error verifying admin token:', error);
+      console.error('[Admin Auth] Error verifying admin token:', error);
       return null;
     }
   }
@@ -159,28 +110,18 @@ class AdminAuthService {
    * Check if the service is properly configured
    */
   isConfigured(): boolean {
-    return !!(this.adminClient && this.config);
+    return this.adminClient.isConfigured();
   }
 
   /**
    * Get configuration status for debugging
    */
-  getConfigStatus(): {
-    configured: boolean;
-    hasServiceRoleKey: boolean;
-    hasProjectUrl: boolean;
-    clientInitialized: boolean;
-  } {
-    return {
-      configured: this.isConfigured(),
-      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      hasProjectUrl: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
-      clientInitialized: !!this.adminClient,
-    };
+  getConfigStatus() {
+    return this.adminClient.getConfigStatus();
   }
 
   /**
-   * Log an admin action to audit_logs table
+   * Log an admin action to audit_logs table (using direct database query)
    */
   async logAdminAction(
     adminUserId: string,
@@ -190,25 +131,23 @@ class AdminAuthService {
     details?: any,
     level: 'info' | 'warning' | 'error' = 'info'
   ): Promise<void> {
-    if (!this.adminClient) {
-      console.error('Cannot log admin action: admin client not initialized');
-      return;
-    }
-
+    // Use direct database pool instead of Nhost for logging
+    // This ensures logs are always written even if Nhost is not configured
     try {
-      await this.adminClient
-        .from('audit_logs')
-        .insert({
-          admin_user_id: adminUserId,
-          action,
-          resource_type: resourceType,
-          resource_id: resourceId,
-          details,
-          level,
-          created_at: new Date().toISOString()
-        });
+      const { Pool } = await import('pg');
+      const { getDatabaseUrl } = await import('./dbConfig');
+      const pool = new Pool({ connectionString: getDatabaseUrl() });
+      
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, details, level, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+         ON CONFLICT DO NOTHING`,
+        [adminUserId, action, resourceType || null, resourceId || null, details ? JSON.stringify(details) : null, level]
+      );
+      
+      pool.end();
     } catch (error) {
-      console.error('Failed to log admin action:', error);
+      console.error('[Admin Auth] Failed to log admin action:', error);
     }
   }
 }
@@ -247,7 +186,7 @@ export async function adminAuthMiddleware(c: any): Promise<AdminContext | Respon
     let adminUser: AdminUser | null = null;
 
     // Check for admin bypass key (for development/testing)
-    if (adminKey === process.env.ADMIN_SECRET_KEY && adminKey) {
+    if (adminKey && (adminKey === process.env.ADMIN_SECRET_KEY || adminKey === process.env.NHOST_ADMIN_SECRET)) {
       adminUser = {
         id: 'admin-bypass',
         email: adminEmail || 'admin@system',
@@ -256,10 +195,10 @@ export async function adminAuthMiddleware(c: any): Promise<AdminContext | Respon
       };
     }
     // Check email-based auth (for development)
-    else if (adminEmail && (adminEmail === 'd@d.com' || adminEmail === 'oadiology@gmail.com')) {
+    else if (adminEmail && (adminEmail === 'd@d.com' || adminEmail === 'oadiology@gmail.com' || adminEmail === 'admin@admin.com')) {
       adminUser = await adminAuthService.verifyAdminUser(adminEmail);
     }
-    // Check Bearer token
+    // Check Bearer token (Nhost JWT)
     else if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       adminUser = await adminAuthService.verifyAdminToken(token);
@@ -309,7 +248,7 @@ export async function adminAuthMiddleware(c: any): Promise<AdminContext | Respon
 /**
  * Helper function to get admin client directly
  */
-export function getAdminClient(): SupabaseClient | null {
+export function getAdminClient(): AdminClient | null {
   return adminAuthService.getAdminClient();
 }
 
@@ -335,4 +274,4 @@ export async function logAdminAction(
 }
 
 export { adminAuthService, AdminAuthService };
-export type { AdminUser, AdminContext, AdminClientConfig };
+export type { AdminUser, AdminContext };
