@@ -1,3 +1,22 @@
 # Disable Vercel Analytics and Datadog
 # This file ensures no analytics are injected
 
+# Exclude Python files and dependencies (not needed for Vercel deployment)
+*.py
+requirements.txt
+pyproject.toml
+backend/
+test_adiology.py
+adiology.py
+main.py
+fix_discourse_*.py
+populate_discourse.py
+bulk_community_replies.py
+add_more_replies.py
+create_discourse_community.py
+add_images_to_posts.py
+boost_all_categories.py
+shuffle_discourse_dates.py
+fix_discourse_replies.py
+update_discourse_views.py
+attached_assets/
