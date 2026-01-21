@@ -11,11 +11,12 @@ interface NhostConfig {
 
 class NhostAdminClient {
   private baseUrl: string;
+  private authUrl: string;
   private adminSecret: string;
 
   constructor() {
     const subdomain = process.env.NHOST_SUBDOMAIN || process.env.NHOST_PROJECT_ID;
-    const region = process.env.NHOST_REGION || 'us-east-1';
+    const region = process.env.NHOST_REGION || 'eu-central-1';
     const adminSecret = process.env.NHOST_ADMIN_SECRET || process.env.ADMIN_SECRET_KEY || '';
 
     if (!subdomain) {
@@ -26,9 +27,13 @@ class NhostAdminClient {
       console.warn('[Nhost Admin] NHOST_ADMIN_SECRET or ADMIN_SECRET_KEY not set');
     }
 
-    // Nhost GraphQL endpoint: https://{subdomain}.{region}.nhost.run/v1/graphql
+    // Nhost GraphQL endpoint: https://{subdomain}.graphql.{region}.nhost.run/v1
+    // Auth endpoint: https://{subdomain}.auth.{region}.nhost.run/v1
     this.baseUrl = subdomain 
-      ? `https://${subdomain}.${region}.nhost.run/v1`
+      ? `https://${subdomain}.graphql.${region}.nhost.run/v1`
+      : '';
+    this.authUrl = subdomain
+      ? `https://${subdomain}.auth.${region}.nhost.run/v1`
       : '';
     this.adminSecret = adminSecret;
   }
@@ -172,7 +177,7 @@ class NhostAdminClient {
 
     try {
       // Verify token with Nhost auth endpoint
-      const response = await fetch(`${this.baseUrl}/auth/user`, {
+      const response = await fetch(`${this.authUrl}/user`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -230,7 +235,10 @@ class NhostAdminClient {
       configured: this.isConfigured(),
       hasSubdomain: !!process.env.NHOST_SUBDOMAIN || !!process.env.NHOST_PROJECT_ID,
       hasAdminSecret: !!this.adminSecret,
-      baseUrl: this.baseUrl || 'not configured',
+      subdomain: process.env.NHOST_SUBDOMAIN || process.env.NHOST_PROJECT_ID || 'not set',
+      region: process.env.NHOST_REGION || 'eu-central-1',
+      graphqlUrl: this.baseUrl || 'not configured',
+      authUrl: this.authUrl || 'not configured',
     };
   }
 }
