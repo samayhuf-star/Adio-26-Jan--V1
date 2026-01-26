@@ -127,4 +127,6 @@ serve({
   console.log(`Admin API Server running on http://localhost:${info.port}`);
 });
 
+// Export for Vercel serverless functions
+export { app };
 export default app;
