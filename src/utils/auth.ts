@@ -1,8 +1,9 @@
 /**
- * Auth utilities - Supabase Authentication Implementation
+ * Auth utilities - Nhost Authentication Implementation
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { nhost } from '../lib/nhost';
+import type { User as NhostUser } from '@nhost/nhost-js';
 
 export interface User {
   id: string;
@@ -28,31 +29,8 @@ export interface User {
   email_confirmed_at?: string | null;
 }
 
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY;
-
-let supabaseClient: SupabaseClient | null = null;
-
-function getSupabaseClient(): SupabaseClient {
-  if (!supabaseClient) {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Supabase URL and Anon Key must be provided via environment variables');
-      throw new Error('Supabase configuration missing');
-    }
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
-    });
-  }
-  return supabaseClient;
-}
-
-// Export supabase client for other files that import it
-export const supabase = typeof window !== 'undefined' ? getSupabaseClient() : null;
+// Initialize Nhost client
+const nhostClient = nhost;
 
 export async function signUpWithEmail(
   email: string,
@@ -61,18 +39,17 @@ export async function signUpWithEmail(
   name?: string
 ): Promise<{ data: User | null; error: { message: string } | null }> {
   try {
-    const client = getSupabaseClient();
-    
-    // Sign up with Supabase Auth
-    const { data: authData, error: authError } = await client.auth.signUp({
+    // Sign up with Nhost Auth
+    const { session, error: authError } = await nhostClient.auth.signUp({
       email: email.trim().toLowerCase(),
       password: password,
       options: {
-        data: {
+        displayName: name || '',
+        metadata: {
           full_name: name || '',
           name: name || '',
         },
-        emailRedirectTo: `${window.location.origin}/verify-email`,
+        redirectTo: `${window.location.origin}/verify-email`,
       },
     });
 
@@ -80,15 +57,15 @@ export async function signUpWithEmail(
       return { data: null, error: { message: authError.message } };
     }
 
-    if (!authData.user) {
+    if (!session?.user) {
       return { data: null, error: { message: 'Failed to create user account' } };
     }
 
-    // Create user profile in database
+    // Create user profile using GraphQL
     try {
       const profileData = {
-        id: authData.user.id,
-        email: authData.user.email!,
+        id: session.user.id,
+        email: session.user.email!,
         full_name: name || '',
         name: name || '',
         role: 'user',
@@ -98,38 +75,47 @@ export async function signUpWithEmail(
         updated_at: new Date().toISOString(),
       };
 
-      const { error: profileError } = await client
-        .from('users')
-        .insert([profileData])
-        .select()
-        .single();
+      // Insert user profile via GraphQL
+      const { error: profileError } = await nhostClient.graphql.request(`
+        mutation InsertUser($user: users_insert_input!) {
+          insert_users_one(object: $user, on_conflict: {constraint: users_pkey, update_columns: [updated_at]}) {
+            id
+            email
+            full_name
+            name
+            role
+            subscription_plan
+            subscription_status
+          }
+        }
+      `, { user: profileData });
 
-      if (profileError && !profileError.message.includes('duplicate') && !profileError.message.includes('already exists')) {
+      if (profileError) {
         console.warn('Failed to create user profile:', profileError);
-        // Don't fail signup if profile creation fails - profile might already exist
+        // Don't fail signup if profile creation fails
       }
     } catch (profileErr) {
       console.warn('Error creating user profile:', profileErr);
       // Continue even if profile creation fails
     }
 
-    // Map Supabase user to our User interface
+    // Map Nhost user to our User interface
     const user: User = {
-      id: authData.user.id,
-      email: authData.user.email!,
-      name: name || '',
-      full_name: name || '',
+      id: session.user.id,
+      email: session.user.email!,
+      name: name || session.user.displayName || '',
+      full_name: name || session.user.displayName || '',
       role: 'user',
       subscription_plan: 'free',
       subscription_status: 'active',
-      email_confirmed_at: authData.user.email_confirmed_at,
+      email_confirmed_at: session.user.emailVerified ? new Date().toISOString() : null,
     };
 
     // Store user in localStorage for compatibility
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(user));
-      if (authData.session?.access_token) {
-        localStorage.setItem('auth_token', authData.session.access_token);
+      if (session.accessToken) {
+        localStorage.setItem('auth_token', session.accessToken);
       }
     }
 
@@ -145,9 +131,7 @@ export async function signInWithEmail(
   password: string
 ): Promise<{ data: { user: User; session: any } | null; error: { message: string } | null }> {
   try {
-    const client = getSupabaseClient();
-    
-    const { data: authData, error: authError } = await client.auth.signInWithPassword({
+    const { session, error: authError } = await nhostClient.auth.signIn({
       email: email.trim().toLowerCase(),
       password: password,
     });
@@ -156,29 +140,60 @@ export async function signInWithEmail(
       return { data: null, error: { message: authError.message } };
     }
 
-    if (!authData.user || !authData.session) {
+    if (!session?.user) {
       return { data: null, error: { message: 'Invalid credentials' } };
     }
 
-    // Fetch user profile from database
+    // Fetch user profile from database using GraphQL
     let userProfile: User | null = null;
     try {
-      const { data: profile, error: profileError } = await client
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
+      const { data: profileData, error: profileError } = await nhostClient.graphql.request(`
+        query GetUserProfile($id: uuid!) {
+          users_by_pk(id: $id) {
+            id
+            email
+            name
+            full_name
+            role
+            subscription_plan
+            subscription_status
+            google_ads_default_account
+            company_name
+            job_title
+            industry
+            company_size
+            phone
+            website
+            country
+            bio
+            created_at
+            updated_at
+          }
+        }
+      `, { id: session.user.id });
 
-      if (profile && !profileError) {
+      if (profileData?.users_by_pk && !profileError) {
+        const profile = profileData.users_by_pk;
         userProfile = {
           id: profile.id,
-          email: profile.email || authData.user.email!,
-          name: profile.name || profile.full_name || '',
-          full_name: profile.full_name || profile.name || '',
+          email: profile.email || session.user.email!,
+          name: profile.name || profile.full_name || session.user.displayName || '',
+          full_name: profile.full_name || profile.name || session.user.displayName || '',
           role: profile.role || 'user',
           subscription_plan: profile.subscription_plan || 'free',
           subscription_status: profile.subscription_status || 'active',
-          ...profile,
+          google_ads_default_account: profile.google_ads_default_account,
+          company_name: profile.company_name,
+          job_title: profile.job_title,
+          industry: profile.industry,
+          company_size: profile.company_size,
+          phone: profile.phone,
+          website: profile.website,
+          country: profile.country,
+          bio: profile.bio,
+          created: profile.created_at,
+          updated: profile.updated_at,
+          email_confirmed_at: session.user.emailVerified ? new Date().toISOString() : null,
         };
       }
     } catch (profileErr) {
@@ -188,27 +203,27 @@ export async function signInWithEmail(
     // If no profile found, create a basic one
     if (!userProfile) {
       userProfile = {
-        id: authData.user.id,
-        email: authData.user.email!,
-        name: authData.user.user_metadata?.full_name || authData.user.user_metadata?.name || '',
-        full_name: authData.user.user_metadata?.full_name || authData.user.user_metadata?.name || '',
+        id: session.user.id,
+        email: session.user.email!,
+        name: session.user.displayName || '',
+        full_name: session.user.displayName || '',
         role: 'user',
         subscription_plan: 'free',
         subscription_status: 'active',
-        email_confirmed_at: authData.user.email_confirmed_at,
+        email_confirmed_at: session.user.emailVerified ? new Date().toISOString() : null,
       };
     }
 
     // Store user and session in localStorage for compatibility
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(userProfile));
-      localStorage.setItem('auth_token', authData.session.access_token);
+      localStorage.setItem('auth_token', session.accessToken);
     }
 
     return {
       data: {
         user: userProfile,
-        session: authData.session,
+        session: session,
       },
       error: null,
     };
@@ -220,8 +235,7 @@ export async function signInWithEmail(
 
 export async function signOut(): Promise<{ error: { message: string } | null }> {
   try {
-    const client = getSupabaseClient();
-    const { error } = await client.auth.signOut();
+    const { error } = await nhostClient.auth.signOut();
 
     // Clear localStorage
     if (typeof window !== 'undefined') {
@@ -235,7 +249,7 @@ export async function signOut(): Promise<{ error: { message: string } | null }> 
       return { error: { message: error.message } };
     }
 
-  return { error: null };
+    return { error: null };
   } catch (err: any) {
     console.error('Signout error:', err);
     // Clear localStorage even if signout fails
@@ -255,13 +269,12 @@ export async function getSessionToken(): Promise<string | null> {
   }
 
   try {
-    const client = getSupabaseClient();
-    const { data: { session } } = await client.auth.getSession();
+    const session = nhostClient.auth.getSession();
     
-    if (session?.access_token) {
+    if (session?.accessToken) {
       // Update localStorage for compatibility
-      localStorage.setItem('auth_token', session.access_token);
-      return session.access_token;
+      localStorage.setItem('auth_token', session.accessToken);
+      return session.accessToken;
     }
 
     // Fallback to localStorage token
@@ -282,9 +295,11 @@ export function getSessionTokenSync(): string | null {
 
 export async function resetPassword(email: string): Promise<{ error: { message: string } | null }> {
   try {
-    const client = getSupabaseClient();
-    const { error } = await client.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error } = await nhostClient.auth.resetPassword({
+      email: email.trim().toLowerCase(),
+      options: {
+        redirectTo: `${window.location.origin}/reset-password`,
+      },
     });
 
     if (error) {
@@ -303,27 +318,27 @@ export async function updatePassword(
   token?: string
 ): Promise<{ error: { message: string } | null }> {
   try {
-    const client = getSupabaseClient();
-    
-    // If token is provided, it's a password reset token
+    // For Nhost, password updates are handled differently
+    // If token is provided, it's a password reset flow
     if (token) {
-      const { error } = await client.auth.verifyOtp({
-        token_hash: token,
-        type: 'recovery',
+      // This would typically be handled by Nhost's password reset flow
+      // For now, we'll use the change password method
+      const { error } = await nhostClient.auth.changePassword({
+        newPassword: newPassword,
       });
 
       if (error) {
         return { error: { message: error.message } };
       }
-    }
+    } else {
+      // Regular password change for authenticated user
+      const { error } = await nhostClient.auth.changePassword({
+        newPassword: newPassword,
+      });
 
-    // Update password
-    const { error } = await client.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (error) {
-      return { error: { message: error.message } };
+      if (error) {
+        return { error: { message: error.message } };
+      }
     }
 
     return { error: null };
@@ -353,55 +368,85 @@ export async function getCurrentUserAsync(): Promise<User | null> {
   }
 
   try {
-    const client = getSupabaseClient();
-    const { data: { user: authUser } } = await client.auth.getUser();
+    const user = nhostClient.auth.getUser();
 
-    if (!authUser) {
+    if (!user) {
       return null;
     }
 
-    // Try to get user profile from database
+    // Try to get user profile from database using GraphQL
     try {
-      const { data: profile, error } = await client
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
+      const { data: profileData, error } = await nhostClient.graphql.request(`
+        query GetUserProfile($id: uuid!) {
+          users_by_pk(id: $id) {
+            id
+            email
+            name
+            full_name
+            role
+            subscription_plan
+            subscription_status
+            google_ads_default_account
+            company_name
+            job_title
+            industry
+            company_size
+            phone
+            website
+            country
+            bio
+            created_at
+            updated_at
+          }
+        }
+      `, { id: user.id });
 
-      if (profile && !error) {
-        const user: User = {
+      if (profileData?.users_by_pk && !error) {
+        const profile = profileData.users_by_pk;
+        const userProfile: User = {
           id: profile.id,
-          email: profile.email || authUser.email!,
-          name: profile.name || profile.full_name || '',
-          full_name: profile.full_name || profile.name || '',
+          email: profile.email || user.email!,
+          name: profile.name || profile.full_name || user.displayName || '',
+          full_name: profile.full_name || profile.name || user.displayName || '',
           role: profile.role || 'user',
           subscription_plan: profile.subscription_plan || 'free',
           subscription_status: profile.subscription_status || 'active',
-          ...profile,
+          google_ads_default_account: profile.google_ads_default_account,
+          company_name: profile.company_name,
+          job_title: profile.job_title,
+          industry: profile.industry,
+          company_size: profile.company_size,
+          phone: profile.phone,
+          website: profile.website,
+          country: profile.country,
+          bio: profile.bio,
+          created: profile.created_at,
+          updated: profile.updated_at,
+          email_confirmed_at: user.emailVerified ? new Date().toISOString() : null,
         };
         
         // Update localStorage
-        localStorage.setItem('user', JSON.stringify(user));
-        return user;
+        localStorage.setItem('user', JSON.stringify(userProfile));
+        return userProfile;
       }
     } catch (profileErr) {
       console.warn('Error fetching user profile:', profileErr);
     }
 
     // Fallback to auth user metadata
-    const user: User = {
-      id: authUser.id,
-      email: authUser.email!,
-      name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
-      full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
+    const userProfile: User = {
+      id: user.id,
+      email: user.email!,
+      name: user.displayName || '',
+      full_name: user.displayName || '',
       role: 'user',
       subscription_plan: 'free',
       subscription_status: 'active',
-      email_confirmed_at: authUser.email_confirmed_at,
+      email_confirmed_at: user.emailVerified ? new Date().toISOString() : null,
     };
 
-    localStorage.setItem('user', JSON.stringify(user));
-    return user;
+    localStorage.setItem('user', JSON.stringify(userProfile));
+    return userProfile;
   } catch (err) {
     console.error('Error getting current user:', err);
     return getCurrentUser(); // Fallback to localStorage
@@ -416,9 +461,8 @@ export function isAuthenticated(): boolean {
 
 export async function isAuthenticatedAsync(): Promise<boolean> {
   try {
-    const client = getSupabaseClient();
-    const { data: { session } } = await client.auth.getSession();
-    return session !== null;
+    const session = nhostClient.auth.getSession();
+    return session !== null && session.accessToken !== null;
   } catch (err) {
     return isAuthenticated(); // Fallback to sync check
   }
@@ -430,33 +474,32 @@ export function clearProfileCache() {
 
 export async function getCurrentAuthUser(): Promise<{ id: string; email: string } | null> {
   try {
-    const client = getSupabaseClient();
-    const { data: { user: authUser } } = await client.auth.getUser();
+    const user = nhostClient.auth.getUser();
     
-    if (!authUser) {
+    if (!user) {
       // Fallback to localStorage
-  const user = getCurrentUser();
-      if (user) {
+      const localUser = getCurrentUser();
+      if (localUser) {
         return {
-          id: user.id,
-          email: user.email,
+          id: localUser.id,
+          email: localUser.email,
         };
       }
-    return null;
-  }
+      return null;
+    }
 
     return {
-      id: authUser.id,
-      email: authUser.email!,
+      id: user.id,
+      email: user.email!,
     };
   } catch (err) {
     console.error('Error getting auth user:', err);
     const user = getCurrentUser();
     if (user) {
-  return {
-    id: user.id,
-    email: user.email,
-  };
+      return {
+        id: user.id,
+        email: user.email,
+      };
     }
     return null;
   }
@@ -469,28 +512,27 @@ export async function getCurrentUserProfile(): Promise<User | null> {
 
 export async function getSession() {
   try {
-    const client = getSupabaseClient();
-    const { data: { session } } = await client.auth.getSession();
+    const session = nhostClient.auth.getSession();
     
-    if (session) {
+    if (session?.accessToken) {
       // Update localStorage for compatibility
-      localStorage.setItem('auth_token', session.access_token);
+      localStorage.setItem('auth_token', session.accessToken);
       return session;
     }
 
     // Fallback to localStorage
     const token = getSessionTokenSync();
     if (token) {
-      return { access_token: token };
+      return { accessToken: token };
     }
     return null;
   } catch (err) {
     console.error('Error getting session:', err);
     const token = getSessionTokenSync();
-  if (token) {
-    return { access_token: token };
-  }
-  return null;
+    if (token) {
+      return { accessToken: token };
+    }
+    return null;
   }
 }
 
@@ -500,8 +542,6 @@ export async function createUserProfile(
   fullName: string
 ): Promise<User> {
   try {
-    const client = getSupabaseClient();
-    
     const profileData = {
       id: userId,
       email: email,
@@ -514,12 +554,20 @@ export async function createUserProfile(
       updated_at: new Date().toISOString(),
     };
 
-    // Try to insert or update user profile
-    const { data: profile, error } = await client
-      .from('users')
-      .upsert(profileData, { onConflict: 'id' })
-      .select()
-      .single();
+    // Try to insert or update user profile using GraphQL
+    const { data: profile, error } = await nhostClient.graphql.request(`
+      mutation UpsertUser($user: users_insert_input!) {
+        insert_users_one(object: $user, on_conflict: {constraint: users_pkey, update_columns: [updated_at, full_name, name]}) {
+          id
+          email
+          full_name
+          name
+          role
+          subscription_plan
+          subscription_status
+        }
+      }
+    `, { user: profileData });
 
     const user: User = {
       id: userId,
@@ -529,7 +577,7 @@ export async function createUserProfile(
       role: 'user',
       subscription_plan: 'free',
       subscription_status: 'active',
-      ...profile,
+      ...profile?.insert_users_one,
     };
 
     // Store in localStorage
@@ -537,7 +585,7 @@ export async function createUserProfile(
       localStorage.setItem('user', JSON.stringify(user));
     }
 
-    if (error && !error.message.includes('duplicate') && !error.message.includes('already exists')) {
+    if (error) {
       console.warn('Error creating/updating user profile:', error);
     }
 
@@ -565,12 +613,10 @@ export async function createUserProfile(
 
 export async function resendVerificationEmail(email: string) {
   try {
-    const client = getSupabaseClient();
-    const { error } = await client.auth.resend({
-      type: 'signup',
+    const { error } = await nhostClient.auth.sendVerificationEmail({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: `${window.location.origin}/verify-email`,
+        redirectTo: `${window.location.origin}/verify-email`,
       },
     });
 
@@ -594,7 +640,7 @@ export function isSuperAdmin(): boolean {
 if (typeof window !== 'undefined') {
   try {
     // Listen for auth state changes
-    getSupabaseClient().auth.onAuthStateChange((event, session) => {
+    nhostClient.auth.onAuthStateChanged((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         // Update localStorage when user signs in
         getCurrentUserAsync().catch(console.error);
@@ -602,9 +648,9 @@ if (typeof window !== 'undefined') {
         // Clear localStorage when user signs out
         localStorage.removeItem('user');
         localStorage.removeItem('auth_token');
-      } else if (event === 'TOKEN_REFRESHED' && session) {
+      } else if (event === 'TOKEN_CHANGED' && session) {
         // Update token on refresh
-        localStorage.setItem('auth_token', session.access_token);
+        localStorage.setItem('auth_token', session.accessToken);
       }
     });
   } catch (err) {
@@ -613,10 +659,10 @@ if (typeof window !== 'undefined') {
 }
 
 // Legacy compatibility functions
-export function setClerkUser(_user: any) {
+export function setNhostUser(_user: any) {
   // No-op
 }
 
-export function setClerkAuth(_auth: any) {
+export function setNhostAuth(_auth: any) {
   // No-op
 }

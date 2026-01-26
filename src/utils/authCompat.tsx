@@ -1,29 +1,24 @@
 /**
- * Compatibility layer for migrating from Clerk to PocketBase
+ * Compatibility layer for migrating from Clerk to Nhost
  * Provides similar hooks/utilities to ease migration
  */
 
 import React, { useState, useEffect } from 'react';
-import { getSessionToken, getCurrentUserProfile, getCurrentUser, isAuthenticated } from './auth';
+import { useAuthenticationStatus, useUserData, useAccessToken } from '@nhost/react';
 
 /**
  * Hook-like function that returns getToken (for components that used useAuth)
  */
 export function useAuthCompat() {
-  const [isSignedIn, setIsSignedIn] = useState(isAuthenticated());
-
-  useEffect(() => {
-    // Update isSignedIn when auth state changes
-    setIsSignedIn(isAuthenticated());
-  }, []);
+  const { isAuthenticated } = useAuthenticationStatus();
+  const accessToken = useAccessToken();
 
   return {
     getToken: async () => {
-      const token = await getSessionToken();
-      return token || null;
+      return accessToken || null;
     },
     isLoaded: true,
-    isSignedIn,
+    isSignedIn: isAuthenticated,
   };
 }
 
@@ -31,34 +26,13 @@ export function useAuthCompat() {
  * Hook-like function that returns user (for components that used useUser)
  */
 export function useUserCompat() {
-  const [user, setUser] = useState<any>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const currentUser = getCurrentUser();
-        if (currentUser) {
-          const profile = await getCurrentUserProfile();
-          setUser(profile);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Failed to load user:', error);
-        setUser(null);
-      } finally {
-        setIsLoaded(true);
-      }
-    };
-
-    loadUser();
-  }, []);
+  const user = useUserData();
+  const { isAuthenticated, isLoading } = useAuthenticationStatus();
 
   return {
     user,
-    isLoaded,
-    isSignedIn: !!user,
+    isLoaded: !isLoading,
+    isSignedIn: isAuthenticated,
   };
 }
 
@@ -69,7 +43,7 @@ export function useAuth() {
   const authCompat = useAuthCompat();
   return {
     getToken: authCompat.getToken,
-    isSignedIn: authCompat.isSignedIn || isAuthenticated(),
+    isSignedIn: authCompat.isSignedIn,
     isLoaded: authCompat.isLoaded,
   };
 }
@@ -87,18 +61,18 @@ export function useUser() {
 export function useOrganization() {
   const [organization, setOrganization] = useState<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const accessToken = useAccessToken();
 
   useEffect(() => {
     const loadOrganization = async () => {
       try {
-        const token = await getSessionToken();
-        if (!token) {
+        if (!accessToken) {
           setIsLoaded(true);
           return;
         }
 
         const response = await fetch('/api/organizations/my', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
         if (response.ok) {
@@ -115,7 +89,7 @@ export function useOrganization() {
     };
 
     loadOrganization();
-  }, []);
+  }, [accessToken]);
 
   return {
     organization,
@@ -124,7 +98,7 @@ export function useOrganization() {
 }
 
 /**
- * Stub for useClerk hook (not used in PocketBase migration)
+ * Stub for useClerk hook (not used in Nhost migration)
  */
 export function useClerk() {
   return {
@@ -143,7 +117,7 @@ export const SignIn: React.FC<any> = (props: any) => {
   // If this component is rendered, it means ClerkAuth is being used (legacy)
   return (
     <div style={{ display: 'none' }}>
-      {/* Stub component - not used in PocketBase migration */}
+      {/* Stub component - not used in Nhost migration */}
     </div>
   );
 };
@@ -158,7 +132,7 @@ export const SignUp: React.FC<any> = (props: any) => {
   // If this component is rendered, it means ClerkAuth is being used (legacy)
   return (
     <div style={{ display: 'none' }}>
-      {/* Stub component - not used in PocketBase migration */}
+      {/* Stub component - not used in Nhost migration */}
     </div>
   );
 };

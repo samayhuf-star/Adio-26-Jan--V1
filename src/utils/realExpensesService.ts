@@ -1,4 +1,4 @@
-import { supabase } from "./auth"/client';
+import { nhost } from '../lib/nhost';
 
 export interface RealExpense {
   id: string;
@@ -97,14 +97,19 @@ export async function calculateRealExpenses(): Promise<RealExpense[]> {
   try {
     // Get Stripe expenses
     try {
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('*')
-        .gte('created_at', startOfMonth.toISOString())
-        .order('created_at', { ascending: false });
+      const { data } = await nhost.graphql.request(`
+        query GetPayments($startDate: timestamptz!) {
+          payments(where: {created_at: {_gte: $startDate}}, order_by: {created_at: desc}) {
+            id
+            amount
+            type
+            created_at
+          }
+        }
+      `, { startDate: startOfMonth.toISOString() });
 
-      if (payments && payments.length > 0) {
-        payments.forEach((p: any) => {
+      if (data?.payments && data.payments.length > 0) {
+        data.payments.forEach((p: any) => {
           expenses.push({
             id: `stripe-${p.id}`,
             date: new Date(p.created_at).toLocaleDateString(),
@@ -121,29 +126,34 @@ export async function calculateRealExpenses(): Promise<RealExpense[]> {
       console.warn('Error fetching Stripe expenses:', e);
     }
 
-    // Get Supabase expenses (from database)
+    // Get Nhost expenses (from database)
     try {
-      const { data: subs } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .gte('created_at', startOfMonth.toISOString());
+      const { data } = await nhost.graphql.request(`
+        query GetSubscriptions($startDate: timestamptz!) {
+          subscriptions(where: {created_at: {_gte: $startDate}}) {
+            id
+            amount
+            created_at
+          }
+        }
+      `, { startDate: startOfMonth.toISOString() });
 
-      if (subs && subs.length > 0) {
-        subs.forEach((s: any) => {
+      if (data?.subscriptions && data.subscriptions.length > 0) {
+        data.subscriptions.forEach((s: any) => {
           expenses.push({
-            id: `supabase-${s.id}`,
+            id: `nhost-${s.id}`,
             date: new Date(s.created_at || today).toLocaleDateString(),
-            description: 'Supabase Database Service',
+            description: 'Nhost Database Service',
             amount: Math.abs(parseFloat(s.amount || 49)),
             status: 'paid',
             category: 'infrastructure',
-            source: 'supabase',
+            source: 'nhost',
             currency: 'USD',
           });
         });
       }
     } catch (e) {
-      console.warn('Error fetching Supabase expenses:', e);
+      console.warn('Error fetching Nhost expenses:', e);
     }
 
   } catch (error) {
@@ -184,14 +194,23 @@ export async function loadRealExpenses(): Promise<RealExpense[]> {
 
   try {
     // Try to load from expenses table
-    const { data } = await supabase
-      .from('expenses')
-      .select('*')
-      .order('date', { ascending: false })
-      .limit(100);
+    const { data } = await nhost.graphql.request(`
+      query GetExpenses {
+        expenses(order_by: {date: desc}, limit: 100) {
+          id
+          date
+          description
+          amount
+          status
+          category
+          source
+          currency
+        }
+      }
+    `);
 
-    if (data && data.length > 0) {
-      const expenses = data.map((e: any) => ({
+    if (data?.expenses && data.expenses.length > 0) {
+      const expenses = data.expenses.map((e: any) => ({
         id: e.id,
         date: e.date,
         description: e.description,
@@ -202,7 +221,7 @@ export async function loadRealExpenses(): Promise<RealExpense[]> {
         currency: e.currency || 'USD',
       }));
       localStorage.setItem('admin_expenses_cache', JSON.stringify(expenses));
-      console.log(`📊 Loaded ${expenses.length} expenses from Supabase`);
+      console.log(`📊 Loaded ${expenses.length} expenses from Nhost`);
       return expenses;
     }
   } catch (e) {
@@ -217,7 +236,7 @@ export async function loadRealExpenses(): Promise<RealExpense[]> {
   return apiExpenses;
 }
 
-// Upload CSV expenses to Supabase
+// Upload CSV expenses to Nhost
 export async function uploadCSVExpenses(expenses: RealExpense[]): Promise<boolean> {
   try {
     const formattedExpenses = expenses.map(e => ({
@@ -234,16 +253,26 @@ export async function uploadCSVExpenses(expenses: RealExpense[]): Promise<boolea
       }
     }));
 
-    const { error } = await supabase
-      .from('expenses')
-      .upsert(formattedExpenses, { onConflict: 'id' });
+    const { error } = await nhost.graphql.request(`
+      mutation InsertExpenses($objects: [expenses_insert_input!]!) {
+        insert_expenses(
+          objects: $objects,
+          on_conflict: {
+            constraint: expenses_id_key,
+            update_columns: [description, amount, status, category, source, currency, metadata]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `, { objects: formattedExpenses });
 
     if (error) {
       console.error('Error uploading expenses:', error);
       return false;
     }
 
-    console.log(`✅ Uploaded ${expenses.length} expenses to Supabase`);
+    console.log(`✅ Uploaded ${expenses.length} expenses to Nhost`);
     return true;
   } catch (error) {
     console.error('Error uploading expenses:', error);

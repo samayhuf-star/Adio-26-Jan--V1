@@ -74,16 +74,16 @@ async function fetchWithRetry(
   throw lastError || new Error('Request failed after retries');
 }
 
-let clerkGetToken: (() => Promise<string | null>) | null = null;
+let nhostGetToken: (() => Promise<string | null>) | null = null;
 
-export function setClerkGetToken(getToken: () => Promise<string | null>) {
-  clerkGetToken = getToken;
+export function setNhostGetToken(getToken: () => Promise<string | null>) {
+  nhostGetToken = getToken;
 }
 
 async function getAuthToken(): Promise<string | null> {
   try {
-    if (clerkGetToken) {
-      return await clerkGetToken();
+    if (nhostGetToken) {
+      return await nhostGetToken();
     }
     return null;
   } catch {

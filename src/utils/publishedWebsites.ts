@@ -1,4 +1,4 @@
-import { supabase } from "./auth"/client';
+import { nhost } from '../lib/nhost';
 
 export interface PublishedWebsite {
   id: string;
@@ -29,18 +29,30 @@ export interface PublishedWebsiteInput {
  */
 export async function getUserPublishedWebsites(userId: string): Promise<PublishedWebsite[]> {
   try {
-    const { data, error } = await supabase
-      .from('published_websites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const { data, error } = await nhost.graphql.request(`
+      query GetUserPublishedWebsites($userId: uuid!) {
+        published_websites(where: {user_id: {_eq: $userId}}, order_by: {created_at: desc}) {
+          id
+          user_id
+          name
+          template_id
+          template_data
+          vercel_deployment_id
+          vercel_url
+          vercel_project_id
+          status
+          created_at
+          updated_at
+        }
+      }
+    `, { userId });
 
     if (error) {
       console.error('Error fetching published websites:', error);
       throw error;
     }
 
-    return data || [];
+    return data?.published_websites || [];
   } catch (error) {
     console.error('Error in getUserPublishedWebsites:', error);
     throw error;
@@ -55,9 +67,24 @@ export async function savePublishedWebsite(
   website: PublishedWebsiteInput
 ): Promise<PublishedWebsite> {
   try {
-    const { data, error } = await supabase
-      .from('published_websites')
-      .insert({
+    const { data, error } = await nhost.graphql.request(`
+      mutation InsertPublishedWebsite($object: published_websites_insert_input!) {
+        insert_published_websites_one(object: $object) {
+          id
+          user_id
+          name
+          template_id
+          template_data
+          vercel_deployment_id
+          vercel_url
+          vercel_project_id
+          status
+          created_at
+          updated_at
+        }
+      }
+    `, {
+      object: {
         user_id: userId,
         name: website.name,
         template_id: website.template_id,
@@ -66,16 +93,15 @@ export async function savePublishedWebsite(
         vercel_url: website.vercel_url,
         vercel_project_id: website.vercel_project_id,
         status: website.status,
-      })
-      .select()
-      .single();
+      }
+    });
 
     if (error) {
       console.error('Error saving published website:', error);
       throw error;
     }
 
-    return data;
+    return data.insert_published_websites_one;
   } catch (error) {
     console.error('Error in savePublishedWebsite:', error);
     throw error;
@@ -90,22 +116,36 @@ export async function updatePublishedWebsite(
   updates: Partial<PublishedWebsiteInput>
 ): Promise<PublishedWebsite> {
   try {
-    const { data, error } = await supabase
-      .from('published_websites')
-      .update({
+    const { data, error } = await nhost.graphql.request(`
+      mutation UpdatePublishedWebsite($id: uuid!, $updates: published_websites_set_input!) {
+        update_published_websites_by_pk(pk_columns: {id: $id}, _set: $updates) {
+          id
+          user_id
+          name
+          template_id
+          template_data
+          vercel_deployment_id
+          vercel_url
+          vercel_project_id
+          status
+          created_at
+          updated_at
+        }
+      }
+    `, {
+      id,
+      updates: {
         ...updates,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single();
+      }
+    });
 
     if (error) {
       console.error('Error updating published website:', error);
       throw error;
     }
 
-    return data;
+    return data.update_published_websites_by_pk;
   } catch (error) {
     console.error('Error in updatePublishedWebsite:', error);
     throw error;
@@ -127,10 +167,13 @@ export async function updatePublishedWebsiteStatus(
  */
 export async function deletePublishedWebsite(id: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('published_websites')
-      .delete()
-      .eq('id', id);
+    const { error } = await nhost.graphql.request(`
+      mutation DeletePublishedWebsite($id: uuid!) {
+        delete_published_websites_by_pk(id: $id) {
+          id
+        }
+      }
+    `, { id });
 
     if (error) {
       console.error('Error deleting published website:', error);

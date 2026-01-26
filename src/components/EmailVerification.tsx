@@ -4,7 +4,8 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { notifications } from '../utils/notifications';
-import { getCurrentUser, getCurrentUserAsync, resendVerificationEmail, supabase } from '../utils/auth';
+import { useUserData, useAuthenticationStatus } from '@nhost/react';
+import { nhost } from '../lib/nhost';
 
 interface EmailVerificationProps {
   onVerificationSuccess: () => void;

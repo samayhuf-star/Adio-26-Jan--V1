@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getCurrentAuthUser, getCurrentUserProfile } from '../utils/auth';
-// Supabase removed - using auth utilities instead
+import { useUserData, useAuthenticationStatus } from '@nhost/react';
+import { nhost } from '../lib/nhost';
 
 export interface OnboardingStep {
   id: string;
@@ -98,29 +98,35 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const checkOnboardingStatus = async () => {
     try {
       setIsLoading(true);
-      const user = await getCurrentAuthUser();
+      const user = useUserData();
       
       if (!user) {
         setIsLoading(false);
         return;
       }
 
-      // Check if user has completed onboarding
-      const { data: onboardingData, error } = await supabase
-        .from('user_onboarding')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      // Check if user has completed onboarding using Nhost GraphQL
+      const { data, error } = await nhost.graphql.request(`
+        query GetUserOnboarding($userId: uuid!) {
+          user_onboarding(where: {user_id: {_eq: $userId}}) {
+            completed
+            skipped
+            current_step
+            steps_completed
+          }
+        }
+      `, { userId: user.id });
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error checking onboarding status:', error);
         setIsLoading(false);
         return;
       }
 
+      const onboardingData = data?.user_onboarding?.[0];
+
       // Check if user profile exists and is complete
-      const profile = await getCurrentUserProfile();
-      const isProfileComplete = profile && profile.full_name && profile.email;
+      const isProfileComplete = user && user.displayName && user.email;
 
       if (!onboardingData) {
         // First time user
@@ -158,22 +164,38 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
 
   const saveOnboardingState = async (updates: Partial<OnboardingState>) => {
     try {
-      const user = await getCurrentAuthUser();
+      const user = useUserData();
       if (!user) return;
 
       const completedSteps = updates.steps?.filter(s => s.completed).map(s => s.id) || 
                            state.steps.filter(s => s.completed).map(s => s.id);
 
-      const { error } = await supabase
-        .from('user_onboarding')
-        .upsert({
-          user_id: user.id,
-          completed: updates.completed ?? state.completed,
-          skipped: updates.skipped ?? state.skipped,
-          current_step: updates.currentStep ?? state.currentStep,
-          steps_completed: completedSteps,
-          updated_at: new Date().toISOString(),
-        });
+      const { error } = await nhost.graphql.request(`
+        mutation UpsertUserOnboarding($userId: uuid!, $completed: Boolean!, $skipped: Boolean!, $currentStep: Int!, $stepsCompleted: jsonb!) {
+          insert_user_onboarding(
+            objects: {
+              user_id: $userId,
+              completed: $completed,
+              skipped: $skipped,
+              current_step: $currentStep,
+              steps_completed: $stepsCompleted,
+              updated_at: "now()"
+            },
+            on_conflict: {
+              constraint: user_onboarding_user_id_key,
+              update_columns: [completed, skipped, current_step, steps_completed, updated_at]
+            }
+          ) {
+            affected_rows
+          }
+        }
+      `, {
+        userId: user.id,
+        completed: updates.completed ?? state.completed,
+        skipped: updates.skipped ?? state.skipped,
+        currentStep: updates.currentStep ?? state.currentStep,
+        stepsCompleted: completedSteps,
+      });
 
       if (error) {
         console.error('Error saving onboarding state:', error);

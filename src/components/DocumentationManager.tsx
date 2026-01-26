@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Save, X, FileText, ImageIcon, Film, Loader } from 'lucide-react';
 import { notifications } from '../utils/notifications';
-import { supabase } from "../utils/auth";
+import { nhost } from '../lib/nhost';
 
 interface DocumentationItem {
   id: string;
@@ -43,7 +43,7 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
     status: 'draft'
   });
 
-  // Load docs from PocketBase
+  // Load docs from Nhost
   useEffect(() => {
     loadDocumentation();
   }, []);
@@ -51,14 +51,30 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
   const loadDocumentation = async () => {
     setLoading(true);
     try {
-      // Load from PocketBase support_tickets collection
+      // Load from Nhost support_tickets collection
       try {
-        const tickets = await pb.collection('support_tickets').getList(1, 100, {
-          sort: '-created',
-        });
+        const { data, error } = await nhost.graphql.request(`
+          query GetSupportTickets {
+            support_tickets(order_by: {created_at: desc}, limit: 100) {
+              id
+              subject
+              category
+              message
+              images
+              videos
+              status
+              created_at
+              updated_at
+            }
+          }
+        `);
+        
+        if (error) {
+          throw error;
+        }
         
         // Transform support_tickets to documentation format
-        const formattedDocs: DocumentationItem[] = tickets.items.map((ticket: any) => ({
+        const formattedDocs: DocumentationItem[] = data?.support_tickets?.map((ticket: any) => ({
           id: ticket.id,
           title: ticket.subject || 'Untitled',
           category: ticket.category || 'Getting Started',
@@ -66,14 +82,14 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
           images: ticket.images || [],
           videos: ticket.videos || [],
           status: ticket.status === 'published' ? 'published' : 'draft',
-          created_at: ticket.created || new Date().toISOString(),
-          updated_at: ticket.updated || new Date().toISOString(),
-        }));
+          created_at: ticket.created_at || new Date().toISOString(),
+          updated_at: ticket.updated_at || new Date().toISOString(),
+        })) || [];
         
         setDocs(formattedDocs);
         console.log(`📚 Loaded ${formattedDocs.length} documentation items`);
-      } catch (pbError) {
-        console.error('Error loading from PocketBase:', pbError);
+      } catch (nhostError) {
+        console.error('Error loading from Nhost:', nhostError);
         // Fallback to localStorage
         const stored = localStorage.getItem('admin_docs');
         if (stored) {
@@ -99,7 +115,7 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
     }
   };
 
-  // Save docs to localStorage and PocketBase
+  // Save docs to localStorage and Nhost
   const saveDocs = async (newDoc?: Partial<DocumentationItem>, docId?: string) => {
     if (!newDoc) return;
 
@@ -116,17 +132,26 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
         } as DocumentationItem : d);
         notifications.success('Documentation updated');
         
-        // Update in PocketBase
+        // Update in Nhost
         try {
-          await pb.collection('support_tickets').update(docId, {
-            subject: newDoc.title,
-            message: newDoc.content,
-            status: newDoc.status === 'published' ? 'published' : 'draft',
-            category: newDoc.category,
-            priority: 'medium'
+          await nhost.graphql.request(`
+            mutation UpdateSupportTicket($id: uuid!, $updates: support_tickets_set_input!) {
+              update_support_tickets_by_pk(pk_columns: {id: $id}, _set: $updates) {
+                id
+              }
+            }
+          `, {
+            id: docId,
+            updates: {
+              subject: newDoc.title,
+              message: newDoc.content,
+              status: newDoc.status === 'published' ? 'published' : 'draft',
+              category: newDoc.category,
+              updated_at: new Date().toISOString()
+            }
           });
-        } catch (pbError) {
-          console.error('Error updating in PocketBase:', pbError);
+        } catch (nhostError) {
+          console.error('Error updating in Nhost:', nhostError);
         }
       } else {
         // Create new
@@ -144,17 +169,25 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
         updatedDocs = [newDocItem, ...updatedDocs];
         notifications.success('Documentation created');
         
-        // Save to PocketBase
+        // Save to Nhost
         try {
-          await pb.collection('support_tickets').create({
-            subject: newDoc.title,
-            message: newDoc.content,
-            status: newDoc.status === 'published' ? 'published' : 'draft',
-            category: newDoc.category,
-            priority: 'medium'
+          await nhost.graphql.request(`
+            mutation InsertSupportTicket($object: support_tickets_insert_input!) {
+              insert_support_tickets_one(object: $object) {
+                id
+              }
+            }
+          `, {
+            object: {
+              subject: newDoc.title,
+              message: newDoc.content,
+              status: newDoc.status === 'published' ? 'published' : 'draft',
+              category: newDoc.category,
+              priority: 'medium'
+            }
           });
-        } catch (pbError) {
-          console.error('Error creating in PocketBase:', pbError);
+        } catch (nhostError) {
+          console.error('Error creating in Nhost:', nhostError);
         }
       }
       
@@ -189,11 +222,17 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
   const handleDeleteDoc = async (id: string) => {
     if (confirm('Are you sure you want to delete this documentation?')) {
       try {
-        await pb.collection('support_tickets').delete(id);
+        await nhost.graphql.request(`
+          mutation DeleteSupportTicket($id: uuid!) {
+            delete_support_tickets_by_pk(id: $id) {
+              id
+            }
+          }
+        `, { id });
         notifications.success('Documentation deleted');
         await loadDocumentation();
       } catch (error) {
-        console.error('Error deleting from PocketBase:', error);
+        console.error('Error deleting from Nhost:', error);
         notifications.error('Failed to delete documentation');
       }
     }

@@ -15,9 +15,8 @@ const envConfig: EnvConfig = {
     // 'DATABASE_URL', // Uncomment if database URL is required
   ],
   optional: [
-    'VITE_SUPABASE_URL',
-    'VITE_SUPABASE_ANON_KEY',
-    'VITE_CLERK_PUBLISHABLE_KEY',
+    'VITE_NHOST_SUBDOMAIN',
+    'VITE_NHOST_REGION',
     'STRIPE_SECRET_KEY',
     'STRIPE_PUBLISHABLE_KEY',
   ],

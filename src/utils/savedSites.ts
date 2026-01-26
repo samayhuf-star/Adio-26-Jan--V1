@@ -3,7 +3,7 @@
  * Handles CRUD operations for saved sites with workspace isolation
  */
 
-import { supabase } from "../utils/auth";
+import { nhost } from '../lib/nhost';
 import { createWorkspaceQuery, getCurrentWorkspaceContext, logSecurityViolation } from './workspace-api';
 
 export interface SavedSite {
@@ -44,17 +44,39 @@ export interface ActivityLog {
  * Get all saved sites for current user in current workspace
  */
 export async function getSavedSites(): Promise<SavedSite[]> {
-  const workspaceQuery = await createWorkspaceQuery('saved_sites');
-  if (!workspaceQuery) {
+  const context = await getCurrentWorkspaceContext();
+  if (!context) {
     throw new Error('No workspace context available');
   }
 
-  const { data, error } = await workspaceQuery
-    .select('*')
-    .order('updated_at', { ascending: false });
+  const { data, error } = await nhost.graphql.request(`
+    query GetSavedSites($userId: uuid!, $workspaceId: uuid) {
+      saved_sites(
+        where: { 
+          user_id: { _eq: $userId }
+          workspace_id: { _eq: $workspaceId }
+        }
+        order_by: { updated_at: desc }
+      ) {
+        id
+        user_id
+        workspace_id
+        template_id
+        slug
+        title
+        html
+        assets
+        metadata
+        status
+        vercel
+        created_at
+        updated_at
+      }
+    }
+  `, { userId: context.userId, workspaceId: context.workspaceId });
 
   if (error) throw error;
-  return data || [];
+  return data?.saved_sites || [];
 }
 
 /**
@@ -66,25 +88,43 @@ export async function getSavedSite(id: string): Promise<SavedSite | null> {
     throw new Error('No workspace context available');
   }
 
-  const { data, error } = await supabase
-    .from('saved_sites')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', context.userId)
-    .single();
+  const { data, error } = await nhost.graphql.request(`
+    query GetSavedSite($id: uuid!, $userId: uuid!) {
+      saved_sites_by_pk(id: $id) {
+        id
+        user_id
+        workspace_id
+        template_id
+        slug
+        title
+        html
+        assets
+        metadata
+        status
+        vercel
+        created_at
+        updated_at
+      }
+    }
+  `, { id, userId: context.userId });
 
   if (error) {
-    if (error.code === 'PGRST116') return null; // Not found
-    throw error;
-  }
-
-  // Validate workspace access if site has workspace_id
-  if (data.workspace_id && data.workspace_id !== context.workspaceId) {
-    logSecurityViolation('access_saved_site', data.workspace_id, context.userId, { siteId: id });
+    console.error('Error fetching saved site:', error);
     return null;
   }
 
-  return data;
+  const site = data?.saved_sites_by_pk;
+  if (!site || site.user_id !== context.userId) {
+    return null;
+  }
+
+  // Validate workspace access if site has workspace_id
+  if (site.workspace_id && site.workspace_id !== context.workspaceId) {
+    logSecurityViolation('access_saved_site', site.workspace_id, context.userId, { siteId: id });
+    return null;
+  }
+
+  return site;
 }
 
 /**
@@ -96,25 +136,49 @@ export async function getSavedSiteBySlug(slug: string): Promise<SavedSite | null
     throw new Error('No workspace context available');
   }
 
-  const { data, error } = await supabase
-    .from('saved_sites')
-    .select('*')
-    .eq('slug', slug)
-    .eq('user_id', context.userId)
-    .single();
+  const { data, error } = await nhost.graphql.request(`
+    query GetSavedSiteBySlug($slug: String!, $userId: uuid!) {
+      saved_sites(
+        where: { 
+          slug: { _eq: $slug }
+          user_id: { _eq: $userId }
+        }
+        limit: 1
+      ) {
+        id
+        user_id
+        workspace_id
+        template_id
+        slug
+        title
+        html
+        assets
+        metadata
+        status
+        vercel
+        created_at
+        updated_at
+      }
+    }
+  `, { slug, userId: context.userId });
 
   if (error) {
-    if (error.code === 'PGRST116') return null;
-    throw error;
-  }
-
-  // Validate workspace access if site has workspace_id
-  if (data.workspace_id && data.workspace_id !== context.workspaceId) {
-    logSecurityViolation('access_saved_site_by_slug', data.workspace_id, context.userId, { slug });
+    console.error('Error fetching saved site by slug:', error);
     return null;
   }
 
-  return data;
+  const site = data?.saved_sites?.[0];
+  if (!site) {
+    return null;
+  }
+
+  // Validate workspace access if site has workspace_id
+  if (site.workspace_id && site.workspace_id !== context.workspaceId) {
+    logSecurityViolation('access_saved_site_by_slug', site.workspace_id, context.userId, { slug });
+    return null;
+  }
+
+  return site;
 }
 
 /**
@@ -133,11 +197,28 @@ export async function createSavedSiteFromTemplate(
     throw new Error('No workspace context available');
   }
 
-  const { data, error } = await supabase
-    .from('saved_sites')
-    .insert({
+  const { data, error } = await nhost.graphql.request(`
+    mutation CreateSavedSite($site: saved_sites_insert_input!) {
+      insert_saved_sites_one(object: $site) {
+        id
+        user_id
+        workspace_id
+        template_id
+        slug
+        title
+        html
+        assets
+        metadata
+        status
+        vercel
+        created_at
+        updated_at
+      }
+    }
+  `, {
+    site: {
       user_id: context.userId,
-      workspace_id: context.workspaceId, // Add workspace context
+      workspace_id: context.workspaceId,
       template_id: templateId,
       slug,
       title,
@@ -145,16 +226,18 @@ export async function createSavedSiteFromTemplate(
       assets,
       metadata,
       status: 'draft',
-    })
-    .select()
-    .single();
+    }
+  });
 
   if (error) throw error;
 
-  // Log activity with workspace context
-  await logActivity(data.id, 'edit', { templateId });
+  const site = data?.insert_saved_sites_one;
+  if (!site) throw new Error('Failed to create saved site');
 
-  return data;
+  // Log activity with workspace context
+  await logActivity(site.id, 'edit', { templateId });
+
+  return site;
 }
 
 /**
@@ -175,22 +258,37 @@ export async function updateSavedSite(
     throw new Error('Saved site not found or access denied');
   }
 
-  const { data, error } = await supabase
-    .from('saved_sites')
-    .update(updates)
-    .eq('id', id)
-    .eq('user_id', context.userId)
-    .select()
-    .single();
+  const { data, error } = await nhost.graphql.request(`
+    mutation UpdateSavedSite($id: uuid!, $updates: saved_sites_set_input!) {
+      update_saved_sites_by_pk(pk_columns: { id: $id }, _set: $updates) {
+        id
+        user_id
+        workspace_id
+        template_id
+        slug
+        title
+        html
+        assets
+        metadata
+        status
+        vercel
+        created_at
+        updated_at
+      }
+    }
+  `, { id, updates });
 
   if (error) throw error;
+
+  const site = data?.update_saved_sites_by_pk;
+  if (!site) throw new Error('Failed to update saved site');
 
   // Log activity if HTML was updated
   if (updates.html) {
     await logActivity(id, 'edit', {});
   }
 
-  return data;
+  return site;
 }
 
 /**
@@ -208,11 +306,13 @@ export async function deleteSavedSite(id: string): Promise<void> {
     throw new Error('Saved site not found or access denied');
   }
 
-  const { error } = await supabase
-    .from('saved_sites')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', context.userId);
+  const { error } = await nhost.graphql.request(`
+    mutation DeleteSavedSite($id: uuid!) {
+      delete_saved_sites_by_pk(id: $id) {
+        id
+      }
+    }
+  `, { id });
 
   if (error) throw error;
 
@@ -232,11 +332,28 @@ export async function duplicateSavedSite(id: string, newSlug: string, newTitle: 
     throw new Error('No workspace context available');
   }
 
-  const { data, error } = await supabase
-    .from('saved_sites')
-    .insert({
+  const { data, error } = await nhost.graphql.request(`
+    mutation DuplicateSavedSite($site: saved_sites_insert_input!) {
+      insert_saved_sites_one(object: $site) {
+        id
+        user_id
+        workspace_id
+        template_id
+        slug
+        title
+        html
+        assets
+        metadata
+        status
+        vercel
+        created_at
+        updated_at
+      }
+    }
+  `, {
+    site: {
       user_id: context.userId,
-      workspace_id: context.workspaceId, // Add workspace context
+      workspace_id: context.workspaceId,
       template_id: original.template_id,
       slug: newSlug,
       title: newTitle,
@@ -244,16 +361,18 @@ export async function duplicateSavedSite(id: string, newSlug: string, newTitle: 
       assets: original.assets,
       metadata: original.metadata,
       status: 'draft',
-    })
-    .select()
-    .single();
+    }
+  });
 
   if (error) throw error;
 
-  // Log activity
-  await logActivity(data.id, 'duplicate', { originalId: id });
+  const site = data?.insert_saved_sites_one;
+  if (!site) throw new Error('Failed to duplicate saved site');
 
-  return data;
+  // Log activity
+  await logActivity(site.id, 'duplicate', { originalId: id });
+
+  return site;
 }
 
 /**
@@ -267,12 +386,20 @@ export async function logActivity(
   const context = await getCurrentWorkspaceContext();
   if (!context) return; // Silently fail if not authenticated
 
-  await supabase.from('activity_log').insert({
-    user_id: context.userId,
-    workspace_id: context.workspaceId, // Add workspace context
-    saved_site_id: savedSiteId,
-    action,
-    metadata,
+  await nhost.graphql.request(`
+    mutation LogActivity($activity: activity_log_insert_input!) {
+      insert_activity_log_one(object: $activity) {
+        id
+      }
+    }
+  `, {
+    activity: {
+      user_id: context.userId,
+      workspace_id: context.workspaceId,
+      saved_site_id: savedSiteId,
+      action,
+      metadata,
+    }
   });
 }
 
@@ -280,18 +407,34 @@ export async function logActivity(
  * Get activity log for user in current workspace
  */
 export async function getActivityLog(limit: number = 50): Promise<ActivityLog[]> {
-  const workspaceQuery = await createWorkspaceQuery('activity_log');
-  if (!workspaceQuery) {
+  const context = await getCurrentWorkspaceContext();
+  if (!context) {
     throw new Error('No workspace context available');
   }
 
-  const { data, error } = await workspaceQuery
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  const { data, error } = await nhost.graphql.request(`
+    query GetActivityLog($userId: uuid!, $workspaceId: uuid, $limit: Int!) {
+      activity_log(
+        where: { 
+          user_id: { _eq: $userId }
+          workspace_id: { _eq: $workspaceId }
+        }
+        order_by: { created_at: desc }
+        limit: $limit
+      ) {
+        id
+        user_id
+        workspace_id
+        saved_site_id
+        action
+        metadata
+        created_at
+      }
+    }
+  `, { userId: context.userId, workspaceId: context.workspaceId, limit });
 
   if (error) throw error;
-  return data || [];
+  return data?.activity_log || [];
 }
 
 /**
@@ -309,14 +452,27 @@ export async function getSavedSiteActivity(savedSiteId: string): Promise<Activit
     throw new Error('Saved site not found or access denied');
   }
 
-  const { data, error } = await supabase
-    .from('activity_log')
-    .select('*')
-    .eq('saved_site_id', savedSiteId)
-    .eq('user_id', context.userId)
-    .order('created_at', { ascending: false });
+  const { data, error } = await nhost.graphql.request(`
+    query GetSavedSiteActivity($savedSiteId: uuid!, $userId: uuid!) {
+      activity_log(
+        where: { 
+          saved_site_id: { _eq: $savedSiteId }
+          user_id: { _eq: $userId }
+        }
+        order_by: { created_at: desc }
+      ) {
+        id
+        user_id
+        workspace_id
+        saved_site_id
+        action
+        metadata
+        created_at
+      }
+    }
+  `, { savedSiteId, userId: context.userId });
 
   if (error) throw error;
-  return data || [];
+  return data?.activity_log || [];
 }
 

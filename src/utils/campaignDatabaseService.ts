@@ -1,9 +1,9 @@
 /**
- * Direct Supabase Database Service for Campaigns
- * Bypasses edge functions and saves directly to database
+ * Direct Nhost Database Service for Campaigns
+ * Uses GraphQL to save campaigns to database
  */
 
-import { supabase } from "./auth"/client';
+import { nhost } from '../lib/nhost';
 
 export interface CampaignDatabaseItem {
   id?: string;
@@ -27,7 +27,7 @@ export const campaignDatabaseService = {
   async save(type: string, name: string, data: any, status: 'draft' | 'completed' = 'completed'): Promise<string> {
     try {
       // Get current user if available
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = nhost.auth.getUser();
       const userId = user?.id || null;
 
       const campaignData: CampaignDatabaseItem = {
@@ -40,36 +40,22 @@ export const campaignDatabaseService = {
         updated_at: new Date().toISOString(),
       };
 
-      // Try to insert into adiology_campaigns table
-      const { data: insertedData, error } = await supabase
-        .from('adiology_campaigns')
-        .insert(campaignData)
-        .select('id')
-        .single();
+      // Insert into adiology_campaigns table using GraphQL
+      const { data: insertedData, error } = await nhost.graphql.request(`
+        mutation InsertCampaign($campaign: adiology_campaigns_insert_input!) {
+          insert_adiology_campaigns_one(object: $campaign) {
+            id
+          }
+        }
+      `, { campaign: campaignData });
 
       if (error) {
-        // If table doesn't exist, create it and retry
-        if (error.code === '42P01' || error.message?.includes('does not exist')) {
-          console.log('adiology_campaigns table does not exist, creating it...');
-          await this.createTableIfNeeded();
-          
-          // Retry insert
-          const { data: retryData, error: retryError } = await supabase
-            .from('adiology_campaigns')
-            .insert(campaignData)
-            .select('id')
-            .single();
-
-          if (retryError) {
-            throw retryError;
-          }
-
-          return retryData?.id || crypto.randomUUID();
-        }
-        throw error;
+        console.error('Database save error:', error);
+        // Return a UUID anyway so the frontend can continue
+        return crypto.randomUUID();
       }
 
-      return insertedData?.id || crypto.randomUUID();
+      return insertedData?.insert_adiology_campaigns_one?.id || crypto.randomUUID();
     } catch (error: any) {
       console.error('Database save error:', error);
       // Return a UUID anyway so the frontend can continue
@@ -82,29 +68,33 @@ export const campaignDatabaseService = {
    */
   async getAll(): Promise<CampaignDatabaseItem[]> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = nhost.auth.getUser();
       const userId = user?.id;
 
-      let query = supabase
-        .from('adiology_campaigns')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await nhost.graphql.request(`
+        query GetAllCampaigns($userId: uuid) {
+          adiology_campaigns(
+            where: { user_id: { _eq: $userId } }
+            order_by: { created_at: desc }
+          ) {
+            id
+            user_id
+            type
+            name
+            data
+            status
+            created_at
+            updated_at
+          }
+        }
+      `, { userId });
 
       if (error) {
-        // If table doesn't exist, return empty array
-        if (error.code === '42P01' || error.message?.includes('does not exist')) {
-          return [];
-        }
-        throw error;
+        console.error('Database getAll error:', error);
+        return [];
       }
 
-      return data || [];
+      return data?.adiology_campaigns || [];
     } catch (error: any) {
       console.error('Database getAll error:', error);
       return [];
@@ -116,29 +106,36 @@ export const campaignDatabaseService = {
    */
   async getByType(type: string): Promise<CampaignDatabaseItem[]> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = nhost.auth.getUser();
       const userId = user?.id;
 
-      let query = supabase
-        .from('adiology_campaigns')
-        .select('*')
-        .eq('type', type)
-        .order('created_at', { ascending: false });
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await nhost.graphql.request(`
+        query GetCampaignsByType($type: String!, $userId: uuid) {
+          adiology_campaigns(
+            where: { 
+              type: { _eq: $type }
+              user_id: { _eq: $userId }
+            }
+            order_by: { created_at: desc }
+          ) {
+            id
+            user_id
+            type
+            name
+            data
+            status
+            created_at
+            updated_at
+          }
+        }
+      `, { type, userId });
 
       if (error) {
-        if (error.code === '42P01' || error.message?.includes('does not exist')) {
-          return [];
-        }
-        throw error;
+        console.error('Database getByType error:', error);
+        return [];
       }
 
-      return data || [];
+      return data?.adiology_campaigns || [];
     } catch (error: any) {
       console.error('Database getByType error:', error);
       return [];
@@ -159,10 +156,13 @@ export const campaignDatabaseService = {
         updateData.name = name;
       }
 
-      const { error } = await supabase
-        .from('adiology_campaigns')
-        .update(updateData)
-        .eq('id', id);
+      const { error } = await nhost.graphql.request(`
+        mutation UpdateCampaign($id: uuid!, $updates: adiology_campaigns_set_input!) {
+          update_adiology_campaigns_by_pk(pk_columns: { id: $id }, _set: $updates) {
+            id
+          }
+        }
+      `, { id, updates: updateData });
 
       if (error) {
         throw error;
@@ -178,10 +178,13 @@ export const campaignDatabaseService = {
    */
   async delete(id: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('adiology_campaigns')
-        .delete()
-        .eq('id', id);
+      const { error } = await nhost.graphql.request(`
+        mutation DeleteCampaign($id: uuid!) {
+          delete_adiology_campaigns_by_pk(id: $id) {
+            id
+          }
+        }
+      `, { id });
 
       if (error) {
         throw error;
@@ -197,9 +200,9 @@ export const campaignDatabaseService = {
    * This is a client-side helper - actual table creation should be done via migrations
    */
   async createTableIfNeeded(): Promise<void> {
-    // Note: Table creation should be done via Supabase migrations
+    // Note: Table creation should be done via Nhost migrations
     // This is just a placeholder to show what the table structure should be
-    console.warn('Table creation should be done via Supabase migrations. Please run the migration SQL.');
+    console.warn('Table creation should be done via Nhost migrations. Please run the migration SQL.');
   },
 };
 

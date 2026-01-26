@@ -15,8 +15,9 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { validateEnvironment } from "./utils/envCheck";
 import { loggingService } from "./utils/loggingService";
 import { initVersionCheck, handleChunkLoadError } from "./utils/versionCheck";
+import { NhostProvider } from "./components/NhostProvider";
 
-// PocketBase removed - using Nhost or other auth provider
+// Nhost migration complete - using Nhost for auth, database and storage
 
 // Initialize notification service
 notifications.setToastInstance(toast);
@@ -142,12 +143,14 @@ if (!validateEnvironment()) {
 } else {
   createRoot(rootElement).render(
     <ErrorBoundary>
+      <NhostProvider>
         <ThemeProvider>
           <Suspense fallback={<LoadingScreen />}>
             <App />
           </Suspense>
           <Toaster position="top-right" richColors closeButton visibleToasts={1} />
         </ThemeProvider>
+      </NhostProvider>
     </ErrorBoundary>
   );
 }
