@@ -71,3 +71,4 @@ tmp/
 pocketbase/
 pb_data/
 *.pb
+.env.database.example
