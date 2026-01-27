@@ -27,7 +27,7 @@ function initializeDb() {
 export function getDb() {
   const { db: dbInstance } = initializeDb();
   if (!dbInstance) {
-    throw new Error('Database not configured. Please set SUPABASE_DB_PASSWORD or DATABASE_URL');
+      throw new Error('Database not configured. Please set DATABASE_URL, NHOST_DATABASE_URL, or NHOST_DB_PASSWORD with NHOST_SUBDOMAIN');
   }
   return dbInstance;
 }
@@ -35,7 +35,7 @@ export function getDb() {
 export function getPool() {
   const { pool: poolInstance } = initializeDb();
   if (!poolInstance) {
-    throw new Error('Database not configured. Please set SUPABASE_DB_PASSWORD or DATABASE_URL');
+      throw new Error('Database not configured. Please set DATABASE_URL, NHOST_DATABASE_URL, or NHOST_DB_PASSWORD with NHOST_SUBDOMAIN');
   }
   return poolInstance;
 }
