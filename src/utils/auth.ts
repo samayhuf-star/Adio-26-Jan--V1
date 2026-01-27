@@ -34,21 +34,8 @@ const nhostClient = nhost;
 
 // Get the correct redirect URL for email verification
 function getRedirectUrl(): string {
-  // Use production domain for email verification links
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    // If on production domain, use it
-    if (hostname === 'www.adiology.online' || hostname === 'adiology.online') {
-      return 'https://www.adiology.online/verify-email';
-    }
-    // For Vercel preview deployments
-    if (hostname.includes('vercel.app')) {
-      return `https://${hostname}/verify-email`;
-    }
-    // Fallback to current origin
-    return `${window.location.origin}/verify-email`;
-  }
-  // Default production URL
+  // Always use production domain for email verification links
+  // This ensures the URL is whitelisted in Nhost and works consistently
   return 'https://www.adiology.online/verify-email';
 }
 
@@ -318,14 +305,9 @@ export function getSessionTokenSync(): string | null {
 
 export async function resetPassword(email: string): Promise<{ error: { message: string } | null }> {
   try {
-    // Get the correct redirect URL for password reset
-    const redirectUrl = typeof window !== 'undefined' 
-      ? (window.location.hostname === 'www.adiology.online' || window.location.hostname === 'adiology.online'
-          ? 'https://www.adiology.online/reset-password'
-          : window.location.hostname.includes('vercel.app')
-          ? `https://${window.location.hostname}/reset-password`
-          : `${window.location.origin}/reset-password`)
-      : 'https://www.adiology.online/reset-password';
+    // Always use production domain for password reset links
+    // This ensures the URL is whitelisted in Nhost and works consistently
+    const redirectUrl = 'https://www.adiology.online/reset-password';
     
     const { error } = await nhostClient.auth.resetPassword({
       email: email.trim().toLowerCase(),
@@ -683,6 +665,15 @@ if (typeof window !== 'undefined') {
         // Clear localStorage when user signs out
         localStorage.removeItem('user');
         localStorage.removeItem('auth_token');
+        // Clear all Nhost-related storage
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('nhost.') || key.includes('nhost'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
       } else if (event === 'TOKEN_CHANGED' && session) {
         // Update token on refresh
         localStorage.setItem('auth_token', session.accessToken);

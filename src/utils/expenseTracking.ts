@@ -40,23 +40,23 @@ export async function fetchOpenAIExpenses(): Promise<Partial<ServiceExpense>> {
 }
 
 // Stripe Expense Tracking
+// NOTE: This should use a server-side endpoint to avoid exposing secret keys
+// The secret key should NEVER be exposed to client-side code
 export async function fetchStripeExpenses(): Promise<Partial<ServiceExpense>> {
   try {
-    const apiKey = import.meta.env.VITE_STRIPE_SECRET_KEY;
-    if (!apiKey) return { currentSpend: 0, status: 'inactive' };
-
-    const response = await fetch('https://api.stripe.com/v1/charges?limit=100', {
-      headers: { 'Authorization': `Bearer ${apiKey}` }
+    // Use server-side endpoint instead of direct Stripe API calls
+    // This prevents exposing secret keys to the client
+    const response = await fetch('/api/stripe/expenses', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
 
     if (response.ok) {
       const data = await response.json();
-      const fees = data.data.reduce((sum: number, charge: any) => 
-        sum + (charge.amount_captured * 0.029 + 30), 0) / 100;
-      
       return {
-        currentSpend: fees,
-        lastBilled: new Date().toISOString().split('T')[0]
+        currentSpend: data.currentSpend || 0,
+        lastBilled: data.lastBilled || new Date().toISOString().split('T')[0],
+        status: data.status || 'active'
       };
     }
   } catch (error) {

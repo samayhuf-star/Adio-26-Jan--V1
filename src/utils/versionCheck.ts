@@ -160,20 +160,34 @@ function showUpdateNotification() {
 /**
  * Handle chunk load errors by forcing a reload
  */
-export function handleChunkLoadError(error: Error): boolean {
+export function handleChunkLoadError(error: Error | string): boolean {
+  const errorMessage = typeof error === 'string' ? error : (error.message || '');
+  const errorName = typeof error === 'string' ? '' : (error.name || '');
+  
   const isChunkError = 
-    error.message.includes('Failed to fetch dynamically imported module') ||
-    error.message.includes('Loading chunk') ||
-    error.message.includes('ChunkLoadError') ||
-    error.name === 'ChunkLoadError';
+    errorMessage.includes('Failed to fetch dynamically imported module') ||
+    errorMessage.includes('Loading chunk') ||
+    errorMessage.includes('ChunkLoadError') ||
+    errorMessage.includes('ERR_ABORTED 404') ||
+    errorMessage.includes('net::ERR_ABORTED') ||
+    errorMessage.includes('Failed to fetch') ||
+    errorName === 'ChunkLoadError' ||
+    errorName === 'TypeError';
 
   if (isChunkError) {
-    console.log('[VersionCheck] Chunk load error detected, reloading...');
-    // Clear caches and reload
-    clearStaleCache().then(() => {
-      window.location.reload();
-    });
-    return true;
+    // Check if it's specifically a 404 for a JS asset (likely stale cache)
+    const is404ForAsset = errorMessage.includes('404') && 
+                         (errorMessage.includes('.js') || errorMessage.includes('assets/'));
+    
+    if (is404ForAsset || errorMessage.includes('dynamically imported module')) {
+      console.log('[VersionCheck] Chunk load error detected (likely stale cache), reloading...');
+      // Clear caches and reload
+      clearStaleCache().then(() => {
+        // Force reload bypassing cache
+        window.location.reload();
+      });
+      return true;
+    }
   }
   
   return false;

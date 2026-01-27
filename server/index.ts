@@ -188,8 +188,20 @@ app.get('/api/dashboard/all/:userId', async (c) => {
 // Error reporting endpoint
 app.post('/api/errors', async (c) => {
   try {
+    let errorData;
+    try {
+      // Try to parse JSON, but handle malformed requests gracefully
+      const body = await c.req.text();
+      if (!body || body.trim() === '') {
+        return c.json({ success: false, error: 'Empty request body' }, 400);
+      }
+      errorData = JSON.parse(body);
+    } catch (parseError) {
+      console.error('[Client Error] Failed to parse error data:', parseError);
+      return c.json({ success: false, error: 'Invalid JSON format' }, 400);
+    }
+    
     // Log error for monitoring
-    const errorData = await c.req.json();
     console.error('[Client Error]', errorData);
     // Return success to prevent console errors
     return c.json({ success: true, message: 'Error logged' });

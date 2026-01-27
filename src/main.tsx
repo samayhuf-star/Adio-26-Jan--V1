@@ -28,6 +28,20 @@ if (typeof window !== 'undefined') {
   window.addEventListener('error', async (event) => {
     const errorMessage = String(event.error || event.message || '');
     
+    // Check for chunk load errors first (stale cache after deployment)
+    if (event.error && handleChunkLoadError(event.error)) {
+      event.preventDefault();
+      return;
+    }
+    
+    // Also check the error message string for 404s on JS assets
+    if (errorMessage.includes('404') && errorMessage.includes('.js')) {
+      if (handleChunkLoadError(errorMessage)) {
+        event.preventDefault();
+        return;
+      }
+    }
+    
     // Ignore browser extension errors but allow mobx-state-tree errors to show
     // so we can verify our fixes worked
     if (
@@ -57,14 +71,17 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', async (event) => {
     const errorMessage = String(event.reason || '');
     
-    // Ignore browser extension errors
+    // Ignore browser extension errors and expected Nhost token refresh failures
     if (
       errorMessage.includes('sw.js') ||
       errorMessage.includes('mobx-state-tree') ||
       errorMessage.includes('setDetectedLibs') ||
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
-      errorMessage.includes('tabId not found')
+      errorMessage.includes('tabId not found') ||
+      // Suppress expected 401 errors from Nhost token refresh (invalid/expired refresh tokens)
+      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('401')) ||
+      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('Unauthorized'))
     ) {
       event.preventDefault();
       return;
@@ -76,7 +93,8 @@ if (typeof window !== 'undefined') {
       : new Error(String(event.reason));
     
     // Check if it's a chunk load error (stale cache after deployment)
-    if (handleChunkLoadError(error)) {
+    // Also check the error message string directly for 404s
+    if (handleChunkLoadError(error) || handleChunkLoadError(String(event.reason))) {
       event.preventDefault();
       return;
     }
@@ -104,7 +122,10 @@ if (typeof window !== 'undefined') {
       errorMessage.includes('setDetectedLibs') ||
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
-      (errorMessage.includes('service worker') && errorMessage.includes('extension'))
+      (errorMessage.includes('service worker') && errorMessage.includes('extension')) ||
+      // Suppress expected 401 errors from Nhost token refresh (invalid/expired refresh tokens)
+      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('401')) ||
+      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('Unauthorized'))
     ) {
       return;
     }

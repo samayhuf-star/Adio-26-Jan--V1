@@ -81,17 +81,23 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   };
 
   const fetchDashboardData = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     // Skip API calls in test admin mode
     const testAdminMode = sessionStorage.getItem('test_admin_mode');
     if (testAdminMode === 'true' || user.id?.startsWith('test-admin-')) {
       setDefaultStats();
+      setLoading(false);
       return;
     }
     
     // Prevent duplicate calls - if already loading, skip
-    if (fetchInProgress.current) return;
+    if (fetchInProgress.current) {
+      return;
+    }
     fetchInProgress.current = true;
     
     setLoading(true);
@@ -103,53 +109,49 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
       if (response.status === 429) {
         console.warn('Dashboard rate limited, using default data');
         setDefaultStats();
-        return;
-      }
-      
-      if (!response.ok) {
+      } else if (!response.ok) {
         console.warn('Dashboard API error, using default data');
         setDefaultStats();
-        return;
+      } else {
+        const result = await response.json();
+        const apiData = result.data || result;
+        
+        const myCampaigns = apiData.stats?.totalCampaigns || 0;
+        
+        // Convert recent campaigns to activity format
+        const activityData = (apiData.recentCampaigns || []).map((c: any) => ({
+          id: c.id,
+          action: `${c.step >= 5 ? 'completed' : 'created'}_campaign`,
+          timestamp: c.updated_at || c.created_at,
+          resourceType: 'campaign',
+          metadata: { name: c.campaign_name, structure: c.structure_type }
+        }));
+
+        setStats({
+          subscription: {
+            plan: user.subscription_plan || 'free',
+            status: user.subscription_status || 'active',
+            periodEnd: null,
+          },
+          usage: {
+            apiCalls: 0,
+            campaigns: myCampaigns,
+            keywords: apiData.stats?.keywordsGenerated || 0,
+          },
+          activity: {
+            lastLogin: user.last_login_at || null,
+            totalActions: activityData.length,
+          },
+          userResources: {
+            myCampaigns,
+            myWebsites: 0,
+            myPresets: 0,
+            myDomains: 0,
+          },
+        });
+
+        setRecentActivity(activityData);
       }
-      
-      const result = await response.json();
-      const apiData = result.data || result;
-      
-      const myCampaigns = apiData.stats?.totalCampaigns || 0;
-      
-      // Convert recent campaigns to activity format
-      const activityData = (apiData.recentCampaigns || []).map((c: any) => ({
-        id: c.id,
-        action: `${c.step >= 5 ? 'completed' : 'created'}_campaign`,
-        timestamp: c.updated_at || c.created_at,
-        resourceType: 'campaign',
-        metadata: { name: c.campaign_name, structure: c.structure_type }
-      }));
-
-      setStats({
-        subscription: {
-          plan: user.subscription_plan || 'free',
-          status: user.subscription_status || 'active',
-          periodEnd: null,
-        },
-        usage: {
-          apiCalls: 0,
-          campaigns: myCampaigns,
-          keywords: apiData.stats?.keywordsGenerated || 0,
-        },
-        activity: {
-          lastLogin: user.last_login_at || null,
-          totalActions: activityData.length,
-        },
-        userResources: {
-          myCampaigns,
-          myWebsites: 0,
-          myPresets: 0,
-          myDomains: 0,
-        },
-      });
-
-      setRecentActivity(activityData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setDefaultStats();
