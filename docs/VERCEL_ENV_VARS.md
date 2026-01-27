@@ -20,9 +20,23 @@ ADMIN_SECRET_KEY=your-actual-admin-secret-from-nhost-dashboard
 
 ### Database Configuration
 
+**Option 1: Full Connection String (Recommended)**
 ```
-DATABASE_URL=your-postgresql-connection-string
+DATABASE_URL=postgres://postgres:[YOUR-PASSWORD]@vumnjkoyxkistmlzotuk.db.eu-central-1.nhost.run:5432/vumnjkoyxkistmlzotuk
 ```
+
+**Option 2: Using Components**
+```
+NHOST_SUBDOMAIN=vumnjkoyxkistmlzotuk
+NHOST_REGION=eu-central-1
+NHOST_DB_PASSWORD=your-database-password
+```
+
+**Important:**
+- Get your database password from Nhost Dashboard → Settings → Database → Public Access
+- Generate a new password if you haven't set one yet
+- Replace `[YOUR-PASSWORD]` with your actual password
+- The database name matches your subdomain: `vumnjkoyxkistmlzotuk`
 
 ### Stripe Configuration (if using Stripe)
 

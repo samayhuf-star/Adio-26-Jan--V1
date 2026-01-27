@@ -15,8 +15,9 @@ export function getDatabaseUrl(): string {
   const nhostDbPassword = process.env.NHOST_DB_PASSWORD;
   
   if (nhostSubdomain && nhostDbPassword) {
-    // Nhost database connection format: postgresql://postgres:[password]@db.[subdomain].[region].nhost.run:5432/postgres
-    return `postgresql://postgres:${nhostDbPassword}@db.${nhostSubdomain}.${nhostRegion}.nhost.run:5432/postgres`;
+    // Nhost database connection format: postgres://postgres:[password]@[subdomain].db.[region].nhost.run:5432/[subdomain]
+    // Example: postgres://postgres:password@vumnjkoyxkistmlzotuk.db.eu-central-1.nhost.run:5432/vumnjkoyxkistmlzotuk
+    return `postgres://postgres:${nhostDbPassword}@${nhostSubdomain}.db.${nhostRegion}.nhost.run:5432/${nhostSubdomain}`;
   }
   
   // Legacy Supabase support (for migration period)
