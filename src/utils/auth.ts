@@ -32,6 +32,26 @@ export interface User {
 // Initialize Nhost client
 const nhostClient = nhost;
 
+// Get the correct redirect URL for email verification
+function getRedirectUrl(): string {
+  // Use production domain for email verification links
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // If on production domain, use it
+    if (hostname === 'www.adiology.online' || hostname === 'adiology.online') {
+      return 'https://www.adiology.online/verify-email';
+    }
+    // For Vercel preview deployments
+    if (hostname.includes('vercel.app')) {
+      return `https://${hostname}/verify-email`;
+    }
+    // Fallback to current origin
+    return `${window.location.origin}/verify-email`;
+  }
+  // Default production URL
+  return 'https://www.adiology.online/verify-email';
+}
+
 export async function signUpWithEmail(
   email: string,
   password: string,
@@ -40,6 +60,9 @@ export async function signUpWithEmail(
 ): Promise<{ data: User | null; error: { message: string } | null }> {
   try {
     // Sign up with Nhost Auth
+    // Use production domain for email verification redirect
+    const redirectUrl = getRedirectUrl();
+    
     const { session, error: authError } = await nhostClient.auth.signUp({
       email: email.trim().toLowerCase(),
       password: password,
@@ -49,7 +72,7 @@ export async function signUpWithEmail(
           full_name: name || '',
           name: name || '',
         },
-        redirectTo: `${window.location.origin}/verify-email`,
+        redirectTo: redirectUrl,
       },
     });
 
@@ -295,10 +318,19 @@ export function getSessionTokenSync(): string | null {
 
 export async function resetPassword(email: string): Promise<{ error: { message: string } | null }> {
   try {
+    // Get the correct redirect URL for password reset
+    const redirectUrl = typeof window !== 'undefined' 
+      ? (window.location.hostname === 'www.adiology.online' || window.location.hostname === 'adiology.online'
+          ? 'https://www.adiology.online/reset-password'
+          : window.location.hostname.includes('vercel.app')
+          ? `https://${window.location.hostname}/reset-password`
+          : `${window.location.origin}/reset-password`)
+      : 'https://www.adiology.online/reset-password';
+    
     const { error } = await nhostClient.auth.resetPassword({
       email: email.trim().toLowerCase(),
       options: {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectUrl,
       },
     });
 
@@ -613,10 +645,13 @@ export async function createUserProfile(
 
 export async function resendVerificationEmail(email: string) {
   try {
+    // Use production domain for email verification redirect
+    const redirectUrl = getRedirectUrl();
+    
     const { error } = await nhostClient.auth.sendVerificationEmail({
       email: email.trim().toLowerCase(),
       options: {
-        redirectTo: `${window.location.origin}/verify-email`,
+        redirectTo: redirectUrl,
       },
     });
 

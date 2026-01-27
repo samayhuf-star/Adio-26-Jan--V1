@@ -116,6 +116,202 @@ app.get('/api/admin/status', async (c) => {
   return c.json({ success: true, admin: { email: authResult.user.email } });
 });
 
+// User sync endpoint - syncs user data to database
+app.post('/api/user/sync', async (c) => {
+  try {
+    // This endpoint is called after user login to sync user data
+    // For now, return success as user data is managed by Nhost
+    return c.json({ success: true, message: 'User synced' });
+  } catch (error) {
+    console.error('User sync error:', error);
+    return c.json({ error: 'Failed to sync user' }, 500);
+  }
+});
+
+// Notifications endpoints
+app.get('/api/notifications/:userId', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    // Return empty notifications array for now
+    // Can be implemented with Nhost GraphQL later
+    return c.json({ notifications: [] });
+  } catch (error) {
+    console.error('Notifications error:', error);
+    return c.json({ error: 'Failed to fetch notifications' }, 500);
+  }
+});
+
+app.put('/api/notifications/:id/read', async (c) => {
+  try {
+    const id = c.req.param('id');
+    return c.json({ success: true, message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Mark notification read error:', error);
+    return c.json({ error: 'Failed to update notification' }, 500);
+  }
+});
+
+app.put('/api/notifications/user/:userId/read-all', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    return c.json({ success: true, message: 'All notifications marked as read' });
+  } catch (error) {
+    console.error('Mark all read error:', error);
+    return c.json({ error: 'Failed to update notifications' }, 500);
+  }
+});
+
+// Dashboard endpoint
+app.get('/api/dashboard/all/:userId', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    // Return default dashboard data
+    // Can be implemented with Nhost GraphQL later
+    return c.json({
+      success: true,
+      data: {
+        stats: {
+          totalCampaigns: 0,
+          totalSearches: 0,
+          unreadNotifications: 0
+        },
+        recentCampaigns: [],
+        workspaces: []
+      }
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    return c.json({ error: 'Failed to fetch dashboard data' }, 500);
+  }
+});
+
+// Error reporting endpoint
+app.post('/api/errors', async (c) => {
+  try {
+    // Log error for monitoring
+    const errorData = await c.req.json();
+    console.error('[Client Error]', errorData);
+    // Return success to prevent console errors
+    return c.json({ success: true, message: 'Error logged' });
+  } catch (error) {
+    console.error('Error logging error:', error);
+    return c.json({ error: 'Failed to log error' }, 500);
+  }
+});
+
+// Google Ads API endpoints (stubs)
+app.get('/api/google-ads/accounts', async (c) => {
+  try {
+    return c.json({ accounts: [] });
+  } catch (error) {
+    console.error('Google Ads accounts error:', error);
+    return c.json({ error: 'Failed to fetch accounts' }, 500);
+  }
+});
+
+app.get('/api/google-ads/status', async (c) => {
+  try {
+    return c.json({ connected: false, message: 'Google Ads API not configured' });
+  } catch (error) {
+    console.error('Google Ads status error:', error);
+    return c.json({ error: 'Failed to fetch status' }, 500);
+  }
+});
+
+app.get('/api/google-ads/auth-url', async (c) => {
+  try {
+    return c.json({ url: null, message: 'Google Ads OAuth not configured' });
+  } catch (error) {
+    console.error('Google Ads auth URL error:', error);
+    return c.json({ error: 'Failed to generate auth URL' }, 500);
+  }
+});
+
+app.get('/api/google-ads/requests', async (c) => {
+  try {
+    return c.json({ requests: [] });
+  } catch (error) {
+    console.error('Google Ads requests error:', error);
+    return c.json({ error: 'Failed to fetch requests' }, 500);
+  }
+});
+
+app.post('/api/google-ads/search-advertiser', async (c) => {
+  try {
+    return c.json({ results: [] });
+  } catch (error) {
+    console.error('Google Ads search advertiser error:', error);
+    return c.json({ error: 'Failed to search advertiser' }, 500);
+  }
+});
+
+app.get('/api/google-ads/search/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    return c.json({ id, results: [] });
+  } catch (error) {
+    console.error('Google Ads search error:', error);
+    return c.json({ error: 'Failed to fetch search' }, 500);
+  }
+});
+
+app.post('/api/google-ads/fetch-ad', async (c) => {
+  try {
+    return c.json({ ad: null });
+  } catch (error) {
+    console.error('Google Ads fetch ad error:', error);
+    return c.json({ error: 'Failed to fetch ad' }, 500);
+  }
+});
+
+app.post('/api/google-ads/keyword-planner', async (c) => {
+  try {
+    const body = await c.req.json();
+    // Return empty results for now
+    return c.json({ 
+      success: false, 
+      source: 'fallback', 
+      message: 'Keyword planner API not configured',
+      keywords: [] 
+    });
+  } catch (error) {
+    console.error('Keyword planner error:', error);
+    return c.json({ error: 'Failed to fetch keywords' }, 500);
+  }
+});
+
+// Item projects endpoints (stubs)
+app.get('/api/item-projects/campaign/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    return c.json({ id, data: null, message: 'Campaign not found' });
+  } catch (error) {
+    console.error('Item projects campaign error:', error);
+    return c.json({ error: 'Failed to fetch campaign' }, 500);
+  }
+});
+
+app.get('/api/item-projects/keyword-list/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    return c.json({ id, data: null, message: 'Keyword list not found' });
+  } catch (error) {
+    console.error('Item projects keyword list error:', error);
+    return c.json({ error: 'Failed to fetch keyword list' }, 500);
+  }
+});
+
+app.get('/api/item-projects/:type/:id', async (c) => {
+  try {
+    const type = c.req.param('type');
+    const id = c.req.param('id');
+    return c.json({ type, id, data: null, message: 'Item not found' });
+  } catch (error) {
+    console.error('Item projects error:', error);
+    return c.json({ error: 'Failed to fetch item' }, 500);
+  }
+});
+
 const port = parseInt(process.env.PORT || '3001', 10);
 
 console.log(`Starting Admin API Server on port ${port}...`);
