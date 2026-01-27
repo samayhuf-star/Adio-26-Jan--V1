@@ -14,23 +14,29 @@
 
 ## 🔍 Detailed Root Cause Analysis
 
-### 1. Supabase Edge Functions Still Active ⚠️ **ACTIVE USAGE**
+### 1. Supabase Edge Functions Still Active ⚠️ **ACTIVE USAGE** (PRIMARY ROOT CAUSE)
 
 **Why Still There:**
 - Edge Function `make-server-6757d0ca` is still deployed and being called
 - Used for specific operations that haven't been migrated to main API
+- **Root Cause:** These endpoints were never migrated to the main Hono API server
 
 **Active Usage Found:**
-- `src/utils/csvExportBackend.ts` - Calls Supabase Edge Functions
-- `src/utils/historyService.ts` - Uses `/functions/v1/make-server-6757d0ca/history/*`
-- Campaign history save/load operations
-- CSV export functionality
-- Some admin operations
+- `src/utils/csvExportBackend.ts` (Line 15) - Calls `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca/export-csv`
+- `src/utils/historyService.ts` - Uses `/functions/v1/make-server-6757d0ca/history/*` endpoints
+- `src/utils/api/admin.ts` (Line 4) - Uses Edge Function for admin operations
+- `src/components/HistoryPanel.tsx` (Line 17) - Calls Edge Function directly
+- Campaign history save/load operations across multiple components
+- CSV export functionality (used by CampaignBuilder3, etc.)
 
 **Files:**
-- `backend/supabase-functions/server/index.tsx` - Edge function code
+- `backend/supabase-functions/server/index.tsx` - Edge function code (41 routes)
 - `supabase/functions/make-server-6757d0ca/index.tsx` - Deployed function
 - `scripts/deploy-edge-function.sh` - Deployment script
+
+**Impact:** 
+- Frontend still depends on Supabase Edge Functions
+- Cannot fully remove Supabase until these are migrated
 
 **Action Required:**
 - Migrate Edge Function endpoints to main Hono API (`server/index.ts`)
@@ -39,24 +45,36 @@
 
 ---
 
-### 2. Frontend Components Using Supabase Client ⚠️ **ACTIVE USAGE**
+### 2. Frontend Components Using Supabase Client ⚠️ **BROKEN CODE** (SECONDARY ROOT CAUSE)
+
+**Root Cause:** Files have broken imports trying to import from non-existent `"./auth"/client'` and `"./auth"/info'` paths.
 
 **Components Still Using Supabase:**
 
 #### `src/components/MyWebsites.tsx`
-- **Lines 42, 77, 143, 231, 303:** Uses `supabase.auth.getUser()`
-- **Reason:** Not migrated to Nhost auth
-- **Impact:** Website management features may not work correctly
+- **Lines 42, 77, 143, 231, 303:** Uses `supabase.auth.getUser()` 
+- **Problem:** `supabase` is not imported - **CODE IS BROKEN**
+- **Reason:** Migration incomplete - should use `nhostClient.auth.getUser()` or `useUserData()` hook
+- **Impact:** Website management features are broken
 
 #### `src/components/EmailVerification.tsx`
 - **Lines 37-38:** Uses `supabase.auth.getSession()`
-- **Reason:** Email verification flow not fully migrated
-- **Impact:** Email verification may fail
+- **Problem:** `supabase` is not imported - **CODE IS BROKEN**
+- **Reason:** Email verification flow not migrated
+- **Impact:** Email verification is broken
 
 #### `src/utils/api/admin.ts`
-- **Line 2:** Imports Supabase client
-- **Reason:** Admin API calls still use Supabase
-- **Impact:** Admin features may not work
+- **Line 1-2:** Broken imports: `import { projectId } from "./auth"/info';` and `import { supabase } from "./auth"/client';`
+- **Line 4:** Uses `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca`
+- **Line 9:** Uses `supabase.auth.getSession()` - **CODE IS BROKEN**
+- **Reason:** Admin API still calls Supabase Edge Functions
+- **Impact:** Admin panel features are broken
+
+#### `src/utils/csvExportBackend.ts`
+- **Line 8:** Broken import: `import { projectId, publicAnonKey } from "./auth"/info';`
+- **Line 15:** Uses Supabase Edge Function URL
+- **Reason:** CSV export still uses Supabase backend
+- **Impact:** CSV export may be broken
 
 **Action Required:**
 - Replace `supabase.auth.getUser()` with Nhost `nhostClient.auth.getUser()`
