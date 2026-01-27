@@ -1,24 +1,24 @@
-# Nhost Database Setup - Complete Connection String
+# Nhost Database Setup - Template
 
 ## Your Nhost Database Connection Details
 
 **Full Connection String:**
 ```
-postgres://postgres:JMFSvSBe4Nv51bCb@vumnjkoyxkistmlzotuk.db.eu-central-1.nhost.run:5432/vumnjkoyxkistmlzotuk
+postgres://postgres:YOUR_PASSWORD@YOUR_SUBDOMAIN.db.YOUR_REGION.nhost.run:5432/YOUR_SUBDOMAIN
 ```
 
 ## Environment Variables to Set in Vercel
 
 ### Option 1: Single DATABASE_URL (Recommended)
 ```
-DATABASE_URL=postgres://postgres:JMFSvSBe4Nv51bCb@vumnjkoyxkistmlzotuk.db.eu-central-1.nhost.run:5432/vumnjkoyxkistmlzotuk
+DATABASE_URL=postgres://postgres:YOUR_PASSWORD@YOUR_SUBDOMAIN.db.YOUR_REGION.nhost.run:5432/YOUR_SUBDOMAIN
 ```
 
 ### Option 2: Component Variables
 ```
-NHOST_SUBDOMAIN=vumnjkoyxkistmlzotuk
-NHOST_REGION=eu-central-1
-NHOST_DB_PASSWORD=JMFSvSBe4Nv51bCb
+NHOST_SUBDOMAIN=YOUR_SUBDOMAIN
+NHOST_REGION=YOUR_REGION
+NHOST_DB_PASSWORD=YOUR_PASSWORD
 ```
 
 ## Steps to Configure in Vercel
@@ -30,15 +30,15 @@ NHOST_DB_PASSWORD=JMFSvSBe4Nv51bCb
 2. **Add DATABASE_URL**
    - Click **Add New**
    - Name: `DATABASE_URL`
-   - Value: `postgres://postgres:JMFSvSBe4Nv51bCb@vumnjkoyxkistmlzotuk.db.eu-central-1.nhost.run:5432/vumnjkoyxkistmlzotuk`
+   - Value: `postgres://postgres:YOUR_PASSWORD@YOUR_SUBDOMAIN.db.YOUR_REGION.nhost.run:5432/YOUR_SUBDOMAIN`
    - Select all environments: ✅ Production, ✅ Preview, ✅ Development
    - Click **Save**
 
 3. **Verify Other Nhost Variables Are Set**
    Make sure these are also configured:
    ```
-   NHOST_SUBDOMAIN=vumnjkoyxkistmlzotuk
-   NHOST_REGION=eu-central-1
+   NHOST_SUBDOMAIN=YOUR_SUBDOMAIN
+   NHOST_REGION=YOUR_REGION
    NHOST_ADMIN_SECRET=your-admin-secret
    ADMIN_SECRET_KEY=your-admin-secret
    ```
@@ -51,10 +51,11 @@ NHOST_DB_PASSWORD=JMFSvSBe4Nv51bCb
 ## Security Notes
 
 ⚠️ **Important:**
-- This file contains your database password - **DO NOT commit it to git**
+- Never commit files containing actual passwords to git
 - Keep your database password secure
 - Consider rotating the password periodically
 - Never share this password publicly
+- Use environment variables for all sensitive data
 
 ## Verification
 

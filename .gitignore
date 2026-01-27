@@ -72,3 +72,9 @@ pocketbase/
 pb_data/
 *.pb
 .env.database.example
+
+# Sensitive database configuration files
+NHOST_DATABASE_SETUP.md
+*_DATABASE_SETUP.md
+*_PASSWORD*.md
+*_SECRET*.md
