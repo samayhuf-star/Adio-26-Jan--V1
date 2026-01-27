@@ -338,7 +338,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                     userGoal,
                     count: keywordCount,
                     excludeCompetitors,
-                    competitorBrands: competitorBrands.split(',').map(b => b.trim()).filter(Boolean),
+                    competitorBrands: (competitorBrands || '').split(',').map(b => b.trim()).filter(Boolean),
                     targetLocation: targetLocation || undefined
                 })
             });
@@ -359,7 +359,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                 negativeKeywords = deduplicateKeywords(negativeKeywords);
                 negativeKeywords = filterProfanity(negativeKeywords);
                 
-                if (excludeCompetitors && competitorBrands.trim()) {
+                if (excludeCompetitors && competitorBrands && competitorBrands.trim()) {
                     const brands = competitorBrands.split(',').map(b => b.trim()).filter(Boolean);
                     negativeKeywords = handleBrandNames(negativeKeywords, brands);
                 }
