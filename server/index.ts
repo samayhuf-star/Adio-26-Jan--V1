@@ -13,7 +13,7 @@ import { tasksRoutes } from './routes/tasks';
 import { promoRoutes } from './routes/promo';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
-import { db } from './db';
+import { db, getDb } from './db';
 import { campaignHistory, auditLogs, workspaceProjects, projectItems } from '../shared/schema';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
@@ -259,6 +259,7 @@ app.get('/api/workspace-projects', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
+    const db = getDb();
     const results = await db
       .select()
       .from(workspaceProjects)
