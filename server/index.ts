@@ -161,6 +161,43 @@ app.put('/api/notifications/user/:userId/read-all', async (c) => {
   }
 });
 
+// Workspace projects endpoints
+app.get('/api/workspace-projects', async (c) => {
+  try {
+    // Return empty projects array for now
+    // Can be implemented with Nhost GraphQL later
+    return c.json({
+      success: true,
+      data: []
+    });
+  } catch (error) {
+    console.error('Workspace projects error:', error);
+    return c.json({ error: 'Failed to fetch projects' }, 500);
+  }
+});
+
+app.post('/api/workspace-projects', async (c) => {
+  try {
+    const { name } = await c.req.json();
+    if (!name) {
+      return c.json({ error: 'Project name required' }, 400);
+    }
+    // Return mock project for now
+    // Can be implemented with Nhost GraphQL later
+    return c.json({
+      success: true,
+      data: {
+        id: `project-${Date.now()}`,
+        name,
+        createdAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Create project error:', error);
+    return c.json({ error: 'Failed to create project' }, 500);
+  }
+});
+
 // Dashboard endpoint
 app.get('/api/dashboard/all/:userId', async (c) => {
   try {
