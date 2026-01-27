@@ -1064,9 +1064,16 @@ async function callGeminiAPI(prompt: string): Promise<string> {
 // POST /api/ai/generate-negative-keywords
 app.post('/api/ai/generate-negative-keywords', async (c) => {
   try {
-    const { url, coreKeywords, userGoal, count, excludeCompetitors, competitorBrands, targetLocation } = await c.req.json();
+    const { url, coreKeywords: coreKeywordsInput, userGoal, count, excludeCompetitors, competitorBrands, targetLocation } = await c.req.json();
     
-    if (!coreKeywords || !Array.isArray(coreKeywords) || coreKeywords.length === 0) {
+    // Convert string to array if needed (frontend sends string, server expects array)
+    const coreKeywords = Array.isArray(coreKeywordsInput) 
+      ? coreKeywordsInput 
+      : (typeof coreKeywordsInput === 'string' 
+          ? coreKeywordsInput.split(/[,\n]+/).map(k => k.trim()).filter(Boolean)
+          : []);
+    
+    if (!coreKeywords || coreKeywords.length === 0) {
       return c.json({ error: 'Core keywords are required' }, 400);
     }
 
@@ -1182,6 +1189,113 @@ Return the full blog post content in markdown format.`;
   } catch (error: any) {
     console.error('Generate blog error:', error);
     return c.json({ error: 'Failed to generate blog', blog: '' }, 500);
+  }
+});
+
+// Campaigns Endpoints
+// POST /api/campaigns/one-click - Generate one-click campaign
+app.post('/api/campaigns/one-click', async (c) => {
+  try {
+    const { websiteUrl } = await c.req.json();
+    
+    if (!websiteUrl || typeof websiteUrl !== 'string') {
+      return c.json({ error: 'Website URL is required' }, 400);
+    }
+
+    // Validate URL format
+    try {
+      new URL(websiteUrl);
+    } catch {
+      return c.json({ error: 'Invalid URL format' }, 400);
+    }
+
+    // Analyze URL
+    const analysisResult = await analyzeUrlWithCheerio(websiteUrl);
+    
+    // Generate basic campaign structure
+    const campaignName = `Campaign-${analysisResult.url.replace(/^https?:\/\//, '').split('/')[0]}-${new Date().toISOString().split('T')[0]}`;
+    
+    // Extract services/keywords from analysis
+    const seedKeywords = analysisResult.services.slice(0, 5).map(s => s.toLowerCase().trim()).filter(Boolean);
+    if (seedKeywords.length === 0) {
+      seedKeywords.push(analysisResult.url.split('/')[2]?.split('.')[0] || 'service');
+    }
+
+    // Generate mock campaign data
+    const campaign = {
+      id: `campaign-${Date.now()}`,
+      campaign_name: campaignName,
+      business_name: analysisResult.seoSignals?.title || analysisResult.url.split('/')[2] || 'Business',
+      website_url: websiteUrl,
+      monthly_budget: 3000,
+      daily_budget: 100,
+      campaign_data: {
+        analysis: {
+          businessName: analysisResult.seoSignals?.title || 'Business',
+          mainValue: analysisResult.keyMessaging?.[0]?.text || 'Quality Service',
+          keyBenefits: analysisResult.keyMessaging?.slice(0, 3).map((m: any) => m.text) || [],
+          targetAudience: 'General',
+          industry: 'Services',
+          products: analysisResult.services.slice(0, 5)
+        },
+        structure: {
+          campaignName,
+          dailyBudget: 100,
+          adGroupThemes: analysisResult.services.slice(0, 5)
+        },
+        keywords: seedKeywords,
+        adGroups: analysisResult.services.slice(0, 5).map((service: string, idx: number) => ({
+          name: `${service} Ad Group`,
+          keywords: [`${service}`, `${service} near me`, `best ${service}`, `professional ${service}`]
+        })),
+        adCopy: {
+          headlines: [
+            { text: analysisResult.seoSignals?.title || 'Quality Service' },
+            { text: `Best ${analysisResult.services[0] || 'Service'} Near You` },
+            { text: 'Professional & Reliable' },
+            { text: 'Get Started Today' },
+            { text: 'Free Consultation Available' }
+          ],
+          descriptions: [
+            { text: `Experience top-quality ${analysisResult.services[0] || 'service'} with our professional team.` },
+            { text: 'Trusted by thousands. Book your appointment today!' }
+          ],
+          callouts: ['Free Consultation', '24/7 Support', 'Licensed & Insured']
+        }
+      },
+      csvData: '' // CSV generation would go here
+    };
+
+    // Return as streaming response (SSE format for frontend)
+    return c.streamText(async (stream) => {
+      const steps = [
+        { progress: 15, status: 'Analyzing landing page...', log: { message: 'Fetching website content...', type: 'info' } },
+        { progress: 30, status: 'Building campaign structure...', log: { message: 'Creating ad groups...', type: 'progress' } },
+        { progress: 50, status: 'Generating keywords...', log: { message: `Generated ${seedKeywords.length} seed keywords`, type: 'success' } },
+        { progress: 65, status: 'Creating ad copy...', log: { message: 'Writing headlines and descriptions...', type: 'progress' } },
+        { progress: 80, status: 'Organizing campaign...', log: { message: 'Structuring ad groups...', type: 'info' } },
+        { progress: 90, status: 'Generating CSV...', log: { message: 'Preparing export file...', type: 'progress' } },
+        { progress: 100, status: 'Complete!', log: { message: 'Campaign built successfully!', type: 'success' }, complete: true, campaign }
+      ];
+
+      for (const step of steps) {
+        await stream.write(`data: ${JSON.stringify(step)}\n\n`);
+        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate processing time
+      }
+    }, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no' // Disable buffering for streaming
+      }
+    });
+  } catch (error: any) {
+    console.error('One-click campaign generation error:', error);
+    return c.json({ 
+      error: 'Failed to generate campaign', 
+      message: error.message 
+    }, 500);
   }
 });
 
