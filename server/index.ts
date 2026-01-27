@@ -207,7 +207,8 @@ app.get('/api/workspace-projects', async (c) => {
       .select()
       .from(workspaceProjects)
       .where(eq(workspaceProjects.userId, userId))
-      .orderBy(workspaceProjects.order, workspaceProjects.createdAt);
+      .orderBy(workspaceProjects.order)
+      .orderBy(desc(workspaceProjects.createdAt));
 
     return c.json({
       success: true,
@@ -215,7 +216,16 @@ app.get('/api/workspace-projects', async (c) => {
     });
   } catch (error: any) {
     console.error('Workspace projects error:', error);
-    return c.json({ error: 'Failed to fetch projects', message: error.message }, 500);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    return c.json({ 
+      error: 'Failed to fetch projects', 
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, 500);
   }
 });
 
