@@ -1,6 +1,6 @@
 /**
- * Compatibility layer for migrating from Clerk to Nhost
- * Provides similar hooks/utilities to ease migration
+ * Compatibility layer for authentication
+ * Provides hooks/utilities for Nhost authentication
  */
 
 import React, { useState, useEffect } from 'react';
@@ -37,7 +37,7 @@ export function useUserCompat() {
 }
 
 /**
- * Alias for useAuthCompat - provides Clerk-like useAuth hook
+ * Alias for useAuthCompat - provides useAuth hook
  */
 export function useAuth() {
   const authCompat = useAuthCompat();
@@ -49,7 +49,7 @@ export function useAuth() {
 }
 
 /**
- * Alias for useUserCompat - provides Clerk-like useUser hook
+ * Alias for useUserCompat - provides useUser hook
  */
 export function useUser() {
   return useUserCompat();
@@ -98,7 +98,7 @@ export function useOrganization() {
 }
 
 /**
- * Stub for useClerk hook (not used in Nhost migration)
+ * Stub for useClerk hook (legacy compatibility)
  */
 export function useClerk() {
   return {
@@ -112,12 +112,11 @@ export function useClerk() {
  * Note: This is a compatibility stub. The app uses the Auth component instead.
  */
 export const SignIn: React.FC<any> = (props: any) => {
-  // This is a stub component for Clerk compatibility
+  // This is a stub component for compatibility
   // The actual sign-in is handled by the Auth component
-  // If this component is rendered, it means ClerkAuth is being used (legacy)
   return (
     <div style={{ display: 'none' }}>
-      {/* Stub component - not used in Nhost migration */}
+      {/* Stub component - not used */}
     </div>
   );
 };
@@ -127,12 +126,11 @@ export const SignIn: React.FC<any> = (props: any) => {
  * Note: This is a compatibility stub. The app uses the Auth component instead.
  */
 export const SignUp: React.FC<any> = (props: any) => {
-  // This is a stub component for Clerk compatibility
+  // This is a stub component for compatibility
   // The actual sign-up is handled by the Auth component
-  // If this component is rendered, it means ClerkAuth is being used (legacy)
   return (
     <div style={{ display: 'none' }}>
-      {/* Stub component - not used in Nhost migration */}
+      {/* Stub component - not used */}
     </div>
   );
 };

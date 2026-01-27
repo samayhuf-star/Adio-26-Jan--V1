@@ -35,7 +35,6 @@ export function parseMercuryCSV(csvText: string): RealExpense[] {
     'SUPABASE': 'supabase',
     'ANTHROPIC': 'anthropic',
     'TWILIO': 'twilio',
-    'SENDGRID': 'sendgrid',
     'DIGITALOCEAN': 'digitalocean',
     'FLY.IO': 'fly',
     'FIGMA': 'figma',

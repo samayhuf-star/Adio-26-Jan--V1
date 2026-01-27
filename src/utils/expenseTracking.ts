@@ -116,28 +116,6 @@ export async function fetchVercelExpenses(): Promise<Partial<ServiceExpense>> {
   return { currentSpend: 0, status: 'inactive' };
 }
 
-// SendGrid Expense Tracking
-export async function fetchSendGridExpenses(): Promise<Partial<ServiceExpense>> {
-  try {
-    const apiKey = import.meta.env.VITE_SENDGRID_API_KEY;
-    if (!apiKey) return { currentSpend: 0, status: 'inactive' };
-
-    const response = await fetch('https://api.sendgrid.com/v3/stats', {
-      headers: { 'Authorization': `Bearer ${apiKey}` }
-    });
-
-    if (response.ok) {
-      // SendGrid typically charges per email
-      return {
-        currentSpend: 0,
-        lastBilled: new Date().toISOString().split('T')[0]
-      };
-    }
-  } catch (error) {
-    console.error('Failed to fetch SendGrid expenses:', error);
-  }
-  return { currentSpend: 0, status: 'inactive' };
-}
 
 
 // GitHub Expenses (monthly)
@@ -191,12 +169,11 @@ export async function fetchAllExpenses(): Promise<ServiceExpense[]> {
   }
 
   // Fallback to client-side fetching if backend fails
-  const [openai, stripe, supabase, vercel, sendgrid, github] = await Promise.allSettled([
+  const [openai, stripe, supabase, vercel, github] = await Promise.allSettled([
     fetchOpenAIExpenses(),
     fetchStripeExpenses(),
     fetchSupabaseExpenses(),
     fetchVercelExpenses(),
-    fetchSendGridExpenses(),
     fetchGitHubExpenses()
   ]);
 
@@ -238,24 +215,6 @@ export async function fetchAllExpenses(): Promise<ServiceExpense[]> {
       lastBilled: (vercel.status === 'fulfilled' ? vercel.value.lastBilled : new Date().toISOString().split('T')[0]) || new Date().toISOString().split('T')[0]
     },
     {
-      name: 'Redis Cloud',
-      icon: '🔴',
-      description: 'Caching & Sessions',
-      monthlyBudget: 30,
-      currentSpend: 0,
-      status: 'free_tier',
-      lastBilled: 'N/A'
-    },
-    {
-      name: 'SendGrid',
-      icon: '📧',
-      description: 'Email Service',
-      monthlyBudget: 25,
-      currentSpend: (sendgrid.status === 'fulfilled' ? sendgrid.value.currentSpend : 0) || 0,
-      status: (sendgrid.status === 'fulfilled' ? sendgrid.value.status : 'inactive') || 'inactive',
-      lastBilled: (sendgrid.status === 'fulfilled' ? sendgrid.value.lastBilled : new Date().toISOString().split('T')[0]) || new Date().toISOString().split('T')[0]
-    },
-    {
       name: 'GitHub',
       icon: '🐙',
       description: 'CI/CD & Actions',
@@ -274,8 +233,6 @@ function getServiceIcon(name: string): string {
     'Supabase': '⚡',
     'Stripe': '💳',
     'Vercel': '▲',
-    'Redis Cloud': '🔴',
-    'SendGrid': '📧',
     'GitHub': '🐙'
   };
   return icons[name] || '📦';
