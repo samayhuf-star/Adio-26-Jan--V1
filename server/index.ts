@@ -42,6 +42,21 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test endpoint to verify routing works
+app.get('/api/test-routes', (c) => {
+  return c.json({
+    message: 'Routes are working',
+    timestamp: new Date().toISOString(),
+    availableEndpoints: [
+      '/api/health',
+      '/api/debug',
+      '/api/workspace-projects',
+      '/api/workspace-projects/debug',
+      '/api/test-routes'
+    ]
+  });
+});
+
 // Debug endpoint - test if routes are working
 app.get('/api/debug', async (c) => {
   return c.json({ 
