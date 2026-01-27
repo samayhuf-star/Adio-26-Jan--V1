@@ -194,6 +194,35 @@ app.put('/api/notifications/user/:userId/read-all', async (c) => {
 
 // Workspace projects endpoints
 
+// Debug endpoint to check auth status (remove in production if needed)
+app.get('/api/workspace-projects/debug', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization');
+    const hasToken = !!authHeader?.startsWith('Bearer ');
+    const token = hasToken ? authHeader.substring(7) : null;
+    const tokenLength = token?.length || 0;
+    
+    const userId = await getUserIdFromToken(c);
+    const nhostConfigured = nhostAdmin.isConfigured();
+    
+    return c.json({
+      hasAuthHeader: !!authHeader,
+      hasToken,
+      tokenLength,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : null,
+      userId,
+      nhostConfigured,
+      nhostSubdomain: process.env.NHOST_SUBDOMAIN || process.env.NHOST_PROJECT_ID || 'not set',
+      nhostRegion: process.env.NHOST_REGION || 'not set',
+    });
+  } catch (error: any) {
+    return c.json({ 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, 500);
+  }
+});
+
 // GET /api/workspace-projects - List all projects for user
 app.get('/api/workspace-projects', async (c) => {
   try {
