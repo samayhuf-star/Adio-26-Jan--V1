@@ -42,6 +42,18 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Debug endpoint - test if routes are working
+app.get('/api/debug', async (c) => {
+  return c.json({ 
+    message: 'Debug endpoint working',
+    timestamp: new Date().toISOString(),
+    routes: {
+      'workspace-projects': '/api/workspace-projects',
+      'workspace-projects-debug': '/api/workspace-projects/debug'
+    }
+  });
+});
+
 app.route('/api/community', community);
 app.route('/api/stripe', stripeRoutes);
 app.route('/api/organizations', organizationsRoutes);
