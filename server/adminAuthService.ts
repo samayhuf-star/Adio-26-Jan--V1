@@ -171,7 +171,7 @@ export async function adminAuthMiddleware(c: any): Promise<AdminContext | Respon
         code: 'CONFIG_ERROR',
         details: {
           message: 'Missing required environment variables',
-          required: ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL'],
+          required: ['NHOST_ADMIN_SECRET', 'NHOST_SUBDOMAIN'],
           status
         },
         timestamp: new Date().toISOString()
