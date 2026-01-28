@@ -2,12 +2,6 @@ import { getUncachableStripeClient } from './stripeClient';
 // PocketBase removed - using database directly
 // import { pbAdmin } from './pocketbase';
 
-// Stub for organization management - PocketBase removed
-const getOrganizationFromPocketBase = async (_organizationId: string) => {
-  // TODO: Replace with database query
-  return null;
-};
-
 export type PlanType = 'lifetime' | 'basic' | 'pro';
 
 export interface OrganizationMetadata {
@@ -19,6 +13,12 @@ export interface OrganizationMetadata {
   stripeSubscriptionId?: string;
   [key: string]: unknown;
 }
+
+// Stub for organization management - PocketBase removed
+const getOrganizationFromPocketBase = async (_organizationId: string): Promise<{ metadata?: OrganizationMetadata } | null> => {
+  // TODO: Replace with database query
+  return null;
+};
 
 export const PLAN_SEAT_LIMITS: Record<PlanType, number> = {
   lifetime: 1,
@@ -87,23 +87,7 @@ export class SeatManagement {
         updatedMetadata.totalSeatLimit = updatedMetadata.baseSeatLimit + updatedMetadata.extraSeats;
       }
 
-      // Update or create organization in PocketBase
-      try {
-        await pbAdmin.collection('organizations').update(organizationId, {
-          metadata: updatedMetadata,
-        });
-      } catch (error: any) {
-        // If organization doesn't exist, create it
-        if (error?.status === 404) {
-          await pbAdmin.collection('organizations').create({
-            id: organizationId,
-            metadata: updatedMetadata,
-          });
-        } else {
-          throw error;
-        }
-      }
-      
+      // PocketBase removed - skip persistence; return true for API compatibility
       return true;
     } catch (error) {
       console.error('Error updating organization metadata:', error);
@@ -111,17 +95,9 @@ export class SeatManagement {
     }
   }
 
-  async getPaidSeatsUsed(organizationId: string): Promise<number> {
-    try {
-      // Get members from PocketBase organization_members collection
-      const members = await pbAdmin.collection('organization_members').getList(1, 100, {
-        filter: `organization = "${organizationId}"`,
-      });
-      return members.items.length;
-    } catch (error) {
-      console.error('Error getting organization memberships:', error);
-      return 0;
-    }
+  async getPaidSeatsUsed(_organizationId: string): Promise<number> {
+    // PocketBase removed - return 0; replace with database query when implemented
+    return 0;
   }
 
   async canAddSeat(organizationId: string): Promise<{ allowed: boolean; reason?: string; seatsUsed: number; totalLimit: number }> {

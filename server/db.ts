@@ -6,21 +6,21 @@ import { getDatabaseUrl } from "./dbConfig";
 const { Pool } = pg;
 
 let pool: pg.Pool | null = null;
-let db: ReturnType<typeof drizzle> | null = null;
+let _dbCache: ReturnType<typeof drizzle> | null = null;
 
 function initializeDb() {
-  if (!pool || !db) {
+  if (!pool || !_dbCache) {
     try {
       const databaseUrl = getDatabaseUrl();
       pool = new Pool({ connectionString: databaseUrl });
-      db = drizzle(pool, { schema });
+      _dbCache = drizzle(pool, { schema });
     } catch (error) {
       console.error('[DB] Failed to initialize database connection:', error);
       // Don't throw - allow function to start even if DB is not configured
       // Routes that need DB will handle the error
     }
   }
-  return { pool, db };
+  return { pool, db: _dbCache };
 }
 
 // Lazy initialization - only connect when needed
@@ -40,7 +40,7 @@ export function getPool() {
   return poolInstance;
 }
 
-// Export db for backward compatibility - lazy getter
+// Export db for backward compatibility - lazy getter (named export to avoid redeclaration with inner _dbCache)
 export const db = new Proxy({} as ReturnType<typeof drizzle>, {
   get(_target, prop) {
     return getDb()[prop as keyof ReturnType<typeof drizzle>];

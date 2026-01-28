@@ -17,7 +17,7 @@ import { db, getDb } from './db';
 import { campaignHistory, auditLogs, workspaceProjects, projectItems } from '../shared/schema';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, asc, and } from 'drizzle-orm';
 import { getUserIdFromToken } from './utils/auth';
 
 const app = new Hono();
@@ -226,7 +226,7 @@ app.get('/api/workspace-projects/debug', async (c) => {
   try {
     const authHeader = c.req.header('Authorization');
     const hasToken = !!authHeader?.startsWith('Bearer ');
-    const token = hasToken ? authHeader.substring(7) : null;
+    const token = hasToken && authHeader ? authHeader.substring(7) : null;
     const tokenLength = token?.length || 0;
     
     const userId = await getUserIdFromToken(c);
@@ -264,8 +264,7 @@ app.get('/api/workspace-projects', async (c) => {
       .select()
       .from(workspaceProjects)
       .where(eq(workspaceProjects.userId, userId))
-      .orderBy(workspaceProjects.order)
-      .orderBy(desc(workspaceProjects.createdAt));
+      .orderBy(asc(workspaceProjects.order), desc(workspaceProjects.createdAt));
 
     return c.json({
       success: true,
@@ -1232,8 +1231,8 @@ app.post('/api/campaigns/one-click', async (c) => {
       campaign_data: {
         analysis: {
           businessName: analysisResult.seoSignals?.title || 'Business',
-          mainValue: analysisResult.keyMessaging?.[0]?.text || 'Quality Service',
-          keyBenefits: analysisResult.keyMessaging?.slice(0, 3).map((m: any) => m.text) || [],
+          mainValue: analysisResult.keyMessaging?.[0] || 'Quality Service',
+          keyBenefits: analysisResult.keyMessaging?.slice(0, 3) || [],
           targetAudience: 'General',
           industry: 'Services',
           products: analysisResult.services.slice(0, 5)
@@ -1267,22 +1266,27 @@ app.post('/api/campaigns/one-click', async (c) => {
     };
 
     // Return as streaming response (SSE format for frontend)
-    return c.streamText(async (stream) => {
-      const steps = [
-        { progress: 15, status: 'Analyzing landing page...', log: { message: 'Fetching website content...', type: 'info' } },
-        { progress: 30, status: 'Building campaign structure...', log: { message: 'Creating ad groups...', type: 'progress' } },
-        { progress: 50, status: 'Generating keywords...', log: { message: `Generated ${seedKeywords.length} seed keywords`, type: 'success' } },
-        { progress: 65, status: 'Creating ad copy...', log: { message: 'Writing headlines and descriptions...', type: 'progress' } },
-        { progress: 80, status: 'Organizing campaign...', log: { message: 'Structuring ad groups...', type: 'info' } },
-        { progress: 90, status: 'Generating CSV...', log: { message: 'Preparing export file...', type: 'progress' } },
-        { progress: 100, status: 'Complete!', log: { message: 'Campaign built successfully!', type: 'success' }, complete: true, campaign }
-      ];
+    const steps = [
+      { progress: 15, status: 'Analyzing landing page...', log: { message: 'Fetching website content...', type: 'info' } },
+      { progress: 30, status: 'Building campaign structure...', log: { message: 'Creating ad groups...', type: 'progress' } },
+      { progress: 50, status: 'Generating keywords...', log: { message: `Generated ${seedKeywords.length} seed keywords`, type: 'success' } },
+      { progress: 65, status: 'Creating ad copy...', log: { message: 'Writing headlines and descriptions...', type: 'progress' } },
+      { progress: 80, status: 'Organizing campaign...', log: { message: 'Structuring ad groups...', type: 'info' } },
+      { progress: 90, status: 'Generating CSV...', log: { message: 'Preparing export file...', type: 'progress' } },
+      { progress: 100, status: 'Complete!', log: { message: 'Campaign built successfully!', type: 'success' }, complete: true, campaign }
+    ];
 
-      for (const step of steps) {
-        await stream.write(`data: ${JSON.stringify(step)}\n\n`);
-        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate processing time
+    const stream = new ReadableStream({
+      async start(controller) {
+        for (const step of steps) {
+          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(step)}\n\n`));
+          await new Promise(resolve => setTimeout(resolve, 800)); // Simulate processing time
+        }
+        controller.close();
       }
-    }, {
+    });
+
+    return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
@@ -1736,6 +1740,68 @@ app.delete('/api/campaign-history/:id', async (c) => {
   } catch (error: any) {
     console.error('Delete campaign history error:', error);
     return c.json({ error: 'Failed to delete campaign history', message: error.message }, 500);
+  }
+});
+
+// CSV Export endpoint - migrated from Supabase Edge Function
+app.post('/api/export-csv', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const request = await c.req.json();
+    
+    // Basic validation
+    if (!request.campaign_name) {
+      return c.json({ 
+        success: false,
+        validation_errors: [{
+          field: 'campaign_name',
+          message: 'Campaign name is required',
+          severity: 'error'
+        }]
+      }, 400);
+    }
+
+    // For now, return a simple response indicating CSV generation should be done client-side
+    // TODO: Implement full CSV generation server-side using googleAdsEditorCSVExporterV5 logic
+    return c.json({
+      success: false,
+      message: 'CSV export endpoint migrated. Please use client-side CSV generation.',
+      validation_errors: [],
+      warnings: []
+    }, 501); // 501 Not Implemented - indicates migration in progress
+  } catch (error: any) {
+    console.error('CSV export error:', error);
+    return c.json({ 
+      error: 'Failed to process CSV export', 
+      message: error.message 
+    }, 500);
+  }
+});
+
+// GET /api/export-csv/:jobId - Get async CSV export status
+app.get('/api/export-csv/:jobId', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const jobId = c.req.param('jobId');
+    
+    // TODO: Implement async CSV export status check
+    return c.json({ 
+      error: 'Async CSV export not yet implemented',
+      jobId 
+    }, 501);
+  } catch (error: any) {
+    console.error('Get CSV export status error:', error);
+    return c.json({ error: 'Failed to get export status', message: error.message }, 500);
   }
 });
 

@@ -2,9 +2,10 @@ import { Hono } from 'hono';
 import { db } from '../db';
 import { users, subscriptions, auditLogs, securityRules, emailLogs, promoTrials } from '../../shared/schema';
 import { eq, desc, sql, and, or, like } from 'drizzle-orm';
-import { adminAuthMiddleware, logAdminAction } from '../adminAuthService';
+import { adminAuthMiddleware, logAdminAction, type AdminContext } from '../adminAuthService';
 
-const adminRoutes = new Hono();
+type AdminEnv = { Variables: { admin: AdminContext } };
+const adminRoutes = new Hono<AdminEnv>();
 
 // Apply admin auth middleware to all routes
 adminRoutes.use('*', async (c, next) => {
