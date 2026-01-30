@@ -249,19 +249,11 @@ export const historyService = {
           lastModified: record.updated_at,
         }));
 
-        console.log(`Loaded ${items.length} items from database`);
+        console.log(`Loaded ${items.length} items from database for current user`);
         setDataSource('live');
         
-        // If no items from database, try localStorage for legacy data
-        if (items.length === 0) {
-          const localItems = localStorageHistory.getAll();
-          if (localItems.length > 0) {
-            console.log(`Found ${localItems.length} legacy items in localStorage`);
-            setDataSource('cached');
-            return localItems;
-          }
-        }
-        
+        // Return only user's campaigns from database - don't merge localStorage
+        // localStorage is only used as fallback when not authenticated
         return items;
       } else {
         throw new Error('No auth token available');

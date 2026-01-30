@@ -899,9 +899,6 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                                         <div className="font-mono text-sm font-medium text-slate-800 truncate">
                                                                             {item.keyword}
                                                                         </div>
-                                                                        <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">
-                                                                            {item.reason}
-                                                                        </div>
                                                                     </div>
                                                                     <div className="flex flex-col items-end gap-1 shrink-0">
                                                                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-indigo-50 text-indigo-600 border-indigo-200">
@@ -927,7 +924,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                     <TableHeader className="bg-slate-50/80 sticky top-0 z-10">
                                                         <TableRow>
                                                             <TableHead className="w-[15%] text-xs font-semibold text-slate-600">Match Type</TableHead>
-                                                            <TableHead className="w-[45%] text-xs font-semibold text-slate-600">Reason</TableHead>
+                                                            <TableHead className="w-[55%] text-xs font-semibold text-slate-600">Keyword</TableHead>
                                                             <TableHead className="w-[20%] text-xs font-semibold text-slate-600">Category</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
@@ -942,8 +939,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                                         </Badge>
                                                                     </TableCell>
                                                                     <TableCell className="text-slate-600 text-sm">
-                                                                        <span className="font-mono text-indigo-600 mr-2">{item.keyword}</span>
-                                                                        {item.reason}
+                                                                        <span className="font-mono text-indigo-600">{item.keyword}</span>
                                                                     </TableCell>
                                                                     <TableCell>
                                                                         <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${colors.bg} ${colors.text} ${colors.border} border`}>
