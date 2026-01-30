@@ -215,7 +215,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
               
               // Navigate to dashboard after successful signup
               setTimeout(() => {
-                if (onSignupSuccess) {
+                if (onSignupSuccess && result.data) {
                   onSignupSuccess(result.data.email, result.data.name || trimmedName);
                 }
                 // Also trigger login success to navigate to dashboard

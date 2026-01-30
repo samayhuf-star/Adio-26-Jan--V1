@@ -73,7 +73,9 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
         .filter(item => 
           item.type === 'campaign' || 
           item.type === 'campaign-preset' ||
-          item.type === 'one-click-campaign'
+          item.type === 'campaign-builder' ||
+          item.type === 'one-click-campaign' ||
+          item.type === 'one-click-builder'
         )
         .map(item => ({
           id: item.id,

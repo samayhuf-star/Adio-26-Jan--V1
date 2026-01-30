@@ -214,28 +214,35 @@ export function OneClickCampaignBuilder() {
       setCurrentStep('results');
       
       // Auto-save campaign with authentication
-      let apiSaved = false;
+      let savedToDatabase = false;
       try {
         const token = await getToken();
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
+          const response = await fetch('/api/campaigns/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              campaign_name: generatedCampaign.campaign_name,
+              business_name: generatedCampaign.business_name,
+              website_url: generatedCampaign.website_url,
+              campaign_data: generatedCampaign.campaign_data,
+              source: 'one-click-builder'
+            })
+          });
+          if (response.ok) {
+            const result = await response.json();
+            savedToDatabase = result.saved === true;
+          }
         }
-        const response = await fetch('/api/campaigns/save', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            ...generatedCampaign,
-            source: 'one-click-builder'
-          })
-        });
-        apiSaved = response.ok;
       } catch (err) {
         console.error('API save error:', err);
       }
       
       // Fallback to historyService if API save failed
-      if (!apiSaved) {
+      if (!savedToDatabase) {
         try {
           await historyService.save('one-click-campaign', generatedCampaign.campaign_name || 'One-Click Campaign', {
             ...generatedCampaign.campaign_data,
@@ -245,6 +252,7 @@ export function OneClickCampaignBuilder() {
             source: 'one-click-builder',
             builderType: '1-click'
           });
+          console.log('Campaign saved to historyService');
         } catch (err) {
           console.error('Local save error:', err);
         }

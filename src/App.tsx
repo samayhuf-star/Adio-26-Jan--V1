@@ -31,6 +31,7 @@ import { notifications as notificationService } from './utils/notifications';
 import { setCurrentUserId } from './utils/localStorageHistory';
 import { getCurrentUserProfile, signOut, getSessionToken } from './utils/auth';
 import { getCurrentUser, isAuthenticated } from './utils/auth';
+import { setNhostGetToken } from './utils/historyService';
 import { DataSourceIndicator } from './components/DataSourceIndicator';
 import { useDataSource } from './hooks/useDataSource';
 import { initStorageManager, clearStorageNow } from './utils/storageManager';
@@ -104,6 +105,9 @@ const AppContent = () => {
   
   // Initialize auth state
   useEffect(() => {
+    // Initialize historyService with token getter so it can use database storage
+    setNhostGetToken(getSessionToken);
+    
     const initAuth = async () => {
       setLoading(true);
       
@@ -1301,7 +1305,7 @@ const AppContent = () => {
   if (appView === 'auth') {
     return (
       <Auth
-        initialMode={authMode}
+        initialMode={authMode === 'sign-in' ? 'login' : 'signup'}
         onLoginSuccess={() => {
           // Wait for user state to update, then navigate
           setTimeout(() => {

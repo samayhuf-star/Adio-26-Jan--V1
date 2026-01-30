@@ -133,6 +133,57 @@ export function generateIntentBasedNegatives(
   return generateIntentBasedNegativesWithCategories(coreKeywords, categories, customModifiers, INTENT_CATEGORIES);
 }
 
+// Extended modifier pools for more variety
+const EXTENDED_MODIFIERS: Record<string, string[]> = {
+  diy: [
+    'easy', 'simple', 'quick', 'fast', 'beginner', 'amateur', 'weekend', 'basic',
+    'manual', 'handbook', 'video', 'youtube', 'blog', 'forum', 'reddit', 'advice',
+    'suggestion', 'recommendation', 'template', 'checklist', 'worksheet', 'printable'
+  ],
+  budget: [
+    'lowest price', 'best deal', 'special offer', 'limited time', 'flash sale',
+    'black friday', 'cyber monday', 'holiday sale', 'seasonal', 'outlet',
+    'overstock', 'factory direct', 'wholesale price', 'group buy', 'bundle deal'
+  ],
+  info_seeker: [
+    'compare', 'versus', 'difference', 'which is better', 'pros and cons',
+    'advantages', 'disadvantages', 'features', 'specifications', 'details',
+    'overview', 'summary', 'introduction', 'basics', 'fundamentals'
+  ],
+  job_seeker: [
+    'profession', 'occupation', 'position', 'opening', 'vacancy', 'recruit',
+    'apply', 'application', 'interview tips', 'career path', 'work from home',
+    'remote', 'part time', 'full time', 'freelance', 'contractor', 'temp'
+  ],
+  negative_outcome: [
+    'problem', 'issue', 'trouble', 'regret', 'mistake', 'error', 'bad experience',
+    'negative review', 'one star', 'worst', 'terrible', 'horrible', 'awful',
+    'disappointing', 'unsatisfied', 'unhappy', 'angry', 'frustrated'
+  ],
+  wrong_location: [
+    'europe', 'asia', 'africa', 'south america', 'canada', 'uk', 'australia',
+    'foreign', 'export', 'import', 'cross border', 'shipping overseas', 'global'
+  ],
+  educational: [
+    'textbook', 'lecture', 'professor', 'university', 'college', 'high school',
+    'student', 'assignment', 'homework', 'exam', 'test', 'quiz', 'essay'
+  ],
+  unqualified: [
+    'free trial', 'demo', 'sample', 'freebie', 'giveaway', 'contest', 'sweepstakes',
+    'voucher', 'rebate', 'cashback', 'refund', 'return policy', 'warranty claim'
+  ]
+};
+
+// Shuffle array helper
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export function generateIntentBasedNegativesWithCategories(
   coreKeywords: string[],
   categories: string[],
@@ -141,6 +192,10 @@ export function generateIntentBasedNegativesWithCategories(
 ): NegativeKeywordResult[] {
   const results: NegativeKeywordResult[] = [];
   const seen = new Set<string>();
+  
+  // Target range: 1200-1800 keywords
+  // Use random factor to vary the output
+  const variationFactor = 0.7 + (Math.random() * 0.6); // 0.7 to 1.3
 
   for (const keyword of coreKeywords) {
     const normalizedKeyword = keyword.toLowerCase().trim();
@@ -149,15 +204,26 @@ export function generateIntentBasedNegativesWithCategories(
       const category = categoryMap[categoryKey];
       if (!category) continue;
 
-      const modifiers = [
+      // Combine base modifiers with extended modifiers for more variety
+      const extendedMods = EXTENDED_MODIFIERS[categoryKey] || [];
+      const allModifiers = [
         ...category.modifiers,
+        ...extendedMods,
         ...(customModifiers[categoryKey] || [])
       ];
+      
+      // Shuffle and take a variable portion of modifiers for variety
+      const shuffledModifiers = shuffleArray(allModifiers);
+      const modifierCount = Math.floor(shuffledModifiers.length * variationFactor);
+      const modifiers = shuffledModifiers.slice(0, Math.max(modifierCount, 10));
 
       for (const modifier of modifiers) {
         const normalizedModifier = modifier.toLowerCase().trim();
+        
+        // Randomly include patterns for more variety
+        const patternsToUse = Math.random() > 0.15 ? category.patterns : category.patterns.slice(0, 2);
 
-        for (const pattern of category.patterns) {
+        for (const pattern of patternsToUse) {
           let negativeKeyword = '';
 
           switch (pattern) {
@@ -194,6 +260,13 @@ export function generateIntentBasedNegativesWithCategories(
     return (categoryA?.priority || 99) - (categoryB?.priority || 99);
   });
 
+  // Ensure we're in the target range of 1200-1800
+  // If too few, we already have variability built in
+  // If too many, trim to max 1800
+  if (results.length > 1800) {
+    return shuffleArray(results).slice(0, 1800);
+  }
+  
   return results;
 }
 

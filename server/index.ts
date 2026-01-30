@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { community } from './routes/community';
 import { stripeRoutes } from './routes/stripe';
 import { organizationsRoutes } from './routes/organizations';
@@ -19,6 +20,8 @@ import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
 import { eq, desc, asc, and } from 'drizzle-orm';
 import { getUserIdFromToken } from './utils/auth';
+import fs from 'fs';
+import path from 'path';
 
 const app = new Hono();
 
@@ -1214,13 +1217,113 @@ app.post('/api/campaigns/one-click', async (c) => {
     // Generate basic campaign structure
     const campaignName = `Campaign-${analysisResult.url.replace(/^https?:\/\//, '').split('/')[0]}-${new Date().toISOString().split('T')[0]}`;
     
-    // Extract services/keywords from analysis
-    const seedKeywords = analysisResult.services.slice(0, 5).map(s => s.toLowerCase().trim()).filter(Boolean);
-    if (seedKeywords.length === 0) {
-      seedKeywords.push(analysisResult.url.split('/')[2]?.split('.')[0] || 'service');
+    // Extract services/keywords from analysis - get more seed terms
+    const seedServices = analysisResult.services.slice(0, 15).map((s: string) => s.toLowerCase().trim()).filter(Boolean);
+    if (seedServices.length === 0) {
+      seedServices.push(analysisResult.url.split('/')[2]?.split('.')[0] || 'service');
     }
 
-    // Generate mock campaign data
+    // Generate comprehensive keyword variations (200-300 keywords)
+    const intentModifiers = ['buy', 'get', 'find', 'hire', 'best', 'top', 'affordable', 'cheap', 'professional', 'quality', 'local', 'trusted', 'reliable', 'expert'];
+    const locationModifiers = ['near me', 'in my area', 'nearby', 'local', 'online', 'today', 'now', 'same day', '24/7'];
+    const questionPhrases = ['how to find', 'where to get', 'how much does', 'what is the best', 'how to choose'];
+    const comparisonPhrases = ['vs', 'versus', 'compared to', 'or', 'alternative to'];
+    const serviceModifiers = ['services', 'company', 'companies', 'provider', 'providers', 'specialist', 'experts', 'solutions'];
+    
+    // Generate all keywords
+    const allKeywords: string[] = [];
+    
+    // Base keywords for each service
+    seedServices.forEach((service: string) => {
+      // Core keywords
+      allKeywords.push(service);
+      
+      // Intent + service combinations
+      intentModifiers.forEach(intent => {
+        allKeywords.push(`${intent} ${service}`);
+      });
+      
+      // Service + location combinations
+      locationModifiers.forEach(loc => {
+        allKeywords.push(`${service} ${loc}`);
+      });
+      
+      // Intent + service + location combinations
+      intentModifiers.slice(0, 5).forEach(intent => {
+        locationModifiers.slice(0, 4).forEach(loc => {
+          allKeywords.push(`${intent} ${service} ${loc}`);
+        });
+      });
+      
+      // Question phrase combinations
+      questionPhrases.forEach(q => {
+        allKeywords.push(`${q} ${service}`);
+      });
+      
+      // Service + modifier combinations
+      serviceModifiers.forEach(mod => {
+        allKeywords.push(`${service} ${mod}`);
+        allKeywords.push(`${service} ${mod} near me`);
+      });
+    });
+    
+    // Add comparison keywords between services
+    if (seedServices.length >= 2) {
+      for (let i = 0; i < Math.min(seedServices.length - 1, 5); i++) {
+        comparisonPhrases.forEach(comp => {
+          allKeywords.push(`${seedServices[i]} ${comp} ${seedServices[i + 1]}`);
+        });
+      }
+    }
+    
+    // Deduplicate and limit to 300 keywords
+    const uniqueKeywords = [...new Set(allKeywords)].slice(0, 300);
+    
+    // Create comprehensive ad groups (10-20 ad groups)
+    const adGroupCategories = [
+      { name: 'Brand', prefix: '', suffix: '' },
+      { name: 'Near Me', prefix: '', suffix: 'near me' },
+      { name: 'Best', prefix: 'best', suffix: '' },
+      { name: 'Professional', prefix: 'professional', suffix: '' },
+      { name: 'Affordable', prefix: 'affordable', suffix: '' },
+      { name: 'Local', prefix: 'local', suffix: '' },
+      { name: 'Expert', prefix: 'expert', suffix: '' },
+      { name: 'Top Rated', prefix: 'top rated', suffix: '' },
+      { name: 'Same Day', prefix: '', suffix: 'same day' },
+      { name: 'Emergency', prefix: 'emergency', suffix: '' },
+      { name: 'Online', prefix: '', suffix: 'online' },
+      { name: 'Services', prefix: '', suffix: 'services' },
+    ];
+    
+    const adGroups = seedServices.slice(0, 15).flatMap((service: string) => {
+      return adGroupCategories.slice(0, Math.ceil(12 / seedServices.length) + 1).map(cat => {
+        const keywordBase = cat.prefix ? `${cat.prefix} ${service}` : service;
+        const keywordFull = cat.suffix ? `${keywordBase} ${cat.suffix}` : keywordBase;
+        
+        // Generate 10-15 keywords per ad group
+        const adGroupKeywords = [
+          keywordFull,
+          `${keywordFull} now`,
+          `get ${keywordFull}`,
+          `find ${keywordFull}`,
+          `${service} ${cat.name.toLowerCase()}`,
+          `${keywordFull} today`,
+          `${keywordFull} in my area`,
+          `cheap ${keywordFull}`,
+          `quality ${keywordFull}`,
+          `${keywordFull} company`,
+          `${keywordFull} provider`,
+          `trusted ${keywordFull}`,
+        ].filter(Boolean);
+        
+        return {
+          name: `${service} - ${cat.name}`,
+          keywords: [...new Set(adGroupKeywords)].slice(0, 15)
+        };
+      });
+    }).slice(0, 25); // Cap at 25 ad groups
+
+    // Generate mock campaign data with comprehensive keywords
     const campaign = {
       id: `campaign-${Date.now()}`,
       campaign_name: campaignName,
@@ -1232,34 +1335,43 @@ app.post('/api/campaigns/one-click', async (c) => {
         analysis: {
           businessName: analysisResult.seoSignals?.title || 'Business',
           mainValue: analysisResult.keyMessaging?.[0] || 'Quality Service',
-          keyBenefits: analysisResult.keyMessaging?.slice(0, 3) || [],
+          keyBenefits: analysisResult.keyMessaging?.slice(0, 5) || [],
           targetAudience: 'General',
           industry: 'Services',
-          products: analysisResult.services.slice(0, 5)
+          products: seedServices
         },
         structure: {
           campaignName,
           dailyBudget: 100,
-          adGroupThemes: analysisResult.services.slice(0, 5)
+          adGroupThemes: seedServices
         },
-        keywords: seedKeywords,
-        adGroups: analysisResult.services.slice(0, 5).map((service: string, idx: number) => ({
-          name: `${service} Ad Group`,
-          keywords: [`${service}`, `${service} near me`, `best ${service}`, `professional ${service}`]
-        })),
+        keywords: uniqueKeywords,
+        adGroups,
         adCopy: {
           headlines: [
             { text: analysisResult.seoSignals?.title || 'Quality Service' },
-            { text: `Best ${analysisResult.services[0] || 'Service'} Near You` },
+            { text: `Best ${seedServices[0] || 'Service'} Near You` },
             { text: 'Professional & Reliable' },
             { text: 'Get Started Today' },
-            { text: 'Free Consultation Available' }
+            { text: 'Free Consultation Available' },
+            { text: 'Trusted Local Experts' },
+            { text: 'Fast & Affordable' },
+            { text: 'Licensed Professionals' },
+            { text: 'Call Now For Quote' },
+            { text: '5-Star Rated Service' },
+            { text: 'Same Day Available' },
+            { text: 'Expert Solutions' },
+            { text: '100% Satisfaction' },
+            { text: 'Quality Guaranteed' },
+            { text: 'Book Online Now' }
           ],
           descriptions: [
-            { text: `Experience top-quality ${analysisResult.services[0] || 'service'} with our professional team.` },
-            { text: 'Trusted by thousands. Book your appointment today!' }
+            { text: `Experience top-quality ${seedServices[0] || 'service'} with our professional team. Licensed & insured.` },
+            { text: 'Trusted by thousands. Book your appointment today! Fast, reliable service guaranteed.' },
+            { text: `Looking for ${seedServices[0] || 'service'}? We offer competitive prices and expert solutions.` },
+            { text: 'Professional service at affordable prices. Same day availability. Call for free estimate!' }
           ],
-          callouts: ['Free Consultation', '24/7 Support', 'Licensed & Insured']
+          callouts: ['Free Consultation', '24/7 Support', 'Licensed & Insured', 'Fast Response', 'Quality Guaranteed', 'Local Experts']
         }
       },
       csvData: '' // CSV generation would go here
@@ -1267,13 +1379,15 @@ app.post('/api/campaigns/one-click', async (c) => {
 
     // Return as streaming response (SSE format for frontend)
     const steps = [
-      { progress: 15, status: 'Analyzing landing page...', log: { message: 'Fetching website content...', type: 'info' } },
-      { progress: 30, status: 'Building campaign structure...', log: { message: 'Creating ad groups...', type: 'progress' } },
-      { progress: 50, status: 'Generating keywords...', log: { message: `Generated ${seedKeywords.length} seed keywords`, type: 'success' } },
-      { progress: 65, status: 'Creating ad copy...', log: { message: 'Writing headlines and descriptions...', type: 'progress' } },
-      { progress: 80, status: 'Organizing campaign...', log: { message: 'Structuring ad groups...', type: 'info' } },
-      { progress: 90, status: 'Generating CSV...', log: { message: 'Preparing export file...', type: 'progress' } },
-      { progress: 100, status: 'Complete!', log: { message: 'Campaign built successfully!', type: 'success' }, complete: true, campaign }
+      { progress: 10, status: 'Analyzing landing page...', log: { message: 'Fetching website content...', type: 'info' } },
+      { progress: 20, status: 'Extracting business data...', log: { message: `Found ${seedServices.length} services/products`, type: 'success' } },
+      { progress: 35, status: 'Generating keyword variations...', log: { message: 'Creating intent-based keywords...', type: 'progress' } },
+      { progress: 50, status: 'Building keywords...', log: { message: `Generated ${uniqueKeywords.length} comprehensive keywords`, type: 'success' } },
+      { progress: 65, status: 'Creating ad groups...', log: { message: `Creating ${adGroups.length} themed ad groups...`, type: 'progress' } },
+      { progress: 75, status: 'Writing ad copy...', log: { message: 'Generating headlines and descriptions...', type: 'info' } },
+      { progress: 85, status: 'Organizing campaign...', log: { message: 'Structuring campaign hierarchy...', type: 'progress' } },
+      { progress: 95, status: 'Generating CSV...', log: { message: 'Preparing Google Ads export file...', type: 'progress' } },
+      { progress: 100, status: 'Complete!', log: { message: `Campaign built successfully! ${uniqueKeywords.length} keywords, ${adGroups.length} ad groups`, type: 'success' }, complete: true, campaign }
     ];
 
     const stream = new ReadableStream({
@@ -1300,6 +1414,61 @@ app.post('/api/campaigns/one-click', async (c) => {
       error: 'Failed to generate campaign', 
       message: error.message 
     }, 500);
+  }
+});
+
+// POST /api/campaigns/save - Save campaign data (fallback for large campaigns)
+app.post('/api/campaigns/save', async (c) => {
+  try {
+    // Try to get user from token
+    let userId: string | null = null;
+    try {
+      userId = await getUserIdFromToken(c);
+    } catch (e) {
+      // User not authenticated
+    }
+
+    const { campaign_name, business_name, website_url, campaign_data, source } = await c.req.json();
+    
+    if (!campaign_name || !campaign_data) {
+      return c.json({ error: 'Missing required fields: campaign_name, campaign_data' }, 400);
+    }
+
+    // If we have a user, save to campaign_history table
+    if (userId) {
+      // Normalize type: 'one-click-builder' -> 'one-click-campaign' for DraftCampaigns compatibility
+      let campaignType = source || 'campaign';
+      if (campaignType === 'one-click-builder') {
+        campaignType = 'one-click-campaign';
+      }
+      
+      const result = await db.insert(campaignHistory).values({
+        userId,
+        workspaceId: null,
+        type: campaignType,
+        name: campaign_name,
+        data: campaign_data,
+        status: 'completed',
+      }).returning();
+
+      return c.json({ 
+        success: true, 
+        saved: true,
+        id: result[0]?.id,
+        message: 'Saved to database'
+      });
+    } else {
+      // For anonymous users, return failure so frontend falls back to localStorage
+      return c.json({ 
+        success: false, 
+        saved: false,
+        id: null,
+        message: 'User not authenticated - please save locally'
+      }, 401);
+    }
+  } catch (error: any) {
+    console.error('Save campaign error:', error);
+    return c.json({ error: 'Failed to save campaign', message: error.message }, 500);
   }
 });
 
@@ -1805,9 +1974,550 @@ app.get('/api/export-csv/:jobId', async (c) => {
   }
 });
 
-const port = parseInt(process.env.PORT || '3001', 10);
+// ============================================
+// DKI Ad Generator Endpoint
+// ============================================
+app.post('/api/generate-dki-ad', async (c) => {
+  // Parse request body outside try block so it's accessible in catch
+  let keywords: string[] = [];
+  let industry = 'General';
+  let businessName = 'Business';
+  let url = '';
+  let location = '';
+  
+  try {
+    const body = await c.req.json();
+    keywords = body.keywords || [];
+    industry = body.industry || 'General';
+    businessName = body.businessName || 'Business';
+    url = body.url || '';
+    location = body.location || '';
+    
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+      return c.json({ error: 'Keywords array is required' }, 400);
+    }
+    
+    if (!businessName) {
+      return c.json({ error: 'Business name is required' }, 400);
+    }
+
+    const mainKeyword = keywords[0] || industry || 'Service';
+    
+    // Use OpenAI to generate DKI ads (prefers AI Integrations if available)
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({ 
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
+    });
+    
+    const prompt = `Generate Google Ads copy with Dynamic Keyword Insertion (DKI) for the following business:
+
+Business: ${businessName}
+Industry: ${industry || 'General'}
+Keywords: ${keywords.join(', ')}
+Location: ${location || 'Not specified'}
+URL: ${url || 'Not specified'}
+
+Generate 3 headlines (max 30 chars each) and 2 descriptions (max 90 chars each).
+Use {KeyWord:DefaultText} format for DKI where appropriate.
+Make them compelling with clear CTAs.
+
+Return ONLY valid JSON in this exact format:
+{
+  "headline1": "string",
+  "headline2": "string", 
+  "headline3": "string",
+  "description1": "string",
+  "description2": "string"
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+
+    const content = completion.choices[0]?.message?.content || '';
+    
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      return c.json(result);
+    }
+    
+    // Fallback if parsing fails
+    return c.json({
+      headline1: `{KeyWord:${mainKeyword}} Experts`,
+      headline2: `Best {KeyWord:${mainKeyword}} Today`,
+      headline3: `Professional ${businessName.substring(0, 15)} Service`,
+      description1: `Need {KeyWord:${mainKeyword}}? We deliver expert, fast service. ${businessName} offers solutions you can trust. Contact us today.`,
+      description2: `Looking for {KeyWord:${mainKeyword}}? We provide quality service with guaranteed satisfaction. Get your free estimate now.`,
+    });
+  } catch (error: any) {
+    console.error('Generate DKI ad error:', error);
+    
+    // Return fallback DKI ad when OpenAI is unavailable
+    const mainKeyword = keywords[0] || industry || 'Service';
+    return c.json({
+      headline1: `{KeyWord:${mainKeyword}} Experts`,
+      headline2: `Best {KeyWord:${mainKeyword}} Today`,
+      headline3: `Professional ${businessName.substring(0, 15)} Service`,
+      description1: `Need {KeyWord:${mainKeyword}}? We deliver expert, fast service. ${businessName} offers solutions you can trust. Contact us today.`,
+      description2: `Looking for {KeyWord:${mainKeyword}}? We provide quality service with guaranteed satisfaction. Get your free estimate now.`,
+      fallback: true,
+    });
+  }
+});
+
+// ============================================
+// Analyses Endpoints (URL analysis storage)
+// ============================================
+app.post('/api/analyses', async (c) => {
+  try {
+    const analysis = await c.req.json();
+    const userId = await getUserIdFromToken(c);
+    
+    // Save analysis to campaign_history with type 'url-analysis'
+    const result = await db.insert(campaignHistory).values({
+      userId: userId || null,
+      workspaceId: null,
+      type: 'url-analysis',
+      name: analysis.domain || analysis.url || 'URL Analysis',
+      data: analysis,
+      status: 'completed',
+    }).returning();
+    
+    console.log('[Analyses] Saved analysis for:', analysis.url || analysis.domain);
+    
+    return c.json({ 
+      success: true, 
+      message: 'Analysis saved',
+      id: result[0]?.id || analysis.id 
+    });
+  } catch (error: any) {
+    console.error('Analyses sync error:', error);
+    return c.json({ error: 'Failed to save analysis', message: error.message }, 500);
+  }
+});
+
+app.get('/api/analyses', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    
+    if (!userId) {
+      return c.json({ success: true, data: [] });
+    }
+
+    // Fetch analyses from campaign_history
+    const results = await db
+      .select()
+      .from(campaignHistory)
+      .where(and(
+        eq(campaignHistory.userId, userId),
+        eq(campaignHistory.type, 'url-analysis')
+      ))
+      .orderBy(desc(campaignHistory.createdAt))
+      .limit(50);
+
+    const analyses = results.map((r: any) => ({
+      id: r.id,
+      ...r.data,
+      timestamp: r.createdAt,
+    }));
+
+    return c.json({ 
+      success: true, 
+      data: analyses 
+    });
+  } catch (error: any) {
+    console.error('Get analyses error:', error);
+    return c.json({ error: 'Failed to get analyses', message: error.message }, 500);
+  }
+});
+
+// ============================================
+// Long-tail Keywords Endpoints
+// ============================================
+app.post('/api/long-tail-keywords/generate', async (c) => {
+  // Parse request body outside try block so it's accessible in catch
+  let seedKeywords: string[] = [];
+  let country = 'US';
+  let device = 'all';
+  
+  try {
+    const body = await c.req.json();
+    seedKeywords = body.seedKeywords || [];
+    country = body.country || 'US';
+    device = body.device || 'all';
+    
+    if (!seedKeywords || !Array.isArray(seedKeywords) || seedKeywords.length === 0) {
+      return c.json({ error: 'Seed keywords array is required' }, 400);
+    }
+
+    // Use OpenAI to generate long-tail keywords (prefers AI Integrations if available)
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({ 
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
+    });
+    
+    const prompt = `Generate comprehensive long-tail keyword variations for the following seed keywords:
+
+Seed Keywords: ${seedKeywords.join(', ')}
+Target Country: ${country || 'US'}
+Device: ${device || 'all'}
+
+Generate 100-150 unique long-tail keywords (4+ words each) that would be good for Google Ads.
+For each seed keyword, create variations using ALL of these patterns:
+- Question phrases: "how to find X", "what is the best X", "where to get X", "how much does X cost", "when to hire X", "why choose X"
+- Location modifiers: "X near me", "X in my area", "local X services", "X nearby today"
+- Intent modifiers: "buy X", "hire X", "get X quote", "find affordable X", "best X services", "cheap X near me", "professional X"
+- Comparison phrases: "X vs Y", "X compared to Y", "X or Y which is better", "X alternative"
+- Benefit phrases: "fast X services", "reliable X company", "trusted X provider", "quality X near me"
+- Cost phrases: "X prices", "X cost estimate", "affordable X rates", "cheap X services"
+- Review phrases: "best rated X", "top X reviews", "X recommendations"
+- Emergency phrases: "emergency X", "24 hour X", "same day X", "urgent X services"
+- Business phrases: "X for small business", "commercial X services", "residential X"
+
+For each keyword, estimate:
+- searchVolume: a number between 100-50000
+- cpc: a number between 0.50-10.00
+- difficulty: "easy", "medium", or "hard"
+
+Return ONLY valid JSON array with 100+ keywords:
+[
+  {"keyword": "string", "source": "ai", "searchVolume": number, "cpc": number, "difficulty": "easy|medium|hard"},
+  ...
+]`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 8000,
+    });
+
+    const content = completion.choices[0]?.message?.content || '';
+    
+    // Parse JSON from response
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const keywords = JSON.parse(jsonMatch[0]);
+      return c.json({ success: true, keywords });
+    }
+    
+    // Fallback with generated keywords
+    const fallbackKeywords = generateComprehensiveFallbackKeywords(seedKeywords);
+    return c.json({ success: true, keywords: fallbackKeywords });
+  } catch (error: any) {
+    console.error('Generate long-tail keywords error:', error);
+    
+    // Return fallback keywords when OpenAI is unavailable
+    const fallbackKeywords = generateComprehensiveFallbackKeywords(seedKeywords);
+    return c.json({ success: true, keywords: fallbackKeywords, fallback: true });
+  }
+});
+
+// Helper function to generate 80-200 comprehensive fallback keywords
+function generateComprehensiveFallbackKeywords(seedKeywords: string[]): Array<{keyword: string; source: string; searchVolume: number; cpc: number; difficulty: string}> {
+  const questionPhrases = ['how to find', 'what is the best', 'where to get', 'how much does', 'when to hire', 'why choose', 'how do I find'];
+  const locationModifiers = ['near me', 'in my area', 'nearby', 'local', 'in my city', 'close to me'];
+  const intentModifiers = ['best', 'top', 'affordable', 'cheap', 'professional', 'quality', 'reliable', 'trusted', 'fast', 'quick'];
+  const actionModifiers = ['buy', 'hire', 'get', 'find', 'book', 'order', 'schedule'];
+  const serviceModifiers = ['services', 'company', 'provider', 'specialist', 'experts', 'solutions'];
+  const benefitPhrases = ['with guarantee', 'with warranty', 'same day', '24 hour', 'emergency', 'urgent'];
+  const businessPhrases = ['for small business', 'for home', 'for office', 'commercial', 'residential'];
+  const costPhrases = ['cost', 'prices', 'rates', 'estimate', 'quote'];
+  
+  const allKeywords: Array<{keyword: string; source: string; searchVolume: number; cpc: number; difficulty: string}> = [];
+  
+  seedKeywords.forEach((seed: string) => {
+    // Question + seed + location (7 * 6 = 42 per seed)
+    questionPhrases.forEach(q => {
+      locationModifiers.slice(0, 3).forEach(loc => {
+        allKeywords.push({
+          keyword: `${q} ${seed} ${loc}`,
+          source: 'fallback',
+          searchVolume: Math.floor(Math.random() * 2000) + 200,
+          cpc: parseFloat((Math.random() * 4 + 1).toFixed(2)),
+          difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)]
+        });
+      });
+    });
+    
+    // Intent + seed + location (10 * 4 = 40 per seed)
+    intentModifiers.forEach(intent => {
+      locationModifiers.slice(0, 4).forEach(loc => {
+        allKeywords.push({
+          keyword: `${intent} ${seed} ${loc}`,
+          source: 'fallback',
+          searchVolume: Math.floor(Math.random() * 1500) + 300,
+          cpc: parseFloat((Math.random() * 3.5 + 0.8).toFixed(2)),
+          difficulty: ['easy', 'medium'][Math.floor(Math.random() * 2)]
+        });
+      });
+    });
+    
+    // Action + seed + service (7 * 3 = 21 per seed)
+    actionModifiers.forEach(action => {
+      serviceModifiers.slice(0, 3).forEach(svc => {
+        allKeywords.push({
+          keyword: `${action} ${seed} ${svc} near me`,
+          source: 'fallback',
+          searchVolume: Math.floor(Math.random() * 1200) + 150,
+          cpc: parseFloat((Math.random() * 3 + 1.2).toFixed(2)),
+          difficulty: ['easy', 'medium'][Math.floor(Math.random() * 2)]
+        });
+      });
+    });
+    
+    // Seed + benefit + location (6 * 3 = 18 per seed)
+    benefitPhrases.forEach(benefit => {
+      allKeywords.push({
+        keyword: `${seed} ${benefit} near me`,
+        source: 'fallback',
+        searchVolume: Math.floor(Math.random() * 800) + 100,
+        cpc: parseFloat((Math.random() * 4 + 1.5).toFixed(2)),
+        difficulty: 'medium'
+      });
+      allKeywords.push({
+        keyword: `${benefit} ${seed} services in my area`,
+        source: 'fallback',
+        searchVolume: Math.floor(Math.random() * 600) + 100,
+        cpc: parseFloat((Math.random() * 3.5 + 1).toFixed(2)),
+        difficulty: 'easy'
+      });
+    });
+    
+    // Seed + business phrases (5 per seed)
+    businessPhrases.forEach(biz => {
+      allKeywords.push({
+        keyword: `${seed} ${biz} near me`,
+        source: 'fallback',
+        searchVolume: Math.floor(Math.random() * 700) + 200,
+        cpc: parseFloat((Math.random() * 2.5 + 1).toFixed(2)),
+        difficulty: 'easy'
+      });
+    });
+    
+    // Seed + cost phrases (5 per seed)
+    costPhrases.forEach(cost => {
+      allKeywords.push({
+        keyword: `${seed} ${cost} in my area`,
+        source: 'fallback',
+        searchVolume: Math.floor(Math.random() * 1100) + 300,
+        cpc: parseFloat((Math.random() * 2 + 0.8).toFixed(2)),
+        difficulty: 'easy'
+      });
+    });
+  });
+  
+  // Deduplicate by keyword text and limit to 200
+  const seen = new Set<string>();
+  const uniqueKeywords = allKeywords.filter(kw => {
+    if (seen.has(kw.keyword.toLowerCase())) return false;
+    seen.add(kw.keyword.toLowerCase());
+    return true;
+  });
+  
+  // Return 80-200 keywords
+  return uniqueKeywords.slice(0, 200);
+}
+
+app.get('/api/long-tail-keywords/lists', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // Fetch saved keyword lists from campaign_history with type 'long-tail-keywords'
+    const results = await db
+      .select()
+      .from(campaignHistory)
+      .where(and(
+        eq(campaignHistory.userId, userId),
+        eq(campaignHistory.type, 'long-tail-keywords')
+      ))
+      .orderBy(desc(campaignHistory.createdAt));
+
+    const lists = results.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      keywords: r.data?.keywords || [],
+      seedKeywords: r.data?.seedKeywords || '',
+      createdAt: r.createdAt,
+    }));
+
+    return c.json({ success: true, lists });
+  } catch (error: any) {
+    console.error('Get keyword lists error:', error);
+    return c.json({ error: 'Failed to get keyword lists', message: error.message }, 500);
+  }
+});
+
+app.post('/api/long-tail-keywords/lists', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const { name, keywords, seedKeywords, url } = await c.req.json();
+    
+    if (!name || !keywords || keywords.length === 0) {
+      return c.json({ error: 'Name and keywords are required' }, 400);
+    }
+
+    // Save to campaign_history with type 'long-tail-keywords'
+    const result = await db.insert(campaignHistory).values({
+      userId,
+      workspaceId: null,
+      type: 'long-tail-keywords',
+      name,
+      data: { keywords, seedKeywords, url },
+      status: 'completed',
+    }).returning();
+
+    return c.json({ 
+      success: true, 
+      id: result[0]?.id,
+      message: 'Keyword list saved successfully'
+    });
+  } catch (error: any) {
+    console.error('Save keyword list error:', error);
+    return c.json({ error: 'Failed to save keyword list', message: error.message }, 500);
+  }
+});
+
+// ============================================
+// Blog Endpoints
+// ============================================
+app.get('/api/blogs', async (c) => {
+  try {
+    // Fetch blogs from campaign_history (public endpoint for published blogs)
+    const results = await db
+      .select()
+      .from(campaignHistory)
+      .where(eq(campaignHistory.type, 'blog'))
+      .orderBy(desc(campaignHistory.createdAt))
+      .limit(50);
+
+    const blogs = results.map((r: any) => ({
+      id: r.id,
+      title: r.name,
+      ...r.data,
+      createdAt: r.createdAt,
+    }));
+
+    return c.json({ 
+      success: true, 
+      data: blogs 
+    });
+  } catch (error: any) {
+    console.error('Get blogs error:', error);
+    return c.json({ error: 'Failed to get blogs', message: error.message }, 500);
+  }
+});
+
+app.post('/api/admin/blogs', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const blogData = await c.req.json();
+    
+    // Save blog to campaign_history with type 'blog'
+    const result = await db.insert(campaignHistory).values({
+      userId,
+      workspaceId: null,
+      type: 'blog',
+      name: blogData.title || 'Untitled Blog',
+      data: blogData,
+      status: 'completed',
+    }).returning();
+
+    return c.json({ 
+      success: true, 
+      id: result[0]?.id,
+      message: 'Blog saved successfully'
+    });
+  } catch (error: any) {
+    console.error('Save blog error:', error);
+    return c.json({ error: 'Failed to save blog', message: error.message }, 500);
+  }
+});
+
+// DELETE /api/long-tail-keywords/lists/:id - Delete a saved keyword list
+app.delete('/api/long-tail-keywords/lists/:id', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const listId = c.req.param('id');
+    
+    await db
+      .delete(campaignHistory)
+      .where(and(
+        eq(campaignHistory.id, listId),
+        eq(campaignHistory.userId, userId),
+        eq(campaignHistory.type, 'long-tail-keywords')
+      ));
+
+    return c.json({ 
+      success: true, 
+      message: 'Keyword list deleted successfully'
+    });
+  } catch (error: any) {
+    console.error('Delete keyword list error:', error);
+    return c.json({ error: 'Failed to delete keyword list', message: error.message }, 500);
+  }
+});
+
+// Serve static files in production
+const isProduction = process.env.NODE_ENV === 'production';
+const buildPath = path.resolve(process.cwd(), 'build');
+
+if (isProduction && fs.existsSync(buildPath)) {
+  console.log('Production mode: Serving static files from build directory');
+  
+  // Serve static assets
+  app.use('/assets/*', serveStatic({ root: './build' }));
+  
+  // Serve other static files (favicon, etc.)
+  app.use('/*', serveStatic({ root: './build' }));
+  
+  // SPA fallback - serve index.html for all non-API routes
+  app.get('*', async (c) => {
+    const requestPath = c.req.path;
+    // Don't serve index.html for API routes
+    if (requestPath.startsWith('/api')) {
+      return c.json({ error: 'Not found' }, 404);
+    }
+    
+    const indexPath = path.join(buildPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      const html = fs.readFileSync(indexPath, 'utf-8');
+      return c.html(html);
+    }
+    return c.json({ error: 'Not found' }, 404);
+  });
+}
+
+const port = parseInt(process.env.PORT || (isProduction ? '5000' : '3001'), 10);
 
 console.log(`Starting Admin API Server on port ${port}...`);
+console.log(`Environment: ${isProduction ? 'production' : 'development'}`);
 
 serve({
   fetch: app.fetch,
