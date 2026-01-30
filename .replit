@@ -96,6 +96,7 @@ VITE_NHOST_SUBDOMAIN = "vumnjkoyxkistmlzotuk"
 VITE_NHOST_REGION = "eu-central-1"
 NHOST_SUBDOMAIN = "vumnjkoyxkistmlzotuk"
 NHOST_REGION = "eu-central-1"
+NHOST_DATABASE_URL = "postgres://postgres:JMFSvSBe4Nv51bCb@vumnjkoyxkistmlzotuk.db.eu-central-1.nhost.run:5432/vumnjkoyxkistmlzotuk"
 
 [userenv.production]
 DOMAIN = "https://adiology.io"

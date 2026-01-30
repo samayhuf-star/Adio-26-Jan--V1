@@ -70,8 +70,15 @@ export async function signUpWithEmail(
       return { data: null, error: { message: authError.message } };
     }
 
+    // If no session, email verification is likely required
     if (!session?.user) {
-      return { data: null, error: { message: 'Failed to create user account' } };
+      // Return success with a special flag indicating email verification is needed
+      return { 
+        data: null, 
+        error: null,
+        needsEmailVerification: true,
+        message: 'Please check your email to verify your account before signing in.'
+      } as any;
     }
 
     // Create user profile using GraphQL

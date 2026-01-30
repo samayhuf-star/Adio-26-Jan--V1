@@ -1,18 +1,19 @@
 import { defineConfig } from "drizzle-kit";
 
 function getDatabaseUrl(): string {
-  // PostgreSQL connection - Supabase client/auth removed
+  // Primary: Use Replit DATABASE_URL (automatically provisioned)
+  const databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl) {
+    return databaseUrl;
+  }
+  
+  // Fallback: Supabase (legacy support)
   const supabasePassword = process.env.SUPABASE_DB_PASSWORD;
   if (supabasePassword) {
     return `postgresql://postgres.kkdnnrwhzofttzajnwlj:${supabasePassword}@aws-1-us-east-1.pooler.supabase.com:5432/postgres`;
   }
   
-  const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
-  if (databaseUrl) {
-    return databaseUrl;
-  }
-  
-  throw new Error("No database connection configured. Please set SUPABASE_DB_PASSWORD or DATABASE_URL");
+  throw new Error("No database connection configured. Please set DATABASE_URL");
 }
 
 export default defineConfig({

@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { signUpWithEmail, signInWithEmail, resetPassword, isAuthenticatedAsync } from '../utils/auth';
+import { signUpWithEmail, signInWithEmail, resetPassword, isAuthenticatedAsync, resendVerificationEmail } from '../utils/auth';
 import { notifications } from '../utils/notifications';
 
 interface AuthProps {
@@ -29,6 +29,11 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
   const [error, setError] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [showSignupSuccess, setShowSignupSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+  const MAX_RESENDS = 3;
+  const COOLDOWN_SECONDS = 60;
   
   // Signup is fully enabled
   const SIGNUP_DISABLED = false;
@@ -38,6 +43,37 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
     setIsLogin(initialMode === 'login');
     setError(''); // Clear any errors when mode changes
   }, [initialMode]);
+
+  // Countdown timer for resend cooldown
+  React.useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Handle resend verification email
+  const handleResendVerification = async () => {
+    if (resendCount >= MAX_RESENDS || resendCooldown > 0 || isResending) return;
+    
+    setIsResending(true);
+    try {
+      const result = await resendVerificationEmail(signupEmail);
+      if (result.error) {
+        notifications.error(result.error.message || 'Failed to resend email');
+      } else {
+        setResendCount(prev => prev + 1);
+        setResendCooldown(COOLDOWN_SECONDS);
+        notifications.success('Verification email sent!', {
+          description: `Check your inbox at ${signupEmail}`,
+        });
+      }
+    } catch (err: any) {
+      notifications.error(err?.message || 'Failed to resend verification email');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,7 +220,21 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
 
         // Create actual PocketBase account
         try {
-          const result = await signUpWithEmail(trimmedEmail, trimmedPassword, confirmPassword, trimmedName);
+          const result = await signUpWithEmail(trimmedEmail, trimmedPassword, confirmPassword, trimmedName) as any;
+          
+          // Handle email verification required case
+          if (result.needsEmailVerification) {
+            setSignupEmail(trimmedEmail);
+            setShowSignupSuccess(true);
+            setIsLoading(false);
+            
+            notifications.success('Account created successfully!', {
+              title: 'Check Your Email',
+              description: result.message || 'Please verify your email address to activate your account.',
+            });
+            return;
+          }
+          
           if (result.error) {
             let errorMessage = result.error.message || 'Signup failed. Please try again.';
             
@@ -367,21 +417,55 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
                   <p className="text-base font-semibold text-slate-900 break-all">{signupEmail}</p>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setShowSignupSuccess(false);
-                    setIsLogin(true);
-                    setEmail('');
-                    setPassword('');
-                    setConfirmPassword('');
-                    setName('');
-                    setSignupEmail('');
-                    setError('');
-                  }}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 h-12 text-base font-semibold rounded-lg transition-all"
-                >
-                  Back to Login
-                </button>
+                <div className="space-y-3">
+                  {resendCount < MAX_RESENDS ? (
+                    <button
+                      onClick={handleResendVerification}
+                      disabled={resendCooldown > 0 || isResending}
+                      className={`w-full h-11 text-sm font-medium rounded-lg transition-all border ${
+                        resendCooldown > 0 || isResending
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                          : 'bg-white text-indigo-600 border-indigo-300 hover:bg-indigo-50 hover:border-indigo-400'
+                      }`}
+                    >
+                      {isResending ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Sending...
+                        </span>
+                      ) : resendCooldown > 0 ? (
+                        `Resend in ${resendCooldown}s`
+                      ) : (
+                        `Resend verification email (${MAX_RESENDS - resendCount} left)`
+                      )}
+                    </button>
+                  ) : (
+                    <p className="text-sm text-slate-500 text-center py-2">
+                      Maximum resend attempts reached. Please check your spam folder.
+                    </p>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setShowSignupSuccess(false);
+                      setIsLogin(true);
+                      setEmail('');
+                      setPassword('');
+                      setConfirmPassword('');
+                      setName('');
+                      setSignupEmail('');
+                      setError('');
+                      setResendCount(0);
+                      setResendCooldown(0);
+                    }}
+                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 h-12 text-base font-semibold rounded-lg transition-all"
+                  >
+                    Back to Login
+                  </button>
+                </div>
 
                 <p className="text-xs text-slate-500 italic">
                   Welcome to Adiology!
