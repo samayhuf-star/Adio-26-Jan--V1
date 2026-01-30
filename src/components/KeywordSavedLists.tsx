@@ -8,7 +8,6 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
-import { ProjectMultiSelect, ProjectBadges } from './ProjectMultiSelect';
 
 interface Project {
   id: string;
@@ -357,9 +356,7 @@ export const KeywordSavedLists = () => {
                             <p className="text-sm text-slate-500 mb-2">
                               Created: {date.toLocaleDateString()} at {date.toLocaleTimeString()}
                             </p>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ProjectBadges projects={item.projects || []} />
-                            </div>
+
                             {keywords.length > 0 && (
                               <p className="text-xs text-slate-400 line-clamp-2">
                                 {keywords.slice(0, 5).join(', ')}
@@ -368,12 +365,7 @@ export const KeywordSavedLists = () => {
                             )}
                           </div>
                           <div className="flex items-center gap-2 ml-4">
-                            <ProjectMultiSelect
-                              itemType="keyword-list"
-                              itemId={item.id}
-                              assignedProjects={item.projects || []}
-                              onSave={(projects) => updateItemProjects(item.id, projects, item.type)}
-                            />
+
                             <Button
                               variant="outline"
                               size="sm"
@@ -456,9 +448,7 @@ export const KeywordSavedLists = () => {
                             <p className="text-sm text-slate-500 mb-2">
                               Created: {date.toLocaleDateString()} at {date.toLocaleTimeString()}
                             </p>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ProjectBadges projects={item.projects || []} />
-                            </div>
+
                             {keywords.length > 0 && (
                               <p className="text-xs text-slate-400 line-clamp-2">
                                 {keywords.slice(0, 5).join(', ')}
@@ -467,12 +457,7 @@ export const KeywordSavedLists = () => {
                             )}
                           </div>
                           <div className="flex items-center gap-2 ml-4">
-                            <ProjectMultiSelect
-                              itemType="keyword-list"
-                              itemId={item.id}
-                              assignedProjects={item.projects || []}
-                              onSave={(projects) => updateItemProjects(item.id, projects, item.type)}
-                            />
+
                             <Button
                               variant="outline"
                               size="sm"
@@ -556,9 +541,7 @@ export const KeywordSavedLists = () => {
                             <p className="text-sm text-slate-500 mb-2">
                               Created: {date.toLocaleDateString()} at {date.toLocaleTimeString()}
                             </p>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ProjectBadges projects={item.projects || []} />
-                            </div>
+
                             {keywordList.length > 0 && (
                               <p className="text-xs text-slate-400 line-clamp-2">
                                 {keywordList.slice(0, 5).join(', ')}
@@ -567,12 +550,7 @@ export const KeywordSavedLists = () => {
                             )}
                           </div>
                           <div className="flex items-center gap-2 ml-4">
-                            <ProjectMultiSelect
-                              itemType="keyword-list"
-                              itemId={item.id}
-                              assignedProjects={item.projects || []}
-                              onSave={(projects) => updateItemProjects(item.id, projects, item.type)}
-                            />
+
                             <Button
                               variant="outline"
                               size="sm"

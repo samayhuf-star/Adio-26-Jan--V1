@@ -24,7 +24,6 @@ import { mapGoalToIntent } from '../utils/campaignIntelligence/intentClassifier'
 import { KeywordFilters, KeywordFiltersState, DEFAULT_FILTERS, getDifficultyBadge, formatSearchVolume, formatCPC } from './KeywordFilters';
 import { TerminalProgressConsole, KEYWORD_PLANNER_MESSAGES } from './TerminalProgressConsole';
 import { TerminalResultsConsole, ResultStat } from './TerminalResultsConsole';
-import { ProjectTagSelector } from './ProjectTagSelector';
 
 // Inline vertical detection (same logic as Campaign Builder)
 function detectVertical(url: string, pageText: string): string {
@@ -1489,14 +1488,6 @@ export const KeywordPlanner = ({ initialData }: { initialData?: any }) => {
                                                         <p className="text-xs text-gray-500">
                                                             Created {new Date(list.createdAt).toLocaleDateString()}
                                                         </p>
-                                                        <div className="mt-2">
-                                                            <ProjectTagSelector
-                                                                itemType="keyword-planner"
-                                                                itemId={list.id}
-                                                                itemName={list.name}
-                                                                size="sm"
-                                                            />
-                                                        </div>
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <Button

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Clock, CheckCircle, AlertCircle, RefreshCw, Plus, FolderOpen, Trash2, Eye, Link2, Globe, MapPin, Calendar, Image as ImageIcon, ExternalLink } from 'lucide-react';
 import { TerminalCard, TerminalLine } from './ui/terminal-card';
-import { ProjectTagSelector } from './ProjectTagSelector';
 
 interface GoogleAdsSearchProps {
   user: any;
@@ -458,15 +457,6 @@ export function GoogleAdsSearch({ user }: GoogleAdsSearchProps) {
                       <p className="text-xs text-gray-400 mt-1">
                         {new Date(req.created_at).toLocaleString()}
                       </p>
-                      <div className="mt-2">
-                        <ProjectTagSelector
-                          itemType="ad-search"
-                          itemId={String(req.id)}
-                          itemName={req.name || req.keywords.join(', ')}
-                          itemMetadata={{ keywords: req.keywords, status: req.status }}
-                          size="sm"
-                        />
-                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`px-3 py-1 text-xs font-medium rounded-full ${

@@ -8,7 +8,6 @@ import {
   Edit, Download, Trash2, Copy, Rocket, Globe, ExternalLink,
   Eye, MoreVertical, Loader2, CheckCircle, Clock, AlertCircle
 } from 'lucide-react';
-import { ProjectTagSelector } from './ProjectTagSelector';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -222,15 +221,6 @@ export const SavedSites: React.FC = () => {
           <p className="text-xs text-slate-400">
             Updated: {new Date(site.updated_at).toLocaleDateString()}
           </p>
-          <div className="mt-2">
-            <ProjectTagSelector
-              itemType="saved-site"
-              itemId={site.id}
-              itemName={site.title}
-              itemMetadata={{ slug: site.slug, status: site.status }}
-              size="sm"
-            />
-          </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

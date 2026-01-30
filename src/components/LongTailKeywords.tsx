@@ -11,7 +11,6 @@ import { Checkbox } from './ui/checkbox';
 import { notifications } from '../utils/notifications';
 import { KeywordFilters, KeywordFiltersState, DEFAULT_FILTERS, getDifficultyBadge, formatSearchVolume, formatCPC } from './KeywordFilters';
 import { historyService } from '../utils/historyService';
-import { ProjectTagSelector } from './ProjectTagSelector';
 
 interface KeywordResult {
   keyword: string;
@@ -817,15 +816,6 @@ export function LongTailKeywords() {
                             {list.seedKeywords.split('\n').length > 3 && '...'}
                           </p>
                         )}
-                        <div className="mt-2">
-                          <ProjectTagSelector
-                            itemType="long-tail-keywords"
-                            itemId={list.id}
-                            itemName={list.name}
-                            itemMetadata={{ keywordCount: list.keywords?.length || 0 }}
-                            size="sm"
-                          />
-                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
