@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
 import { KeywordFilters, KeywordFiltersState, DEFAULT_FILTERS } from './KeywordFilters';
-import { ProjectTagSelector } from './ProjectTagSelector';
 import {
     NEGATIVE_KEYWORD_CATEGORIES,
     deduplicateKeywords,
@@ -1019,15 +1018,6 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                                     {item.data.generatedKeywords.length} keywords
                                                                 </Badge>
                                                             )}
-                                                        </div>
-                                                        <div className="mt-2">
-                                                            <ProjectTagSelector
-                                                                itemType="negative-keywords"
-                                                                itemId={item.id}
-                                                                itemName={item.name}
-                                                                itemMetadata={{ keywordCount: item.data?.generatedKeywords?.length || 0 }}
-                                                                size="sm"
-                                                            />
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2">

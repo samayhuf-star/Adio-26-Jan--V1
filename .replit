@@ -1,4 +1,4 @@
-modules = ["web", "nodejs-20", "python-3.11", "postgresql-16"]
+modules = ["web", "python-3.11", "nodejs-20", "postgresql-16"]
 [agent]
 expertMode = true
 integrations = [
@@ -92,6 +92,10 @@ DISCOURSE_API_KEY = "6cc5302765f2b7e91b927672bfe6b62ece69e09f826f3f4c909cc48dedf
 VITE_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYWRpb2xvZ3kuaW8k"
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYWRpb2xvZ3kuaW8k"
 SUPABASE_DB_PASSWORD = "fJGSDy9SpYIkchu1"
+VITE_NHOST_SUBDOMAIN = "vumnjkoyxkistmlzotuk"
+VITE_NHOST_REGION = "eu-central-1"
+NHOST_SUBDOMAIN = "vumnjkoyxkistmlzotuk"
+NHOST_REGION = "eu-central-1"
 
 [userenv.production]
 DOMAIN = "https://adiology.io"

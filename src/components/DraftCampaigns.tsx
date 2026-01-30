@@ -36,17 +36,9 @@ import {
 } from './ui/alert-dialog';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
-import { ProjectMultiSelect, ProjectBadges } from './ProjectMultiSelect';
-import { LinkProjectDialog } from './LinkProjectDialog';
 
 interface DraftCampaignsProps {
   onLoadCampaign: (data: any, mode: 'resume' | 'edit') => void;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  color: string;
 }
 
 interface CampaignItem {
@@ -57,7 +49,6 @@ interface CampaignItem {
   status: 'draft' | 'completed' | 'in_progress';
   data: any;
   type: string;
-  projects?: Project[];
 }
 
 export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
@@ -74,29 +65,6 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
     loadCampaigns();
   }, []);
 
-  const fetchCampaignProjects = async (campaignId: string): Promise<Project[]> => {
-    try {
-      const token = await getToken();
-      const response = await fetch(`/api/item-projects/campaign/${campaignId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        return data.data || [];
-      }
-      return [];
-    } catch (err) {
-      console.error('Error fetching campaign projects:', err);
-      return [];
-    }
-  };
-
-  const updateCampaignProjects = (campaignId: string, projects: Project[]) => {
-    setCampaigns(prev => prev.map(c => 
-      c.id === campaignId ? { ...c, projects } : c
-    ));
-  };
-
   const loadCampaigns = async () => {
     setLoading(true);
     try {
@@ -105,7 +73,9 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
         .filter(item => 
           item.type === 'campaign' || 
           item.type === 'campaign-preset' ||
-          item.type === 'one-click-campaign'
+          item.type === 'campaign-builder' ||
+          item.type === 'one-click-campaign' ||
+          item.type === 'one-click-builder'
         )
         .map(item => ({
           id: item.id,
@@ -114,20 +84,11 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
           lastModified: item.lastModified,
           status: (item.status || 'completed') as 'draft' | 'completed' | 'in_progress',
           data: item.data,
-          type: item.type,
-          projects: [] as Project[]
+          type: item.type
         }))
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       
       setCampaigns(campaignItems);
-      
-      for (const campaign of campaignItems.slice(0, 20)) {
-        fetchCampaignProjects(campaign.id).then(projects => {
-          if (projects.length > 0) {
-            updateCampaignProjects(campaign.id, projects);
-          }
-        });
-      }
     } catch (error) {
       console.error('Failed to load campaigns:', error);
       notifications.error('Failed to load campaigns');
@@ -389,7 +350,6 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
                     <TableHead className="text-gray-600 font-semibold">Date & Time</TableHead>
                     <TableHead className="text-gray-600 font-semibold">Builder</TableHead>
                     <TableHead className="text-gray-600 font-semibold">Status</TableHead>
-                    <TableHead className="text-gray-600 font-semibold">Projects</TableHead>
                     <TableHead className="text-right text-gray-600 font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -441,17 +401,6 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
                         <TableCell>
                           {getStatusBadge(campaign.status)}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <ProjectBadges projects={campaign.projects || []} />
-                            <ProjectMultiSelect
-                              itemType="campaign"
-                              itemId={campaign.id}
-                              assignedProjects={campaign.projects || []}
-                              onSave={(projects) => updateCampaignProjects(campaign.id, projects)}
-                            />
-                          </div>
-                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             {isDraft && (
@@ -483,25 +432,6 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
                             >
                               <Download className="w-4 h-4" />
                             </Button>
-                            <LinkProjectDialog
-                              itemType="campaign"
-                              itemId={campaign.id}
-                              itemName={campaign.name}
-                              itemMetadata={{
-                                structure: campaign.data?.selectedStructure || campaign.data?.structure,
-                                keywordCount: campaign.data?.selectedKeywords?.length || campaign.data?.keywords?.length || 0,
-                                adCount: campaign.data?.ads?.length || 0,
-                                targetCountry: campaign.data?.targetCountry,
-                                builderType: getBuilderType(campaign)
-                              }}
-                              variant="icon"
-                              triggerClassName="h-8 w-8"
-                              onLinked={(projectId, projectName) => {
-                                notifications.success(`Campaign "${campaign.name}" added to "${projectName}"`, {
-                                  title: 'Added to Project'
-                                });
-                              }}
-                            />
                             <Button
                               variant="ghost"
                               size="icon"

@@ -8,13 +8,6 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
-import { ProjectMultiSelect, ProjectBadges } from './ProjectMultiSelect';
-
-interface Project {
-  id: string;
-  name: string;
-  color: string;
-}
 
 interface HistoryItem {
   id: string;
@@ -23,7 +16,6 @@ interface HistoryItem {
   data: any;
   timestamp: string;
   status?: string;
-  projects?: Project[];
 }
 
 export const KeywordSavedLists = () => {
@@ -42,55 +34,15 @@ export const KeywordSavedLists = () => {
     loadHistory();
   }, []);
 
-  const fetchItemProjects = async (itemId: string): Promise<Project[]> => {
-    try {
-      const token = await getToken();
-      const response = await fetch(`/api/item-projects/keyword-list/${itemId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        return data.data || [];
-      }
-      return [];
-    } catch (err) {
-      console.error('Error fetching item projects:', err);
-      return [];
-    }
-  };
-
-  const updateItemProjects = (itemId: string, projects: Project[], type: string) => {
-    const updateFn = (items: HistoryItem[]) => 
-      items.map(item => item.id === itemId ? { ...item, projects } : item);
-    
-    if (type === 'keyword-planner') {
-      setPlannerHistory(updateFn);
-    } else if (type === 'keyword-mixer') {
-      setMixerHistory(updateFn);
-    } else if (type === 'negative-keywords') {
-      setNegativeHistory(updateFn);
-    }
-  };
-
-  const loadProjectsForItems = (items: HistoryItem[], type: string) => {
-    for (const item of items.slice(0, 20)) {
-      fetchItemProjects(item.id).then(projects => {
-        if (projects.length > 0) {
-          updateItemProjects(item.id, projects, type);
-        }
-      });
-    }
-  };
-
   const loadHistory = async () => {
     try {
       setLoading(true);
       const allHistory = await historyService.getAll();
       
       // Filter by type
-      const planner = allHistory.filter((item: any) => item.type === 'keyword-planner').map((item: any) => ({ ...item, projects: [] as Project[] }));
-      const mixer = allHistory.filter((item: any) => item.type === 'keyword-mixer').map((item: any) => ({ ...item, projects: [] as Project[] }));
-      const negative = allHistory.filter((item: any) => item.type === 'negative-keywords').map((item: any) => ({ ...item, projects: [] as Project[] }));
+      const planner = allHistory.filter((item: any) => item.type === 'keyword-planner');
+      const mixer = allHistory.filter((item: any) => item.type === 'keyword-mixer');
+      const negative = allHistory.filter((item: any) => item.type === 'negative-keywords');
       
       // Sort by timestamp (newest first)
       const sortByDate = (a: any, b: any) => 
@@ -103,10 +55,6 @@ export const KeywordSavedLists = () => {
       setPlannerHistory(sortedPlanner);
       setMixerHistory(sortedMixer);
       setNegativeHistory(sortedNegative);
-      
-      loadProjectsForItems(sortedPlanner, 'keyword-planner');
-      loadProjectsForItems(sortedMixer, 'keyword-mixer');
-      loadProjectsForItems(sortedNegative, 'negative-keywords');
     } catch (error) {
       console.error('Failed to load history:', error);
       notifications.error('Failed to load saved lists', {
@@ -357,9 +305,7 @@ export const KeywordSavedLists = () => {
                             <p className="text-sm text-slate-500 mb-2">
                               Created: {date.toLocaleDateString()} at {date.toLocaleTimeString()}
                             </p>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ProjectBadges projects={item.projects || []} />
-                            </div>
+
                             {keywords.length > 0 && (
                               <p className="text-xs text-slate-400 line-clamp-2">
                                 {keywords.slice(0, 5).join(', ')}
@@ -368,12 +314,7 @@ export const KeywordSavedLists = () => {
                             )}
                           </div>
                           <div className="flex items-center gap-2 ml-4">
-                            <ProjectMultiSelect
-                              itemType="keyword-list"
-                              itemId={item.id}
-                              assignedProjects={item.projects || []}
-                              onSave={(projects) => updateItemProjects(item.id, projects, item.type)}
-                            />
+
                             <Button
                               variant="outline"
                               size="sm"
@@ -456,9 +397,7 @@ export const KeywordSavedLists = () => {
                             <p className="text-sm text-slate-500 mb-2">
                               Created: {date.toLocaleDateString()} at {date.toLocaleTimeString()}
                             </p>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ProjectBadges projects={item.projects || []} />
-                            </div>
+
                             {keywords.length > 0 && (
                               <p className="text-xs text-slate-400 line-clamp-2">
                                 {keywords.slice(0, 5).join(', ')}
@@ -467,12 +406,7 @@ export const KeywordSavedLists = () => {
                             )}
                           </div>
                           <div className="flex items-center gap-2 ml-4">
-                            <ProjectMultiSelect
-                              itemType="keyword-list"
-                              itemId={item.id}
-                              assignedProjects={item.projects || []}
-                              onSave={(projects) => updateItemProjects(item.id, projects, item.type)}
-                            />
+
                             <Button
                               variant="outline"
                               size="sm"
@@ -556,9 +490,7 @@ export const KeywordSavedLists = () => {
                             <p className="text-sm text-slate-500 mb-2">
                               Created: {date.toLocaleDateString()} at {date.toLocaleTimeString()}
                             </p>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ProjectBadges projects={item.projects || []} />
-                            </div>
+
                             {keywordList.length > 0 && (
                               <p className="text-xs text-slate-400 line-clamp-2">
                                 {keywordList.slice(0, 5).join(', ')}
@@ -567,12 +499,7 @@ export const KeywordSavedLists = () => {
                             )}
                           </div>
                           <div className="flex items-center gap-2 ml-4">
-                            <ProjectMultiSelect
-                              itemType="keyword-list"
-                              itemId={item.id}
-                              assignedProjects={item.projects || []}
-                              onSave={(projects) => updateItemProjects(item.id, projects, item.type)}
-                            />
+
                             <Button
                               variant="outline"
                               size="sm"

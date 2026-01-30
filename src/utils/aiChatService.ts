@@ -126,22 +126,6 @@ class AIChatService {
         lastUpdated: new Date().toISOString()
       },
       {
-        id: 'team-collaboration',
-        title: 'Team Management and Collaboration',
-        content: `Collaborate with your team:
-        - Invite team members with different roles
-        - Set permissions and access levels
-        - Share campaigns and projects
-        - Comment and review system
-        - Activity tracking
-        
-        Manage your team from the Teams section.`,
-        category: 'teams',
-        tags: ['team', 'collaboration', 'permissions', 'sharing'],
-        url: '#teams',
-        lastUpdated: new Date().toISOString()
-      },
-      {
         id: 'api-integrations',
         title: 'API and Integrations',
         content: `Connect Adiology with your existing tools:

@@ -34,9 +34,12 @@ const nhostClient = nhost;
 
 // Get the correct redirect URL for email verification
 function getRedirectUrl(): string {
-  // Always use production domain for email verification links
-  // This ensures the URL is whitelisted in Nhost and works consistently
-  return 'https://www.adiology.online/verify-email';
+  // Use current origin for redirect - user must add this to Nhost allowed URLs
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/verify-email`;
+  }
+  // Fallback to production domain
+  return 'https://adiology.io/verify-email';
 }
 
 export async function signUpWithEmail(
@@ -658,10 +661,11 @@ if (typeof window !== 'undefined') {
   try {
     // Listen for auth state changes
     nhostClient.auth.onAuthStateChanged((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
+      const eventType = event as string;
+      if (eventType === 'SIGNED_IN' && session?.user) {
         // Update localStorage when user signs in
         getCurrentUserAsync().catch(console.error);
-      } else if (event === 'SIGNED_OUT') {
+      } else if (eventType === 'SIGNED_OUT') {
         // Clear localStorage when user signs out
         localStorage.removeItem('user');
         localStorage.removeItem('auth_token');
@@ -674,7 +678,7 @@ if (typeof window !== 'undefined') {
           }
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
-      } else if (event === 'TOKEN_CHANGED' && session) {
+      } else if (eventType === 'TOKEN_CHANGED' && session) {
         // Update token on refresh
         localStorage.setItem('auth_token', session.accessToken);
       }

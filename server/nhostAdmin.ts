@@ -212,8 +212,12 @@ class NhostAdminClient {
           id
           email
           displayName
+          avatarUrl
+          disabled
+          emailVerified
           metadata
           createdAt
+          lastSeen
         }
       }
     `;
@@ -225,6 +229,118 @@ class NhostAdminClient {
     }
 
     return result.data?.users || [];
+  }
+
+  /**
+   * Get total user count
+   */
+  async getUserCount(): Promise<number> {
+    const query = `
+      query GetUserCount {
+        users_aggregate {
+          aggregate {
+            count
+          }
+        }
+      }
+    `;
+
+    const result = await this.query(query);
+    
+    if (result.errors) {
+      return 0;
+    }
+
+    return result.data?.users_aggregate?.aggregate?.count || 0;
+  }
+
+  /**
+   * Get users with filtering
+   */
+  async getUsersWithFilter(
+    limit: number = 50, 
+    offset: number = 0, 
+    search?: string,
+    disabled?: boolean
+  ): Promise<{ users: any[]; total: number }> {
+    let whereClause = '';
+    const variables: any = { limit, offset };
+
+    if (search) {
+      variables.search = `%${search}%`;
+      whereClause = ', where: { _or: [{ email: { _ilike: $search } }, { displayName: { _ilike: $search } }] }';
+    }
+
+    if (disabled !== undefined) {
+      variables.disabled = disabled;
+      whereClause = whereClause 
+        ? whereClause.replace('}', `, disabled: { _eq: $disabled } }`)
+        : `, where: { disabled: { _eq: $disabled } }`;
+    }
+
+    const query = `
+      query GetUsersWithFilter($limit: Int!, $offset: Int!${search ? ', $search: String!' : ''}${disabled !== undefined ? ', $disabled: Boolean!' : ''}) {
+        users(limit: $limit, offset: $offset, order_by: { createdAt: desc }${whereClause}) {
+          id
+          email
+          displayName
+          avatarUrl
+          disabled
+          emailVerified
+          metadata
+          createdAt
+          lastSeen
+        }
+        users_aggregate${whereClause ? `(${whereClause.replace(', ', '')})` : ''} {
+          aggregate {
+            count
+          }
+        }
+      }
+    `;
+
+    const result = await this.query(query, variables);
+    
+    if (result.errors) {
+      return { users: [], total: 0 };
+    }
+
+    return {
+      users: result.data?.users || [],
+      total: result.data?.users_aggregate?.aggregate?.count || 0
+    };
+  }
+
+  /**
+   * Update user metadata (block/unblock, change role)
+   */
+  async updateUserMetadata(userId: string, metadata: Record<string, any>): Promise<boolean> {
+    const query = `
+      mutation UpdateUserMetadata($userId: uuid!, $metadata: jsonb!) {
+        updateUser(pk_columns: { id: $userId }, _set: { metadata: $metadata }) {
+          id
+        }
+      }
+    `;
+
+    const result = await this.query(query, { userId, metadata });
+    return !result.errors;
+  }
+
+  /**
+   * Disable/enable user
+   */
+  async setUserDisabled(userId: string, disabled: boolean): Promise<boolean> {
+    const query = `
+      mutation SetUserDisabled($userId: uuid!, $disabled: Boolean!) {
+        updateUser(pk_columns: { id: $userId }, _set: { disabled: $disabled }) {
+          id
+        }
+      }
+    `;
+
+    const result = await this.query(query, { userId, disabled });
+    return !result.errors;
   }
 
   /**

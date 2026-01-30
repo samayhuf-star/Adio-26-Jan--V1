@@ -3,6 +3,7 @@ import { db } from '../db';
 import { users, subscriptions, auditLogs, securityRules, emailLogs, promoTrials } from '../../shared/schema';
 import { eq, desc, sql, and, or, like } from 'drizzle-orm';
 import { adminAuthMiddleware, logAdminAction, type AdminContext } from '../adminAuthService';
+import { nhostAdmin } from '../nhostAdmin';
 
 type AdminEnv = { Variables: { admin: AdminContext } };
 const adminRoutes = new Hono<AdminEnv>();
@@ -22,8 +23,14 @@ adminRoutes.get('/stats', async (c) => {
   try {
     const admin = c.get('admin');
     
-    // Get total users
-    const totalUsers = await db.select({ count: sql<number>`count(*)` }).from(users);
+    // Get total users from Nhost
+    let totalUsersCount = 0;
+    if (nhostAdmin.isConfigured()) {
+      totalUsersCount = await nhostAdmin.getUserCount();
+    } else {
+      const totalUsers = await db.select({ count: sql<number>`count(*)` }).from(users);
+      totalUsersCount = parseInt(totalUsers[0]?.count?.toString() || '0');
+    }
     
     // Get active subscriptions
     const activeSubscriptions = await db
@@ -61,9 +68,9 @@ adminRoutes.get('/stats', async (c) => {
     return c.json({
       success: true,
       data: {
-        totalUsers: parseInt(totalUsers[0]?.count?.toString() || '0'),
+        totalUsers: totalUsersCount,
         activeSubscriptions: parseInt(activeSubscriptions[0]?.count?.toString() || '0'),
-        monthlyRevenue: parseInt(monthlyRevenue[0]?.revenue?.toString() || '0') / 100, // Convert cents to dollars
+        monthlyRevenue: parseInt(monthlyRevenue[0]?.revenue?.toString() || '0') / 100,
         errorCount: parseInt(errorCount[0]?.count?.toString() || '0'),
         activeTrials: parseInt(activeTrials[0]?.count?.toString() || '0'),
         emailsSent: parseInt(emailsSent[0]?.count?.toString() || '0'),
@@ -229,12 +236,50 @@ adminRoutes.get('/email/stats', async (c) => {
 adminRoutes.get('/users', async (c) => {
   try {
     const admin = c.get('admin');
+    const search = c.req.query('search');
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '50');
+    const offset = (page - 1) * limit;
     
+    // Try to fetch from Nhost first
+    if (nhostAdmin.isConfigured()) {
+      try {
+        const { users: nhostUsers, total } = await nhostAdmin.getUsersWithFilter(limit, offset, search);
+        
+        await logAdminAction(admin.user.id, 'view_users', 'users');
+
+        return c.json({
+          success: true,
+          data: {
+            users: nhostUsers.map((u: any) => ({
+              id: u.id,
+              email: u.email,
+              full_name: u.displayName || u.email?.split('@')[0] || 'User',
+              role: u.metadata?.role || 'user',
+              subscription_plan: u.metadata?.subscription_plan || null,
+              subscription_status: u.metadata?.subscription_status || null,
+              is_blocked: u.disabled || false,
+              email_verified: u.emailVerified || false,
+              avatar_url: u.avatarUrl,
+              last_sign_in: u.lastSeen,
+              created_at: u.createdAt,
+            })),
+            total,
+            page,
+            limit,
+          },
+        });
+      } catch (nhostError) {
+        console.error('Nhost users fetch error, falling back to local DB:', nhostError);
+      }
+    }
+    
+    // Fallback to local database
     const userList = await db
       .select()
       .from(users)
       .orderBy(desc(users.createdAt))
-      .limit(100);
+      .limit(limit);
 
     await logAdminAction(admin.user.id, 'view_users', 'users');
 
@@ -252,6 +297,9 @@ adminRoutes.get('/users', async (c) => {
           last_sign_in: u.lastSignIn,
           created_at: u.createdAt,
         })),
+        total: userList.length,
+        page: 1,
+        limit,
       },
     });
   } catch (error: any) {
@@ -475,6 +523,29 @@ adminRoutes.post('/users/:id/block', async (c) => {
     const userId = c.req.param('id');
     const { blocked } = await c.req.json();
 
+    // Try Nhost first
+    if (nhostAdmin.isConfigured()) {
+      const success = await nhostAdmin.setUserDisabled(userId, blocked);
+      if (success) {
+        await logAdminAction(
+          admin.user.id,
+          blocked ? 'block_user' : 'unblock_user',
+          'users',
+          userId,
+          { blocked }
+        );
+
+        return c.json({
+          success: true,
+          data: {
+            id: userId,
+            is_blocked: blocked,
+          },
+        });
+      }
+    }
+
+    // Fallback to local database
     const updated = await db
       .update(users)
       .set({ isBlocked: blocked })

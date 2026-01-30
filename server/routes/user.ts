@@ -95,8 +95,8 @@ userRoutes.put('/profile', async (c) => {
   }
 });
 
-// POST /api/user/password - Change password (stub - handled by auth provider)
-userRoutes.post('/password', async (c) => {
+// PUT /api/user/password - Change password via Nhost
+userRoutes.put('/password', async (c) => {
   try {
     const userId = await getUserIdFromToken(c);
     if (!userId) {

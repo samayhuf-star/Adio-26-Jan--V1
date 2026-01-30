@@ -1,0 +1,30 @@
+auth.ts:56 
+ POST https://vumnjkoyxkistmlzotuk.auth.eu-central-1.nhost.run/v1/signup/email-password 400 (Bad Request)
+
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/categories 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/topics?limit=3 500 (Internal Server Error)
+d2f76d9253cf11be.js:2 [Coframe] Mutation callback infinite loop protection triggered, disconnecting mutation observer 
+{0: MutationRecord, 1: MutationRecord}
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/categories 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/topics?limit=3 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/topics?limit=3 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/categories 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/topics?limit=3 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/categories 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/topics?limit=3 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/categories 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/categories 500 (Internal Server Error)
+injected.js:214 
+ GET https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/api/community/topics?limit=3 500 (Internal Server Error)
+﻿

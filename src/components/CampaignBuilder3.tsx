@@ -61,7 +61,6 @@ import { generateDKIAdWithAI } from '../utils/dkiAdGeneratorAI';
 import { CampaignFlowDiagram } from './CampaignFlowDiagram';
 import { TerminalCard, TerminalLine } from './ui/terminal-card';
 import { ApiStatusIndicator } from './ApiStatusIndicator';
-import { ProjectSelect } from './ProjectSelect';
 
 // Campaign Structure Types (14 structures)
 const CAMPAIGN_STRUCTURES = [
@@ -5211,77 +5210,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           </Button>
           </div>
 
-          {/* Add to Project Section */}
-          <Card className="mb-6 border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-                    <FolderOpen className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-800">Add to Project</p>
-                    <p className="text-xs text-slate-500">Organize this campaign in a project for easy access</p>
-                  </div>
-                </div>
-                <div className="w-64">
-                  <ProjectSelect
-                    value={selectedProjectId}
-                    onChange={(projectId, projectName) => {
-                      setSelectedProjectId(projectId);
-                      setSelectedProjectName(projectName || null);
-                      if (projectId && projectName) {
-                        notifications.success(`Campaign added to "${projectName}"`, { title: 'Added to Project' });
-                      }
-                    }}
-                    onLinkItem={async (projectId) => {
-                      try {
-                        const token = await getToken();
-                        const response = await fetch(`/api/workspace-projects/${projectId}/items`, {
-                          method: 'POST',
-                          headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                          },
-                          body: JSON.stringify({
-                            itemType: 'campaign',
-                            itemId: campaignData.campaignName,
-                            itemName: campaignData.campaignName,
-                            itemMetadata: {
-                              structure: campaignData.selectedStructure,
-                              keywordCount: campaignData.selectedKeywords.length,
-                              adCount: campaignData.ads.length,
-                              targetCountry: campaignData.targetCountry
-                            }
-                          })
-                        });
-                        const data = await response.json();
-                        if (!data.success) {
-                          console.error('Error linking campaign to project:', data.error);
-                          notifications.error(data.error || 'Failed to add campaign to project');
-                        }
-                      } catch (err) {
-                        console.error('Error linking campaign to project:', err);
-                        notifications.error('Failed to add campaign to project');
-                      }
-                    }}
-                    itemType="campaign"
-                    itemId={campaignData.campaignName}
-                    itemName={campaignData.campaignName}
-                    placeholder="Select or create project..."
-                  />
-                </div>
-              </div>
-              {selectedProjectName && (
-                <div className="mt-3 pt-3 border-t border-indigo-100">
-                  <div className="flex items-center gap-2 text-sm text-indigo-600">
-                    <Check className="w-4 h-4" />
-                    <span>Campaign linked to <strong>{selectedProjectName}</strong></span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Secondary Actions */}
           <div className="flex flex-wrap gap-3 justify-center">
