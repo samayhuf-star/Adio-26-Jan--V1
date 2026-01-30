@@ -151,6 +151,13 @@ export async function signInWithEmail(
   password: string
 ): Promise<{ data: { user: User; session: any } | null; error: { message: string } | null }> {
   try {
+    // Check if user is already signed in
+    const existingSession = nhostClient.auth.getSession();
+    if (existingSession) {
+      // Sign out first to allow new sign in
+      await nhostClient.auth.signOut();
+    }
+
     const { session, error: authError } = await nhostClient.auth.signIn({
       email: email.trim().toLowerCase(),
       password: password,
