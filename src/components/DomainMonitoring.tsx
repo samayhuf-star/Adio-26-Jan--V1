@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccessToken, useAuthenticationStatus, useUserData } from '@nhost/react';
+import { nhost } from '../lib/nhost';
+import { getSessionToken } from '../utils/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -72,10 +74,55 @@ export default function DomainMonitoring() {
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [lookupModalOpen, setLookupModalOpen] = useState(false);
 
+  // State for async token fetching
+  const [cachedToken, setCachedToken] = useState<string | null>(null);
+  
+  // Fetch token on mount and when auth state changes
+  useEffect(() => {
+    const fetchToken = async () => {
+      // Try hook token first
+      if (accessToken) {
+        setCachedToken(accessToken);
+        console.log('[DomainMonitoring] Using hook token');
+        return;
+      }
+      
+      // Fallback 1: Try nhost client directly
+      try {
+        const session = nhost.auth.getSession();
+        if (session?.accessToken) {
+          setCachedToken(session.accessToken);
+          console.log('[DomainMonitoring] Using nhost.auth.getSession()');
+          return;
+        }
+      } catch (e) {
+        console.warn('[DomainMonitoring] nhost.auth.getSession() failed:', e);
+      }
+      
+      // Fallback 2: Use getSessionToken from auth.ts (includes localStorage fallback)
+      try {
+        const token = await getSessionToken();
+        if (token) {
+          setCachedToken(token);
+          console.log('[DomainMonitoring] Using getSessionToken() from auth.ts');
+          return;
+        }
+      } catch (e) {
+        console.warn('[DomainMonitoring] getSessionToken() failed:', e);
+      }
+      
+      // No token found
+      setCachedToken(null);
+      console.log('[DomainMonitoring] No auth token available');
+    };
+    
+    fetchToken();
+  }, [accessToken, isAuthenticated, isAuthLoading]);
+  
   const getAuthHeaders = useCallback((): Record<string, string> => {
-    console.log('[DomainMonitoring] Auth state - isLoading:', isAuthLoading, 'isAuthenticated:', isAuthenticated, 'hasToken:', !!accessToken, 'userId:', userData?.id);
-    return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-  }, [accessToken, isAuthLoading, isAuthenticated, userData]);
+    console.log('[DomainMonitoring] Auth state - isLoading:', isAuthLoading, 'isAuthenticated:', isAuthenticated, 'hasToken:', !!cachedToken, 'userId:', userData?.id);
+    return cachedToken ? { Authorization: `Bearer ${cachedToken}` } : {};
+  }, [cachedToken, isAuthLoading, isAuthenticated, userData]);
 
   const fetchDomains = useCallback(async () => {
     try {
@@ -112,38 +159,38 @@ export default function DomainMonitoring() {
       return;
     }
     
-    // Auth has finished loading, now check if authenticated
-    if (isAuthenticated && accessToken) {
-      console.log('[DomainMonitoring] Authenticated with token, fetching domains...');
+    // Check if we have a cached token (from any source)
+    if (cachedToken) {
+      console.log('[DomainMonitoring] Have cached token, fetching domains...');
       fetchDomains();
     } else if (!isAuthenticated) {
       console.log('[DomainMonitoring] Not authenticated');
       setLoading(false);
       setDomains([]);
     } else {
-      // Authenticated but no token yet (edge case during token refresh)
-      console.log('[DomainMonitoring] Authenticated but waiting for token...');
-      setLoading(false);
+      // Authenticated but no token yet - wait for token fetch effect
+      console.log('[DomainMonitoring] Waiting for token...');
     }
-  }, [isAuthLoading, isAuthenticated, accessToken, fetchDomains]);
+  }, [isAuthLoading, isAuthenticated, cachedToken, fetchDomains]);
 
   const [addProgress, setAddProgress] = useState<string>('');
   
   const addDomain = async () => {
     if (!newDomain.trim()) return;
     
-    // Check authentication status before proceeding
-    if (!isAuthenticated || !accessToken) {
+    // Check if we have a valid token (from any source)
+    if (!cachedToken) {
       notifications.error('Please sign in to add domains');
-      console.error('[DomainMonitoring] Cannot add domain - not authenticated or no token');
+      console.error('[DomainMonitoring] Cannot add domain - no auth token available');
       return;
     }
+    
+    const headers = getAuthHeaders();
     
     try {
       setAddLoading(true);
       setAddProgress('Adding domain...');
-      const headers = getAuthHeaders();
-      console.log('[DomainMonitoring] Adding domain with auth headers:', Object.keys(headers), 'token length:', accessToken?.length);
+      console.log('[DomainMonitoring] Adding domain with auth headers:', Object.keys(headers));
       
       const response = await fetch('/api/domains', {
         method: 'POST',
@@ -379,7 +426,14 @@ export default function DomainMonitoring() {
           <p className="text-gray-600 mt-1">Track domain expiry, SSL certificates, and DNS records</p>
         </div>
         <Button 
-          onClick={() => setAddModalOpen(true)}
+          onClick={() => {
+            if (!cachedToken) {
+              notifications.error('Please sign in to add domains');
+              return;
+            }
+            setAddModalOpen(true);
+          }}
+          disabled={isAuthLoading}
           className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -422,7 +476,17 @@ export default function DomainMonitoring() {
             <p className="text-gray-500 text-center mb-4">
               Add your first domain to start monitoring its status
             </p>
-            <Button onClick={() => setAddModalOpen(true)}>
+            <Button 
+              onClick={() => {
+                const headers = getAuthHeaders();
+                if (Object.keys(headers).length === 0) {
+                  notifications.error('Please sign in to add domains');
+                  return;
+                }
+                setAddModalOpen(true);
+              }}
+              disabled={isAuthLoading}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Add Domain
             </Button>
