@@ -132,11 +132,18 @@ export default function DomainMonitoring() {
   const addDomain = async () => {
     if (!newDomain.trim()) return;
     
+    // Check authentication status before proceeding
+    if (!isAuthenticated || !accessToken) {
+      notifications.error('Please sign in to add domains');
+      console.error('[DomainMonitoring] Cannot add domain - not authenticated or no token');
+      return;
+    }
+    
     try {
       setAddLoading(true);
       setAddProgress('Adding domain...');
       const headers = getAuthHeaders();
-      console.log('[DomainMonitoring] Adding domain with auth headers:', Object.keys(headers));
+      console.log('[DomainMonitoring] Adding domain with auth headers:', Object.keys(headers), 'token length:', accessToken?.length);
       
       const response = await fetch('/api/domains', {
         method: 'POST',
