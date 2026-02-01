@@ -624,6 +624,82 @@ export const messages = pgTable("messages", {
   conversationIdx: index("idx_messages_conversation_id").on(table.conversationId),
 }));
 
+// Domain Monitoring tables
+export const monitoredDomains = pgTable("monitored_domains", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  domain: text("domain").notNull(),
+  registrar: text("registrar"),
+  expiryDate: timestamp("expiry_date"),
+  createdDate: timestamp("created_date"),
+  updatedDate: timestamp("updated_date"),
+  nameServers: jsonb("name_servers").default([]),
+  whoisData: jsonb("whois_data").default({}),
+  sslIssuer: text("ssl_issuer"),
+  sslExpiryDate: timestamp("ssl_expiry_date"),
+  sslValidFrom: timestamp("ssl_valid_from"),
+  sslData: jsonb("ssl_data").default({}),
+  dnsRecords: jsonb("dns_records").default({}),
+  lastCheckedAt: timestamp("last_checked_at"),
+  alertDays: jsonb("alert_days").default([30, 15, 7, 1]),
+  alertsEnabled: boolean("alerts_enabled").default(true),
+  alertEmail: text("alert_email"),
+  notes: text("notes"),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_monitored_domains_user_id").on(table.userId),
+  domainIdx: index("idx_monitored_domains_domain").on(table.domain),
+  expiryDateIdx: index("idx_monitored_domains_expiry_date").on(table.expiryDate),
+  sslExpiryIdx: index("idx_monitored_domains_ssl_expiry").on(table.sslExpiryDate),
+  userDomainUnique: unique("user_domain_unique").on(table.userId, table.domain),
+}));
+
+export const domainSnapshots = pgTable("domain_snapshots", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  domainId: uuid("domain_id").references(() => monitoredDomains.id, { onDelete: 'cascade' }).notNull(),
+  snapshotType: text("snapshot_type").notNull(),
+  data: jsonb("data").default({}),
+  changes: jsonb("changes").default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  domainIdIdx: index("idx_domain_snapshots_domain_id").on(table.domainId),
+  typeIdx: index("idx_domain_snapshots_type").on(table.snapshotType),
+  createdAtIdx: index("idx_domain_snapshots_created_at").on(table.createdAt),
+}));
+
+export const domainAlerts = pgTable("domain_alerts", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  domainId: uuid("domain_id").references(() => monitoredDomains.id, { onDelete: 'cascade' }).notNull(),
+  alertType: text("alert_type").notNull(),
+  message: text("message").notNull(),
+  daysUntilExpiry: integer("days_until_expiry"),
+  sentAt: timestamp("sent_at"),
+  acknowledged: boolean("acknowledged").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  domainIdIdx: index("idx_domain_alerts_domain_id").on(table.domainId),
+  alertTypeIdx: index("idx_domain_alerts_type").on(table.alertType),
+  sentAtIdx: index("idx_domain_alerts_sent_at").on(table.sentAt),
+}));
+
+export const insertMonitoredDomainSchema = createInsertSchema(monitoredDomains).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDomainSnapshotSchema = createInsertSchema(domainSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDomainAlertSchema = createInsertSchema(domainAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
@@ -642,3 +718,9 @@ export type OrganizationMember = typeof organizationMembers.$inferSelect;
 export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
 export type OrganizationInvite = typeof organizationInvites.$inferSelect;
 export type InsertOrganizationInvite = z.infer<typeof insertOrganizationInviteSchema>;
+export type MonitoredDomain = typeof monitoredDomains.$inferSelect;
+export type InsertMonitoredDomain = z.infer<typeof insertMonitoredDomainSchema>;
+export type DomainSnapshot = typeof domainSnapshots.$inferSelect;
+export type InsertDomainSnapshot = z.infer<typeof insertDomainSnapshotSchema>;
+export type DomainAlert = typeof domainAlerts.$inferSelect;
+export type InsertDomainAlert = z.infer<typeof insertDomainAlertSchema>;

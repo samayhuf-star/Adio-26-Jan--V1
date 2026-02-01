@@ -1,6 +1,6 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
-  LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare
+  LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare, Globe
 } from 'lucide-react';
 
 declare global {
@@ -63,7 +63,7 @@ const SupportHelpCombined = lazy(() => import('./components/SupportHelpCombined'
 const Blog = lazy(() => import('./components/Blog').then(m => ({ default: m.default })));
 const BlogGenerator = lazy(() => import('./components/BlogGenerator').then(m => ({ default: m.default })));
 const SuperAdminPanel = lazy(() => import('./components/SuperAdminPanel').then(m => ({ default: m.SuperAdminPanel })));
-// PocketBaseAdmin removed
+const SuperAdminApp = lazy(() => import('./components/admin/SuperAdminApp').then(m => ({ default: m.SuperAdminApp })));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
 const TermsOfService = lazy(() => import('./components/TermsOfService').then(m => ({ default: m.TermsOfService })));
 const CookiePolicy = lazy(() => import('./components/CookiePolicy').then(m => ({ default: m.CookiePolicy })));
@@ -73,6 +73,7 @@ const PromoLandingPage = lazy(() => import('./components/PromoLandingPage').then
 const TaskManager = lazy(() => import('./components/TaskManager').then(m => ({ default: m.TaskManager })));
 const CommunityPage = lazy(() => import('./modules/community').then(m => ({ default: m.CommunityPage })));
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then(m => ({ default: m.AcceptInvite })));
+const DomainMonitoring = lazy(() => import('./components/DomainMonitoring').then(m => ({ default: m.default })));
 
 // Loading component for lazy-loaded modules
 const ComponentLoader = () => (
@@ -84,7 +85,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'admin-panel' | 'accept-invite';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'admin-panel' | 'accept-invite' | 'superadmin';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -155,14 +156,23 @@ const AppContent = () => {
     };
   }, []);
   
-  // Sync user to database when user signs in
+  // Track if user has been synced to prevent infinite loops
+  const userSyncedRef = useRef<string | null>(null);
+  
+  // Sync user to database when user signs in (only once per user)
   useEffect(() => {
     const syncUserToDatabase = async () => {
-      if (!user) return;
+      if (!user?.id) return;
+      
+      // Skip if already synced for this user
+      if (userSyncedRef.current === user.id) return;
       
       try {
         const token = await getSessionToken();
         if (!token) return;
+        
+        // Mark as synced before the request to prevent race conditions
+        userSyncedRef.current = user.id;
         
         const response = await fetch('/api/user/sync', {
           method: 'POST',
@@ -177,16 +187,24 @@ const AppContent = () => {
         
         if (response.ok) {
           console.log('[User Sync] User synced to database');
+        } else {
+          // Reset sync flag if request failed
+          userSyncedRef.current = null;
         }
       } catch (error) {
         console.error('[User Sync] Failed to sync user:', error);
+        // Reset sync flag if request failed
+        userSyncedRef.current = null;
       }
     };
     
-    if (user) {
-    syncUserToDatabase();
+    if (user?.id) {
+      syncUserToDatabase();
+    } else {
+      // Reset when user logs out
+      userSyncedRef.current = null;
     }
-  }, [user]);
+  }, [user?.id]);
   
   // Initialize storage manager on mount (auto-cleanup old data)
   useEffect(() => {
@@ -258,6 +276,7 @@ const AppContent = () => {
     'support-help',
     'blog',
     'community',
+    'domain-monitoring',
     // 'call-forwarding', // Hidden - module disabled
   ]);
 
@@ -656,9 +675,27 @@ const AppContent = () => {
         return;
       }
 
+      // Super Admin Panel - dedicated login (public access to login page)
+      if (path === '/superadmin' || path.startsWith('/superadmin')) {
+        setView('superadmin');
+        return;
+      }
+
       // Accept team invite - public access (will prompt sign in if needed)
       if (path.startsWith('/accept-invite')) {
         setView('accept-invite');
+        return;
+      }
+
+      // Email verification - public access
+      if (path === '/verify-email' || path.startsWith('/verify-email')) {
+        setView('verify-email');
+        return;
+      }
+
+      // Password reset - public access
+      if (path === '/reset-password' || path.startsWith('/reset-password')) {
+        setView('reset-password');
         return;
       }
 
@@ -668,33 +705,35 @@ const AppContent = () => {
         return;
       }
 
+      // Legal/Policy pages - public access
+      if (path === '/privacy-policy') {
+        setView('privacy-policy');
+        return;
+      }
+      if (path === '/terms-of-service') {
+        setView('terms-of-service');
+        return;
+      }
+      if (path === '/cookie-policy') {
+        setView('cookie-policy');
+        return;
+      }
+      if (path === '/gdpr-compliance') {
+        setView('gdpr-compliance');
+        return;
+      }
+      if (path === '/refund-policy') {
+        setView('refund-policy');
+        return;
+      }
+
       // Admin panel - detect subdomain or /admin path
+      // Super admin has its own authentication system (username/password), not Nhost
       const hostname = window.location.hostname;
       const isAdminSubdomain = hostname.startsWith('admin.') || hostname === 'admin.adiology.io';
       if (isAdminSubdomain || path.startsWith('/admin')) {
-        // If not logged in, redirect to auth first
-        if (!user) {
-          setAuthMode('sign-in');
-          setView('auth');
-          return;
-        }
-        
-        // Whitelisted super admin emails (fallback if database role not set)
-        const superAdminEmails = [
-          'samayhuf@gmail.com'
-        ];
-        
-        // Check if user is super admin - use database role OR email whitelist
-        const hasAdminRole = user.role === 'superadmin' || user.role === 'super_admin';
-        const isWhitelistedEmail = user.email && superAdminEmails.includes(user.email.toLowerCase());
-        
-        if (hasAdminRole || isWhitelistedEmail) {
-          setView('admin-panel');
-          return;
-        }
-        
-        // If logged in but not admin, show homepage
-        setView('homepage');
+        // Render SuperAdminApp directly - it handles its own authentication
+        setView('superadmin');
         return;
       }
 
@@ -892,6 +931,7 @@ const AppContent = () => {
     },
 
     { id: 'community', label: 'Community', icon: MessageSquare, module: null, externalUrl: 'https://community.adiology.io/' },
+    { id: 'domain-monitoring', label: 'Domain Monitor', icon: Globe, module: null },
     // Blog hidden - disabled
     // { id: 'blog', label: 'Blog', icon: BookOpen, module: null },
     { id: 'settings', label: 'Settings', icon: Settings, module: 'settings' },
@@ -1224,6 +1264,14 @@ const AppContent = () => {
     );
   }
 
+  if (appView === 'superadmin') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>}>
+        <SuperAdminApp />
+      </Suspense>
+    );
+  }
+
   if (appView === 'admin-panel') {
     // Admin panel - PocketBase removed
     const path = window.location.pathname;
@@ -1306,32 +1354,46 @@ const AppContent = () => {
     return (
       <Auth
         initialMode={authMode === 'sign-in' ? 'login' : 'signup'}
-        onLoginSuccess={() => {
-          // Wait for user state to update, then navigate
-          setTimeout(() => {
-            setAppView('user');
-            setActiveTab('dashboard');
-            // Force a refresh of user state
+        onLoginSuccess={async () => {
+          // First, get user state before navigating
+          try {
             const currentUser = getCurrentUser();
             if (currentUser) {
-              getCurrentUserProfile().then(profile => {
-                if (profile) {
-                  setUser(profile);
-                  setCurrentUserId(currentUser.id);
-                }
-              });
+              const profile = await getCurrentUserProfile();
+              if (profile) {
+                setUser(profile);
+                setCurrentUserId(currentUser.id);
+              }
             }
-          }, 200);
+            // Set loading to false and navigate after user state is set
+            setLoading(false);
+            setAppView('user');
+            setActiveTab('dashboard');
+          } catch (err) {
+            console.error('Error setting user state after login:', err);
+            // Still navigate even if profile fetch fails
+            setLoading(false);
+            setAppView('user');
+            setActiveTab('dashboard');
+          }
         }}
-        onSignupSuccess={(email, name) => {
+        onSignupSuccess={async (email, name) => {
           // After signup, navigate to dashboard if user is authenticated
-          setTimeout(() => {
+          try {
             const currentUser = getCurrentUser();
             if (currentUser || isAuthenticated()) {
+              const profile = await getCurrentUserProfile();
+              if (profile) {
+                setUser(profile);
+                setCurrentUserId(profile.id);
+              }
+              setLoading(false);
               setAppView('user');
               setActiveTab('dashboard');
             }
-          }, 300);
+          } catch (err) {
+            console.error('Error after signup:', err);
+          }
         }}
         onBackToHome={() => {
           setAppView('homepage');
@@ -1375,22 +1437,27 @@ const AppContent = () => {
         return (
           <Auth
             initialMode="login"
-            onLoginSuccess={() => {
-              // Wait for user state to update, then navigate
-              setTimeout(() => {
-                setAppView('user');
-                setActiveTab('dashboard');
-                // Force a refresh of user state
+            onLoginSuccess={async () => {
+              // First, get user state before navigating
+              try {
                 const currentUser = getCurrentUser();
                 if (currentUser) {
-                  getCurrentUserProfile().then(profile => {
-                    if (profile) {
-                      setUser(profile);
-                      setCurrentUserId(currentUser.id);
-                    }
-                  });
+                  const profile = await getCurrentUserProfile();
+                  if (profile) {
+                    setUser(profile);
+                    setCurrentUserId(currentUser.id);
+                  }
                 }
-              }, 200);
+                // Set loading to false and navigate after user state is set
+                setLoading(false);
+                setAppView('user');
+                setActiveTab('dashboard');
+              } catch (err) {
+                console.error('Error setting user state after login:', err);
+                setLoading(false);
+                setAppView('user');
+                setActiveTab('dashboard');
+              }
             }}
             onBackToHome={() => {
               setAppView('homepage');
@@ -1512,6 +1579,12 @@ const AppContent = () => {
         return (
           <Suspense fallback={<ComponentLoader />}>
             <TaskManager />
+          </Suspense>
+        );
+      case 'domain-monitoring':
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <DomainMonitoring />
           </Suspense>
         );
       case 'dashboard':
@@ -1953,74 +2026,6 @@ const AppContent = () => {
             
             {/* Data Source Indicator - Shows if data is from live API or local cache */}
             <DataSourceIndicator source={dataSource} />
-            
-            {/* View Mode Toggle - Only show for owners/admins */}
-            {canSwitchViews && (
-              <div className="flex items-center gap-3 px-4 py-2 rounded-xl glass-effect border border-white/30">
-                <Eye className="w-4 h-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">
-                  {viewMode === 'admin' ? 'Admin View' : 'User View'}
-                </span>
-                <Switch
-                  checked={viewMode === 'admin'}
-                  onCheckedChange={(checked: boolean) => {
-                    const newViewMode = checked ? 'admin' : 'user';
-                    setViewMode(newViewMode);
-                    if (!checked) {
-                      const currentItem = allMenuItems.find(item => 
-                        item.id === activeTab || item.submenu?.some(sub => sub.id === activeTab)
-                      );
-                      if (currentItem) {
-                        const itemToCheck = currentItem.id === activeTab ? currentItem : 
-                          currentItem.submenu?.find(sub => sub.id === activeTab);
-                        if (itemToCheck) {
-                          if (itemToCheck.module && !['dashboard', 'settings', 'support'].includes(itemToCheck.module)) {
-                            setActiveTabSafe('dashboard');
-                          } else if (itemToCheck.id === 'admin-panel') {
-                            setActiveTabSafe('dashboard');
-                          }
-                        }
-                      }
-                    }
-                  }}
-                  className="scale-90"
-                />
-              </div>
-            )}
-            
-            {/* Enhanced Search */}
-            <div className="relative hidden sm:block">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setShowSearchSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
-                className="block w-64 pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 glass-effect placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                placeholder="Search campaigns, keywords..."
-              />
-              
-              {/* Enhanced Search Suggestions */}
-              {showSearchSuggestions && searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 glass-card rounded-xl shadow-xl border border-white/50 z-50 max-h-64 overflow-y-auto">
-                  {searchSuggestions.map((suggestion, index) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => handleSearchSuggestionClick(suggestion)}
-                      className="w-full text-left px-4 py-3 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 first:rounded-t-xl last:rounded-b-xl border-b border-white/30 last:border-b-0"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Search className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700">{suggestion}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Enhanced Notifications */}
             <DropdownMenu>

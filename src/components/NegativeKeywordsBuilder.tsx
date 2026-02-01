@@ -365,14 +365,29 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
 
                 negativeKeywords = addMisspellings(negativeKeywords);
 
-                const formattedKeywords: GeneratedKeyword[] = negativeKeywords.map((item, index) => ({
-                    id: index + 1,
-                    keyword: `[${item.keyword}]`,
-                    reason: item.reason,
-                    category: NEGATIVE_KEYWORD_CATEGORIES[item.category]?.label || item.category,
-                    subcategory: item.subcategory,
-                    matchType: item.matchType
-                }));
+                const formattedKeywords: GeneratedKeyword[] = negativeKeywords.map((item, index) => {
+                    let formattedKeyword: string;
+                    switch (item.matchType) {
+                        case 'phrase':
+                            formattedKeyword = `"${item.keyword}"`;
+                            break;
+                        case 'broad':
+                            formattedKeyword = item.keyword;
+                            break;
+                        case 'exact':
+                        default:
+                            formattedKeyword = `[${item.keyword}]`;
+                            break;
+                    }
+                    return {
+                        id: index + 1,
+                        keyword: formattedKeyword,
+                        reason: item.reason,
+                        category: NEGATIVE_KEYWORD_CATEGORIES[item.category]?.label || item.category,
+                        subcategory: item.subcategory,
+                        matchType: item.matchType
+                    };
+                });
 
                 setGeneratedKeywords(formattedKeywords);
                 notifications.success(`Generated ${formattedKeywords.length} contextual negative keywords`, {
@@ -413,14 +428,29 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                 competitors: competitors.length > 0 ? competitors : undefined
             });
 
-            const formattedKeywords: GeneratedKeyword[] = result.negatives.map((neg, index) => ({
-                id: index + 1,
-                keyword: `[${neg.keyword}]`,
-                reason: neg.source,
-                category: neg.category,
-                subcategory: undefined,
-                matchType: neg.matchType
-            }));
+            const formattedKeywords: GeneratedKeyword[] = result.negatives.map((neg, index) => {
+                let formattedKeyword: string;
+                switch (neg.matchType) {
+                    case 'phrase':
+                        formattedKeyword = `"${neg.keyword}"`;
+                        break;
+                    case 'broad':
+                        formattedKeyword = neg.keyword;
+                        break;
+                    case 'exact':
+                    default:
+                        formattedKeyword = `[${neg.keyword}]`;
+                        break;
+                }
+                return {
+                    id: index + 1,
+                    keyword: formattedKeyword,
+                    reason: neg.source,
+                    category: neg.category,
+                    subcategory: undefined,
+                    matchType: neg.matchType
+                };
+            });
 
             setGeneratedKeywords(formattedKeywords);
             
@@ -473,6 +503,38 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
         });
         return stats;
     }, [generatedKeywords]);
+
+    const displayKeywords = useMemo(() => {
+        if (exportFormat === 'all') return filteredKeywords;
+        
+        return filteredKeywords.map(kw => {
+            const cleanKeyword = kw.keyword.replace(/[\[\]"]/g, '');
+            let formattedKeyword: string;
+            let displayMatchType: 'exact' | 'phrase' | 'broad';
+            
+            switch (exportFormat) {
+                case 'phrase':
+                    formattedKeyword = `"${cleanKeyword}"`;
+                    displayMatchType = 'phrase';
+                    break;
+                case 'broad':
+                    formattedKeyword = cleanKeyword;
+                    displayMatchType = 'broad';
+                    break;
+                case 'exact':
+                default:
+                    formattedKeyword = `[${cleanKeyword}]`;
+                    displayMatchType = 'exact';
+                    break;
+            }
+            
+            return {
+                ...kw,
+                keyword: formattedKeyword,
+                matchType: displayMatchType
+            };
+        });
+    }, [filteredKeywords, exportFormat]);
 
     const handleDownload = async (format: 'standard' | 'google-ads-editor' = 'standard') => {
         if (filteredKeywords.length === 0) {
@@ -886,11 +948,11 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                     )}
 
                                     <CardContent className="p-0">
-                                        {filteredKeywords.length > 0 ? (
+                                        {displayKeywords.length > 0 ? (
                                             <div className="max-h-[500px] overflow-auto">
                                                 {/* Mobile Card View */}
                                                 <div className="sm:hidden divide-y divide-slate-100">
-                                                    {filteredKeywords.slice(0, 50).map((item) => {
+                                                    {displayKeywords.slice(0, 50).map((item) => {
                                                         const colors = CATEGORY_COLORS[item.category] || { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' };
                                                         return (
                                                             <div key={item.id} className="p-3 hover:bg-slate-50/50">
@@ -912,9 +974,9 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                             </div>
                                                         );
                                                     })}
-                                                    {filteredKeywords.length > 50 && (
+                                                    {displayKeywords.length > 50 && (
                                                         <div className="p-3 text-center text-xs text-slate-500">
-                                                            Showing 50 of {filteredKeywords.length} keywords. Export to see all.
+                                                            Showing 50 of {displayKeywords.length} keywords. Export to see all.
                                                         </div>
                                                     )}
                                                 </div>
@@ -929,7 +991,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
-                                                        {filteredKeywords.map((item) => {
+                                                        {displayKeywords.map((item) => {
                                                             const colors = CATEGORY_COLORS[item.category] || { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' };
                                                             return (
                                                                 <TableRow key={item.id} className="hover:bg-indigo-50/30 transition-colors">

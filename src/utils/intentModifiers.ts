@@ -260,11 +260,13 @@ export function generateIntentBasedNegativesWithCategories(
     return (categoryA?.priority || 99) - (categoryB?.priority || 99);
   });
 
-  // Ensure we're in the target range of 1200-1800
-  // If too few, we already have variability built in
-  // If too many, trim to max 1800
-  if (results.length > 1800) {
-    return shuffleArray(results).slice(0, 1800);
+  // Ensure we're in the target range of 1210-1810
+  // Generate a random target count in this range
+  const randomTargetCount = Math.floor(Math.random() * (1810 - 1210 + 1)) + 1210;
+  
+  // If we have more than the random target, trim down
+  if (results.length > randomTargetCount) {
+    return shuffleArray(results).slice(0, randomTargetCount);
   }
   
   return results;

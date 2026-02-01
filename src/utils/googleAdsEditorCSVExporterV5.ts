@@ -191,7 +191,13 @@ export const MASTER_CSV_HEADERS = [
   'Business Name',
   'Business Address',
   'Business Phone',
-  'Business Website'
+  'Business Website',
+  'Link Text',
+  'Description Line 1',
+  'Description Line 2',
+  'Callout Text',
+  'Snippet Header',
+  'Snippet Values'
 ];
 
 // Column index map for quick access
@@ -772,6 +778,46 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
         rows.push(locRow);
       });
     }
+  }
+  
+  // SITELINK ASSET ROWS - Each sitelink as separate row with proper asset columns for Google Ads Editor
+  if (campaign.sitelinks && campaign.sitelinks.length > 0) {
+    campaign.sitelinks.forEach((sl, idx) => {
+      const slRow = createEmptyRow();
+      slRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      slRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      // Use proper asset column names for sitelinks
+      slRow[COLUMN_INDEX['Link Text']] = sl.text || '';
+      slRow[COLUMN_INDEX['Description Line 1']] = sl.description1 || '';
+      slRow[COLUMN_INDEX['Description Line 2']] = sl.description2 || '';
+      slRow[COLUMN_INDEX['Final URL']] = sl.finalUrl || campaign.url || '';
+      rows.push(slRow);
+    });
+  }
+  
+  // CALLOUT ASSET ROWS - Each callout as separate row with proper asset columns for Google Ads Editor
+  if (campaign.callouts && campaign.callouts.length > 0) {
+    campaign.callouts.forEach((co, idx) => {
+      const coRow = createEmptyRow();
+      coRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      coRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      // Use proper asset column name for callouts
+      coRow[COLUMN_INDEX['Callout Text']] = co.text || '';
+      rows.push(coRow);
+    });
+  }
+  
+  // STRUCTURED SNIPPET ASSET ROWS - Each snippet as separate row with proper asset columns for Google Ads Editor  
+  if (campaign.snippets && campaign.snippets.length > 0) {
+    campaign.snippets.forEach((sn, idx) => {
+      const snRow = createEmptyRow();
+      snRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      snRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      // Use proper asset column names for snippets
+      snRow[COLUMN_INDEX['Snippet Header']] = sn.header || '';
+      snRow[COLUMN_INDEX['Snippet Values']] = sn.values || '';
+      rows.push(snRow);
+    });
   }
   
   // Image asset rows

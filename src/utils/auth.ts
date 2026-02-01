@@ -49,6 +49,25 @@ export async function signUpWithEmail(
   name?: string
 ): Promise<{ data: User | null; error: { message: string } | null }> {
   try {
+    // Clear any existing session before signup to prevent "already signed in" error
+    const existingSession = nhostClient.auth.getSession();
+    if (existingSession) {
+      try {
+        await nhostClient.auth.signOut();
+        // Wait a bit for session to clear
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (signOutErr) {
+        console.warn('Error clearing existing session before signup:', signOutErr);
+      }
+    }
+    
+    // Also clear any stale localStorage data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('nhostSession');
+    }
+    
     // Sign up with Nhost Auth
     // Use production domain for email verification redirect
     const redirectUrl = getRedirectUrl();

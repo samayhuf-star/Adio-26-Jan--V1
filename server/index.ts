@@ -12,6 +12,8 @@ import { adminRoutes } from './routes/admin';
 import { userRoutes } from './routes/user';
 import { tasksRoutes } from './routes/tasks';
 import { promoRoutes } from './routes/promo';
+import { superadminRoutes } from './routes/superadmin';
+import { domainsRoutes } from './routes/domains';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -80,46 +82,32 @@ app.route('/api/organization', seatsRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/user', userRoutes);
 app.route('/api/tasks', tasksRoutes);
-app.route('/api/projects', tasksRoutes); // Projects are handled in tasks routes
+app.route('/api/projects', tasksRoutes);
 app.route('/api/promo', promoRoutes);
-app.route('/api/organizations', organizationsRoutes);
-app.route('/api/invites', invitesRoutes);
-app.route('/api/organization', seatsRoutes);
-app.route('/api/admin', adminRoutes);
-app.route('/api/user', userRoutes);
-app.route('/api/tasks', tasksRoutes);
-app.route('/api/projects', tasksRoutes); // Projects are handled in tasks routes
-app.route('/api/promo', promoRoutes);
+app.route('/api/superadmin', superadminRoutes);
+app.route('/api/domains', domainsRoutes);
 
 app.get('/api/products', async (c) => {
   try {
     const products = await stripeService.listProductsWithPrices(true, 50, 0);
     
-    const productMap = new Map();
-    for (const row of products) {
-      if (!productMap.has(row.product_id)) {
-        productMap.set(row.product_id, {
-          id: row.product_id,
-          name: row.product_name,
-          description: row.product_description,
-          active: row.product_active,
-          metadata: row.product_metadata,
-          prices: []
-        });
-      }
-      if (row.price_id) {
-        productMap.get(row.product_id).prices.push({
-          id: row.price_id,
-          unitAmount: row.unit_amount,
-          currency: row.currency,
-          recurring: row.recurring,
-          active: row.price_active,
-          metadata: row.price_metadata
-        });
-      }
-    }
+    const formattedProducts = products.map((product: any) => ({
+      id: product.product_id,
+      name: product.product_name,
+      description: product.product_description,
+      active: product.product_active,
+      metadata: product.product_metadata,
+      prices: product.prices?.map((price: any) => ({
+        id: price.price_id,
+        unitAmount: price.unit_amount,
+        currency: price.currency,
+        recurring: price.recurring,
+        active: price.price_active,
+        metadata: price.price_metadata
+      })) || []
+    }));
     
-    return c.json({ products: Array.from(productMap.values()) });
+    return c.json({ products: formattedProducts });
   } catch (error) {
     console.error('Error fetching products:', error);
     return c.json({ error: 'Failed to fetch products' }, 500);

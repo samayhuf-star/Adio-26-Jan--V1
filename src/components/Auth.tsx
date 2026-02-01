@@ -42,6 +42,16 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
   React.useEffect(() => {
     setIsLogin(initialMode === 'login');
     setError(''); // Clear any errors when mode changes
+    
+    // When switching to signup mode, clear any stale session data to prevent "already signed in" errors
+    if (initialMode === 'signup') {
+      // Clear localStorage auth data that might be stale
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('nhostSession');
+      }
+    }
   }, [initialMode]);
 
   // Countdown timer for resend cooldown

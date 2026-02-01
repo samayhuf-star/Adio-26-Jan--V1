@@ -9,6 +9,8 @@
       "dependencies": {
             "@grapesjs/react": "^2.0.0",
             "@hono/node-server": "^1.19.7",
+            "@nhost/nhost-js": "^3.1.0",
+            "@nhost/react": "^3.1.0",
             "@prisma/client": "^7.1.0",
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -38,8 +40,6 @@
             "@radix-ui/react-tooltip": "^1.1.8",
             "@stripe/react-stripe-js": "^5.4.0",
             "@stripe/stripe-js": "^8.5.2",
-            "@nhost/nhost-js": "^3.1.0",
-    "@nhost/react": "^3.1.0",
             "@tailwindcss/vite": "^4.1.17",
             "@types/cheerio": "^0.22.35",
             "@types/papaparse": "^5.5.0",
@@ -89,6 +89,7 @@
             "tsconfig-paths": "^4.2.0",
             "tsx": "^4.21.0",
             "vaul": "^1.1.2",
+            "whois": "^2.16.1",
             "xlsx-js-style": "^1.2.0",
             "zod": "^4.2.1",
             "zod-validation-error": "^5.0.0"

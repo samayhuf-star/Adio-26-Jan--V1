@@ -1,51 +1,101 @@
 interface FooterProps {
   onNavigateToPolicy?: (policy: string) => void;
   onNavigateToSection?: (section: string) => void;
+  onNavigateToApp?: (tab: string) => void;
 }
 
-export function Footer({ onNavigateToPolicy, onNavigateToSection }: FooterProps) {
+export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToApp }: FooterProps) {
+  const navigateToPolicy = (policy: string) => {
+    if (onNavigateToPolicy) {
+      onNavigateToPolicy(policy);
+    } else {
+      // Fallback: use URL-based navigation
+      const policyPaths: Record<string, string> = {
+        'privacy': '/privacy-policy',
+        'terms': '/terms-of-service',
+        'cookie': '/cookie-policy',
+        'gdpr': '/gdpr-compliance',
+        'refund': '/refund-policy'
+      };
+      if (policyPaths[policy]) {
+        window.location.href = policyPaths[policy];
+      }
+    }
+  };
+
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string, category: string) => {
     e.preventDefault();
     
-    // Product links - scroll to sections or navigate
+    // Product links - scroll to sections on homepage, or navigate to app
     if (link === 'Features') {
       const element = document.querySelector('#features');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.location.href = '/#features';
       }
     } else if (link === 'Pricing') {
       const element = document.querySelector('#pricing');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.location.href = '/#pricing';
       }
-    } else if (link === 'Campaign Builder' || link === 'Keyword Planner' || link === 'Ad Generator') {
-      // These require login - scroll to pricing or show auth
-      const element = document.querySelector('#pricing');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (link === 'Campaign Builder') {
+      if (onNavigateToApp) {
+        onNavigateToApp('campaign-builder');
+      } else {
+        window.location.href = '/?tab=campaign-builder';
+      }
+    } else if (link === 'Keyword Planner') {
+      if (onNavigateToApp) {
+        onNavigateToApp('keyword-planner');
+      } else {
+        window.location.href = '/?tab=keyword-planner';
+      }
+    } else if (link === 'Ad Generator') {
+      if (onNavigateToApp) {
+        onNavigateToApp('ads-builder');
+      } else {
+        window.location.href = '/?tab=ads-builder';
       }
     }
     // Resources links
-    else if (link === 'Documentation' || link === 'Help Center' || link === 'Tutorials') {
-      window.open('https://docs.adiology.io', '_blank');
+    else if (link === 'Documentation' || link === 'Help Center') {
+      if (onNavigateToApp) {
+        onNavigateToApp('docs');
+      } else {
+        window.location.href = '/?tab=docs';
+      }
     } else if (link === 'Blog') {
-      window.open('https://blog.adiology.io', '_blank');
+      if (onNavigateToApp) {
+        onNavigateToApp('blog');
+      } else {
+        window.location.href = '/?tab=blog';
+      }
     } else if (link === 'API Reference') {
-      window.open('https://docs.adiology.io/api', '_blank');
+      if (onNavigateToApp) {
+        onNavigateToApp('docs');
+      } else {
+        window.location.href = '/?tab=docs';
+      }
+    } else if (link === 'Tutorials') {
+      if (onNavigateToApp) {
+        onNavigateToApp('docs');
+      } else {
+        window.location.href = '/?tab=docs';
+      }
     }
     // Company links
     else if (link === 'About Us') {
-      const element = document.querySelector('#about') || document.querySelector('#features');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    } else if (link === 'Contact') {
-      const element = document.querySelector('#contact');
+      const element = document.querySelector('#features');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
-        window.location.href = 'mailto:support@adiology.io';
+        window.location.href = '/#features';
       }
+    } else if (link === 'Contact') {
+      window.location.href = 'mailto:support@adiology.io';
     } else if (link === 'Careers') {
       window.location.href = 'mailto:careers@adiology.io';
     } else if (link === 'Partners') {
@@ -60,17 +110,15 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection }: FooterProps)
         'GDPR Compliance': 'gdpr',
         'Refund Policy': 'refund'
       };
-      if (onNavigateToPolicy && policyMap[link]) {
-        onNavigateToPolicy(policyMap[link]);
+      if (policyMap[link]) {
+        navigateToPolicy(policyMap[link]);
       }
     }
   };
 
   const handlePolicyClick = (e: React.MouseEvent<HTMLAnchorElement>, policy: string) => {
     e.preventDefault();
-    if (onNavigateToPolicy) {
-      onNavigateToPolicy(policy);
-    }
+    navigateToPolicy(policy);
   };
 
   const footerSections = [

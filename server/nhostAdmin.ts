@@ -15,26 +15,30 @@ class NhostAdminClient {
   private adminSecret: string;
 
   constructor() {
-    const subdomain = process.env.NHOST_SUBDOMAIN || process.env.NHOST_PROJECT_ID;
-    const region = process.env.NHOST_REGION || 'eu-central-1';
-    const adminSecret = process.env.NHOST_ADMIN_SECRET || process.env.ADMIN_SECRET_KEY || '';
+    const subdomain = process.env.NHOST_SUBDOMAIN || process.env.NHOST_PROJECT_ID || process.env.VITE_NHOST_SUBDOMAIN;
+    const region = process.env.NHOST_REGION || process.env.VITE_NHOST_REGION || 'eu-central-1';
+    const adminSecret = process.env.NHOST_ADMIN_SECRET || process.env.VITE_NHOST_ADMIN_SECRET || process.env.ADMIN_SECRET_KEY || '';
 
     if (!subdomain) {
       console.warn('[Nhost Admin] NHOST_SUBDOMAIN or NHOST_PROJECT_ID not set');
     }
 
     if (!adminSecret) {
-      console.warn('[Nhost Admin] NHOST_ADMIN_SECRET or ADMIN_SECRET_KEY not set');
+      console.warn('[Nhost Admin] NHOST_ADMIN_SECRET or VITE_NHOST_ADMIN_SECRET not set');
+    } else {
+      console.log('[Nhost Admin] Admin secret configured');
     }
 
-    // Nhost GraphQL endpoint: https://{subdomain}.graphql.{region}.nhost.run/v1
+    // Nhost GraphQL endpoint: https://{subdomain}.hasura.{region}.nhost.run/v1
     // Auth endpoint: https://{subdomain}.auth.{region}.nhost.run/v1
     this.baseUrl = subdomain 
-      ? `https://${subdomain}.graphql.${region}.nhost.run/v1`
+      ? `https://${subdomain}.hasura.${region}.nhost.run/v1`
       : '';
     this.authUrl = subdomain
       ? `https://${subdomain}.auth.${region}.nhost.run/v1`
       : '';
+    
+    console.log('[Nhost Admin] GraphQL URL:', this.baseUrl);
     this.adminSecret = adminSecret;
   }
 
@@ -235,12 +239,33 @@ class NhostAdminClient {
    * Get total user count
    */
   async getUserCount(): Promise<number> {
+    // Fetch a large batch and count them since users_aggregate may not exist in schema
     const query = `
       query GetUserCount {
-        users_aggregate {
-          aggregate {
-            count
-          }
+        users(limit: 10000) {
+          id
+        }
+      }
+    `;
+
+    const result = await this.query(query);
+    
+    if (result.errors) {
+      console.error('[Nhost Admin] getUserCount error:', result.errors);
+      return 0;
+    }
+
+    return result.data?.users?.length || 0;
+  }
+
+  /**
+   * Get blocked users count
+   */
+  async getBlockedUserCount(): Promise<number> {
+    const query = `
+      query GetBlockedUsers {
+        users(where: { disabled: { _eq: true } }, limit: 10000) {
+          id
         }
       }
     `;
@@ -251,7 +276,61 @@ class NhostAdminClient {
       return 0;
     }
 
-    return result.data?.users_aggregate?.aggregate?.count || 0;
+    return result.data?.users?.length || 0;
+  }
+
+  /**
+   * Delete user by ID
+   */
+  async deleteUser(userId: string): Promise<boolean> {
+    const query = `
+      mutation DeleteUser($userId: uuid!) {
+        deleteUser(id: $userId) {
+          id
+        }
+      }
+    `;
+
+    const result = await this.query(query, { userId });
+    
+    if (result.errors) {
+      console.error('[Nhost Admin] deleteUser error:', result.errors);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Update user display name
+   */
+  async updateUserDisplayName(userId: string, displayName: string): Promise<boolean> {
+    const query = `
+      mutation UpdateUserDisplayName($userId: uuid!, $displayName: String!) {
+        updateUser(pk_columns: { id: $userId }, _set: { displayName: $displayName }) {
+          id
+        }
+      }
+    `;
+
+    const result = await this.query(query, { userId, displayName });
+    return !result.errors;
+  }
+
+  /**
+   * Update user email
+   */
+  async updateUserEmail(userId: string, newEmail: string): Promise<boolean> {
+    const query = `
+      mutation UpdateUserEmail($userId: uuid!, $email: citext!) {
+        updateUser(pk_columns: { id: $userId }, _set: { email: $email }) {
+          id
+        }
+      }
+    `;
+
+    const result = await this.query(query, { userId, email: newEmail });
+    return !result.errors;
   }
 
   /**

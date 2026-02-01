@@ -50,31 +50,25 @@ stripe.get('/config', async (c) => {
 /** GET /api/stripe/products – { products } */
 stripe.get('/products', async (c) => {
   try {
-    const rows = await stripeService.listProductsWithPrices(true, 50, 0);
-    const productMap = new Map<string, any>();
-    for (const row of rows) {
-      if (!productMap.has(row.product_id)) {
-        productMap.set(row.product_id, {
-          id: row.product_id,
-          name: row.product_name,
-          description: row.product_description,
-          active: row.product_active,
-          metadata: row.product_metadata,
-          prices: [],
-        });
-      }
-      if (row.price_id) {
-        productMap.get(row.product_id).prices.push({
-          id: row.price_id,
-          unitAmount: row.unit_amount,
-          currency: row.currency,
-          recurring: row.recurring,
-          active: row.price_active,
-          metadata: row.price_metadata,
-        });
-      }
-    }
-    return c.json({ products: Array.from(productMap.values()) });
+    const products = await stripeService.listProductsWithPrices(true, 50, 0);
+    
+    const formattedProducts = products.map((product: any) => ({
+      id: product.product_id,
+      name: product.product_name,
+      description: product.product_description,
+      active: product.product_active,
+      metadata: product.product_metadata,
+      prices: product.prices?.map((price: any) => ({
+        id: price.price_id,
+        unitAmount: price.unit_amount,
+        currency: price.currency,
+        recurring: price.recurring,
+        active: price.price_active,
+        metadata: price.price_metadata
+      })) || []
+    }));
+    
+    return c.json({ products: formattedProducts });
   } catch (error) {
     console.error('[Stripe] Products error:', error);
     return c.json({ error: 'Failed to fetch products' }, 500);

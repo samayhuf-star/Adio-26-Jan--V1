@@ -291,15 +291,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
             Your command center is ready. <span className="text-indigo-400">12 new insights</span> are waiting for your attention.
           </p>
         </div>
-        <Button 
-          onClick={() => onNavigate('builder-3')}
-          className="h-16 px-10 rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-500 hover:to-purple-600 text-white font-bold text-lg shadow-2xl shadow-indigo-500/30 transition-all duration-300 hover:scale-[1.05] active:scale-[0.95] flex items-center gap-4 border-t border-white/20 group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center group-hover:rotate-12 transition-transform">
-            <Zap className="w-5 h-5 fill-white" />
-          </div>
-          New Campaign
-        </Button>
       </div>
 
       {/* Enhanced Terminal-Style System Stats - Shell View */}

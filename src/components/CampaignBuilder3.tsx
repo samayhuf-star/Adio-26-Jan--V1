@@ -2301,7 +2301,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
               newExtension.sitelinks = extensionData.sitelinks.map((sl: any) => ({
                 text: sl.text || sl.linkText || 'Link',
                 description: sl.description || '',
-                url: campaignData.url || ''
+                description1: sl.description || '',
+                description2: sl.description2 || '',
+                url: sl.url || campaignData.url || '',
+                finalUrl: sl.url || campaignData.url || ''
               }));
               newExtension.text = newExtension.sitelinks.map((sl: any) => sl.text).join(', ');
             } else if (extensionType === 'call' && extensionData.phone) {

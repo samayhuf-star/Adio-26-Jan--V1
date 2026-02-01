@@ -47,11 +47,13 @@ export class StripeService {
 
   async getProduct(productId: string) {
     try {
-      const result = await pool.query(
-        'SELECT * FROM stripe.products WHERE id = $1',
-        [productId]
-      );
-      return result.rows[0] || null;
+      const stripe = await getUncachableStripeClient();
+      if (!stripe) {
+        console.error('Stripe not configured');
+        return null;
+      }
+      const product = await stripe.products.retrieve(productId);
+      return product;
     } catch (error) {
       console.error('Error getting product:', error);
       return null;
@@ -60,11 +62,16 @@ export class StripeService {
 
   async listProducts(active = true, limit = 20, offset = 0) {
     try {
-      const result = await pool.query(
-        'SELECT * FROM stripe.products WHERE active = $1 LIMIT $2 OFFSET $3',
-        [active, limit, offset]
-      );
-      return result.rows;
+      const stripe = await getUncachableStripeClient();
+      if (!stripe) {
+        console.error('Stripe not configured');
+        return [];
+      }
+      const products = await stripe.products.list({
+        active,
+        limit,
+      });
+      return products.data;
     } catch (error) {
       console.error('Error listing products:', error);
       return [];
@@ -73,31 +80,43 @@ export class StripeService {
 
   async listProductsWithPrices(active = true, limit = 20, offset = 0) {
     try {
-      const result = await pool.query(`
-        WITH paginated_products AS (
-          SELECT id, name, description, metadata, active
-          FROM stripe.products
-          WHERE active = $1
-          ORDER BY id
-          LIMIT $2 OFFSET $3
-        )
-        SELECT 
-          p.id as product_id,
-          p.name as product_name,
-          p.description as product_description,
-          p.active as product_active,
-          p.metadata as product_metadata,
-          pr.id as price_id,
-          pr.unit_amount,
-          pr.currency,
-          pr.recurring,
-          pr.active as price_active,
-          pr.metadata as price_metadata
-        FROM paginated_products p
-        LEFT JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
-        ORDER BY p.id, pr.unit_amount
-      `, [active, limit, offset]);
-      return result.rows;
+      const stripe = await getUncachableStripeClient();
+      if (!stripe) {
+        console.error('Stripe not configured');
+        return [];
+      }
+      
+      const products = await stripe.products.list({
+        active,
+        limit,
+        expand: ['data.default_price'],
+      });
+      
+      const productsWithPrices = await Promise.all(
+        products.data.map(async (product) => {
+          const prices = await stripe.prices.list({
+            product: product.id,
+            active: true,
+          });
+          return {
+            product_id: product.id,
+            product_name: product.name,
+            product_description: product.description,
+            product_active: product.active,
+            product_metadata: product.metadata,
+            prices: prices.data.map(price => ({
+              price_id: price.id,
+              unit_amount: price.unit_amount,
+              currency: price.currency,
+              recurring: price.recurring,
+              price_active: price.active,
+              price_metadata: price.metadata,
+            })),
+          };
+        })
+      );
+      
+      return productsWithPrices;
     } catch (error) {
       console.error('Error listing products with prices:', error);
       return [];
@@ -106,11 +125,13 @@ export class StripeService {
 
   async getPrice(priceId: string) {
     try {
-      const result = await pool.query(
-        'SELECT * FROM stripe.prices WHERE id = $1',
-        [priceId]
-      );
-      return result.rows[0] || null;
+      const stripe = await getUncachableStripeClient();
+      if (!stripe) {
+        console.error('Stripe not configured');
+        return null;
+      }
+      const price = await stripe.prices.retrieve(priceId);
+      return price;
     } catch (error) {
       console.error('Error getting price:', error);
       return null;
@@ -119,11 +140,13 @@ export class StripeService {
 
   async getSubscription(subscriptionId: string) {
     try {
-      const result = await pool.query(
-        'SELECT * FROM stripe.subscriptions WHERE id = $1',
-        [subscriptionId]
-      );
-      return result.rows[0] || null;
+      const stripe = await getUncachableStripeClient();
+      if (!stripe) {
+        console.error('Stripe not configured');
+        return null;
+      }
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      return subscription;
     } catch (error) {
       console.error('Error getting subscription:', error);
       return null;

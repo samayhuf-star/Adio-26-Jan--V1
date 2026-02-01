@@ -83,10 +83,26 @@ export function setNhostGetToken(getToken: () => Promise<string | null>) {
 async function getAuthToken(): Promise<string | null> {
   try {
     if (nhostGetToken) {
-      return await nhostGetToken();
+      const token = await nhostGetToken();
+      if (token) {
+        console.log('[historyService] Got auth token from Nhost');
+        return token;
+      }
     }
+    
+    // Fallback: try to get token from localStorage
+    if (typeof window !== 'undefined') {
+      const localToken = localStorage.getItem('auth_token');
+      if (localToken && localToken.length > 10) {
+        console.log('[historyService] Got auth token from localStorage');
+        return localToken;
+      }
+    }
+    
+    console.warn('[historyService] No auth token available');
     return null;
-  } catch {
+  } catch (error) {
+    console.warn('[historyService] Error getting auth token:', error);
     return null;
   }
 }
@@ -249,11 +265,35 @@ export const historyService = {
           lastModified: record.updated_at,
         }));
 
-        console.log(`Loaded ${items.length} items from database for current user`);
+        console.log(`[historyService] Loaded ${items.length} items from database for current user`);
         setDataSource('live');
         
-        // Return only user's campaigns from database - don't merge localStorage
-        // localStorage is only used as fallback when not authenticated
+        // If database has items, use them; otherwise fall back to localStorage
+        if (items.length > 0) {
+          return items;
+        }
+        
+        // Database is empty - try to get items from localStorage as fallback
+        // This helps when user had campaigns saved locally before authentication
+        console.log('[historyService] Database empty, checking localStorage for fallback data');
+        try {
+          const localItems = localStorageHistory.getAll();
+          if (localItems.length > 0) {
+            console.log(`[historyService] Found ${localItems.length} items in localStorage`);
+            return localItems.map((item: any) => ({
+              id: item.id || crypto.randomUUID(),
+              type: item.type || 'unknown',
+              name: item.name || 'Unnamed',
+              data: item.data || {},
+              timestamp: item.timestamp || new Date().toISOString(),
+              status: item.status || 'completed',
+              lastModified: item.lastModified,
+            }));
+          }
+        } catch (localErr) {
+          console.warn('[historyService] Error reading localStorage:', localErr);
+        }
+        
         return items;
       } else {
         throw new Error('No auth token available');

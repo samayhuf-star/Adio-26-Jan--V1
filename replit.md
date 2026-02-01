@@ -31,6 +31,15 @@ Preferred communication style: Simple, everyday language.
   - API: /api/community endpoints for SSO, topics, posts, and categories
   - Requires: DISCOURSE_URL, DISCOURSE_API_KEY, DISCOURSE_SSO_SECRET environment variables
   - Setup guide: docs/discourse-setup.md
+- **Domain Monitoring**: Track domain expiry, SSL certificates, and DNS records.
+  - Real-time WHOIS lookups for domain registration and expiry dates
+  - SSL certificate checking with validity status and expiry alerts
+  - DNS record viewing (A, AAAA, MX, TXT, NS, CNAME records)
+  - Change detection with historical snapshots
+  - Email alert configuration for expiring domains/certificates
+  - Uses free Node.js packages: whois npm package, native tls/dns modules
+  - API: /api/domains endpoints for CRUD and lookups
+  - Database: monitored_domains, domain_snapshots, domain_alerts tables
 
 ## Backend
 - **Primary API**: Hono (Node.js/TypeScript) for all API endpoints, with optional FastAPI (Python) for legacy ad generation.
