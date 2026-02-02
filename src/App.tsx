@@ -931,12 +931,12 @@ const AppContent = () => {
       ]
     },
 
-    { id: 'community', label: 'Community', icon: MessageSquare, module: null, externalUrl: 'https://community.adiology.io/' },
     { id: 'domain-monitoring', label: 'Domain Monitor', icon: Globe, module: null },
     // Blog hidden - disabled
     // { id: 'blog', label: 'Blog', icon: BookOpen, module: null },
     { id: 'settings', label: 'Settings', icon: Settings, module: 'settings' },
     { id: 'support-help', label: 'Support & Help', icon: HelpCircle, module: 'support' },
+    { id: 'community', label: 'Community', icon: MessageSquare, module: null, externalUrl: 'https://community.adiology.io/' },
     // Super Admin Panel - only visible to super admins
     ...(isSuperAdmin ? [{ id: 'admin-panel', label: 'Admin Panel', icon: Shield, module: null }] : []),
   ];
