@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccessToken, useAuthenticationStatus, useUserData } from '@nhost/react';
 import { nhost } from '../lib/nhost';
 import { getSessionToken } from '../utils/auth';
+import { useAuthCompat } from '../utils/authCompat';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +58,7 @@ export default function DomainMonitoring() {
   const accessToken = useAccessToken();
   const { isLoading: isAuthLoading, isAuthenticated } = useAuthenticationStatus();
   const userData = useUserData();
+  const { getToken } = useAuthCompat();
   const [domains, setDomains] = useState<MonitoredDomain[]>([]);
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -74,49 +76,110 @@ export default function DomainMonitoring() {
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [lookupModalOpen, setLookupModalOpen] = useState(false);
 
-  // State for async token fetching
-  const [cachedToken, setCachedToken] = useState<string | null>(null);
+  // State for async token fetching - initialize from localStorage immediately
+  const [cachedToken, setCachedToken] = useState<string | null>(() => {
+    // Try to get token immediately on mount
+    try {
+      return localStorage.getItem('auth_token');
+    } catch {
+      return null;
+    }
+  });
   
-  // Fetch token on mount and when auth state changes
+  // Fetch token on mount and when auth state changes with retry mechanism
   useEffect(() => {
-    const fetchToken = async () => {
+    let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 5;
+    
+    const tryGetToken = (): string | null => {
       // Try hook token first
       if (accessToken) {
-        setCachedToken(accessToken);
         console.log('[DomainMonitoring] Using hook token');
-        return;
+        return accessToken;
       }
       
       // Fallback 1: Try nhost client directly
       try {
         const session = nhost.auth.getSession();
         if (session?.accessToken) {
-          setCachedToken(session.accessToken);
           console.log('[DomainMonitoring] Using nhost.auth.getSession()');
-          return;
+          return session.accessToken;
         }
       } catch (e) {
         console.warn('[DomainMonitoring] nhost.auth.getSession() failed:', e);
       }
       
-      // Fallback 2: Use getSessionToken from auth.ts (includes localStorage fallback)
+      // Fallback 2: Direct localStorage check
       try {
-        const token = await getSessionToken();
-        if (token) {
-          setCachedToken(token);
-          console.log('[DomainMonitoring] Using getSessionToken() from auth.ts');
-          return;
+        const localToken = localStorage.getItem('auth_token');
+        if (localToken) {
+          console.log('[DomainMonitoring] Using localStorage auth_token');
+          return localToken;
         }
       } catch (e) {
-        console.warn('[DomainMonitoring] getSessionToken() failed:', e);
+        console.warn('[DomainMonitoring] localStorage check failed:', e);
       }
       
-      // No token found
-      setCachedToken(null);
-      console.log('[DomainMonitoring] No auth token available');
+      return null;
+    };
+    
+    const fetchToken = async () => {
+      // Wait for auth loading to complete first
+      if (isAuthLoading) {
+        console.log('[DomainMonitoring] Auth is loading, waiting...');
+        return;
+      }
+      
+      console.log('[DomainMonitoring] Fetching token... accessToken:', !!accessToken, 'isAuthenticated:', isAuthenticated, 'retry:', retryCount);
+      
+      // Try to get token
+      let token = tryGetToken();
+      
+      // If no token and authenticated, retry with delay (session might not be ready)
+      if (!token && isAuthenticated && retryCount < maxRetries) {
+        retryCount++;
+        console.log('[DomainMonitoring] No token but authenticated, retrying in 500ms (attempt', retryCount, ')');
+        setTimeout(() => {
+          if (isMounted) {
+            const retryToken = tryGetToken();
+            if (retryToken) {
+              setCachedToken(retryToken);
+            } else if (retryCount < maxRetries) {
+              fetchToken();
+            }
+          }
+        }, 500);
+        return;
+      }
+      
+      // Also try async getSessionToken
+      if (!token) {
+        try {
+          token = await getSessionToken();
+          if (token) {
+            console.log('[DomainMonitoring] Using getSessionToken() from auth.ts');
+          }
+        } catch (e) {
+          console.warn('[DomainMonitoring] getSessionToken() failed:', e);
+        }
+      }
+      
+      if (isMounted) {
+        if (token) {
+          setCachedToken(token);
+        } else {
+          console.log('[DomainMonitoring] No auth token available after all fallbacks');
+          setCachedToken(null);
+        }
+      }
     };
     
     fetchToken();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [accessToken, isAuthenticated, isAuthLoading]);
   
   const getAuthHeaders = useCallback((): Record<string, string> => {
@@ -178,19 +241,25 @@ export default function DomainMonitoring() {
   const addDomain = async () => {
     if (!newDomain.trim()) return;
     
-    // Check if we have a valid token (from any source)
-    if (!cachedToken) {
+    // Try to get token - first from cache, then from hook
+    let token = cachedToken;
+    if (!token) {
+      console.log('[DomainMonitoring] No cached token, trying getToken()...');
+      token = await getToken();
+    }
+    
+    if (!token) {
       notifications.error('Please sign in to add domains');
       console.error('[DomainMonitoring] Cannot add domain - no auth token available');
       return;
     }
     
-    const headers = getAuthHeaders();
+    const headers = { Authorization: `Bearer ${token}` };
     
     try {
       setAddLoading(true);
       setAddProgress('Adding domain...');
-      console.log('[DomainMonitoring] Adding domain with auth headers:', Object.keys(headers));
+      console.log('[DomainMonitoring] Adding domain with auth token');
       
       const response = await fetch('/api/domains', {
         method: 'POST',

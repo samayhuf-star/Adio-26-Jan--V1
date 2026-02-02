@@ -45,6 +45,7 @@ import { PaymentSuccess } from './components/PaymentSuccess';
 import { PlanSelection } from './components/PlanSelection';
 import CreativeMinimalistHomepage from './components/CreativeMinimalistHomepage';
 import { MobileNavigation, MobileQuickActions } from './components/MobileNavigation';
+import { LiveLogs } from './components/LiveLogs';
 
 // Lazy load heavy components for code splitting
 const CampaignBuilder3 = lazy(() => import('./components/CampaignBuilder3').then(m => ({ default: m.CampaignBuilder3 })));
@@ -2239,6 +2240,8 @@ const AppContent = () => {
         />
       </div>
 
+      {/* Live Logs Panel */}
+      <LiveLogs />
     </div>
   );
 };

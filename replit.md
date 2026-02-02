@@ -55,8 +55,20 @@ Preferred communication style: Simple, everyday language.
 - **Primary Database**: Replit PostgreSQL (Neon-backed) for user data, campaign history, subscriptions, and billing. Managed via Drizzle ORM.
 - **Schema**: Defined in `shared/schema.ts` with Drizzle schema definitions. Use `npm run db:push` to sync schema changes.
 - **Caching**: KV store for edge functions, localStorage for offline data, and Redis for Celery.
+- **API Response Cache**: Centralized cache utility (`src/utils/apiCache.ts`) with:
+  - TTL-based expiration (default 5 minutes)
+  - Request deduplication to prevent duplicate API calls
+  - Stale-while-revalidate pattern for instant cached responses with background refresh
+  - Pattern-based cache invalidation
 - **Data Models**: Supports campaign structure, user profiles, and billing records.
 - **Website Analysis Storage**: localStorage-based analysis service for quick reuse of URL analysis results, with backend sync.
+
+## Performance Optimizations
+- **Visibility-based loading**: CommunityDashboardWidget uses Intersection Observer to defer API calls until visible
+- **API request deduplication**: Concurrent duplicate requests are merged into a single network call
+- **Stale-while-revalidate**: Cached data is shown immediately while fresh data is fetched in background
+- **Lazy loading**: Non-critical dashboard widgets are lazy-loaded with React.lazy()
+- **Dashboard optimization**: Single consolidated API endpoint (`/api/dashboard/all/:userId`) with duplicate prevention
 
 ## Authentication & Authorization
 - **Authentication Provider**: Clerk with email/password, social login, and managed user sessions.
