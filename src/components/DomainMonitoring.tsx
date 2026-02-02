@@ -189,8 +189,20 @@ export default function DomainMonitoring() {
 
   const fetchDomains = useCallback(async () => {
     try {
-      const headers = getAuthHeaders();
-      console.log('[DomainMonitoring] Fetching domains with auth headers:', Object.keys(headers));
+      // Try to get token - first from cache, then from hook
+      let token = cachedToken;
+      if (!token) {
+        token = await getToken();
+      }
+      
+      if (!token) {
+        console.log('[DomainMonitoring] No auth token for fetching domains');
+        setLoading(false);
+        return;
+      }
+      
+      const headers = { Authorization: `Bearer ${token}` };
+      console.log('[DomainMonitoring] Fetching domains with auth token');
       
       const response = await fetch('/api/domains', {
         headers
@@ -213,7 +225,7 @@ export default function DomainMonitoring() {
     } finally {
       setLoading(false);
     }
-  }, [getAuthHeaders]);
+  }, [cachedToken, getToken]);
 
   useEffect(() => {
     // Wait for auth to finish loading before making any decisions
@@ -315,9 +327,19 @@ export default function DomainMonitoring() {
   const refreshDomain = async (domainId: string) => {
     try {
       setRefreshingId(domainId);
+      
+      let token = cachedToken;
+      if (!token) {
+        token = await getToken();
+      }
+      if (!token) {
+        notifications.error('Please sign in to refresh domain');
+        return;
+      }
+      
       const response = await fetch(`/api/domains/${domainId}/refresh`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.ok) {
@@ -343,9 +365,18 @@ export default function DomainMonitoring() {
   
   const deleteDomain = async (domainId: string) => {
     try {
+      let token = cachedToken;
+      if (!token) {
+        token = await getToken();
+      }
+      if (!token) {
+        notifications.error('Please sign in to delete domain');
+        return;
+      }
+      
       const response = await fetch(`/api/domains/${domainId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.ok) {
@@ -408,11 +439,20 @@ export default function DomainMonitoring() {
     if (!selectedDomain) return;
     
     try {
+      let token = cachedToken;
+      if (!token) {
+        token = await getToken();
+      }
+      if (!token) {
+        notifications.error('Please sign in to update settings');
+        return;
+      }
+      
       const response = await fetch(`/api/domains/${selectedDomain.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders()
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           alertsEnabled: selectedDomain.alertsEnabled,
