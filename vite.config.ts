@@ -6,6 +6,10 @@
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    // Build date (ISO date string) — set at Vercel build time
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+  },
   optimizeDeps: {
     include: [
       // React core - MUST be pre-bundled first

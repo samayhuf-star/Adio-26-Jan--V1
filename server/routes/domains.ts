@@ -41,6 +41,55 @@ domainsRoutes.get('/', async (c) => {
   }
 });
 
+// Register /lookup/* before /:id so GET /api/domains/lookup/whois etc. are not matched by /:id
+domainsRoutes.get('/lookup/whois', async (c) => {
+  try {
+    const domain = c.req.query('domain');
+    if (!domain) {
+      return c.json({ error: 'Domain is required' }, 400);
+    }
+
+    const normalized = normalizeDomain(domain);
+    const whoisData = await lookupWhois(normalized);
+    return c.json(whoisData);
+  } catch (error) {
+    console.error('WHOIS lookup failed:', error);
+    return c.json({ error: 'WHOIS lookup failed' }, 500);
+  }
+});
+
+domainsRoutes.get('/lookup/ssl', async (c) => {
+  try {
+    const domain = c.req.query('domain');
+    if (!domain) {
+      return c.json({ error: 'Domain is required' }, 400);
+    }
+
+    const normalized = normalizeDomain(domain);
+    const sslData = await checkSSL(normalized);
+    return c.json(sslData);
+  } catch (error) {
+    console.error('SSL check failed:', error);
+    return c.json({ error: 'SSL check failed' }, 500);
+  }
+});
+
+domainsRoutes.get('/lookup/dns', async (c) => {
+  try {
+    const domain = c.req.query('domain');
+    if (!domain) {
+      return c.json({ error: 'Domain is required' }, 400);
+    }
+
+    const normalized = normalizeDomain(domain);
+    const dnsRecords = await lookupDNS(normalized);
+    return c.json(dnsRecords);
+  } catch (error) {
+    console.error('DNS lookup failed:', error);
+    return c.json({ error: 'DNS lookup failed' }, 500);
+  }
+});
+
 domainsRoutes.get('/:id', async (c) => {
   try {
     const userId = await getUserId(c);
@@ -307,54 +356,6 @@ domainsRoutes.post('/:id/refresh', async (c) => {
   } catch (error) {
     console.error('Failed to refresh domain:', error);
     return c.json({ error: 'Failed to refresh domain' }, 500);
-  }
-});
-
-domainsRoutes.get('/lookup/whois', async (c) => {
-  try {
-    const domain = c.req.query('domain');
-    if (!domain) {
-      return c.json({ error: 'Domain is required' }, 400);
-    }
-
-    const normalized = normalizeDomain(domain);
-    const whoisData = await lookupWhois(normalized);
-    return c.json(whoisData);
-  } catch (error) {
-    console.error('WHOIS lookup failed:', error);
-    return c.json({ error: 'WHOIS lookup failed' }, 500);
-  }
-});
-
-domainsRoutes.get('/lookup/ssl', async (c) => {
-  try {
-    const domain = c.req.query('domain');
-    if (!domain) {
-      return c.json({ error: 'Domain is required' }, 400);
-    }
-
-    const normalized = normalizeDomain(domain);
-    const sslData = await checkSSL(normalized);
-    return c.json(sslData);
-  } catch (error) {
-    console.error('SSL check failed:', error);
-    return c.json({ error: 'SSL check failed' }, 500);
-  }
-});
-
-domainsRoutes.get('/lookup/dns', async (c) => {
-  try {
-    const domain = c.req.query('domain');
-    if (!domain) {
-      return c.json({ error: 'Domain is required' }, 400);
-    }
-
-    const normalized = normalizeDomain(domain);
-    const dnsRecords = await lookupDNS(normalized);
-    return c.json(dnsRecords);
-  } catch (error) {
-    console.error('DNS lookup failed:', error);
-    return c.json({ error: 'DNS lookup failed' }, 500);
   }
 });
 

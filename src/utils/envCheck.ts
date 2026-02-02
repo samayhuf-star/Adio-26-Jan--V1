@@ -37,8 +37,9 @@ export function validateEnvironment(): boolean {
     return false;
   }
   
-  if (validation.warnings.length > 0 && import.meta.env.PROD) {
-    console.warn('⚠️ Production environment warnings:', validation.warnings);
+  // Only show optional env warnings in dev (suppress in production to avoid console noise)
+  if (validation.warnings.length > 0 && import.meta.env.DEV) {
+    console.warn('⚠️ Optional environment variables not set:', validation.warnings);
   }
   
   return true;

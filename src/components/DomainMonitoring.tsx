@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAccessToken, useAuthenticationStatus, useUserData } from '@nhost/react';
 import { nhost } from '../lib/nhost';
 import { getSessionToken } from '../utils/auth';
@@ -59,6 +59,8 @@ export default function DomainMonitoring() {
   const { isLoading: isAuthLoading, isAuthenticated } = useAuthenticationStatus();
   const userData = useUserData();
   const { getToken } = useAuthCompat();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
   const [domains, setDomains] = useState<MonitoredDomain[]>([]);
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -85,67 +87,55 @@ export default function DomainMonitoring() {
       return null;
     }
   });
+
+  // Log only once per "not authenticated" or "auth loading" state to avoid console spam
+  const hasLoggedNotAuthenticated = useRef(false);
+  const hasLoggedAuthLoading = useRef(false);
+  const retryCountRef = useRef(0);
   
   // Fetch token on mount and when auth state changes with retry mechanism
   useEffect(() => {
     let isMounted = true;
-    let retryCount = 0;
     const maxRetries = 5;
+    retryCountRef.current = 0; // Reset on each effect run
     
     const tryGetToken = (): string | null => {
-      // Try hook token first
-      if (accessToken) {
-        console.log('[DomainMonitoring] Using hook token');
-        return accessToken;
-      }
-      
-      // Fallback 1: Try nhost client directly
+      if (accessToken) return accessToken;
       try {
         const session = nhost.auth.getSession();
-        if (session?.accessToken) {
-          console.log('[DomainMonitoring] Using nhost.auth.getSession()');
-          return session.accessToken;
-        }
-      } catch (e) {
-        console.warn('[DomainMonitoring] nhost.auth.getSession() failed:', e);
+        if (session?.accessToken) return session.accessToken;
+      } catch {
+        // ignore
       }
-      
-      // Fallback 2: Direct localStorage check
       try {
         const localToken = localStorage.getItem('auth_token');
-        if (localToken) {
-          console.log('[DomainMonitoring] Using localStorage auth_token');
-          return localToken;
-        }
-      } catch (e) {
-        console.warn('[DomainMonitoring] localStorage check failed:', e);
+        if (localToken) return localToken;
+      } catch {
+        // ignore
       }
-      
       return null;
     };
     
     const fetchToken = async () => {
-      // Wait for auth loading to complete first
       if (isAuthLoading) {
-        console.log('[DomainMonitoring] Auth is loading, waiting...');
+        if (!hasLoggedAuthLoading.current) {
+          hasLoggedAuthLoading.current = true;
+        }
         return;
       }
+      hasLoggedAuthLoading.current = false;
       
-      console.log('[DomainMonitoring] Fetching token... accessToken:', !!accessToken, 'isAuthenticated:', isAuthenticated, 'retry:', retryCount);
-      
-      // Try to get token
       let token = tryGetToken();
       
-      // If no token and authenticated, retry with delay (session might not be ready)
-      if (!token && isAuthenticated && retryCount < maxRetries) {
-        retryCount++;
-        console.log('[DomainMonitoring] No token but authenticated, retrying in 500ms (attempt', retryCount, ')');
+      if (!token && isAuthenticated && retryCountRef.current < maxRetries) {
+        retryCountRef.current += 1;
         setTimeout(() => {
           if (isMounted) {
             const retryToken = tryGetToken();
             if (retryToken) {
               setCachedToken(retryToken);
-            } else if (retryCount < maxRetries) {
+              retryCountRef.current = 0;
+            } else if (retryCountRef.current < maxRetries) {
               fetchToken();
             }
           }
@@ -153,24 +143,23 @@ export default function DomainMonitoring() {
         return;
       }
       
-      // Also try async getSessionToken
       if (!token) {
         try {
           token = await getSessionToken();
-          if (token) {
-            console.log('[DomainMonitoring] Using getSessionToken() from auth.ts');
-          }
-        } catch (e) {
-          console.warn('[DomainMonitoring] getSessionToken() failed:', e);
+        } catch {
+          // ignore
         }
       }
       
       if (isMounted) {
         if (token) {
           setCachedToken(token);
+          hasLoggedNotAuthenticated.current = false;
         } else {
-          console.log('[DomainMonitoring] No auth token available after all fallbacks');
           setCachedToken(null);
+          if (!hasLoggedNotAuthenticated.current) {
+            hasLoggedNotAuthenticated.current = true;
+          }
         }
       }
     };
@@ -183,16 +172,15 @@ export default function DomainMonitoring() {
   }, [accessToken, isAuthenticated, isAuthLoading]);
   
   const getAuthHeaders = useCallback((): Record<string, string> => {
-    console.log('[DomainMonitoring] Auth state - isLoading:', isAuthLoading, 'isAuthenticated:', isAuthenticated, 'hasToken:', !!cachedToken, 'userId:', userData?.id);
     return cachedToken ? { Authorization: `Bearer ${cachedToken}` } : {};
-  }, [cachedToken, isAuthLoading, isAuthenticated, userData]);
+  }, [cachedToken]);
 
   const fetchDomains = useCallback(async () => {
     try {
-      // Try to get token - first from cache, then from hook
+      // Try to get token - first from cache, then from hook (via ref to avoid dependency loop)
       let token = cachedToken;
       if (!token) {
-        token = await getToken();
+        token = await getTokenRef.current();
       }
       
       if (!token) {
@@ -225,26 +213,23 @@ export default function DomainMonitoring() {
     } finally {
       setLoading(false);
     }
-  }, [cachedToken, getToken]);
+  }, [cachedToken]);
 
   useEffect(() => {
-    // Wait for auth to finish loading before making any decisions
     if (isAuthLoading) {
-      console.log('[DomainMonitoring] Auth is still loading, waiting...');
       return;
     }
-    
-    // Check if we have a cached token (from any source)
+    if (isAuthenticated) {
+      hasLoggedNotAuthenticated.current = false;
+    }
     if (cachedToken) {
-      console.log('[DomainMonitoring] Have cached token, fetching domains...');
       fetchDomains();
     } else if (!isAuthenticated) {
-      console.log('[DomainMonitoring] Not authenticated');
+      if (!hasLoggedNotAuthenticated.current) {
+        hasLoggedNotAuthenticated.current = true;
+      }
       setLoading(false);
       setDomains([]);
-    } else {
-      // Authenticated but no token yet - wait for token fetch effect
-      console.log('[DomainMonitoring] Waiting for token...');
     }
   }, [isAuthLoading, isAuthenticated, cachedToken, fetchDomains]);
 
@@ -257,7 +242,7 @@ export default function DomainMonitoring() {
     let token = cachedToken;
     if (!token) {
       console.log('[DomainMonitoring] No cached token, trying getToken()...');
-      token = await getToken();
+      token = await getTokenRef.current();
     }
     
     if (!token) {
@@ -298,7 +283,7 @@ export default function DomainMonitoring() {
         
         await new Promise(r => setTimeout(r, 1000));
         
-        setDomains([domain, ...domains]);
+        setDomains(prev => [domain, ...prev]);
         setAddModalOpen(false);
         setNewDomain('');
         setNewAlertEmail('');
@@ -330,7 +315,7 @@ export default function DomainMonitoring() {
       
       let token = cachedToken;
       if (!token) {
-        token = await getToken();
+        token = await getTokenRef.current();
       }
       if (!token) {
         notifications.error('Please sign in to refresh domain');
@@ -344,7 +329,7 @@ export default function DomainMonitoring() {
       
       if (response.ok) {
         const updated = await response.json();
-        setDomains(domains.map(d => d.id === domainId ? updated : d));
+        setDomains(prev => prev.map(d => d.id === domainId ? updated : d));
         if (selectedDomain?.id === domainId) {
           setSelectedDomain(updated);
         }
@@ -367,7 +352,7 @@ export default function DomainMonitoring() {
     try {
       let token = cachedToken;
       if (!token) {
-        token = await getToken();
+        token = await getTokenRef.current();
       }
       if (!token) {
         notifications.error('Please sign in to delete domain');
@@ -380,7 +365,7 @@ export default function DomainMonitoring() {
       });
       
       if (response.ok) {
-        setDomains(domains.filter(d => d.id !== domainId));
+        setDomains(prev => prev.filter(d => d.id !== domainId));
         if (selectedDomain?.id === domainId) {
           setDetailModalOpen(false);
           setSelectedDomain(null);
@@ -441,7 +426,7 @@ export default function DomainMonitoring() {
     try {
       let token = cachedToken;
       if (!token) {
-        token = await getToken();
+        token = await getTokenRef.current();
       }
       if (!token) {
         notifications.error('Please sign in to update settings');
@@ -463,7 +448,7 @@ export default function DomainMonitoring() {
       
       if (response.ok) {
         const updated = await response.json();
-        setDomains(domains.map(d => d.id === selectedDomain.id ? updated : d));
+        setDomains(prev => prev.map(d => d.id === selectedDomain.id ? updated : d));
         setSelectedDomain(updated);
         setSettingsModalOpen(false);
         notifications.success('Domain settings updated');
