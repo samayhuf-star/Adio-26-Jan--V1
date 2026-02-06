@@ -43,9 +43,67 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
     const ticketParam = urlParams.get('ticket');
     const typeParam = urlParams.get('type');
     const redirectTo = urlParams.get('redirectTo');
+    const refreshToken = urlParams.get('refreshToken') || urlParams.get('token');
 
     if (emailParam) {
       setEmail(emailParam);
+    }
+
+    if (refreshToken) {
+      hasProcessedRef.current = true;
+      setIsVerifying(true);
+
+      const signInWithRefreshToken = async () => {
+        try {
+          const { session, error: signInError } = await nhost.auth.refreshSession(refreshToken);
+
+          if (signInError || !session) {
+            console.error('[EmailVerification] Failed to sign in with refresh token:', signInError);
+            setError('Verification link has expired or is invalid. Please request a new one.');
+            setIsVerifying(false);
+            return;
+          }
+
+          const user = nhost.auth.getUser();
+          if (user?.email) setEmail(user.email);
+
+          if (user?.emailVerified) {
+            setIsVerified(true);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('auth_token', session.accessToken);
+              localStorage.setItem('user', JSON.stringify({
+                id: user.id,
+                email: user.email,
+                name: user.displayName || '',
+                full_name: user.displayName || '',
+                role: 'user',
+                subscription_plan: 'free',
+                subscription_status: 'active',
+                email_confirmed_at: new Date().toISOString(),
+              }));
+            }
+            notifications.success('Email verified successfully!');
+            window.history.replaceState({}, '', '/verify-email');
+            setTimeout(() => {
+              onVerificationSuccess();
+            }, 2000);
+          } else {
+            setIsVerified(true);
+            notifications.success('Email verified successfully!');
+            window.history.replaceState({}, '', '/verify-email');
+            setTimeout(() => {
+              onVerificationSuccess();
+            }, 2000);
+          }
+        } catch (err) {
+          console.error('[EmailVerification] Error processing refresh token:', err);
+          setError('Something went wrong during verification. Please try again.');
+          setIsVerifying(false);
+        }
+      };
+
+      signInWithRefreshToken();
+      return;
     }
 
     if (ticketParam && typeParam) {
