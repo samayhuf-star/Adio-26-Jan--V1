@@ -71,7 +71,7 @@ export default function DomainMonitoring() {
   const [addLoading, setAddLoading] = useState(false);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [currentView, setCurrentView] = useState<'home' | 'monitor'>('home');
   const [emailReportLoading, setEmailReportLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('whois');

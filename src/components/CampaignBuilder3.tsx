@@ -2474,15 +2474,30 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       const sitelinks: any[] = [];
       const callouts: any[] = [];
       const snippets: any[] = [];
+      const callExtensions: any[] = [];
+      const priceExtensions: any[] = [];
+      const promotions: any[] = [];
+      const appExtensions: any[] = [];
+      const messageExtensions: any[] = [];
+      const leadFormExtensions: any[] = [];
+      const imageAssets: any[] = [];
+      const businessInfo: any = {};
       const seenSitelinks = new Set<string>();
       const seenCallouts = new Set<string>();
       const seenSnippets = new Set<string>();
+      let hasCallExt = false;
+      let hasPriceExt = false;
+      let hasPromotionExt = false;
+      let hasAppExt = false;
+      let hasMessageExt = false;
+      let hasLeadFormExt = false;
+      let hasImageExt = false;
+      let hasLocationExt = false;
       
       (campaignData.ads || []).forEach((ad: any) => {
         if (ad.extensions && Array.isArray(ad.extensions)) {
           ad.extensions.forEach((ext: any) => {
             if (ext.type === 'sitelink') {
-              // Handle nested sitelinks array structure from ADD ALL button
               if (ext.sitelinks && Array.isArray(ext.sitelinks)) {
                 ext.sitelinks.forEach((sl: any) => {
                   const slText = sl.text || sl.linkText || '';
@@ -2498,7 +2513,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   }
                 });
               } else {
-                // Handle flat structure
                 const slText = ext.text || ext.linkText || '';
                 if (slText && !seenSitelinks.has(slText)) {
                   seenSitelinks.add(slText);
@@ -2512,7 +2526,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                 }
               }
             } else if (ext.type === 'callout') {
-              // Handle nested callouts array structure from ADD ALL button
               if (ext.callouts && Array.isArray(ext.callouts)) {
                 ext.callouts.forEach((calloutText: string) => {
                   if (calloutText && !seenCallouts.has(calloutText)) {
@@ -2524,7 +2537,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   }
                 });
               } else if (ext.text && !seenCallouts.has(ext.text)) {
-                // Handle flat structure
                 seenCallouts.add(ext.text);
                 callouts.push({
                   text: ext.text,
@@ -2532,7 +2544,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                 });
               }
             } else if (ext.type === 'snippet') {
-              // Handle snippet with header and values
               const snippetKey = `${ext.header || ''}:${Array.isArray(ext.values) ? ext.values.join(',') : ext.values || ''}`;
               if (!seenSnippets.has(snippetKey)) {
                 seenSnippets.add(snippetKey);
@@ -2542,17 +2553,94 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   status: 'Enabled'
                 });
               }
+            } else if (ext.type === 'call' && !hasCallExt) {
+              hasCallExt = true;
+              callExtensions.push({
+                phoneNumber: ext.phone || ext.phoneNumber || '',
+                countryCode: ext.countryCode || 'US',
+                status: 'Enabled'
+              });
+            } else if (ext.type === 'price' && !hasPriceExt) {
+              hasPriceExt = true;
+              const priceValue = ext.price || '$99';
+              const unit = ext.unit || 'per service';
+              priceExtensions.push({
+                type: ext.priceType || 'Services',
+                priceQualifier: ext.priceQualifier || 'From',
+                items: ext.items || [
+                  { header: campaignData.campaignName || 'Service', price: priceValue, finalUrl: campaignData.url || '' }
+                ]
+              });
+            } else if (ext.type === 'promotion' && !hasPromotionExt) {
+              hasPromotionExt = true;
+              promotions.push({
+                target: ext.promotionText || ext.target || campaignData.campaignName || 'Special Offer',
+                discountModifier: ext.discountModifier || '',
+                percentOff: ext.percentOff || '',
+                moneyAmountOff: ext.moneyAmountOff || '',
+                finalUrl: campaignData.url || '',
+                status: 'Enabled'
+              });
+            } else if (ext.type === 'app' && !hasAppExt) {
+              hasAppExt = true;
+              appExtensions.push({
+                appId: ext.appId || '',
+                appStore: ext.appStore || 'Google Play',
+                linkText: ext.linkText || ext.text || 'Download App',
+                finalUrl: ext.finalUrl || campaignData.url || '',
+                status: 'Enabled'
+              });
+            } else if (ext.type === 'message' && !hasMessageExt) {
+              hasMessageExt = true;
+              messageExtensions.push({
+                text: ext.message || ext.text || 'Send us a message',
+                businessName: ext.businessName || campaignData.campaignName || 'Business',
+                countryCode: ext.countryCode || 'US',
+                phoneNumber: ext.phoneNumber || ext.phone || '',
+                finalUrl: campaignData.url || '',
+                status: 'Enabled'
+              });
+            } else if (ext.type === 'leadform' && !hasLeadFormExt) {
+              hasLeadFormExt = true;
+              leadFormExtensions.push({
+                id: ext.formId || '',
+                name: ext.formName || ext.text || 'Lead Form',
+                headline: ext.headline || 'Get in Touch',
+                description: ext.description || 'Fill out this form',
+                callToAction: ext.callToAction || 'Submit',
+                status: 'Enabled'
+              });
+            } else if (ext.type === 'image' && !hasImageExt) {
+              hasImageExt = true;
+              imageAssets.push({
+                name: ext.imageName || ext.text || 'Campaign Image',
+                url: ext.imageUrl || ext.url || '',
+                status: 'Enabled'
+              });
+            } else if (ext.type === 'location' && !hasLocationExt) {
+              hasLocationExt = true;
+              businessInfo.name = ext.businessName || campaignData.campaignName || '';
+              businessInfo.address = ext.address || '';
+              businessInfo.phone = ext.phone || '';
+              businessInfo.website = campaignData.url || '';
+              businessInfo.location = ext.location || '';
             }
           });
         }
       });
       
-      // Only include extensions that the user explicitly added - do NOT auto-generate defaults
-      
-      console.log('📦 Extensions collected for CSV:', { 
+      console.log('Extensions collected for CSV:', { 
         sitelinks: sitelinks.length, 
         callouts: callouts.length, 
-        snippets: snippets.length 
+        snippets: snippets.length,
+        callExtensions: callExtensions.length,
+        priceExtensions: priceExtensions.length,
+        promotions: promotions.length,
+        appExtensions: appExtensions.length,
+        messageExtensions: messageExtensions.length,
+        leadFormExtensions: leadFormExtensions.length,
+        imageAssets: imageAssets.length,
+        hasLocation: hasLocationExt
       });
       
       // Build the V5 campaign data structure with all 183 columns
@@ -2601,7 +2689,15 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         },
         sitelinks: sitelinks.slice(0, 4),
         callouts: callouts.slice(0, 4),
-        snippets: snippets.slice(0, 2)
+        snippets: snippets.slice(0, 2),
+        callExtensions: callExtensions.length > 0 ? callExtensions : undefined,
+        priceExtensions: priceExtensions.length > 0 ? priceExtensions : undefined,
+        promotions: promotions.length > 0 ? promotions : undefined,
+        appExtensions: appExtensions.length > 0 ? appExtensions : undefined,
+        messageExtensions: messageExtensions.length > 0 ? messageExtensions : undefined,
+        leadFormExtensions: leadFormExtensions.length > 0 ? leadFormExtensions : undefined,
+        imageAssets: imageAssets.length > 0 ? imageAssets : undefined,
+        businessInfo: hasLocationExt ? businessInfo : undefined,
       };
       
       // Add ads to ALL ad groups - each ad group should have the same ads

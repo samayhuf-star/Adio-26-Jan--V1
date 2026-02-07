@@ -50,6 +50,28 @@ Preferred communication style: Simple, everyday language.
   - Creative UI with gradient cards, animated transitions, avatar colors
   - API: /api/tempmail proxy routes (no database needed, API handles storage)
   - Requires: TEMP_MAIL_API_KEY secret
+- **Click Guard**: Click fraud protection and traffic analytics module.
+  - Domain management: Add domains, generate tracking snippets, verify via first ping
+  - Tracking script (public/t.js): Lightweight JS snippet embedded on external websites
+    - Collects visitor data: browser, device, OS, screen size, language, timezone
+    - Behavioral analysis: mouse movements, click patterns, time on page
+    - Visitor fingerprinting from browser attributes
+    - Headless browser detection (webdriver, plugins, UA checks)
+    - Sends data to /api/clickguard/track via sendBeacon/fetch
+    - Auto-detects API base URL from script src for cross-origin support
+  - Bot detection engine with scoring: headless (+40), no mouse (+20), short visit (+10), suspicious UA (+30)
+  - Threat levels: critical (>=70), high (>=50), medium (>=30), low (<30)
+  - IP geolocation via ip-api.com (free tier, 45 req/min)
+  - VPN/Proxy detection via ip-api.com proxy field
+  - Auto-blocking of high-threat IPs
+  - Live traffic monitor: Real-time visitor feed with 10s auto-refresh
+  - Analytics dashboard: Traffic stats by device, browser, OS, country, ISP, threat level
+  - Bar charts: Simple div-based percentage bars (no chart library)
+  - Protection settings: Manual IP blocking, whitelist management, fraud event logs
+  - 4-tab UI: Domains, Live Traffic, Analytics, Protection
+  - API: /api/clickguard endpoints for domains, tracking, analytics, blocked IPs
+  - Database: click_guard_domains, click_guard_visitors, click_guard_blocked_ips, click_guard_fraud_events
+  - Served at /t.js route from server for cross-domain script loading
 
 ## Backend
 - **Primary API**: Hono (Node.js/TypeScript) for all API endpoints, with optional FastAPI (Python) for legacy ad generation.

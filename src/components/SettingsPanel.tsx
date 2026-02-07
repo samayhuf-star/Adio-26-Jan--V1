@@ -4,20 +4,18 @@ import {
   User, Mail, Lock, Globe,
   Save, Eye, EyeOff,
   CheckCircle2, AlertCircle, Loader,
-  PanelLeftClose, PanelLeftOpen
+  PanelLeftClose, PanelLeftOpen,
+  Settings, CreditCard, Shield, ChevronRight
 } from 'lucide-react';
 import { getUserPreferences, saveUserPreferences } from '../utils/userPreferences';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { BillingPanel } from './BillingPanel';
 import { notifications } from '../utils/notifications';
-import { TerminalCard, TerminalLine } from './ui/terminal-card';
 
 interface GoogleAdsAccount {
   id: string;
@@ -28,6 +26,8 @@ interface SettingsPanelProps {
   defaultTab?: 'settings' | 'billing';
 }
 
+type SettingsSection = 'profile' | 'password' | 'integrations' | 'preferences' | 'billing';
+
 export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) => {
   const currentUser = getCurrentUser();
   const getToken = async () => getSessionTokenSync();
@@ -35,7 +35,6 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -44,19 +43,16 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<string>(defaultTab);
+  const [activeSection, setActiveSection] = useState<SettingsSection>(defaultTab === 'billing' ? 'billing' : 'profile');
   
-  // Google Ads state
   const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
   const [googleAdsLoading, setGoogleAdsLoading] = useState(true);
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<GoogleAdsAccount[]>([]);
   const [defaultAccount, setDefaultAccount] = useState<string>('');
   
-  // Sidebar auto-close preference
   const [sidebarAutoClose, setSidebarAutoClose] = useState(() => getUserPreferences().sidebarAutoClose);
 
   useEffect(() => {
-    // Load user data and Google Ads info
     const loadData = async () => {
       try {
         setLoading(true);
@@ -66,8 +62,6 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
           setName(userProfile.full_name || '');
           setEmail(userProfile.email || '');
         }
-        
-        // Load Google Ads connection status
         await checkGoogleAdsConnection();
       } catch (e) {
         console.error('Failed to load user data', e);
@@ -75,7 +69,6 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
         setLoading(false);
       }
     };
-    
     loadData();
   }, []);
   
@@ -96,7 +89,6 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
           }));
           setGoogleAdsAccounts(accounts);
           
-          // Load default account from user profile
           const userProfile = await getCurrentUserProfile();
           if (userProfile?.google_ads_default_account) {
             setDefaultAccount(userProfile.google_ads_default_account);
@@ -155,9 +147,8 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
     }
   };
 
-  // Update active tab when defaultTab prop changes
   useEffect(() => {
-    setActiveTab(defaultTab);
+    setActiveSection(defaultTab === 'billing' ? 'billing' : 'profile');
   }, [defaultTab]);
 
   const handleSaveProfile = async () => {
@@ -165,7 +156,6 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
     setSaveMessage(null);
     
     try {
-      // Bug_08: Validate that name and email are not blank
       const trimmedName = name.trim();
       const trimmedEmail = email.trim();
       
@@ -175,13 +165,11 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
         return;
       }
       
-      // Get current user
       const currentUser = await getCurrentUserProfile();
       if (!currentUser) {
         throw new Error('User not found');
       }
 
-      // Update user profile in database via API
       const token = await getToken();
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
@@ -199,11 +187,9 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
         throw new Error(errorData.error || 'Failed to update profile');
       }
 
-      const { error } = { error: null }; // Placeholder for compatibility
-
+      const { error } = { error: null };
       if (error) throw error;
 
-      // Refresh user data
       const updatedProfile = await getCurrentUserProfile();
       if (updatedProfile) {
         setUser(updatedProfile);
@@ -220,17 +206,11 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
   };
 
   const handleChangePassword = async () => {
-    const trimmedCurrentPassword = currentPassword.trim();
     const trimmedNewPassword = newPassword.trim();
     const trimmedConfirmPassword = confirmPassword.trim();
     
     if (!currentUser) {
       setSaveMessage({ type: 'error', text: 'You must be signed in to change your password.' });
-      return;
-    }
-    
-    if (!trimmedCurrentPassword) {
-      setSaveMessage({ type: 'error', text: 'Current password is required. Please enter your current password.' });
       return;
     }
     
@@ -258,10 +238,6 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
     setSaveMessage(null);
     
     try {
-      const userProfile = await getCurrentUserProfile();
-      if (!userProfile) throw new Error('User not found');
-      
-      // Update password via API
       const token = await getToken();
       const response = await fetch('/api/user/password', {
         method: 'PUT',
@@ -270,42 +246,29 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          currentPassword: trimmedCurrentPassword,
           newPassword: trimmedNewPassword,
           confirmPassword: trimmedConfirmPassword,
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to change password');
+        throw new Error(data.error || 'Failed to change password');
       }
       
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       
-      setSaveMessage({ type: 'success', text: 'Password changed successfully!' });
-      setTimeout(() => setSaveMessage(null), 3000);
+      setSaveMessage({ type: 'success', text: 'Password updated successfully! You can now log in with your new password.' });
+      setTimeout(() => setSaveMessage(null), 5000);
     } catch (error: any) {
       console.error('Error changing password:', error);
-      let errorMessage = 'Failed to change password. Please try again.';
-      
-      if (error.message) {
-        if (error.message.includes('incorrect') || error.message.includes('invalid')) {
-          errorMessage = 'Current password is incorrect. Please try again.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      setSaveMessage({ type: 'error', text: errorMessage });
+      setSaveMessage({ type: 'error', text: error.message || 'Failed to change password. Please try again.' });
     } finally {
       setIsSaving(false);
     }
   };
-
-
 
   if (loading) {
     return (
@@ -318,327 +281,377 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
     );
   }
 
+  const navItems: { id: SettingsSection; label: string; icon: React.ReactNode; description: string }[] = [
+    { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" />, description: 'Personal info' },
+    { id: 'password', label: 'Security', icon: <Shield className="w-4 h-4" />, description: 'Password' },
+    { id: 'integrations', label: 'Integrations', icon: <Globe className="w-4 h-4" />, description: 'Connected apps' },
+    { id: 'preferences', label: 'Preferences', icon: <Settings className="w-4 h-4" />, description: 'App settings' },
+    { id: 'billing', label: 'Billing', icon: <CreditCard className="w-4 h-4" />, description: 'Plans & payments' },
+  ];
+
+  const userInitial = (name || email || 'U').charAt(0).toUpperCase();
+
   return (
-    <div className="p-8 lg:p-10 max-w-7xl mx-auto w-full">
-      <div className="mb-10">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">
-          Settings
-        </h1>
-        <p className="text-slate-600 text-lg">Manage your account settings, billing, and preferences</p>
+    <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto w-full">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-1">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-violet-200">
+            {userInitial}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+            <p className="text-sm text-slate-500">Manage your account, security, and preferences</p>
+          </div>
+        </div>
       </div>
 
-      {/* Terminal-Style Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-        <TerminalCard title="Account Status" showDots={true} variant="compact">
-          <div className="space-y-1.5">
-            <TerminalLine prefix="$" label="user:" value={name || 'NOT_SET'} valueColor={name ? 'green' : 'yellow'} />
-            <TerminalLine prefix="$" label="email:" value={email ? email.substring(0, 20) + (email.length > 20 ? '...' : '') : 'NOT_SET'} valueColor={email ? 'cyan' : 'yellow'} />
-            <TerminalLine prefix="$" label="auth_provider:" value="CUSTOM" valueColor="purple" />
-            <TerminalLine prefix="$" label="status:" value={user ? 'AUTHENTICATED' : 'NOT_LOGGED_IN'} valueColor={user ? 'green' : 'yellow'} />
-          </div>
-        </TerminalCard>
-
-        <TerminalCard title="Integrations" showDots={true} variant="compact">
-          <div className="space-y-1.5">
-            <TerminalLine prefix=">" label="google_ads:" value={googleAdsConnected ? 'CONNECTED' : googleAdsLoading ? 'CHECKING...' : 'DISCONNECTED'} valueColor={googleAdsConnected ? 'green' : googleAdsLoading ? 'slate' : 'yellow'} />
-            <TerminalLine prefix=">" label="accounts:" value={`${googleAdsAccounts.length}`} valueColor="cyan" />
-            <TerminalLine prefix=">" label="default_account:" value={defaultAccount ? defaultAccount.substring(0, 12) + '...' : 'NONE'} valueColor={defaultAccount ? 'green' : 'slate'} />
-            <TerminalLine prefix=">" label="tab:" value={activeTab.toUpperCase()} valueColor="purple" />
-          </div>
-        </TerminalCard>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mb-10 p-2 bg-slate-100 rounded-lg">
-          <TabsTrigger value="settings" className="text-base py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm">Settings</TabsTrigger>
-          <TabsTrigger value="billing" className="text-base py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm">Billing</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="settings" className="space-y-10 mt-0">
-
-      {saveMessage && (
-        <Alert 
-          variant={saveMessage.type === 'success' ? 'default' : 'destructive'}
-          className={saveMessage.type === 'success' ? 'border-green-500 bg-indigo-50' : ''}
-        >
-          {saveMessage.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-green-600" />
-          ) : (
-            <AlertCircle className="w-4 h-4" />
-          )}
-          <AlertDescription className={saveMessage.type === 'success' ? 'text-green-700 font-medium' : ''}>
-            {saveMessage.text}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Profile Settings */}
-      <Card className="p-8">
-        <CardHeader className="pb-6 mb-6 border-b border-slate-200">
-          <CardTitle className="flex items-center gap-3 text-2xl">
-            <User className="w-6 h-6 text-blue-600" />
-            Profile Information
-          </CardTitle>
-          <CardDescription className="text-base mt-2">Update your personal information and account details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8 pt-6">
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-3">
-              <Label htmlFor="name" className="text-base font-semibold">Full Name</Label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" />
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-12 pr-4 h-12 text-base"
-                  placeholder="Enter your full name"
-                />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="email" className="text-base font-semibold">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" />
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  readOnly
-                  disabled
-                  className="pl-12 pr-4 h-12 text-base bg-slate-50 cursor-not-allowed"
-                  placeholder="Enter your email"
-                />
-              </div>
-              <p className="text-xs text-slate-500">Email cannot be changed. Contact support if you need to update your email.</p>
-            </div>
-          </div>
-          <div className="flex justify-start pt-4">
-            <Button onClick={handleSaveProfile} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 h-12 text-base">
-              <Save className="w-5 h-5 mr-2" />
-              Save Profile Changes
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Password Settings */}
-      <Card className="p-8">
-        <CardHeader className="pb-6 mb-6 border-b border-slate-200">
-          <CardTitle className="flex items-center gap-3 text-2xl">
-            <Lock className="w-6 h-6 text-blue-600" />
-            Change Password
-          </CardTitle>
-          <CardDescription className="text-base mt-2">Update your password to keep your account secure</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8 pt-6">
-          <div className="space-y-3">
-            <Label htmlFor="currentPassword" className="text-base font-semibold">Current Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" />
-              <Input
-                id="currentPassword"
-                type={showPassword ? 'text' : 'password'}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="pl-12 pr-12 h-12 text-base"
-                placeholder="Enter current password"
-              />
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Navigation */}
+        <div className="lg:w-56 shrink-0">
+          <nav className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            {navItems.map((item) => (
               <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                key={item.id}
+                onClick={() => setActiveSection(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-all border-b border-gray-100 last:border-b-0 ${
+                  activeSection === item.id
+                    ? 'bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 font-medium border-l-[3px] border-l-violet-500'
+                    : 'text-slate-600 hover:bg-gray-50 border-l-[3px] border-l-transparent'
+                }`}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                <span className={activeSection === item.id ? 'text-violet-500' : 'text-slate-400'}>{item.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate">{item.label}</p>
+                </div>
+                {activeSection === item.id && <ChevronRight className="w-3.5 h-3.5 text-violet-400" />}
               </button>
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-3">
-              <Label htmlFor="newPassword" className="text-base font-semibold">New Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" />
-                <Input
-                  id="newPassword"
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="pl-12 pr-12 h-12 text-base"
-                  placeholder="Enter new password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Label htmlFor="confirmPassword" className="text-base font-semibold">Confirm New Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" />
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-12 pr-12 h-12 text-base"
-                  placeholder="Confirm new password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-start pt-4">
-            <Button onClick={handleChangePassword} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 h-12 text-base">
-              <Lock className="w-5 h-5 mr-2" />
-              Change Password
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            ))}
+          </nav>
 
-      {/* Google Ads Connection */}
-      <Card className={`p-8 ${googleAdsConnected ? 'border-indigo-200 bg-indigo-50' : 'border-blue-200 bg-blue-50'}`}>
-        <CardHeader className="pb-6 mb-6 border-b border-slate-200">
-          <CardTitle className="flex items-center gap-3 text-2xl">
-            <Globe className="w-6 h-6 text-blue-600" />
-            Google Ads Accounts
-          </CardTitle>
-          <CardDescription className="text-base mt-2">Connect and manage your Google Ads accounts for direct campaign pushes</CardDescription>
-        </CardHeader>
-        
-        <CardContent className="pt-6 space-y-6">
-          {googleAdsLoading ? (
-            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-              <Loader className="w-5 h-5 animate-spin text-blue-600" />
-              <span className="text-blue-700">Checking connection status...</span>
+          {/* Quick Status */}
+          <div className="mt-4 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Account</p>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">Status</span>
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  Active
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">Google Ads</span>
+                <span className={`text-xs font-medium ${googleAdsConnected ? 'text-green-600' : 'text-slate-400'}`}>
+                  {googleAdsConnected ? 'Connected' : 'Not connected'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">Sidebar</span>
+                <span className="text-xs font-medium text-slate-600">{sidebarAutoClose ? 'Auto-close' : 'Stay open'}</span>
+              </div>
             </div>
-          ) : googleAdsConnected ? (
-            <>
-              <Alert className="border-indigo-200 bg-indigo-50">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800">
-                  Your Google Ads account is connected
-                </AlertDescription>
-              </Alert>
-              
-              {googleAdsAccounts.length > 0 && (
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-base font-semibold mb-2 block">Select Default Account</Label>
-                    <p className="text-sm text-slate-600 mb-3">Campaigns will be pushed to this account by default</p>
-                    <Select value={defaultAccount} onValueChange={setDefaultAccount}>
-                      <SelectTrigger className="w-full h-10">
-                        <SelectValue placeholder="Select an account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {googleAdsAccounts.map(account => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 min-w-0">
+          {saveMessage && (
+            <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-lg text-sm ${
+              saveMessage.type === 'success'
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {saveMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              {saveMessage.text}
+            </div>
+          )}
+
+          {/* Profile Section */}
+          {activeSection === 'profile' && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-violet-100 rounded-lg">
+                    <User className="w-5 h-5 text-violet-600" />
                   </div>
-                  
-                  <Button onClick={saveDefaultAccount} className="bg-green-600 hover:bg-green-700 text-white w-full">
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Default Account
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Profile Information</h2>
+                    <p className="text-sm text-slate-500">Update your personal details</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 space-y-5">
+                {/* Avatar Preview */}
+                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    {userInitial}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800">{name || 'Your Name'}</p>
+                    <p className="text-sm text-slate-500">{email}</p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-sm font-medium text-slate-700">Full Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
+                      <Input
+                        id="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="pl-10 h-10 bg-white border-gray-200 focus:border-violet-400 focus:ring-violet-400/20"
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        readOnly
+                        disabled
+                        className="pl-10 h-10 bg-gray-50 border-gray-200 cursor-not-allowed text-slate-500"
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-400">Email cannot be changed. Contact support to update.</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <Button
+                    onClick={handleSaveProfile}
+                    disabled={isSaving}
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6 h-10 shadow-sm"
+                  >
+                    {isSaving ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Save Changes
                   </Button>
                 </div>
-              )}
-            </>
-          ) : (
-            <>
-              <Alert className="border-blue-200 bg-blue-50">
-                <AlertCircle className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800">
-                  Connect your Google Ads account to push campaigns directly
-                </AlertDescription>
-              </Alert>
-              
-              <div className="relative">
-                <Button disabled className="bg-gray-400 cursor-not-allowed text-white w-full opacity-70">
-                  <Globe className="w-4 h-4 mr-2" />
-                  Connect Google Ads Account
-                </Button>
-                <Badge className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-2 py-0.5">Coming Soon</Badge>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-
-      {/* Sidebar Behavior */}
-      <Card className="p-8">
-        <CardHeader className="pb-6 mb-6 border-b border-slate-200">
-          <CardTitle className="flex items-center gap-3 text-2xl">
-            {sidebarAutoClose ? (
-              <PanelLeftClose className="w-6 h-6 text-blue-600" />
-            ) : (
-              <PanelLeftOpen className="w-6 h-6 text-blue-600" />
-            )}
-            Sidebar Behavior
-          </CardTitle>
-          <CardDescription className="text-base mt-2">Configure how the sidebar behaves when you select a menu item</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <div className="space-y-1">
-              <p className="font-semibold text-slate-900">Auto-Close Sidebar</p>
-              <p className="text-sm text-slate-600">Automatically close the sidebar after selecting a menu item</p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const newValue = !sidebarAutoClose;
-                setSidebarAutoClose(newValue);
-                saveUserPreferences({ sidebarAutoClose: newValue });
-              }}
-              className={`h-10 px-4 gap-2 ${
-                sidebarAutoClose 
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100' 
-                  : 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {sidebarAutoClose ? (
-                <>
-                  <PanelLeftClose className="w-4 h-4" />
-                  <span>ON</span>
-                </>
-              ) : (
-                <>
-                  <PanelLeftOpen className="w-4 h-4" />
-                  <span>OFF</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          )}
 
-        </TabsContent>
-        
-        <TabsContent value="billing" className="mt-0 w-full">
-          <BillingPanel />
-        </TabsContent>
-      </Tabs>
+          {/* Security / Password Section */}
+          {activeSection === 'password' && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <Shield className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Security</h2>
+                    <p className="text-sm text-slate-500">Manage your password and account security</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 space-y-5">
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword" className="text-sm font-medium text-slate-700">New Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="pl-10 pr-10 h-10 bg-white border-gray-200 focus:border-violet-400 focus:ring-violet-400/20"
+                        placeholder="Enter new password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700">Confirm New Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="pl-10 pr-10 h-10 bg-white border-gray-200 focus:border-violet-400 focus:ring-violet-400/20"
+                        placeholder="Confirm new password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <p className="text-xs text-slate-500">Password must be at least 8 characters long. Use a mix of letters, numbers, and symbols for better security.</p>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <Button
+                    onClick={handleChangePassword}
+                    disabled={isSaving}
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6 h-10 shadow-sm"
+                  >
+                    {isSaving ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <Lock className="w-4 h-4 mr-2" />}
+                    Update Password
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Integrations Section */}
+          {activeSection === 'integrations' && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Globe className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Integrations</h2>
+                    <p className="text-sm text-slate-500">Connect external services to your account</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                {/* Google Ads Integration Card */}
+                <div className={`rounded-lg border p-5 ${googleAdsConnected ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white rounded-lg border border-gray-200 flex items-center justify-center shadow-sm">
+                        <Globe className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800">Google Ads</p>
+                        <p className="text-xs text-slate-500">Push campaigns directly to your ad account</p>
+                      </div>
+                    </div>
+                    {googleAdsLoading ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                        <Loader className="w-3 h-3 animate-spin" />
+                        Checking...
+                      </span>
+                    ) : googleAdsConnected ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                        Connected
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                        Disconnected
+                      </span>
+                    )}
+                  </div>
+
+                  {googleAdsConnected && googleAdsAccounts.length > 0 ? (
+                    <div className="space-y-3 pt-3 border-t border-gray-200">
+                      <div>
+                        <Label className="text-sm font-medium text-slate-700 mb-1.5 block">Default Account</Label>
+                        <Select value={defaultAccount} onValueChange={setDefaultAccount}>
+                          <SelectTrigger className="w-full h-10 bg-white">
+                            <SelectValue placeholder="Select an account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {googleAdsAccounts.map(account => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={saveDefaultAccount} className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white w-full h-10">
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Default Account
+                      </Button>
+                    </div>
+                  ) : !googleAdsConnected && !googleAdsLoading ? (
+                    <div className="pt-3 border-t border-gray-200">
+                      <div className="relative">
+                        <Button disabled className="bg-gray-300 cursor-not-allowed text-white w-full opacity-70 h-10">
+                          <Globe className="w-4 h-4 mr-2" />
+                          Connect Google Ads Account
+                        </Button>
+                        <Badge className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-2 py-0.5">Coming Soon</Badge>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Preferences Section */}
+          {activeSection === 'preferences' && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Settings className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Preferences</h2>
+                    <p className="text-sm text-slate-500">Customize how the app works for you</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                {/* Sidebar Behavior Toggle */}
+                <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+                      {sidebarAutoClose ? <PanelLeftClose className="w-4 h-4 text-violet-500" /> : <PanelLeftOpen className="w-4 h-4 text-slate-500" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">Auto-Close Sidebar</p>
+                      <p className="text-xs text-slate-500">Close sidebar after selecting a menu item</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newValue = !sidebarAutoClose;
+                      setSidebarAutoClose(newValue);
+                      saveUserPreferences({ sidebarAutoClose: newValue });
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      sidebarAutoClose ? 'bg-violet-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                      sidebarAutoClose ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Billing Section */}
+          {activeSection === 'billing' && (
+            <BillingPanel />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
-
-

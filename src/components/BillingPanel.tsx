@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     CreditCard, CheckCircle, Shield, Download, 
     Calendar, FileText, CheckCircle2, AlertCircle
@@ -27,6 +27,8 @@ export const BillingPanel = () => {
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     const [showAddCardDialog, setShowAddCardDialog] = useState(false);
+    const [pendingPlan, setPendingPlan] = useState<{ name: string; priceId: string } | null>(null);
+    const pricingSectionRef = useRef<HTMLDivElement>(null);
     
     // Card form state
     const [cardNumber, setCardNumber] = useState('');
@@ -152,25 +154,32 @@ export const BillingPanel = () => {
 
     const handleSubscribe = async (planName?: string, priceId?: string) => {
         const selectedPlan = planName || 'Lifetime Unlimited';
-        setProcessingPlan(selectedPlan);
+        
+        if (savedCards.length === 0) {
+            setPendingPlan({ name: selectedPlan, priceId: priceId || '' });
+            setShowAddCardDialog(true);
+            return;
+        }
+        
+        await proceedWithSubscription(selectedPlan, priceId);
+    };
+
+    const proceedWithSubscription = async (planName: string, priceId?: string) => {
+        setProcessingPlan(planName);
         setProcessing(true);
         try {
-            // Try to get the real price ID from Stripe
             let selectedPriceId = priceId;
             
-            // If using placeholder price IDs, try to fetch the real ones
             if (!selectedPriceId || selectedPriceId.startsWith('price_basic') || selectedPriceId.startsWith('price_pro') || selectedPriceId === 'price_lifetime') {
                 const { getPriceIdForPlan } = await import('../utils/stripe');
-                const fetchedPriceId = await getPriceIdForPlan(selectedPlan, 'month');
+                const fetchedPriceId = await getPriceIdForPlan(planName, 'month');
                 if (fetchedPriceId) {
                     selectedPriceId = fetchedPriceId;
                 } else {
-                    // Don't fallback to a different plan - show error instead
-                    throw new Error(`The ${selectedPlan} plan is not yet configured. Please contact support or try a different plan.`);
+                    throw new Error(`The ${planName} plan is not yet configured. Please contact support or try a different plan.`);
                 }
             }
             
-            // Get current user for checkout
             const { getCurrentAuthUser } = await import('../utils/auth');
             const user = await getCurrentAuthUser();
             
@@ -178,16 +187,11 @@ export const BillingPanel = () => {
                 throw new Error('You must be logged in to subscribe');
             }
             
-            // Create Stripe checkout session
-            await createCheckoutSession(selectedPriceId, selectedPlan, user.id, user.email);
-            
-            // Note: User will be redirected to Stripe, so we don't need to setProcessing(false)
-            // The redirect happens in createCheckoutSession
+            await createCheckoutSession(selectedPriceId, planName, user.id, user.email);
         } catch (error) {
             console.error("Subscription error", error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
             
-            // Provide more helpful error messages
             if (errorMessage.includes('not yet configured') || errorMessage.includes('price') || errorMessage.includes('Price')) {
                 notifications.error(errorMessage, {
                     title: 'Plan Unavailable',
@@ -350,6 +354,12 @@ export const BillingPanel = () => {
                 title: 'Payment Method Added',
                 description: `Your card ending in ${last4} has been added.`,
             });
+            
+            if (pendingPlan) {
+                const plan = pendingPlan;
+                setPendingPlan(null);
+                await proceedWithSubscription(plan.name, plan.priceId || undefined);
+            }
         } catch (error) {
             console.error("Add card error", error);
             notifications.error('Failed to add card. Please try again.', {
@@ -404,9 +414,11 @@ export const BillingPanel = () => {
             // Try to fetch invoice PDF from API using fetch directly for blob response
             try {
                 // Use API endpoint instead of Supabase
+                const { getSessionTokenSync } = await import('../utils/auth');
+                const token = getSessionTokenSync();
                 const response = await fetch(`/api/billing/invoices/${invoiceId}/download`, {
                     headers: {
-                        'Authorization': `Bearer ${publicAnonKey}`
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     }
                 });
                 
@@ -542,36 +554,13 @@ Generated on ${new Date().toLocaleDateString()}`;
                     <CardFooter className="bg-slate-50/50 border-t border-slate-100 p-4 sm:p-6 flex flex-col gap-3">
                         <div className="flex flex-col sm:flex-row gap-3 w-full">
                             <Button 
-                                onClick={async () => {
-                                    setProcessing(true);
-                                    try {
-                                        await createCustomerPortalSession();
-                                        notifications.info('Redirecting to subscription management...', {
-                                            title: 'Manage Subscription',
-                                            description: 'You can view your plan, update payment methods, and manage your subscription.',
-                                        });
-                                    } catch (error) {
-                                        console.error("Manage subscription error", error);
-                                        notifications.error('Failed to open subscription portal. Please contact support.', {
-                                            title: 'Error',
-                                            description: error instanceof Error ? error.message : 'Unknown error occurred',
-                                        });
-                                    } finally {
-                                        setProcessing(false);
-                                    }
+                                onClick={() => {
+                                    pricingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                 }}
-                                disabled={processing || billingInfo.plan === 'Free'}
+                                disabled={processing} 
                                 className="bg-indigo-600 text-white hover:bg-indigo-700 flex-1 min-w-0"
                             >
-                                {processing ? "Processing..." : "Manage Subscription"}
-                            </Button>
-                            <Button 
-                                onClick={() => handleSubscribe()} 
-                                disabled={processing} 
-                                variant="outline" 
-                                className="flex-1 min-w-0"
-                            >
-                                {processing ? "Processing..." : "Upgrade Plan"}
+                                Upgrade Plan
                             </Button>
                         </div>
                         {billingInfo.plan !== 'Free' && !billingInfo.plan.includes('Lifetime') && (
@@ -653,6 +642,7 @@ Generated on ${new Date().toLocaleDateString()}`;
             </div>
 
             {/* Upgrade Plan Section - Inline Pricing */}
+            <div ref={pricingSectionRef}>
             {!isPaid && (
                 <Card className="border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-xl">
                     <CardHeader>
@@ -662,7 +652,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
                             {/* Basic Plan */}
                             <Card className="border-2 border-blue-200 hover:border-blue-300 transition-all hover:shadow-lg relative flex flex-col h-full bg-blue-50/30">
                                 <CardHeader className="flex-shrink-0 pb-3">
@@ -780,58 +770,11 @@ Generated on ${new Date().toLocaleDateString()}`;
                                 </CardFooter>
                             </Card>
 
-                            {/* Lifetime Plan */}
-                            <Card className="border-2 border-pink-200 hover:border-pink-300 transition-all hover:shadow-lg relative flex flex-col h-full bg-pink-50/30">
-                                <CardHeader className="flex-shrink-0 pb-3">
-                                    <div className="text-center">
-                                        <Badge className="mb-2 bg-pink-100 text-pink-700 border-pink-200 text-xs">One-Time</Badge>
-                                        <CardTitle className="text-lg mb-2">Lifetime</CardTitle>
-                                        <div className="text-2xl font-bold text-slate-800 mb-1">$49.99</div>
-                                        <div className="text-xs text-slate-600">one-time payment</div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="flex-1 pb-3">
-                                    <ul className="space-y-2">
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">10 Campaigns per Month</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">1 Team Member</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">20+ Campaign Presets</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">Keywords Mixer & Planner</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">CSV Export to Google Ads</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">Email & Chat Support</span>
-                                        </li>
-                                    </ul>
-                                </CardContent>
-                                <CardFooter className="flex-shrink-0 pt-3 pb-4">
-                                    <Button 
-                                        className="w-full bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-300 text-sm"
-                                        onClick={() => handleSubscribe("Lifetime", "price_lifetime")}
-                                        disabled={processing || billingInfo.plan === "Lifetime"}
-                                    >
-                                        {billingInfo.plan === "Lifetime" ? "Current Plan" : processingPlan === "Lifetime" ? "Processing..." : "Get Started"}
-                                    </Button>
-                                </CardFooter>
-                            </Card>
                         </div>
                     </CardContent>
                 </Card>
             )}
+            </div>
 
             {/* Invoices */}
             <Card className="border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-xl">
@@ -905,12 +848,17 @@ Generated on ${new Date().toLocaleDateString()}`;
             </Dialog>
 
             {/* Add Payment Card Dialog */}
-            <Dialog open={showAddCardDialog} onOpenChange={setShowAddCardDialog}>
+            <Dialog open={showAddCardDialog} onOpenChange={(open) => {
+                setShowAddCardDialog(open);
+                if (!open) setPendingPlan(null);
+            }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>Add Payment Card</DialogTitle>
                         <DialogDescription>
-                            Add a payment card to enable plan upgrades. Your card will be securely stored for future transactions.
+                            {pendingPlan 
+                                ? `Add a payment card to continue with the ${pendingPlan.name} plan. Your card will be securely stored.`
+                                : 'Add a payment card to enable plan upgrades. Your card will be securely stored for future transactions.'}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={(e) => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthCompat } from '../utils/authCompat';
-import { Sparkles, Download, Globe, Type, ShieldAlert, Save, Filter, BarChart3, FileText, RefreshCw, Trash2, Clock, Zap, Brain, ChevronDown, ChevronUp, X, FolderOpen } from 'lucide-react';
+import { Sparkles, Download, Globe, Type, ShieldAlert, Save, Filter, BarChart3, RefreshCw, Trash2, Clock, Zap, Brain, ChevronDown, ChevronUp, X, FolderOpen } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -791,7 +791,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
 
                                             {/* Generate Button */}
                                             <Button 
-                                                className="w-full mt-2 shadow-lg transition-all bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-violet-200"
+                                                className="w-full mt-2 shadow-lg transition-all bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-violet-200 text-white"
                                                 size="lg"
                                                 onClick={handleSmartGenerate}
                                                 disabled={isGenerating || !coreKeywords}
@@ -867,14 +867,6 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                     >
                                                         <Download className="h-3.5 w-3.5" />
                                                         <span className="hidden sm:inline">CSV</span>
-                                                    </Button>
-                                                    <Button 
-                                                        size="sm"
-                                                        onClick={() => handleDownload('google-ads-editor')} 
-                                                        className="gap-1.5 text-xs h-8 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0"
-                                                    >
-                                                        <FileText className="h-3.5 w-3.5" />
-                                                        <span className="hidden sm:inline">Google Ads</span>
                                                     </Button>
                                                 </div>
                                             )}

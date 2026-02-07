@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { TerminalCard, TerminalLine } from './ui/terminal-card';
 import { getUserPreferences, saveUserPreferences, initializeUserPreferences } from '../utils/userPreferences';
+import { historyService } from '../utils/historyService';
 import { 
   useScreenSize, 
   getResponsiveGridCols, 
@@ -62,12 +63,14 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [preferences, setPreferences] = useState(getUserPreferences());
+  const [keywordListCount, setKeywordListCount] = useState(0);
   const screenSize = useScreenSize();
   const fetchInProgress = useRef(false);
 
   useEffect(() => {
     fetchDashboardData();
     initializeUserPreferences();
+    fetchKeywordListCount();
   }, [user?.id]);
 
   useEffect(() => {
@@ -78,6 +81,17 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
     const updatedPrefs = { ...preferences, sidebarAutoClose: !preferences.sidebarAutoClose };
     setPreferences(updatedPrefs);
     saveUserPreferences(updatedPrefs);
+  };
+
+  const fetchKeywordListCount = async () => {
+    try {
+      const allItems = await historyService.getHistory();
+      const keywordTypes = ['keyword-planner', 'long-tail-keywords', 'negative-keywords', 'keyword-mixer'];
+      const count = allItems.history.filter(item => keywordTypes.includes(item.type)).length;
+      setKeywordListCount(count);
+    } catch (error) {
+      console.warn('Failed to fetch keyword list count:', error);
+    }
   };
 
   const fetchDashboardData = async () => {
@@ -144,9 +158,9 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
           },
           userResources: {
             myCampaigns,
-            myWebsites: 0,
+            myWebsites: apiData.stats?.totalClickGuardDomains || 0,
             myPresets: 0,
-            myDomains: 0,
+            myDomains: apiData.stats?.totalDomains || 0,
           },
         });
 
@@ -268,7 +282,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   ];
 
   const myCampaigns = stats?.userResources?.myCampaigns || 0;
-  const keywordsGenerated = myCampaigns * 485;
   const adsCreated = myCampaigns * 12;
   const extensionsAdded = myCampaigns * 8;
 
@@ -277,48 +290,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
       '--user-spacing-multiplier': preferences.spacing,
       '--user-font-size-multiplier': preferences.fontSize
     } as React.CSSProperties}>
-      {/* Improvised Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 bg-white/40 backdrop-blur-md p-8 sm:p-10 rounded-[2.5rem] border border-white/40 shadow-2xl shadow-indigo-100/20 slide-in-up">
-        <div className="space-y-3">
-          <div className="flex items-center gap-4">
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight">
-              Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500">{user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Admin'}!</span>
-            </h1>
-            <div className="relative group">
-              <span className="px-4 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold rounded-full uppercase tracking-widest shadow-lg shadow-indigo-200/50">Beta</span>
-              <div className="absolute -inset-1 bg-indigo-400 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-            </div>
-          </div>
-          <p className="text-slate-500 text-xl font-medium max-w-2xl leading-relaxed">
-            Your command center is ready. <span className="text-indigo-400">12 new insights</span> are waiting for your attention.
-          </p>
-        </div>
-      </div>
-
-      {/* Enhanced Terminal-Style System Stats - Shell View */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 slide-in-up">
-        <TerminalCard title="campaign_stats.sh" icon={<Terminal className="w-4 h-4" />}>
-          <div className="space-y-3">
-            <TerminalLine prefix="$" label="total_campaigns:" value={`${myCampaigns}`} valueColor="green" />
-            <TerminalLine prefix="$" label="keywords_generated:" value={`${keywordsGenerated.toLocaleString()}`} valueColor="cyan" />
-            <TerminalLine prefix="$" label="ads_created:" value={`${adsCreated.toLocaleString()}`} valueColor="yellow" />
-            <TerminalLine prefix="$" label="extensions_added:" value={`${extensionsAdded.toLocaleString()}`} valueColor="purple" />
-            <TerminalLine prefix="$" label="csv_exports:" value={`${myCampaigns}`} valueColor="white" />
-          </div>
-        </TerminalCard>
-
-        <TerminalCard title="status_info.sh" icon={<Activity className="w-4 h-4" />}>
-          <div className="space-y-3">
-            <TerminalLine prefix="$" label="api_status:" value="ONLINE" valueColor="green" />
-            <TerminalLine prefix="$" label="google_ads_api:" value="CONNECTED" valueColor="green" />
-            <TerminalLine prefix="$" label="keyword_planner:" value="READY" valueColor="green" />
-            <TerminalLine prefix="$" label="subscription:" value={stats?.subscription?.plan?.toUpperCase() || 'FREE'} valueColor="cyan" />
-            <TerminalLine prefix="$" label="last_activity:" value={formatRelativeTime(stats?.activity?.lastLogin || null)} valueColor="slate" />
-          </div>
-        </TerminalCard>
-      </div>
-
-      {/* Enhanced My Resources Section */}
+      {/* My Resources Section */}
       <div className="space-y-6 slide-in-up">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
@@ -384,15 +356,15 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
 
       {/* Enhanced Colorful Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 slide-in-up">
-        {/* Keywords Generated - Enhanced Indigo */}
-        <div className="rounded-2xl p-8 text-white shadow-xl card-hover" style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }}>
+        {/* Keywords List - Enhanced Indigo */}
+        <div className="rounded-2xl p-8 text-white shadow-xl card-hover cursor-pointer" style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }} onClick={() => onNavigate('keyword-planner')}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium opacity-90 mb-2">Keywords Generated</p>
-              <p className="text-4xl font-bold mb-3">{keywordsGenerated.toLocaleString()}</p>
+              <p className="text-sm font-medium opacity-90 mb-2">Keywords List</p>
+              <p className="text-4xl font-bold mb-3">{keywordListCount.toLocaleString()}</p>
               <div className="flex items-center gap-2 text-sm opacity-90">
-                <ArrowUp className="w-4 h-4" />
-                <span>23% from last week</span>
+                <Layers className="w-4 h-4" />
+                <span>Planner, Long Tail, Negative & Mixer</span>
               </div>
             </div>
             <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center float-animation">

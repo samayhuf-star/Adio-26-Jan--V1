@@ -421,8 +421,8 @@ export const KeywordMixer = ({ initialData }: { initialData?: any }) => {
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
                 <TabsList>
-                    <TabsTrigger value="mixer">Keyword Mixer</TabsTrigger>
-                    <TabsTrigger value="history">Saved List</TabsTrigger>
+                    <TabsTrigger value="mixer" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-violet-500/20 rounded-lg transition-all duration-300">Keyword Mixer</TabsTrigger>
+                    <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-violet-500/20 rounded-lg transition-all duration-300">Saved List</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="mixer">
@@ -512,7 +512,7 @@ export const KeywordMixer = ({ initialData }: { initialData?: any }) => {
                     {/* Generate Button */}
                     <button
                         onClick={mixKeywords}
-                        className="w-full mt-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                        className="w-full mt-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                     >
                         <Shuffle className="w-4 h-4" />
                         Generate Keywords

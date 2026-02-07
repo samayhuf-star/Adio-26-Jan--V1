@@ -967,8 +967,7 @@ export const KeywordPlanner = ({ initialData }: { initialData?: any }) => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-white p-6">
-            {/* Terminal Progress Console */}
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
             <TerminalProgressConsole
                 title="Keyword Planner Console"
                 messages={KEYWORD_PLANNER_MESSAGES}
@@ -983,248 +982,150 @@ export const KeywordPlanner = ({ initialData }: { initialData?: any }) => {
                 minDuration={4500}
             />
 
-            <div className="max-w-6xl mx-auto">
-                {/* Header */}
-                <div className="mb-4 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-800">Keyword Planner</h1>
-                        <p className="text-xs text-slate-500">Generate comprehensive keyword lists powered by AI and Google Ads data</p>
-                    </div>
-                </div>
-
-                {/* Shell View - Two Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {/* Card 1: Stats */}
-                    <div className="bg-slate-900 rounded-xl border border-slate-700 overflow-hidden">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 border-b border-slate-700">
-                            <div className="flex gap-1.5">
-                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                            </div>
-                            <span className="text-xs text-slate-400 ml-2 font-mono">planner_stats.sh</span>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                            <Sparkles className="w-5 h-5 text-white" />
                         </div>
-                        <div className="p-4 font-mono">
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="space-y-1 text-center">
-                                    <div className="text-2xl font-bold text-violet-400">{generatedKeywords.length}</div>
-                                    <div className="text-xs text-slate-400">Generated</div>
-                                </div>
-                                <div className="space-y-1 text-center">
-                                    <div className="text-2xl font-bold text-emerald-400">{apiStatus === 'ok' ? 'LIVE' : 'LOCAL'}</div>
-                                    <div className="text-xs text-slate-400">Source</div>
-                                </div>
-                                <div className="space-y-1 text-center">
-                                    <div className="text-2xl font-bold text-amber-400">{savedLists.length}</div>
-                                    <div className="text-xs text-slate-400">Saved</div>
-                                </div>
-                            </div>
+                        <div>
+                            <h1 className="text-lg sm:text-xl font-bold text-slate-900">Keyword Planner</h1>
+                            <p className="text-xs text-slate-500 hidden sm:block">Generate comprehensive keyword lists powered by AI</p>
                         </div>
                     </div>
-
-                    {/* Card 2: Config */}
-                    <div className="bg-slate-900 rounded-xl border border-slate-700 overflow-hidden">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 border-b border-slate-700">
-                            <div className="flex gap-1.5">
-                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                            </div>
-                            <span className="text-xs text-slate-400 ml-2 font-mono">planner_config.sh</span>
-                        </div>
-                        <div className="p-4 font-mono space-y-2 text-xs">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-slate-500">seeds:</span>
-                                <span className="text-cyan-400">{seedKeywords.split(',').filter(s => s.trim()).length}</span>
-                                <span className="text-slate-600 mx-1">|</span>
-                                <span className="text-slate-500">negatives:</span>
-                                <span className="text-pink-400">{negativeKeywords.split('\n').filter(s => s.trim()).length}</span>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-slate-500">match:</span>
-                                <span className="text-slate-300">[{matchTypes.broad ? 'B' : '-'}{matchTypes.phrase ? 'P' : '-'}{matchTypes.exact ? 'E' : '-'}]</span>
-                                <span className="text-slate-600 mx-1">|</span>
-                                <span className="text-slate-500">metrics:</span>
-                                <span className={showMetrics ? 'text-green-400' : 'text-slate-500'}>{showMetrics ? 'ON' : 'OFF'}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-slate-500">country:</span>
-                                <span className="text-blue-400">{filters.country}</span>
-                                <span className="text-slate-600 mx-1">|</span>
-                                <span className="text-slate-500">device:</span>
-                                <span className="text-orange-400">{filters.device}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Tabs */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="bg-gray-100 border border-gray-200 p-1 rounded-xl">
-                        <TabsTrigger 
-                            value="planner" 
-                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-violet-500/20 rounded-lg px-6 py-2.5 text-gray-600 transition-all duration-300"
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <KeywordFilters filters={filters} onFiltersChange={setFilters} compact={true} />
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleFillInfo}
+                            className="gap-1.5 text-xs bg-white hover:bg-indigo-50 border-indigo-200 text-indigo-600"
                         >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Fill Sample</span>
+                        </Button>
+                    </div>
+                </div>
+
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                    <TabsList className="bg-white/80 backdrop-blur border border-slate-200 p-1 rounded-xl shadow-sm">
+                        <TabsTrigger value="planner" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white">
                             <Sparkles className="w-4 h-4 mr-2" />
                             Keyword Planner
                         </TabsTrigger>
-                        <TabsTrigger 
-                            value="saved"
-                            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-violet-500/20 rounded-lg px-6 py-2.5 text-gray-600 transition-all duration-300"
-                        >
+                        <TabsTrigger value="saved" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white">
                             <FolderOpen className="w-4 h-4 mr-2" />
                             Saved Lists
                         </TabsTrigger>
                     </TabsList>
-                    
-                    <TabsContent value="planner" className="mt-0">
-                        <div className="max-w-4xl mx-auto space-y-6">
-                            {/* Configuration Panel */}
-                            <div className="relative group">
-                                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-purple-500 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
-                                <div className="relative bg-white rounded-2xl p-6 border border-gray-200 shadow-lg">
-                                    {/* Panel Header */}
-                                    <div className="flex items-start justify-between mb-6">
-                                        <div>
-                                            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></div>
-                                                Configuration
-                                            </h2>
-                                            <p className="text-sm text-gray-500 mt-1">
-                                                Set up your keyword generation parameters
-                                            </p>
-                                        </div>
-                                    </div>
 
-                                    <div className="space-y-5">
-                                        {/* Seed Keywords */}
-                                        <div className="space-y-3">
-                                            <Label htmlFor="seedKeywords" className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
-                                                Seed Keywords
-                                            </Label>
+                    <TabsContent value="planner" className="space-y-4 mt-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                            <div className="lg:col-span-4 space-y-4">
+                                <div className={`space-y-4`}>
+                                    <div className="border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl border p-4 space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                                <Target className="h-4 w-4 text-indigo-500" />
+                                                Seed Keywords <span className="text-red-500">*</span>
+                                            </label>
                                             <Input
-                                                id="seedKeywords"
                                                 placeholder="airline number, contact airline, delta phone..."
                                                 value={seedKeywords}
                                                 onChange={(e) => setSeedKeywords(e.target.value)}
-                                                className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-violet-500 focus:ring-violet-500/20 rounded-lg"
+                                                className="bg-white text-sm border-slate-200 focus:ring-indigo-500"
                                             />
-                                            <p className="text-xs text-gray-500">
-                                                Enter 3-5 core keywords, comma-separated
-                                            </p>
+                                            <p className="text-xs text-slate-400">Enter 3-5 core keywords, comma-separated</p>
                                         </div>
 
-                                        {/* Match Types */}
-                                        <div className="space-y-3">
-                                            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
-                                                Match Types
-                                            </Label>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div 
-                                                    onClick={() => setMatchTypes(prev => ({...prev, broad: !prev.broad}))}
-                                                    className={`cursor-pointer p-3 rounded-xl border transition-all duration-300 ${
-                                                        matchTypes.broad 
-                                                            ? 'bg-amber-50 border-amber-400 shadow-lg shadow-amber-500/10' 
-                                                            : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <Checkbox 
-                                                            id="broad-planner" 
-                                                            checked={matchTypes.broad}
-                                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                                            onCheckedChange={(c: boolean | 'indeterminate') => setMatchTypes(prev => ({...prev, broad: c === true}))}
-                                                            className="border-amber-400 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
-                                                        />
-                                                    </div>
-                                                    <span className={`text-xs font-medium ${matchTypes.broad ? 'text-amber-700' : 'text-gray-500'}`}>
-                                                        Broad
-                                                    </span>
-                                                </div>
-                                                <div 
-                                                    onClick={() => setMatchTypes(prev => ({...prev, phrase: !prev.phrase}))}
-                                                    className={`cursor-pointer p-3 rounded-xl border transition-all duration-300 ${
-                                                        matchTypes.phrase 
-                                                            ? 'bg-blue-50 border-blue-400 shadow-lg shadow-blue-500/10' 
-                                                            : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <Checkbox 
-                                                            id="phrase-planner" 
-                                                            checked={matchTypes.phrase}
-                                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                                            onCheckedChange={(c: boolean | 'indeterminate') => setMatchTypes(prev => ({...prev, phrase: c === true}))}
-                                                            className="border-blue-400 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
-                                                        />
-                                                    </div>
-                                                    <span className={`text-xs font-medium ${matchTypes.phrase ? 'text-blue-700' : 'text-gray-500'}`}>
-                                                        "Phrase"
-                                                    </span>
-                                                </div>
-                                                <div 
-                                                    onClick={() => setMatchTypes(prev => ({...prev, exact: !prev.exact}))}
-                                                    className={`cursor-pointer p-3 rounded-xl border transition-all duration-300 ${
-                                                        matchTypes.exact 
-                                                            ? 'bg-indigo-50 border-indigo-400 shadow-lg shadow-indigo-500/10' 
-                                                            : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <Checkbox 
-                                                            id="exact-planner" 
-                                                            checked={matchTypes.exact}
-                                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                                            onCheckedChange={(c: boolean | 'indeterminate') => setMatchTypes(prev => ({...prev, exact: c === true}))}
-                                                            className="border-indigo-400 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                                                        />
-                                                    </div>
-                                                    <span className={`text-xs font-medium ${matchTypes.exact ? 'text-indigo-700' : 'text-gray-500'}`}>
-                                                        [Exact]
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Negative Keywords */}
-                                        <div className="space-y-3">
-                                            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                                <AlertCircle className="w-3.5 h-3.5 text-gray-500" />
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                                <AlertCircle className="h-4 w-4 text-indigo-500" />
                                                 Negative Keywords
-                                            </Label>
+                                            </label>
                                             <Textarea
                                                 placeholder="cheap, discount, reviews, job, free..."
                                                 value={negativeKeywords}
                                                 onChange={(e) => setNegativeKeywords(e.target.value)}
-                                                className="min-h-[100px] bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-violet-500 focus:ring-violet-500/20 rounded-lg text-sm resize-none"
+                                                className="bg-white min-h-[80px] text-sm border-slate-200 focus:ring-indigo-500 resize-none"
                                             />
-                                            <p className="text-xs text-gray-500">
-                                                One per line or comma-separated. These terms will be excluded.
-                                            </p>
+                                            <p className="text-xs text-slate-400">One per line or comma-separated</p>
                                         </div>
-
                                     </div>
 
-                                    {/* Filters + Generate Button */}
-                                    <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <KeywordFilters filters={filters} onFiltersChange={setFilters} compact={true} />
+                                    <div className="border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl border p-4 space-y-3">
+                                        <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                            <Zap className="h-4 w-4 text-indigo-500" />
+                                            Match Types
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div
+                                                onClick={() => setMatchTypes(prev => ({...prev, broad: !prev.broad}))}
+                                                className={`cursor-pointer p-2.5 rounded-xl border transition-all duration-200 text-center ${
+                                                    matchTypes.broad
+                                                        ? 'bg-amber-50 border-amber-400 shadow-sm'
+                                                        : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                <Checkbox
+                                                    id="broad-planner"
+                                                    checked={matchTypes.broad}
+                                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                    onCheckedChange={(c: boolean | 'indeterminate') => setMatchTypes(prev => ({...prev, broad: c === true}))}
+                                                    className="border-amber-400 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500 mx-auto mb-1"
+                                                />
+                                                <span className={`text-xs font-medium block ${matchTypes.broad ? 'text-amber-700' : 'text-slate-500'}`}>Broad</span>
+                                            </div>
+                                            <div
+                                                onClick={() => setMatchTypes(prev => ({...prev, phrase: !prev.phrase}))}
+                                                className={`cursor-pointer p-2.5 rounded-xl border transition-all duration-200 text-center ${
+                                                    matchTypes.phrase
+                                                        ? 'bg-blue-50 border-blue-400 shadow-sm'
+                                                        : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                <Checkbox
+                                                    id="phrase-planner"
+                                                    checked={matchTypes.phrase}
+                                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                    onCheckedChange={(c: boolean | 'indeterminate') => setMatchTypes(prev => ({...prev, phrase: c === true}))}
+                                                    className="border-blue-400 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 mx-auto mb-1"
+                                                />
+                                                <span className={`text-xs font-medium block ${matchTypes.phrase ? 'text-blue-700' : 'text-slate-500'}`}>"Phrase"</span>
+                                            </div>
+                                            <div
+                                                onClick={() => setMatchTypes(prev => ({...prev, exact: !prev.exact}))}
+                                                className={`cursor-pointer p-2.5 rounded-xl border transition-all duration-200 text-center ${
+                                                    matchTypes.exact
+                                                        ? 'bg-indigo-50 border-indigo-400 shadow-sm'
+                                                        : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                <Checkbox
+                                                    id="exact-planner"
+                                                    checked={matchTypes.exact}
+                                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                    onCheckedChange={(c: boolean | 'indeterminate') => setMatchTypes(prev => ({...prev, exact: c === true}))}
+                                                    className="border-indigo-400 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 mx-auto mb-1"
+                                                />
+                                                <span className={`text-xs font-medium block ${matchTypes.exact ? 'text-indigo-700' : 'text-slate-500'}`}>[Exact]</span>
+                                            </div>
                                         </div>
+
                                         <Button
+                                            className="w-full mt-2 shadow-lg transition-all bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-violet-200 text-white"
+                                            size="lg"
                                             onClick={() => handleGenerate(false)}
                                             disabled={isGenerating || !(typeof seedKeywords === 'string' && seedKeywords.trim())}
-                                            className="w-full h-12 bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600 hover:from-violet-500 hover:via-purple-500 hover:to-violet-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 text-sm"
                                         >
                                             {isGenerating ? (
                                                 <>
-                                                    <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                                                    Generating Keywords...
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                                                    Generating...
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Sparkles className="w-5 h-5 mr-2" />
+                                                    <Sparkles className="h-4 w-4 mr-2" />
                                                     Generate Keywords
                                                 </>
                                             )}
@@ -1234,7 +1135,7 @@ export const KeywordPlanner = ({ initialData }: { initialData?: any }) => {
                                                 onClick={() => handleGenerate(true)}
                                                 disabled={isGenerating || !(typeof seedKeywords === 'string' && seedKeywords.trim())}
                                                 variant="outline"
-                                                className="w-full h-10 bg-white border-gray-300 text-gray-700 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-400 rounded-xl transition-all duration-300 text-sm"
+                                                className="w-full bg-white border-slate-200 text-slate-700 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-400 text-sm"
                                             >
                                                 <Plus className="w-4 h-4 mr-2" />
                                                 Append More ({generatedKeywords.length} total)
@@ -1244,318 +1145,255 @@ export const KeywordPlanner = ({ initialData }: { initialData?: any }) => {
                                 </div>
                             </div>
 
-                            {/* Results Panel */}
-                            <div className="relative group">
-                                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-purple-500 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
-                                <div className="relative bg-white rounded-2xl p-6 border border-gray-200 shadow-lg h-full flex flex-col">
-                                    {/* Terminal Results Console */}
-                                    {showResultsConsole && generatedKeywords.length > 0 && (
-                                        <div className="mb-6">
-                                            <TerminalResultsConsole
-                                                title="Keyword Planner Export Console"
-                                                isVisible={showResultsConsole}
-                                                stats={[
-                                                    { label: 'Keywords Generated', value: generatedKeywords.length, color: 'green' },
-                                                    { label: 'Seed Keywords', value: seedKeywords.split(',').filter(s => s.trim()).length, color: 'cyan' },
-                                                    { label: 'Match Types', value: `${matchTypes.broad ? 'Broad' : ''}${matchTypes.phrase ? ' Phrase' : ''}${matchTypes.exact ? ' Exact' : ''}`.trim() || 'None', color: 'yellow' },
-                                                    { label: 'Data Source', value: dataSource === 'google_ads_api' ? 'Google Ads API' : dataSource === 'fallback' ? 'Estimated' : 'Local', color: 'purple' },
-                                                    { label: 'Country', value: filters.country, color: 'cyan' },
-                                                ]}
-                                                onDownloadCSV={handleDownloadKeywords}
-                                                onSave={handleSave}
-                                                onCopy={handleCopyAll}
-                                                onAppendMore={() => handleGenerate(true)}
-                                                onGenerateAnother={() => {
-                                                    setShowResultsConsole(false);
-                                                    setGeneratedKeywords([]);
-                                                    setEnrichedKeywords([]);
-                                                }}
-                                                showDownload={true}
-                                                showSave={true}
-                                                showCopy={true}
-                                                showAppendMore={true}
-                                                downloadButtonText="Download CSV for Google Ads"
-                                                saveButtonText="Save to Saved Lists"
-                                                copyButtonText="Copy Keywords"
-                                                appendMoreButtonText={`Append More (${generatedKeywords.length} total)`}
-                                                isSaving={isSaving}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Panel Header */}
-                                    <div className="mb-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-3">
-                                                <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></div>
-                                                Keywords
+                            <div className="lg:col-span-8">
+                                <div className="border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl border">
+                                    <div className="border-b border-slate-100 bg-white/50 py-3 px-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                                                Generated Keywords
                                                 {generatedKeywords.length > 0 && (
-                                                    <span className="px-2.5 py-1 text-xs font-bold bg-gradient-to-r from-violet-600 to-purple-600 rounded-full text-white shadow-lg shadow-violet-500/20">
-                                                        {generatedKeywords.length}
-                                                    </span>
+                                                    <Badge className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white border-0 font-semibold">
+                                                        {generatedKeywords.length.toLocaleString()}
+                                                    </Badge>
                                                 )}
-                                            </h2>
+                                            </div>
                                             {generatedKeywords.length > 0 && (
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => setShowMetrics(!showMetrics)}
-                                                        className="h-8 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                                        className="h-7 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                                                     >
-                                                        <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
-                                                        {showMetrics ? 'Hide' : 'Show'}
+                                                        <BarChart3 className="w-3.5 h-3.5 mr-1" />
+                                                        {showMetrics ? 'Hide Metrics' : 'Show Metrics'}
                                                     </Button>
-                                                    <Badge className={`text-xs px-2.5 py-1 rounded-full font-medium border-0 ${
-                                                        dataSource === 'google_ads_api' 
-                                                            ? 'bg-indigo-100 text-indigo-700' 
-                                                            : dataSource === 'fallback' 
-                                                                ? 'bg-amber-100 text-amber-700' 
-                                                                : 'bg-gray-100 text-gray-600'
-                                                    }`}>
-                                                        {dataSource === 'google_ads_api' 
-                                                            ? 'Google Ads API' 
-                                                            : dataSource === 'fallback' 
-                                                                ? 'Estimated' 
-                                                                : 'Local Data'}
-                                                    </Badge>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-gray-500">
-                                            {showMetrics && enrichedKeywords.some(k => k.metrics) 
-                                                ? 'Keywords with volume, CPC, and competition metrics' 
-                                                : 'Your generated keywords will appear here'}
-                                        </p>
-                                    </div>
-
-                                    <div className="flex-1 overflow-hidden flex flex-col">
-                                        {generatedKeywords.length === 0 ? (
-                                            <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
-                                                <div className="relative mb-6">
-                                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-lg">
-                                                        <Sparkles className="w-10 h-10 text-gray-400" />
-                                                    </div>
-                                                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center shadow-lg">
-                                                        <Plus className="w-3 h-3 text-white" />
-                                                    </div>
-                                                </div>
-                                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                                    Ready to Generate
-                                                </h3>
-                                                <p className="text-sm text-gray-500 max-w-xs">
-                                                    Configure your seed keywords and click Generate to create a comprehensive keyword list
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col h-full">
-                                                {/* Action Buttons */}
-                                                <div className="flex gap-2 flex-wrap mb-4">
                                                     <Button
                                                         onClick={handleOpenSaveDialog}
-                                                        disabled={isSaving || generatedKeywords.length === 0}
+                                                        disabled={isSaving}
                                                         size="sm"
-                                                        className="h-9 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white border-0 shadow-lg shadow-violet-500/20 text-xs font-medium rounded-lg"
+                                                        className="h-7 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white border-0 text-xs rounded-lg"
                                                     >
-                                                        <Save className="w-3.5 h-3.5 mr-1.5" />
-                                                        {isSaving ? 'Saving...' : 'Save'}
+                                                        <Save className="w-3.5 h-3.5 mr-1" />
+                                                        Save
                                                     </Button>
                                                     <Button
                                                         onClick={handleCopyAll}
                                                         variant="outline"
                                                         size="sm"
-                                                        className="h-9 bg-white border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-400 text-xs rounded-lg"
+                                                        className="h-7 text-xs bg-white border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"
                                                     >
-                                                        <Copy className="w-3.5 h-3.5 mr-1.5" />
+                                                        <Copy className="w-3.5 h-3.5 mr-1" />
                                                         Copy
                                                     </Button>
                                                     <Button
                                                         onClick={handleDownloadKeywords}
                                                         variant="outline"
                                                         size="sm"
-                                                        className="h-9 bg-white border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-400 text-xs rounded-lg"
+                                                        className="h-7 text-xs bg-white border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"
                                                     >
-                                                        <Download className="w-3.5 h-3.5 mr-1.5" />
-                                                        Export
+                                                        <Download className="w-3.5 h-3.5 mr-1" />
+                                                        CSV
                                                     </Button>
+                                                    <Badge className={`text-xs px-2 py-0.5 rounded-full font-medium border-0 ${
+                                                        dataSource === 'google_ads_api'
+                                                            ? 'bg-indigo-100 text-indigo-700'
+                                                            : dataSource === 'fallback'
+                                                                ? 'bg-amber-100 text-amber-700'
+                                                                : 'bg-slate-100 text-slate-600'
+                                                    }`}>
+                                                        {dataSource === 'google_ads_api'
+                                                            ? 'Google Ads API'
+                                                            : dataSource === 'fallback'
+                                                                ? 'Estimated'
+                                                                : 'Local Data'}
+                                                    </Badge>
                                                 </div>
+                                            )}
+                                        </div>
+                                    </div>
 
-                                                {/* Keywords Table */}
-                                                <div className="flex-1 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                                                    {showMetrics && enrichedKeywords.some(k => k.metrics) && (
-                                                        <div className="hidden sm:grid grid-cols-12 gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-gray-100 border-b border-gray-200 text-xs font-semibold text-gray-600 sticky top-0">
-                                                            <div className="col-span-6 sm:col-span-5">Keyword</div>
-                                                            <div className="col-span-3 sm:col-span-2 text-center">Volume</div>
-                                                            <div className="hidden sm:block col-span-2 text-center">CPC</div>
-                                                            <div className="col-span-3 text-center">Competition</div>
-                                                        </div>
-                                                    )}
-                                                    <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-                                                        {(showMetrics && enrichedKeywords.length > 0 ? enrichedKeywords : generatedKeywords.map((k: any) => {
-                                                            // Handle both string keywords and object keywords
-                                                            if (typeof k === 'string') return { text: k };
-                                                            if (k && typeof k === 'object' && 'text' in k) return { text: String(k.text) };
-                                                            return { text: String(k || '') };
-                                                        })).map((item, idx) => {
-                                                            const kw = typeof item === 'string' ? { text: item } : item;
-                                                            const metrics = (kw as EnrichedKeyword).metrics;
-                                                            
-                                                            return showMetrics && metrics ? (
-                                                                <div
-                                                                    key={idx}
-                                                                    className="grid grid-cols-1 sm:grid-cols-12 gap-1 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 hover:bg-gray-100 transition-colors duration-200 text-sm bg-white"
-                                                                >
-                                                                    <div className="sm:col-span-5 font-mono text-gray-800 break-words sm:truncate" title={kw.text}>
-                                                                        {kw.text}
-                                                                    </div>
-                                                                    <div className="flex sm:hidden gap-4 text-xs mt-1">
-                                                                        <span className="text-gray-500">Vol: <span className="text-gray-700 font-medium">{metrics.avgMonthlySearches ? (metrics.avgMonthlySearches >= 1000 ? `${(metrics.avgMonthlySearches / 1000).toFixed(1)}K` : metrics.avgMonthlySearches.toLocaleString()) : '-'}</span></span>
-                                                                        <span className="text-gray-500">CPC: <span className="text-gray-700 font-medium">{metrics.avgCpc ? `$${metrics.avgCpc.toFixed(2)}` : '-'}</span></span>
-                                                                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${metrics.competition === 'HIGH' ? 'bg-rose-100 text-rose-700' : metrics.competition === 'MEDIUM' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{metrics.competition || 'Low'}</span>
-                                                                    </div>
-                                                                    <div className="hidden sm:flex col-span-2 text-center items-center justify-center gap-1.5">
-                                                                        <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
-                                                                        <span className="text-gray-700 font-medium">
-                                                                            {metrics.avgMonthlySearches 
-                                                                                ? metrics.avgMonthlySearches >= 1000 
-                                                                                    ? `${(metrics.avgMonthlySearches / 1000).toFixed(1)}K`
-                                                                                    : metrics.avgMonthlySearches.toLocaleString()
-                                                                                : '-'}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="hidden sm:flex col-span-2 text-center items-center justify-center gap-1.5">
-                                                                        <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-                                                                        <span className="text-gray-700 font-medium">
-                                                                            {metrics.avgCpc ? `$${metrics.avgCpc.toFixed(2)}` : '-'}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="hidden sm:block col-span-3 text-center">
-                                                                        <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${
-                                                                            metrics.competition === 'HIGH' 
-                                                                                ? 'bg-rose-100 text-rose-700' 
-                                                                                : metrics.competition === 'MEDIUM' 
-                                                                                    ? 'bg-amber-100 text-amber-700' 
-                                                                                    : 'bg-indigo-100 text-indigo-700'
-                                                                        }`}>
-                                                                            {metrics.competition || 'Low'}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div
-                                                                    key={idx}
-                                                                    className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 hover:bg-gray-100 transition-colors duration-200 text-sm text-gray-800 font-mono bg-white break-words"
-                                                                >
-                                                                    {kw.text}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
+                                    {generatedKeywords.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                                            <div className="relative mb-5">
+                                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shadow-lg">
+                                                    <Sparkles className="w-8 h-8 text-slate-400" />
+                                                </div>
+                                                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center shadow-lg">
+                                                    <Plus className="w-3 h-3 text-white" />
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
+                                            <h3 className="text-base font-semibold text-slate-800 mb-1">Ready to Generate</h3>
+                                            <p className="text-sm text-slate-500 max-w-xs">
+                                                Configure your seed keywords and click Generate to create a comprehensive keyword list
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            {showMetrics && enrichedKeywords.some(k => k.metrics) && (
+                                                <div className="hidden sm:grid grid-cols-12 gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 sticky top-0">
+                                                    <div className="col-span-5">Keyword</div>
+                                                    <div className="col-span-2 text-center">Volume</div>
+                                                    <div className="col-span-2 text-center">CPC</div>
+                                                    <div className="col-span-3 text-center">Competition</div>
+                                                </div>
+                                            )}
+                                            <div className="max-h-[500px] overflow-y-auto">
+                                                {(showMetrics && enrichedKeywords.length > 0 ? enrichedKeywords : generatedKeywords.map((k: any) => {
+                                                    if (typeof k === 'string') return { text: k };
+                                                    if (k && typeof k === 'object' && 'text' in k) return { text: String(k.text) };
+                                                    return { text: String(k || '') };
+                                                })).map((item, idx) => {
+                                                    const kw = typeof item === 'string' ? { text: item } : item;
+                                                    const metrics = (kw as EnrichedKeyword).metrics;
+
+                                                    return showMetrics && metrics ? (
+                                                        <div
+                                                            key={idx}
+                                                            className={`grid grid-cols-1 sm:grid-cols-12 gap-1 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 border-b border-slate-100 hover:bg-indigo-50/40 transition-colors duration-150 text-sm ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+                                                        >
+                                                            <div className="sm:col-span-5 font-mono text-slate-800 break-words sm:truncate text-[13px]" title={kw.text}>
+                                                                {kw.text}
+                                                            </div>
+                                                            <div className="flex sm:hidden gap-4 text-xs mt-1">
+                                                                <span className="text-slate-500">Vol: <span className="text-slate-700 font-medium">{metrics.avgMonthlySearches ? (metrics.avgMonthlySearches >= 1000 ? `${(metrics.avgMonthlySearches / 1000).toFixed(1)}K` : metrics.avgMonthlySearches.toLocaleString()) : '-'}</span></span>
+                                                                <span className="text-slate-500">CPC: <span className="text-slate-700 font-medium">{metrics.avgCpc ? `$${metrics.avgCpc.toFixed(2)}` : '-'}</span></span>
+                                                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${metrics.competition === 'HIGH' ? 'bg-rose-100 text-rose-700' : metrics.competition === 'MEDIUM' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{metrics.competition || 'Low'}</span>
+                                                            </div>
+                                                            <div className="hidden sm:flex col-span-2 text-center items-center justify-center gap-1.5">
+                                                                <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
+                                                                <span className="text-slate-700 font-medium text-[13px]">
+                                                                    {metrics.avgMonthlySearches
+                                                                        ? metrics.avgMonthlySearches >= 1000
+                                                                            ? `${(metrics.avgMonthlySearches / 1000).toFixed(1)}K`
+                                                                            : metrics.avgMonthlySearches.toLocaleString()
+                                                                        : '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="hidden sm:flex col-span-2 text-center items-center justify-center gap-1.5">
+                                                                <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                                                                <span className="text-slate-700 font-medium text-[13px]">
+                                                                    {metrics.avgCpc ? `$${metrics.avgCpc.toFixed(2)}` : '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="hidden sm:block col-span-3 text-center">
+                                                                <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full ${
+                                                                    metrics.competition === 'HIGH'
+                                                                        ? 'bg-rose-100 text-rose-700'
+                                                                        : metrics.competition === 'MEDIUM'
+                                                                            ? 'bg-amber-100 text-amber-700'
+                                                                            : 'bg-indigo-100 text-indigo-700'
+                                                                }`}>
+                                                                    {metrics.competition || 'Low'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            key={idx}
+                                                            className={`px-3 sm:px-4 py-2 sm:py-2.5 border-b border-slate-100 hover:bg-indigo-50/40 transition-colors duration-150 text-[13px] text-slate-800 font-mono break-words ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+                                                        >
+                                                            {kw.text}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </TabsContent>
-                    
-                    <TabsContent value="saved" className="mt-0">
-                        <div className="relative group">
-                            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-purple-500 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
-                            <div className="relative bg-white rounded-2xl p-6 border border-gray-200 shadow-lg">
-                                <div className="mb-6">
-                                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></div>
-                                        Saved Keyword Lists
-                                        {savedLists.length > 0 && (
-                                            <span className="px-2.5 py-1 text-xs font-bold bg-gradient-to-r from-violet-600 to-purple-600 rounded-full text-white">
-                                                {savedLists.length}
-                                            </span>
-                                        )}
-                                    </h2>
+
+                    <TabsContent value="saved" className="space-y-4 mt-4">
+                        <div className="border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm overflow-hidden rounded-xl border">
+                            <div className="border-b border-slate-100 bg-white/50 py-3 px-4">
+                                <div className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                                    Saved Keyword Lists
+                                    {savedLists.length > 0 && (
+                                        <Badge className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white border-0 font-semibold">
+                                            {savedLists.length}
+                                        </Badge>
+                                    )}
                                 </div>
-                                {savedLists.length > 0 ? (
-                                    <div className="grid gap-4">
-                                        {savedLists.map(list => (
-                                            <div
-                                                key={list.id}
-                                                className="p-4 rounded-xl bg-gray-50 border border-gray-200 hover:border-violet-300 hover:bg-violet-50/50 transition-all duration-300"
-                                            >
-                                                <div className="flex justify-between items-center">
-                                                    <div className="space-y-1">
-                                                        <span className="text-base font-semibold text-gray-900">{list.name}</span>
-                                                        <p className="text-xs text-gray-500">
-                                                            Created {new Date(list.createdAt).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            onClick={() => handleLoadSavedList(list.id)}
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-9 bg-white border-gray-300 text-gray-700 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-400 rounded-lg text-xs"
-                                                        >
-                                                            <FolderOpen className="w-3.5 h-3.5 mr-1.5" />
-                                                            Load
-                                                        </Button>
-                                                        <Button
-                                                            onClick={() => handleDeleteSavedList(list.id)}
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-9 bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100 hover:border-rose-400 rounded-lg text-xs"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                                                            Delete
-                                                        </Button>
-                                                    </div>
+                            </div>
+                            {savedLists.length > 0 ? (
+                                <div className="divide-y divide-slate-100">
+                                    {savedLists.map(list => (
+                                        <div
+                                            key={list.id}
+                                            className="p-4 hover:bg-indigo-50/40 transition-all duration-200"
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <div className="space-y-1">
+                                                    <span className="text-sm font-semibold text-slate-800">{list.name}</span>
+                                                    <p className="text-xs text-slate-500">
+                                                        Created {new Date(list.createdAt).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        onClick={() => handleLoadSavedList(list.id)}
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 bg-white border-slate-200 text-slate-700 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-400 rounded-lg text-xs"
+                                                    >
+                                                        <FolderOpen className="w-3.5 h-3.5 mr-1.5" />
+                                                        Load
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => handleDeleteSavedList(list.id)}
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 hover:border-rose-400 rounded-lg text-xs"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                                        Delete
+                                                    </Button>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                                        <div className="relative mb-6">
-                                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-lg">
-                                                <FolderOpen className="w-10 h-10 text-gray-400" />
-                                            </div>
                                         </div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                            No Saved Lists
-                                        </h3>
-                                        <p className="text-sm text-gray-500 max-w-xs">
-                                            Generate keywords and save them for future use
-                                        </p>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-16 text-center">
+                                    <div className="relative mb-5">
+                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shadow-lg">
+                                            <FolderOpen className="w-8 h-8 text-slate-400" />
+                                        </div>
                                     </div>
-                                )}
-                            </div>
+                                    <h3 className="text-base font-semibold text-slate-800 mb-1">No Saved Lists</h3>
+                                    <p className="text-sm text-slate-500 max-w-xs">
+                                        Generate keywords and save them for future use
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </TabsContent>
                 </Tabs>
 
-                {/* Save Dialog */}
                 <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-                    <DialogContent className="bg-white border-gray-200 shadow-2xl rounded-2xl sm:max-w-[440px]">
+                    <DialogContent className="bg-white border-slate-200 shadow-2xl rounded-2xl sm:max-w-[440px]">
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-semibold text-gray-900 flex items-center gap-3">
+                            <DialogTitle className="text-lg font-semibold text-slate-900 flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600">
                                     <Save className="w-4 h-4 text-white" />
                                 </div>
                                 Save Keyword Plan
                             </DialogTitle>
-                            <DialogDescription className="text-gray-500">
+                            <DialogDescription className="text-slate-500">
                                 Give your keyword plan a name to save it for later
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name" className="text-sm font-medium text-gray-700">Plan Name</Label>
+                                <Label htmlFor="name" className="text-sm font-medium text-slate-700">Plan Name</Label>
                                 <Input
                                     id="name"
                                     placeholder="My Keyword Plan"
                                     value={listName}
                                     onChange={(e) => setListName(e.target.value)}
-                                    className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-violet-500 focus:ring-violet-500/20 rounded-lg"
+                                    className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:ring-violet-500/20 rounded-lg"
                                 />
                             </div>
                         </div>
@@ -1563,7 +1401,7 @@ export const KeywordPlanner = ({ initialData }: { initialData?: any }) => {
                             <Button
                                 onClick={handleCloseSaveDialog}
                                 variant="outline"
-                                className="bg-white border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-lg"
+                                className="bg-white border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 rounded-lg"
                             >
                                 Cancel
                             </Button>

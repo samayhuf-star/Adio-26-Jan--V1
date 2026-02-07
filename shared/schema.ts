@@ -726,3 +726,154 @@ export type DomainSnapshot = typeof domainSnapshots.$inferSelect;
 export type InsertDomainSnapshot = z.infer<typeof insertDomainSnapshotSchema>;
 export type DomainAlert = typeof domainAlerts.$inferSelect;
 export type InsertDomainAlert = z.infer<typeof insertDomainAlertSchema>;
+
+// Click Guard - Tracked Domains
+export const clickGuardDomains = pgTable("click_guard_domains", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  domain: text("domain").notNull(),
+  siteId: text("site_id").unique().notNull(),
+  verified: boolean("verified").default(false),
+  verifiedAt: timestamp("verified_at"),
+  settings: jsonb("settings").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_cg_domains_user_id").on(table.userId),
+  siteIdIdx: index("idx_cg_domains_site_id").on(table.siteId),
+  domainIdx: index("idx_cg_domains_domain").on(table.domain),
+}));
+
+// Click Guard - Visitor Logs
+export const clickGuardVisitors = pgTable("click_guard_visitors", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: text("site_id").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  fingerprint: text("fingerprint"),
+  country: text("country"),
+  city: text("city"),
+  region: text("region"),
+  isp: text("isp"),
+  org: text("org"),
+  asNumber: text("as_number"),
+  timezone: text("timezone"),
+  deviceType: text("device_type"),
+  browser: text("browser"),
+  browserVersion: text("browser_version"),
+  os: text("os"),
+  osVersion: text("os_version"),
+  screenWidth: integer("screen_width"),
+  screenHeight: integer("screen_height"),
+  language: text("language"),
+  referrer: text("referrer"),
+  pageUrl: text("page_url"),
+  isProxy: boolean("is_proxy").default(false),
+  isVpn: boolean("is_vpn").default(false),
+  isBot: boolean("is_bot").default(false),
+  isTor: boolean("is_tor").default(false),
+  botScore: integer("bot_score").default(0),
+  threatLevel: text("threat_level").default("low"),
+  clickCount: integer("click_count").default(1),
+  mouseMovements: integer("mouse_movements").default(0),
+  timeOnPage: integer("time_on_page").default(0),
+  blocked: boolean("blocked").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  siteIdIdx: index("idx_cg_visitors_site_id").on(table.siteId),
+  ipIdx: index("idx_cg_visitors_ip").on(table.ipAddress),
+  createdAtIdx: index("idx_cg_visitors_created_at").on(table.createdAt),
+  threatIdx: index("idx_cg_visitors_threat").on(table.threatLevel),
+  fingerprintIdx: index("idx_cg_visitors_fingerprint").on(table.fingerprint),
+}));
+
+// Click Guard - Blocked IPs
+export const clickGuardBlockedIps = pgTable("click_guard_blocked_ips", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: text("site_id").notNull(),
+  ipAddress: text("ip_address").notNull(),
+  reason: text("reason"),
+  autoBlocked: boolean("auto_blocked").default(false),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  siteIdIdx: index("idx_cg_blocked_site_id").on(table.siteId),
+  ipIdx: index("idx_cg_blocked_ip").on(table.ipAddress),
+}));
+
+// Click Guard - Fraud Events
+export const clickGuardFraudEvents = pgTable("click_guard_fraud_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: text("site_id").notNull(),
+  visitorId: uuid("visitor_id"),
+  eventType: text("event_type").notNull(),
+  severity: text("severity").default("medium"),
+  ipAddress: text("ip_address"),
+  details: jsonb("details").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  siteIdIdx: index("idx_cg_fraud_site_id").on(table.siteId),
+  eventTypeIdx: index("idx_cg_fraud_event_type").on(table.eventType),
+  createdAtIdx: index("idx_cg_fraud_created_at").on(table.createdAt),
+}));
+
+export const insertClickGuardDomainSchema = createInsertSchema(clickGuardDomains).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClickGuardVisitorSchema = createInsertSchema(clickGuardVisitors).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClickGuardBlockedIpSchema = createInsertSchema(clickGuardBlockedIps).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClickGuardFraudEventSchema = createInsertSchema(clickGuardFraudEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ClickGuardDomain = typeof clickGuardDomains.$inferSelect;
+export type InsertClickGuardDomain = z.infer<typeof insertClickGuardDomainSchema>;
+export type ClickGuardVisitor = typeof clickGuardVisitors.$inferSelect;
+export type InsertClickGuardVisitor = z.infer<typeof insertClickGuardVisitorSchema>;
+export type ClickGuardBlockedIp = typeof clickGuardBlockedIps.$inferSelect;
+export type InsertClickGuardBlockedIp = z.infer<typeof insertClickGuardBlockedIpSchema>;
+export type ClickGuardFraudEvent = typeof clickGuardFraudEvents.$inferSelect;
+export type InsertClickGuardFraudEvent = z.infer<typeof insertClickGuardFraudEventSchema>;
+
+export const supportTickets = pgTable("support_tickets", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  userEmail: text("user_email"),
+  userName: text("user_name"),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  priority: text("priority").default("Medium"),
+  status: text("status").default("Open"),
+  adminReply: text("admin_reply"),
+  adminRepliedAt: timestamp("admin_replied_at"),
+  adminRepliedBy: text("admin_replied_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_support_tickets_user_id").on(table.userId),
+  statusIdx: index("idx_support_tickets_status").on(table.status),
+}));
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  adminReply: true,
+  adminRepliedAt: true,
+  adminRepliedBy: true,
+});
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;

@@ -179,6 +179,11 @@ img {
   height: auto;
 }
 
+/* Dashboard compact text - 25% smaller than default (12px base instead of 16px) */
+html.dashboard-view {
+  font-size: 12px;
+}
+
 /* Root element - ensure no spacing issues */
 #root {
   margin: 0;

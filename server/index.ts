@@ -16,10 +16,11 @@ import { superadminRoutes } from './routes/superadmin';
 import { domainsRoutes } from './routes/domains';
 import { accountRoutes } from './routes/account';
 import { tempMailRoutes } from './routes/tempmail';
+import { clickGuardRoutes } from './routes/clickguard';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
-import { campaignHistory, auditLogs, workspaceProjects, projectItems } from '../shared/schema';
+import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains } from '../shared/schema';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
 import { eq, desc, asc, and } from 'drizzle-orm';
@@ -90,6 +91,20 @@ app.route('/api/superadmin', superadminRoutes);
 app.route('/api/domains', domainsRoutes);
 app.route('/api/account', accountRoutes);
 app.route('/api/tempmail', tempMailRoutes);
+app.route('/api/clickguard', clickGuardRoutes);
+
+app.get('/t.js', async (c) => {
+  try {
+    const scriptPath = path.resolve(process.cwd(), 'public/t.js');
+    const script = fs.readFileSync(scriptPath, 'utf-8');
+    c.header('Content-Type', 'application/javascript');
+    c.header('Cache-Control', 'public, max-age=3600');
+    c.header('Access-Control-Allow-Origin', '*');
+    return c.body(script);
+  } catch (e) {
+    return c.text('// tracking script unavailable', 500);
+  }
+});
 
 app.get('/api/products', async (c) => {
   try {
@@ -801,17 +816,65 @@ app.delete('/api/workspace-projects/:id/items/:itemId', async (c) => {
 app.get('/api/dashboard/all/:userId', async (c) => {
   try {
     const userId = c.req.param('userId');
-    // Return default dashboard data
-    // Can be implemented with Nhost GraphQL later
+    const database = getDb();
+
+    let totalCampaigns = 0;
+    let recentCampaigns: any[] = [];
+    let totalDomains = 0;
+    let totalClickGuardDomains = 0;
+
+    if (database) {
+      try {
+        const campaigns = await database
+          .select()
+          .from(campaignHistory)
+          .where(eq(campaignHistory.userId, userId))
+          .orderBy(desc(campaignHistory.createdAt));
+        totalCampaigns = campaigns.length;
+        recentCampaigns = campaigns.slice(0, 5).map((c: any) => ({
+          id: c.id,
+          campaign_name: c.name,
+          structure_type: c.data?.structureType || 'standard',
+          step: c.status === 'completed' ? 7 : (c.data?.step || 1),
+          created_at: c.createdAt,
+          updated_at: c.updatedAt || c.createdAt,
+        }));
+      } catch (e) {
+        console.warn('Dashboard: campaign_history query failed:', e);
+      }
+
+      try {
+        const domains = await database
+          .select()
+          .from(monitoredDomains)
+          .where(eq(monitoredDomains.userId, userId));
+        totalDomains = domains.length;
+      } catch (e) {
+        console.warn('Dashboard: monitored_domains query failed:', e);
+      }
+
+      try {
+        const cgDomains = await database
+          .select()
+          .from(clickGuardDomains)
+          .where(eq(clickGuardDomains.userId, userId));
+        totalClickGuardDomains = cgDomains.length;
+      } catch (e) {
+        console.warn('Dashboard: click_guard_domains query failed:', e);
+      }
+    }
+
     return c.json({
       success: true,
       data: {
         stats: {
-          totalCampaigns: 0,
+          totalCampaigns,
           totalSearches: 0,
-          unreadNotifications: 0
+          unreadNotifications: 0,
+          totalDomains,
+          totalClickGuardDomains,
         },
-        recentCampaigns: [],
+        recentCampaigns,
         workspaces: []
       }
     });

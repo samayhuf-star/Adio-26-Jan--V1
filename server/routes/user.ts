@@ -95,7 +95,7 @@ userRoutes.put('/profile', async (c) => {
   }
 });
 
-// PUT /api/user/password - Change password via Nhost
+// PUT /api/user/password - Change password
 userRoutes.put('/password', async (c) => {
   try {
     const userId = await getUserIdFromToken(c);
@@ -103,19 +103,37 @@ userRoutes.put('/password', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const { currentPassword, newPassword } = await c.req.json();
+    const { newPassword, confirmPassword } = await c.req.json();
 
-    if (!currentPassword || !newPassword) {
-      return c.json({ error: 'Current password and new password are required' }, 400);
+    if (!newPassword) {
+      return c.json({ error: 'New password is required' }, 400);
     }
 
-    // Password changes are handled by the auth provider (Nhost)
-    // This endpoint is a stub that returns success
-    // In production, you would call the auth provider's password change API
+    if (newPassword.length < 8) {
+      return c.json({ error: 'Password must be at least 8 characters long' }, 400);
+    }
+
+    if (confirmPassword && newPassword !== confirmPassword) {
+      return c.json({ error: 'Passwords do not match' }, 400);
+    }
+
+    const bcrypt = await import('bcryptjs');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    const pg = await import('pg');
+    const { getDatabaseUrl } = await import('../dbConfig');
+    const pool = new pg.default.Pool({ connectionString: getDatabaseUrl() });
+
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [passwordHash, userId]
+    );
+
+    await pool.end();
 
     return c.json({
       success: true,
-      message: 'Password change request received. Please use your auth provider to change your password.',
+      message: 'Password updated successfully.',
     });
   } catch (error: any) {
     console.error('Change password error:', error);
