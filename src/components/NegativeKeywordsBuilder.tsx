@@ -124,7 +124,45 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
     'Negative Outcomes / Complaints': { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
     'Unqualified Leads': { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' },
     'Wrong Location': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    'Intent Mismatch': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+    'Low Value': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+    'Irrelevant Product': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+    'Competitor': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+    'Location Irrelevant': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+    'Service Mismatch': { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+    'Job/DIY': { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' },
+    'Support/Help': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+    'Educational': { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
+    'Price Comparison': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+    'Other': { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
 };
+
+const INTENT_TO_NEGATIVE_CATEGORY_MAP: Record<string, string> = {
+    'DIY / Self-Help': 'Job/DIY',
+    'Budget / Price Sensitive': 'Low-Value',
+    'Job / Career Seekers': 'Job/DIY',
+    'Competitor Searches': 'Competitor',
+    'Educational / Academic': 'Educational',
+    'Information Seekers': 'Intent-Mismatch',
+    'Negative Outcomes / Complaints': 'Other',
+    'Unqualified Leads': 'Other',
+    'Wrong Location': 'Location-Irrelevant',
+};
+
+function resolveNegativeCategoryKey(categoryName: string): string {
+    if (categoryName in NEGATIVE_KEYWORD_CATEGORIES) return categoryName;
+    
+    const mappedKey = INTENT_TO_NEGATIVE_CATEGORY_MAP[categoryName];
+    if (mappedKey) return mappedKey;
+    
+    const foundKey = Object.keys(NEGATIVE_KEYWORD_CATEGORIES).find(key => {
+        const label = NEGATIVE_KEYWORD_CATEGORIES[key as NegativeKeywordCategory].label;
+        return label === categoryName || label.trim().toLowerCase() === categoryName.trim().toLowerCase();
+    });
+    if (foundKey) return foundKey;
+    
+    return 'Other';
+}
 
 export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) => {
     const { getToken } = useAuthCompat();
@@ -477,20 +515,8 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
         if (selectedCategories.size === 0) return generatedKeywords;
         
         return generatedKeywords.filter(kw => {
-            const categoryKey = Object.keys(NEGATIVE_KEYWORD_CATEGORIES).find(
-                key => {
-                    const categoryLabel = NEGATIVE_KEYWORD_CATEGORIES[key as NegativeKeywordCategory].label;
-                    if (categoryLabel === kw.category) return true;
-                    if (categoryLabel.trim().toLowerCase() === kw.category.trim().toLowerCase()) return true;
-                    return false;
-                }
-            ) as NegativeKeywordCategory | undefined;
-            
-            if (categoryKey && selectedCategories.has(categoryKey)) {
-                return true;
-            }
-            
-            return false;
+            const resolvedKey = resolveNegativeCategoryKey(kw.category);
+            return selectedCategories.has(resolvedKey as NegativeKeywordCategory);
         });
     }, [generatedKeywords, selectedCategories]);
 
@@ -546,13 +572,11 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
 
         const negativeKeywords: NegativeKeyword[] = filteredKeywords.map(kw => {
             const cleanKeyword = kw.keyword.replace(/[\[\]"]/g, '');
-            const categoryKey = Object.keys(NEGATIVE_KEYWORD_CATEGORIES).find(
-                key => NEGATIVE_KEYWORD_CATEGORIES[key as NegativeKeywordCategory].label === kw.category
-            ) as NegativeKeywordCategory;
+            const resolvedKey = resolveNegativeCategoryKey(kw.category);
             
             return {
                 keyword: cleanKeyword,
-                category: categoryKey || 'Other',
+                category: resolvedKey as NegativeKeywordCategory || 'Other',
                 subcategory: kw.subcategory,
                 reason: kw.reason,
                 matchType: kw.matchType || 'exact'

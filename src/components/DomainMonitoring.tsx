@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAccessToken, useAuthenticationStatus, useUserData } from '@nhost/react';
-import { nhost } from '../lib/nhost';
-import { getSessionToken } from '../utils/auth';
-import { useAuthCompat } from '../utils/authCompat';
+import { getSessionToken, getSessionTokenSync, getCurrentUser, isAuthenticated as checkIsAuthenticated } from '../utils/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -55,12 +52,9 @@ interface MonitoredDomain {
 }
 
 export default function DomainMonitoring() {
-  const accessToken = useAccessToken();
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuthenticationStatus();
-  const userData = useUserData();
-  const { getToken } = useAuthCompat();
-  const getTokenRef = useRef(getToken);
-  getTokenRef.current = getToken;
+  const isAuthLoading = false;
+  const isAuthenticated = checkIsAuthenticated();
+  const userData = getCurrentUser();
   const [domains, setDomains] = useState<MonitoredDomain[]>([]);
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -100,20 +94,7 @@ export default function DomainMonitoring() {
     retryCountRef.current = 0; // Reset on each effect run
     
     const tryGetToken = (): string | null => {
-      if (accessToken) return accessToken;
-      try {
-        const session = nhost.auth.getSession();
-        if (session?.accessToken) return session.accessToken;
-      } catch {
-        // ignore
-      }
-      try {
-        const localToken = localStorage.getItem('auth_token');
-        if (localToken) return localToken;
-      } catch {
-        // ignore
-      }
-      return null;
+      return getSessionTokenSync();
     };
     
     const fetchToken = async () => {
@@ -169,7 +150,7 @@ export default function DomainMonitoring() {
     return () => {
       isMounted = false;
     };
-  }, [accessToken, isAuthenticated, isAuthLoading]);
+  }, [isAuthenticated, isAuthLoading]);
   
   const getAuthHeaders = useCallback((): Record<string, string> => {
     return cachedToken ? { Authorization: `Bearer ${cachedToken}` } : {};

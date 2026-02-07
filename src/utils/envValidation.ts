@@ -15,11 +15,7 @@ const envConfig: EnvConfig = {
     // 'DATABASE_URL', // Uncomment if database URL is required
   ],
   optional: [
-    'VITE_NHOST_SUBDOMAIN',
-    'VITE_NHOST_REGION',
     'VITE_STRIPE_PUBLISHABLE_KEY',
-    // Note: STRIPE_SECRET_KEY should NEVER be exposed to client-side code
-    // Only server-side code should have access to secret keys
   ],
   defaults: {
     NODE_ENV: 'development',

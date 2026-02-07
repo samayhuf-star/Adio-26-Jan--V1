@@ -31,7 +31,7 @@ import { notifications as notificationService } from './utils/notifications';
 import { setCurrentUserId } from './utils/localStorageHistory';
 import { getCurrentUserProfile, signOut, getSessionToken } from './utils/auth';
 import { getCurrentUser, isAuthenticated } from './utils/auth';
-import { setNhostGetToken } from './utils/historyService';
+import { setAuthGetToken } from './utils/historyService';
 import { DataSourceIndicator } from './components/DataSourceIndicator';
 import { useDataSource } from './hooks/useDataSource';
 import { initStorageManager, clearStorageNow } from './utils/storageManager';
@@ -108,7 +108,7 @@ const AppContent = () => {
   // Initialize auth state
   useEffect(() => {
     // Initialize historyService with token getter so it can use database storage
-    setNhostGetToken(getSessionToken);
+    setAuthGetToken(getSessionToken);
     
     const initAuth = async () => {
       setLoading(true);
@@ -729,7 +729,7 @@ const AppContent = () => {
       }
 
       // Admin panel - detect subdomain or /admin path
-      // Super admin has its own authentication system (username/password), not Nhost
+      // Super admin has its own authentication system (username/password)
       const hostname = window.location.hostname;
       const isAdminSubdomain = hostname.startsWith('admin.') || hostname === 'admin.adiology.io';
       if (isAdminSubdomain || path.startsWith('/admin')) {

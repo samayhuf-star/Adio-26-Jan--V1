@@ -15,9 +15,6 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { validateEnvironment } from "./utils/envCheck";
 import { loggingService } from "./utils/loggingService";
 import { initVersionCheck, handleChunkLoadError } from "./utils/versionCheck";
-import { NhostProvider } from "./components/NhostProvider";
-
-// Nhost migration complete - using Nhost for auth, database and storage
 
 // Initialize notification service
 notifications.setToastInstance(toast);
@@ -71,17 +68,14 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', async (event) => {
     const errorMessage = String(event.reason || '');
     
-    // Ignore browser extension errors and expected Nhost token refresh failures
+    // Ignore browser extension errors and expected token refresh failures
     if (
       errorMessage.includes('sw.js') ||
       errorMessage.includes('mobx-state-tree') ||
       errorMessage.includes('setDetectedLibs') ||
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
-      errorMessage.includes('tabId not found') ||
-      // Suppress expected 401 errors from Nhost token refresh (invalid/expired refresh tokens)
-      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('401')) ||
-      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('Unauthorized'))
+      errorMessage.includes('tabId not found')
     ) {
       event.preventDefault();
       return;
@@ -123,9 +117,7 @@ if (typeof window !== 'undefined') {
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
       (errorMessage.includes('service worker') && errorMessage.includes('extension')) ||
-      // Suppress expected 401 errors from Nhost token refresh (invalid/expired refresh tokens)
-      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('401')) ||
-      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('Unauthorized'))
+      errorMessage.includes('tabId not found')
     ) {
       return;
     }
@@ -164,14 +156,12 @@ if (!validateEnvironment()) {
 } else {
   createRoot(rootElement).render(
     <ErrorBoundary>
-      <NhostProvider>
-        <ThemeProvider>
-          <Suspense fallback={<LoadingScreen />}>
-            <App />
-          </Suspense>
-          <Toaster position="top-right" richColors closeButton visibleToasts={1} />
-        </ThemeProvider>
-      </NhostProvider>
+      <ThemeProvider>
+        <Suspense fallback={<LoadingScreen />}>
+          <App />
+        </Suspense>
+        <Toaster position="top-right" richColors closeButton visibleToasts={1} />
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

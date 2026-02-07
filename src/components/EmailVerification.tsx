@@ -4,8 +4,6 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { notifications } from '../utils/notifications';
-import { useAuthenticationStatus } from '@nhost/react';
-import { nhost } from '../lib/nhost';
 import { resendVerificationEmail } from '../utils/auth';
 
 interface EmailVerificationProps {
@@ -23,7 +21,6 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendCount, setResendCount] = useState(0);
-  const { isAuthenticated, isLoading } = useAuthenticationStatus();
   const hasProcessedRef = useRef(false);
   const MAX_RESENDS = 3;
   const COOLDOWN_SECONDS = 60;
@@ -36,104 +33,67 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
   }, [resendCooldown]);
 
   useEffect(() => {
-    if (hasProcessedRef.current || isLoading) return;
+    if (hasProcessedRef.current) return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const emailParam = urlParams.get('email');
-    const ticketParam = urlParams.get('ticket');
-    const typeParam = urlParams.get('type');
-    const redirectTo = urlParams.get('redirectTo');
-    const refreshToken = urlParams.get('refreshToken') || urlParams.get('token');
+    const tokenParam = urlParams.get('token');
 
     if (emailParam) {
       setEmail(emailParam);
     }
 
-    if (refreshToken) {
+    if (tokenParam) {
       hasProcessedRef.current = true;
       setIsVerifying(true);
 
-      const signInWithRefreshToken = async () => {
+      const verifyEmail = async () => {
         try {
-          const { session, error: signInError } = await nhost.auth.refreshSession(refreshToken);
+          const response = await fetch('/api/account/verify-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: tokenParam }),
+          });
 
-          if (signInError || !session) {
-            console.error('[EmailVerification] Failed to sign in with refresh token:', signInError);
-            setError('Verification link has expired or is invalid. Please request a new one.');
+          const result = await response.json();
+
+          if (!result.success) {
+            setError(result.error || 'Verification failed. Please request a new verification link.');
             setIsVerifying(false);
             return;
           }
 
-          const user = nhost.auth.getUser();
-          if (user?.email) setEmail(user.email);
-
-          if (user?.emailVerified) {
-            setIsVerified(true);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('auth_token', session.accessToken);
-              localStorage.setItem('user', JSON.stringify({
-                id: user.id,
-                email: user.email,
-                name: user.displayName || '',
-                full_name: user.displayName || '',
-                role: 'user',
-                subscription_plan: 'free',
-                subscription_status: 'active',
-                email_confirmed_at: new Date().toISOString(),
-              }));
-            }
-            notifications.success('Email verified successfully!');
-            window.history.replaceState({}, '', '/verify-email');
-            setTimeout(() => {
-              onVerificationSuccess();
-            }, 2000);
-          } else {
-            setIsVerified(true);
-            notifications.success('Email verified successfully!');
-            window.history.replaceState({}, '', '/verify-email');
-            setTimeout(() => {
-              onVerificationSuccess();
-            }, 2000);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('auth_token', result.token);
+            localStorage.setItem('user', JSON.stringify({
+              id: result.user.id,
+              email: result.user.email,
+              name: result.user.full_name || '',
+              full_name: result.user.full_name || '',
+              role: result.user.role || 'user',
+              subscription_plan: result.user.subscription_plan || 'free',
+              subscription_status: result.user.subscription_status || 'active',
+              email_confirmed_at: new Date().toISOString(),
+            }));
           }
+
+          setIsVerified(true);
+          notifications.success('Email verified successfully!');
+          window.history.replaceState({}, '', '/verify-email');
+          setTimeout(() => {
+            onVerificationSuccess();
+          }, 2000);
         } catch (err) {
-          console.error('[EmailVerification] Error processing refresh token:', err);
+          console.error('[EmailVerification] Error:', err);
           setError('Something went wrong during verification. Please try again.');
           setIsVerifying(false);
         }
       };
 
-      signInWithRefreshToken();
+      verifyEmail();
       return;
     }
-
-    if (ticketParam && typeParam) {
-      hasProcessedRef.current = true;
-      setIsVerifying(true);
-      
-      const nhostAuthUrl = nhost.auth.url;
-      const verifyUrl = `${nhostAuthUrl}/verify?ticket=${encodeURIComponent(ticketParam)}&type=${encodeURIComponent(typeParam)}${redirectTo ? `&redirectTo=${encodeURIComponent(redirectTo)}` : ''}`;
-      
-      setTimeout(() => {
-        window.location.href = verifyUrl;
-      }, 1500);
-      return;
-    }
-
-    if (isAuthenticated) {
-      hasProcessedRef.current = true;
-      const user = nhost.auth.getUser();
-      if (user?.emailVerified) {
-        setIsVerified(true);
-        if (user.email) setEmail(user.email);
-        notifications.success('Email verified successfully!');
-        setTimeout(() => {
-          onVerificationSuccess();
-        }, 2000);
-      } else if (user?.email) {
-        setEmail(user.email);
-      }
-    }
-  }, [isLoading, isAuthenticated, onVerificationSuccess]);
+  }, [onVerificationSuccess]);
 
   const handleResendEmail = async () => {
     if (!email || resendCount >= MAX_RESENDS || resendCooldown > 0) {
@@ -165,7 +125,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
     }
   };
 
-  if (isLoading || isVerifying) {
+  if (isVerifying) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl max-w-md w-full">
@@ -174,7 +134,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
             </div>
             <CardTitle className="text-2xl font-bold text-slate-900">
-              {isVerifying ? 'Verifying Email...' : 'Loading...'}
+              Verifying Email...
             </CardTitle>
             <CardDescription className="text-slate-600 mt-2">
               Please wait while we verify your email address.

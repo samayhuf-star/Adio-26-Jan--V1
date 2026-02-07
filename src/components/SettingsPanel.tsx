@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUserCompat, useAuthCompat } from '../utils/authCompat';
-import { getCurrentUserProfile } from '../utils/auth';
+import { getCurrentUserProfile, getCurrentUser, isAuthenticated, getSessionTokenSync } from '../utils/auth';
 import { 
   User, Mail, Lock, Globe,
   Save, Eye, EyeOff,
@@ -30,8 +29,8 @@ interface SettingsPanelProps {
 }
 
 export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) => {
-  const { user: currentUser } = useUserCompat();
-  const { getToken } = useAuthCompat();
+  const currentUser = getCurrentUser();
+  const getToken = async () => getSessionTokenSync();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -334,7 +333,7 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
           <div className="space-y-1.5">
             <TerminalLine prefix="$" label="user:" value={name || 'NOT_SET'} valueColor={name ? 'green' : 'yellow'} />
             <TerminalLine prefix="$" label="email:" value={email ? email.substring(0, 20) + (email.length > 20 ? '...' : '') : 'NOT_SET'} valueColor={email ? 'cyan' : 'yellow'} />
-            <TerminalLine prefix="$" label="auth_provider:" value="NHOST" valueColor="purple" />
+            <TerminalLine prefix="$" label="auth_provider:" value="CUSTOM" valueColor="purple" />
             <TerminalLine prefix="$" label="status:" value={user ? 'AUTHENTICATED' : 'NOT_LOGGED_IN'} valueColor={user ? 'green' : 'yellow'} />
           </div>
         </TerminalCard>

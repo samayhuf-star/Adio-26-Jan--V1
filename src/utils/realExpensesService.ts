@@ -1,4 +1,4 @@
-import { nhost } from '../lib/nhost';
+import { getSessionTokenSync } from './auth';
 
 export interface RealExpense {
   id: string;
@@ -7,12 +7,11 @@ export interface RealExpense {
   amount: number;
   status: 'pending' | 'sent' | 'failed' | 'paid';
   category: string;
-  source: string; // API source: stripe, openai, vercel, github, supabase, etc.
+  source: string;
   lastFourDigits?: string;
   currency: string;
 }
 
-// Parse Mercury CSV format transactions
 export function parseMercuryCSV(csvText: string): RealExpense[] {
   const lines = csvText.trim().split('\n');
   if (lines.length < 2) return [];
@@ -60,7 +59,6 @@ export function parseMercuryCSV(csvText: string): RealExpense[] {
     const currency = parts[currencyIdx]?.trim() || 'USD';
     const lastFour = parts[lastFourIdx]?.trim() || '';
 
-    // Determine source/service
     let source = 'other';
     for (const [key, value] of Object.entries(serviceMap)) {
       if (description.toUpperCase().includes(key) || (parts[5] && parts[5].toUpperCase().includes(key))) {
@@ -87,25 +85,31 @@ export function parseMercuryCSV(csvText: string): RealExpense[] {
   return expenses;
 }
 
-// Calculate real expenses from active APIs
+async function apiRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const token = getSessionTokenSync();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(endpoint, { ...options, headers });
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function calculateRealExpenses(): Promise<RealExpense[]> {
   const expenses: RealExpense[] = [];
   const today = new Date();
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   try {
-    // Get Stripe expenses
     try {
-      const { data } = await nhost.graphql.request(`
-        query GetPayments($startDate: timestamptz!) {
-          payments(where: {created_at: {_gte: $startDate}}, order_by: {created_at: desc}) {
-            id
-            amount
-            type
-            created_at
-          }
-        }
-      `, { startDate: startOfMonth.toISOString() });
+      const data = await apiRequest(`/api/expenses/payments?startDate=${startOfMonth.toISOString()}`);
 
       if (data?.payments && data.payments.length > 0) {
         data.payments.forEach((p: any) => {
@@ -125,34 +129,25 @@ export async function calculateRealExpenses(): Promise<RealExpense[]> {
       console.warn('Error fetching Stripe expenses:', e);
     }
 
-    // Get Nhost expenses (from database)
     try {
-      const { data } = await nhost.graphql.request(`
-        query GetSubscriptions($startDate: timestamptz!) {
-          subscriptions(where: {created_at: {_gte: $startDate}}) {
-            id
-            amount
-            created_at
-          }
-        }
-      `, { startDate: startOfMonth.toISOString() });
+      const data = await apiRequest(`/api/expenses/subscriptions?startDate=${startOfMonth.toISOString()}`);
 
       if (data?.subscriptions && data.subscriptions.length > 0) {
         data.subscriptions.forEach((s: any) => {
           expenses.push({
-            id: `nhost-${s.id}`,
+            id: `sub-${s.id}`,
             date: new Date(s.created_at || today).toLocaleDateString(),
-            description: 'Nhost Database Service',
+            description: 'Database Service',
             amount: Math.abs(parseFloat(s.amount || 49)),
             status: 'paid',
             category: 'infrastructure',
-            source: 'nhost',
+            source: 'database',
             currency: 'USD',
           });
         });
       }
     } catch (e) {
-      console.warn('Error fetching Nhost expenses:', e);
+      console.warn('Error fetching subscription expenses:', e);
     }
 
   } catch (error) {
@@ -162,9 +157,7 @@ export async function calculateRealExpenses(): Promise<RealExpense[]> {
   return expenses;
 }
 
-// Load expenses from CSV file, Supabase, or APIs
 export async function loadRealExpenses(): Promise<RealExpense[]> {
-  // Try to load from localStorage cache first
   const cached = localStorage.getItem('admin_expenses_cache');
   if (cached) {
     try {
@@ -175,13 +168,11 @@ export async function loadRealExpenses(): Promise<RealExpense[]> {
   }
 
   try {
-    // Try to load Mercury CSV file
     const csvResponse = await fetch('/attached_assets/transactions-googlinks-llc-to-dec082025_(2)_1765359984828.csv');
     if (csvResponse.ok) {
       const csvText = await csvResponse.text();
       const expenses = parseMercuryCSV(csvText);
       if (expenses.length > 0) {
-        // Cache to localStorage
         localStorage.setItem('admin_expenses_cache', JSON.stringify(expenses));
         console.log(`📄 Loaded ${expenses.length} expenses from Mercury CSV`);
         return expenses;
@@ -192,21 +183,7 @@ export async function loadRealExpenses(): Promise<RealExpense[]> {
   }
 
   try {
-    // Try to load from expenses table
-    const { data } = await nhost.graphql.request(`
-      query GetExpenses {
-        expenses(order_by: {date: desc}, limit: 100) {
-          id
-          date
-          description
-          amount
-          status
-          category
-          source
-          currency
-        }
-      }
-    `);
+    const data = await apiRequest('/api/expenses');
 
     if (data?.expenses && data.expenses.length > 0) {
       const expenses = data.expenses.map((e: any) => ({
@@ -220,14 +197,13 @@ export async function loadRealExpenses(): Promise<RealExpense[]> {
         currency: e.currency || 'USD',
       }));
       localStorage.setItem('admin_expenses_cache', JSON.stringify(expenses));
-      console.log(`📊 Loaded ${expenses.length} expenses from Nhost`);
+      console.log(`📊 Loaded ${expenses.length} expenses from API`);
       return expenses;
     }
   } catch (e) {
-    console.warn('Expenses table not available');
+    console.warn('Expenses API not available');
   }
 
-  // Fallback to calculating from APIs
   const apiExpenses = await calculateRealExpenses();
   if (apiExpenses.length > 0) {
     localStorage.setItem('admin_expenses_cache', JSON.stringify(apiExpenses));
@@ -235,7 +211,6 @@ export async function loadRealExpenses(): Promise<RealExpense[]> {
   return apiExpenses;
 }
 
-// Upload CSV expenses to Nhost
 export async function uploadCSVExpenses(expenses: RealExpense[]): Promise<boolean> {
   try {
     const formattedExpenses = expenses.map(e => ({
@@ -252,26 +227,12 @@ export async function uploadCSVExpenses(expenses: RealExpense[]): Promise<boolea
       }
     }));
 
-    const { error } = await nhost.graphql.request(`
-      mutation InsertExpenses($objects: [expenses_insert_input!]!) {
-        insert_expenses(
-          objects: $objects,
-          on_conflict: {
-            constraint: expenses_id_key,
-            update_columns: [description, amount, status, category, source, currency, metadata]
-          }
-        ) {
-          affected_rows
-        }
-      }
-    `, { objects: formattedExpenses });
+    await apiRequest('/api/expenses/upload', {
+      method: 'POST',
+      body: JSON.stringify({ expenses: formattedExpenses }),
+    });
 
-    if (error) {
-      console.error('Error uploading expenses:', error);
-      return false;
-    }
-
-    console.log(`✅ Uploaded ${expenses.length} expenses to Nhost`);
+    console.log(`✅ Uploaded ${expenses.length} expenses`);
     return true;
   } catch (error) {
     console.error('Error uploading expenses:', error);

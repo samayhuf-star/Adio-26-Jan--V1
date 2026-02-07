@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuthCompat, useUserCompat } from '../../../utils/authCompat';
+import { getSessionTokenSync, getCurrentUser } from '../../../utils/auth';
 import { apiCache, createCacheKey } from '../../../utils/apiCache';
 
 export interface DiscourseTopic {
@@ -32,16 +32,19 @@ export interface DiscourseCategory {
   topicCount: number;
 }
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const STALE_TIME = 60 * 1000; // 1 minute
+const CACHE_TTL = 5 * 60 * 1000;
+const STALE_TIME = 60 * 1000;
 
 export function useDiscourseTopics(limit: number = 10, options?: { enabled?: boolean }) {
   const [topics, setTopics] = useState<DiscourseTopic[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { getToken } = useAuthCompat();
   const hasFetched = useRef(false);
   const enabled = options?.enabled ?? true;
+
+  const getToken = useCallback(async () => {
+    return getSessionTokenSync();
+  }, []);
 
   const fetchTopics = useCallback(async (forceRefresh = false) => {
     const cacheKey = createCacheKey('discourse', 'topics', limit);
@@ -124,9 +127,12 @@ export function useDiscourseTopics(limit: number = 10, options?: { enabled?: boo
 export function useDiscourseCategories(options?: { enabled?: boolean }) {
   const [categories, setCategories] = useState<DiscourseCategory[]>([]);
   const [loading, setLoading] = useState(false);
-  const { getToken } = useAuthCompat();
   const hasFetched = useRef(false);
   const enabled = options?.enabled ?? true;
+
+  const getToken = useCallback(async () => {
+    return getSessionTokenSync();
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -199,22 +205,24 @@ export function useDiscourseCategories(options?: { enabled?: boolean }) {
 }
 
 export function useDiscourseSSO() {
-  const { getToken } = useAuthCompat();
-  const { user } = useUserCompat();
   const [loading, setLoading] = useState(false);
 
+  const getToken = useCallback(async () => {
+    return getSessionTokenSync();
+  }, []);
+
   const loginToDiscourse = useCallback(async () => {
+    const user = getCurrentUser();
     if (!user) return null;
 
     try {
       setLoading(true);
       const token = await getToken();
 
-      const nhostUser = user as any;
-      const userEmail = nhostUser.email || '';
-      const userName = nhostUser.displayName || nhostUser.metadata?.name || 'User';
-      const userUsername = nhostUser.metadata?.username || userEmail.split('@')[0];
-      const userAvatar = nhostUser.avatarUrl || '';
+      const userEmail = user.email || '';
+      const userName = user.name || user.full_name || 'User';
+      const userUsername = userEmail.split('@')[0];
+      const userAvatar = user.avatar || '';
 
       const response = await fetch('/api/community/sso/initiate', {
         method: 'POST',
@@ -262,7 +270,7 @@ export function useDiscourseSSO() {
     } finally {
       setLoading(false);
     }
-  }, [user, getToken]);
+  }, [getToken]);
 
   const openForum = useCallback(() => {
     window.open('https://community.adiology.io/', '_blank');
@@ -272,10 +280,12 @@ export function useDiscourseSSO() {
 }
 
 export function useCreatePost() {
-  const { getToken } = useAuthCompat();
-  const { user } = useUserCompat();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const getToken = useCallback(async () => {
+    return getSessionTokenSync();
+  }, []);
 
   const createPost = useCallback(
     async (title: string, content: string, categoryId?: number) => {
@@ -283,8 +293,8 @@ export function useCreatePost() {
         setLoading(true);
         setError(null);
 
-        const nhostUser = user as any;
-        const userEmail = nhostUser?.email || '';
+        const user = getCurrentUser();
+        const userEmail = user?.email || '';
 
         const token = await getToken();
         const response = await fetch('/api/community/posts', {
@@ -318,7 +328,7 @@ export function useCreatePost() {
         setLoading(false);
       }
     },
-    [getToken, user]
+    [getToken]
   );
 
   return { createPost, loading, error };

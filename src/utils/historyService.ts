@@ -74,18 +74,20 @@ async function fetchWithRetry(
   throw lastError || new Error('Request failed after retries');
 }
 
-let nhostGetToken: (() => Promise<string | null>) | null = null;
+let authGetToken: (() => Promise<string | null>) | null = null;
 
-export function setNhostGetToken(getToken: () => Promise<string | null>) {
-  nhostGetToken = getToken;
+export function setAuthGetToken(getToken: () => Promise<string | null>) {
+  authGetToken = getToken;
 }
+
+
 
 async function getAuthToken(): Promise<string | null> {
   try {
-    if (nhostGetToken) {
-      const token = await nhostGetToken();
+    if (authGetToken) {
+      const token = await authGetToken();
       if (token) {
-        console.log('[historyService] Got auth token from Nhost');
+        console.log('[historyService] Got auth token from provider');
         return token;
       }
     }

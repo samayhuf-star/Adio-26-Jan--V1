@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { ArrowLeft, Upload, X, Globe, Info, CheckCircle, Copy, ExternalLink } from 'lucide-react';
 import VisualSectionsEditor from './VisualSectionsEditor';
 import { TemplateData, SavedWebsite, updateSavedWebsite, downloadTemplate } from '../utils/savedWebsites';
-import { useUserData } from '@nhost/react';
+import { getCurrentUser } from '../utils/auth';
 import { generateSlug, cleanWebsiteName } from '../utils/slugify';
 
 interface TemplateEditorBuilderProps {
@@ -153,7 +153,7 @@ ${exportedHtml}
     setIsPublishing(true);
     
     try {
-      const user = useUserData();
+      const user = getCurrentUser();
       const slug = generateSlug(finalName);
       const templateUrl = `https://adiology.io/templates/${slug}`;
       

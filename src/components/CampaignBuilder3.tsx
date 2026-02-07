@@ -2528,41 +2528,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         }
       });
       
-      // Add default extensions if none found to ensure CSV always has extensions
-      if (sitelinks.length === 0) {
-        sitelinks.push(
-          {
-            text: 'Contact Us',
-            description1: 'Get in touch today',
-            description2: 'Free consultation',
-            finalUrl: campaignData.url || '',
-            status: 'Enabled'
-          },
-          {
-            text: 'Our Services',
-            description1: 'View all services',
-            description2: 'Professional solutions',
-            finalUrl: campaignData.url || '',
-            status: 'Enabled'
-          }
-        );
-      }
-      
-      if (callouts.length === 0) {
-        callouts.push(
-          { text: '24/7 Support', status: 'Enabled' },
-          { text: 'Free Consultation', status: 'Enabled' },
-          { text: 'Expert Service', status: 'Enabled' }
-        );
-      }
-      
-      if (snippets.length === 0) {
-        snippets.push({
-          header: 'Services',
-          values: 'Professional Service, Expert Solutions, Quality Work',
-          status: 'Enabled'
-        });
-      }
+      // Only include extensions that the user explicitly added - do NOT auto-generate defaults
       
       console.log('📦 Extensions collected for CSV:', { 
         sitelinks: sitelinks.length, 

@@ -49,7 +49,6 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
-        localStorage.removeItem('nhostSession');
       }
     }
   }, [initialMode]);
@@ -113,44 +112,6 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
       }
 
       if (isLogin) {
-        // Check for test admin credentials first
-        const isTestAdmin = (
-          (trimmedEmail === 'admin@admin.com' || trimmedEmail === 'admin@admin' || trimmedEmail === 'admin' || trimmedEmail === 'oadiology@gmail.com') && 
-          (trimmedPassword === 'admin' || trimmedPassword === 'password' || trimmedPassword === '123456')
-        );
-        
-        if (isTestAdmin) {
-          // Grant instant access - create a mock user object
-          sessionStorage.setItem('test_admin_mode', 'true');
-          sessionStorage.setItem('test_admin_email', trimmedEmail);
-          
-          // Create a mock user object for test admin
-          const mockUser = {
-            id: 'test-admin-' + Date.now(),
-            email: trimmedEmail,
-            name: 'Admin User',
-            role: 'superadmin',
-            subscription_plan: 'pro',
-            subscription_status: 'active',
-          };
-          
-          // Store in sessionStorage for App.tsx to pick up
-          sessionStorage.setItem('test_admin_user', JSON.stringify(mockUser));
-          
-          notifications.success('Welcome, Super Admin!', {
-            title: 'Admin Access Granted',
-            description: `Logged in as ${trimmedEmail}`
-          });
-          
-          setIsLoading(false);
-          // Ensure navigation happens
-          setTimeout(() => {
-            onLoginSuccess();
-          }, 100);
-          return;
-        }
-        
-        // Optimize login - reduce wait time and improve session handling
         try {
           const result = await signInWithEmail(trimmedEmail, trimmedPassword);
           

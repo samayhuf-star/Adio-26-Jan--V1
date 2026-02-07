@@ -1,44 +1,26 @@
-/**
- * Compatibility layer for authentication
- * Provides hooks/utilities for Nhost authentication
- */
-
 import React, { useState, useEffect } from 'react';
-import { useAuthenticationStatus, useUserData, useAccessToken } from '@nhost/react';
+import { getCurrentUser, getSessionTokenSync, isAuthenticated as checkIsAuthenticated } from './auth';
 
-/**
- * Hook-like function that returns getToken (for components that used useAuth)
- */
 export function useAuthCompat() {
-  const { isAuthenticated } = useAuthenticationStatus();
-  const accessToken = useAccessToken();
-
   return {
     getToken: async () => {
-      return accessToken || null;
+      return getSessionTokenSync();
     },
     isLoaded: true,
-    isSignedIn: isAuthenticated,
+    isSignedIn: checkIsAuthenticated(),
   };
 }
 
-/**
- * Hook-like function that returns user (for components that used useUser)
- */
 export function useUserCompat() {
-  const user = useUserData();
-  const { isAuthenticated, isLoading } = useAuthenticationStatus();
+  const user = getCurrentUser();
 
   return {
     user,
-    isLoaded: !isLoading,
-    isSignedIn: isAuthenticated,
+    isLoaded: true,
+    isSignedIn: checkIsAuthenticated(),
   };
 }
 
-/**
- * Alias for useAuthCompat - provides useAuth hook
- */
 export function useAuth() {
   const authCompat = useAuthCompat();
   return {
@@ -48,31 +30,25 @@ export function useAuth() {
   };
 }
 
-/**
- * Alias for useUserCompat - provides useUser hook
- */
 export function useUser() {
   return useUserCompat();
 }
 
-/**
- * Hook for organization data (stub for now)
- */
 export function useOrganization() {
   const [organization, setOrganization] = useState<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const accessToken = useAccessToken();
 
   useEffect(() => {
     const loadOrganization = async () => {
       try {
-        if (!accessToken) {
+        const token = getSessionTokenSync();
+        if (!token) {
           setIsLoaded(true);
           return;
         }
 
         const response = await fetch('/api/organizations/my', {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.ok) {
@@ -89,7 +65,7 @@ export function useOrganization() {
     };
 
     loadOrganization();
-  }, [accessToken]);
+  }, []);
 
   return {
     organization,
@@ -97,9 +73,6 @@ export function useOrganization() {
   };
 }
 
-/**
- * Stub for useClerk hook (legacy compatibility)
- */
 export function useClerk() {
   return {
     user: null,
@@ -107,30 +80,16 @@ export function useClerk() {
   };
 }
 
-/**
- * Stub SignIn component - redirects to Auth component
- * Note: This is a compatibility stub. The app uses the Auth component instead.
- */
 export const SignIn: React.FC<any> = (props: any) => {
-  // This is a stub component for compatibility
-  // The actual sign-in is handled by the Auth component
   return (
     <div style={{ display: 'none' }}>
-      {/* Stub component - not used */}
     </div>
   );
 };
 
-/**
- * Stub SignUp component - redirects to Auth component
- * Note: This is a compatibility stub. The app uses the Auth component instead.
- */
 export const SignUp: React.FC<any> = (props: any) => {
-  // This is a stub component for compatibility
-  // The actual sign-up is handled by the Auth component
   return (
     <div style={{ display: 'none' }}>
-      {/* Stub component - not used */}
     </div>
   );
 };

@@ -14,6 +14,7 @@ import { tasksRoutes } from './routes/tasks';
 import { promoRoutes } from './routes/promo';
 import { superadminRoutes } from './routes/superadmin';
 import { domainsRoutes } from './routes/domains';
+import { accountRoutes } from './routes/account';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -86,6 +87,7 @@ app.route('/api/projects', tasksRoutes);
 app.route('/api/promo', promoRoutes);
 app.route('/api/superadmin', superadminRoutes);
 app.route('/api/domains', domainsRoutes);
+app.route('/api/account', accountRoutes);
 
 app.get('/api/products', async (c) => {
   try {
@@ -1020,10 +1022,13 @@ app.post('/api/analyze-url', async (c) => {
 });
 
 // AI Endpoints
-const AI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBYyBnc99JTLGvUY3qdGFksUlf7roGUdao';
+const AI_API_KEY = process.env.GEMINI_API_KEY || '';
 const AI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 async function callGeminiAPI(prompt: string): Promise<string> {
+  if (!AI_API_KEY) {
+    throw new Error('Gemini API key is not configured. Set the GEMINI_API_KEY environment variable.');
+  }
   try {
     const response = await fetch(`${AI_API_BASE}?key=${AI_API_KEY}`, {
       method: 'POST',

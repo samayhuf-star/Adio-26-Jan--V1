@@ -18,6 +18,8 @@ export const users = pgTable("users", {
   lastSignIn: timestamp("last_sign_in"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  passwordHash: text("password_hash"),
+  emailVerified: boolean("email_verified").default(false),
 }, (table) => ({
   emailIdx: index("idx_users_email").on(table.email),
   roleIdx: index("idx_users_role").on(table.role),

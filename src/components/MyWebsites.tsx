@@ -12,7 +12,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { getUserPublishedWebsites, deletePublishedWebsite, updatePublishedWebsiteStatus, updatePublishedWebsite, PublishedWebsite, savePublishedWebsite } from '../utils/publishedWebsites';
 import { getDeploymentStatus } from '../utils/vercel';
-import { useUserData } from '@nhost/react';
+
 import { notifications } from '../utils/notifications';
 
 export const MyWebsites: React.FC = () => {

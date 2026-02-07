@@ -260,7 +260,7 @@ export function OneClickCampaignBuilder() {
       
       notifications.success('Campaign generated and saved!', {
         title: 'Success',
-        description: `Generated ${generatedCampaign.campaign_data?.keywords?.length || 100}+ keywords`
+        description: `Generated ${generatedCampaign.campaign_data?.adGroups?.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0) || generatedCampaign.campaign_data?.keywords?.length || 100}+ keywords`
       });
     }
   };
@@ -616,7 +616,7 @@ export function OneClickCampaignBuilder() {
                 <span className="text-slate-500 shrink-0">[{resultsTimestamp}]</span>
                 <span className="text-cyan-400">
                   <span className="mr-1">{'\u2192'}</span>
-                  Keywords: <span className="text-yellow-300">{generatedCampaign.campaign_data?.keywords?.length || '100+'}</span>
+                  Keywords: <span className="text-yellow-300">{generatedCampaign.campaign_data?.adGroups?.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0) || generatedCampaign.campaign_data?.keywords?.length || '100+'}</span>
                 </span>
               </div>
               <div className="flex gap-2 py-0.5">
@@ -709,7 +709,7 @@ export function OneClickCampaignBuilder() {
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
                   <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                 </div>
-                <span className="text-slate-300 text-sm font-medium">Sample Keywords ({generatedCampaign.campaign_data?.keywords?.length || 0} total)</span>
+                <span className="text-slate-300 text-sm font-medium">Sample Keywords ({generatedCampaign.campaign_data?.adGroups?.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0) || generatedCampaign.campaign_data?.keywords?.length || 0} total)</span>
               </div>
               <ScrollArea className="h-48 p-4">
                 <div className="space-y-1 font-mono text-xs">

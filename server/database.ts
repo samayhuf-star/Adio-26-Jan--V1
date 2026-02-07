@@ -4,6 +4,9 @@
  */
 
 import { nhostAdmin } from './nhostAdmin';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'adiology-jwt-secret-key';
 
 export interface User {
   id: string;
@@ -39,21 +42,26 @@ export async function verifyUserToken(
       };
     }
 
-    // If not an admin token, try to verify as regular user token
-    // For now, we'll use a simple approach - in production you'd verify the JWT properly
-    if (token.startsWith('eyJ')) { // JWT token format
-      // This is a simplified verification - in production use proper JWT verification
-      console.warn('Database: Using simplified JWT verification. Implement proper JWT verification for production.');
-      
-      // Extract user info from token (this is a stub - implement proper JWT decoding)
-      const userId = 'user-' + Date.now();
-      const userEmail = 'user@example.com';
-      
-      return {
-        authorized: true,
-        userId,
-        userEmail,
-      };
+    // If not an admin token, verify JWT signature using the shared secret
+    if (token.startsWith('eyJ')) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const userId = decoded.userId || decoded.sub;
+        const userEmail = decoded.email;
+        if (!userId || !userEmail) {
+          return { authorized: false, error: 'Invalid token payload' };
+        }
+        return {
+          authorized: true,
+          userId,
+          userEmail,
+        };
+      } catch (jwtErr: any) {
+        if (jwtErr.name === 'TokenExpiredError') {
+          return { authorized: false, error: 'Token expired' };
+        }
+        return { authorized: false, error: 'Invalid or tampered token' };
+      }
     }
 
     return { authorized: false, error: 'Invalid token format' };
