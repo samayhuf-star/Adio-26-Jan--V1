@@ -15,6 +15,7 @@ import { promoRoutes } from './routes/promo';
 import { superadminRoutes } from './routes/superadmin';
 import { domainsRoutes } from './routes/domains';
 import { accountRoutes } from './routes/account';
+import { tempMailRoutes } from './routes/tempmail';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -88,6 +89,7 @@ app.route('/api/promo', promoRoutes);
 app.route('/api/superadmin', superadminRoutes);
 app.route('/api/domains', domainsRoutes);
 app.route('/api/account', accountRoutes);
+app.route('/api/tempmail', tempMailRoutes);
 
 app.get('/api/products', async (c) => {
   try {

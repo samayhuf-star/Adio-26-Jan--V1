@@ -303,6 +303,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [campaignSaved, setCampaignSaved] = useState(false);
+  const [draftCampaignId, setDraftCampaignId] = useState<string | null>(null);
   const [showAnalysisResults, setShowAnalysisResults] = useState(false);
   const [locationSearchTerm, setLocationSearchTerm] = useState({ countries: '', states: '', cities: '', zipCodes: '' });
   const [editingAdId, setEditingAdId] = useState<string | null>(null);
@@ -361,6 +362,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   // Handle initial data from Keyword Planner or saved campaigns
   useEffect(() => {
     if (!initialData) return;
+
+    if (initialData._savedCampaignId) {
+      setDraftCampaignId(initialData._savedCampaignId);
+    }
 
     try {
       // Handle saved campaign data (from CampaignHistoryView)
@@ -551,14 +556,12 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
 
   // Auto-save campaign progress when step changes or key data updates
   useEffect(() => {
-    // Don't save if on step 1 with no data, or if already on success step
     if (currentStep === 1 && !campaignData.url) return;
-    if (currentStep === 7) return; // Don't auto-save after completion
+    if (currentStep === 7) return;
     
-    // Debounce auto-save to avoid too many saves
     const saveTimeout = setTimeout(async () => {
       try {
-        await historyService.save('campaign', campaignData.campaignName || 'Untitled Campaign', {
+        const draftData = {
           name: campaignData.campaignName,
           url: campaignData.url,
           structure: campaignData.selectedStructure || 'stag',
@@ -577,12 +580,22 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           selectedGeoCountries: campaignData.selectedGeoCountries,
           currentStep: currentStep,
           lastSavedAt: new Date().toISOString(),
-        }, 'draft');
-        console.log('📝 Campaign auto-saved at step', currentStep);
+        };
+
+        if (draftCampaignId) {
+          await historyService.update(draftCampaignId, draftData, campaignData.campaignName || 'Untitled Campaign');
+          console.log('📝 Campaign auto-updated at step', currentStep);
+        } else {
+          const savedId = await historyService.save('campaign', campaignData.campaignName || 'Untitled Campaign', draftData, 'draft');
+          if (savedId) {
+            setDraftCampaignId(savedId);
+          }
+          console.log('📝 Campaign auto-saved (new) at step', currentStep);
+        }
       } catch (error) {
         console.error('Auto-save failed:', error);
       }
-    }, 2000); // 2 second debounce
+    }, 2000);
     
     return () => clearTimeout(saveTimeout);
   }, [currentStep, campaignData.url, campaignData.selectedStructure, campaignData.selectedKeywords.length, campaignData.ads.length, campaignData.adGroups.length]);
@@ -1527,11 +1540,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   const autoSaveDraft = async () => {
     try {
       if (campaignData.campaignName || campaignData.url) {
-        // Map step number to step name for display
         const stepNames = ['', 'Setup', 'Structure', 'Keywords', 'Ads', 'Locations', 'Extensions', 'Validate', 'Export'];
         const stepName = stepNames[currentStep] || 'Setup';
         
-        await historyService.save('campaign', campaignData.campaignName || 'Draft Campaign', {
+        const draftData = {
           name: campaignData.campaignName || 'Draft Campaign',
           url: campaignData.url,
           structure: campaignData.selectedStructure || 'skag',
@@ -1545,16 +1557,23 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           adGroups: campaignData.adGroups,
           step: currentStep,
           stepName: stepName,
-          createdAt: new Date().toISOString(),
-        }, 'draft');
+          lastSavedAt: new Date().toISOString(),
+        };
+
+        if (draftCampaignId) {
+          await historyService.update(draftCampaignId, draftData, campaignData.campaignName || 'Draft Campaign');
+        } else {
+          const savedId = await historyService.save('campaign', campaignData.campaignName || 'Draft Campaign', draftData, 'draft');
+          if (savedId) {
+            setDraftCampaignId(savedId);
+          }
+        }
       }
     } catch (error) {
-      // Only log unexpected errors - "Item not found" is now handled gracefully
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (!errorMessage.includes('Item not found') && !errorMessage.includes('not found')) {
         console.error('Auto-save failed:', error);
       }
-      // Don't show error to user for auto-save failures
     }
   };
 
@@ -2938,7 +2957,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       // Generate CSV first
       await handleGenerateCSV();
 
-      await historyService.save('campaign', campaignData.campaignName, {
+      const completedData = {
         name: campaignData.campaignName,
         url: campaignData.url,
         structure: campaignData.selectedStructure || 'stag',
@@ -2951,8 +2970,18 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         negativeKeywords: campaignData.negativeKeywords,
         adGroups: campaignData.adGroups,
         csvData: campaignData.csvData,
-        createdAt: new Date().toISOString(),
-      }, 'completed');
+        completedAt: new Date().toISOString(),
+      };
+
+      if (draftCampaignId) {
+        await historyService.update(draftCampaignId, completedData, campaignData.campaignName);
+        await historyService.markAsCompleted(draftCampaignId);
+      } else {
+        const savedId = await historyService.save('campaign', campaignData.campaignName, completedData, 'completed');
+        if (savedId) {
+          setDraftCampaignId(savedId);
+        }
+      }
 
       setCampaignSaved(true);
       setCurrentStep(7); // Show success screen

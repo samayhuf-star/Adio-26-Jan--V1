@@ -10,7 +10,7 @@ const { Pool } = pg;
 const pool = new Pool({ connectionString: getDatabaseUrl() });
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'adiology-jwt-secret-key';
-const BASE_URL = process.env.DOMAIN || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://adiology.io');
+const BASE_URL = process.env.APP_URL || process.env.DOMAIN || 'https://adiology.io';
 
 export const accountRoutes = new Hono();
 

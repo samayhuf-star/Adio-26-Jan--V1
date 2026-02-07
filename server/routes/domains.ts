@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { db } from '../db';
-import { monitoredDomains, domainSnapshots, domainAlerts } from '../../shared/schema';
+import { monitoredDomains, domainSnapshots, domainAlerts, users } from '../../shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { getUserIdFromToken } from '../utils/auth';
+import { sendEmail } from '../resendClient';
 import { 
   lookupWhois, 
   checkSSL, 
@@ -426,5 +427,162 @@ domainsRoutes.get('/:id/alerts', async (c) => {
   } catch (error) {
     console.error('Failed to fetch alerts:', error);
     return c.json({ error: 'Failed to fetch alerts' }, 500);
+  }
+});
+
+domainsRoutes.post('/email-report', async (c) => {
+  try {
+    const userId = await getUserId(c);
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const user = await db
+      .select({ email: users.email, fullName: users.fullName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user.length || !user[0].email) {
+      return c.json({ error: 'User email not found' }, 404);
+    }
+
+    const userEmail = user[0].email;
+    const userName = user[0].fullName || userEmail.split('@')[0];
+
+    const domainList = await db
+      .select()
+      .from(monitoredDomains)
+      .where(eq(monitoredDomains.userId, userId))
+      .orderBy(desc(monitoredDomains.createdAt));
+
+    if (domainList.length === 0) {
+      return c.json({ error: 'No domains to report on' }, 400);
+    }
+
+    const now = new Date();
+    const formatDate = (d: Date | null) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown';
+    const daysUntil = (d: Date | null) => {
+      if (!d) return null;
+      const diff = Math.ceil((new Date(d).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return diff;
+    };
+    const statusColor = (days: number | null) => {
+      if (days === null) return '#9CA3AF';
+      if (days <= 7) return '#EF4444';
+      if (days <= 30) return '#F59E0B';
+      return '#22C55E';
+    };
+    const statusLabel = (days: number | null) => {
+      if (days === null) return 'Unknown';
+      if (days <= 0) return 'Expired';
+      if (days <= 7) return 'Critical';
+      if (days <= 30) return 'Warning';
+      return 'Good';
+    };
+
+    const domainRows = domainList.map(d => {
+      const domExpiry = daysUntil(d.expiryDate);
+      const sslExpiry = daysUntil(d.sslExpiryDate);
+      return `
+        <tr style="border-bottom: 1px solid #F3F4F6;">
+          <td style="padding: 16px 12px; font-weight: 600; color: #1F2937;">${d.domain}</td>
+          <td style="padding: 16px 12px; color: #4B5563;">${d.registrar || 'Unknown'}</td>
+          <td style="padding: 16px 12px;">
+            ${formatDate(d.expiryDate)}
+            <span style="display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; color: white; background: ${statusColor(domExpiry)};">
+              ${domExpiry !== null ? domExpiry + 'd' : '?'}
+            </span>
+          </td>
+          <td style="padding: 16px 12px;">
+            ${formatDate(d.sslExpiryDate)}
+            <span style="display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; color: white; background: ${statusColor(sslExpiry)};">
+              ${d.sslExpiryDate ? (sslExpiry !== null ? sslExpiry + 'd' : '?') : 'No SSL'}
+            </span>
+          </td>
+          <td style="padding: 16px 12px; color: #6B7280; font-size: 13px;">${formatDate(d.lastCheckedAt)}</td>
+        </tr>`;
+    }).join('');
+
+    const criticalCount = domainList.filter(d => {
+      const days = daysUntil(d.expiryDate);
+      return days !== null && days <= 30;
+    }).length;
+
+    const sslCriticalCount = domainList.filter(d => {
+      const days = daysUntil(d.sslExpiryDate);
+      return days !== null && days <= 30;
+    }).length;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="margin: 0; padding: 0; background: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="max-width: 700px; margin: 0 auto; padding: 40px 20px;">
+          <div style="background: linear-gradient(135deg, #6366F1, #8B5CF6); border-radius: 16px 16px 0 0; padding: 32px; text-align: center;">
+            <h1 style="color: white; margin: 0 0 8px 0; font-size: 24px;">Domain Monitoring Report</h1>
+            <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 14px;">Generated on ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          </div>
+          
+          <div style="background: white; padding: 32px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+            <p style="color: #374151; margin: 0 0 24px 0;">Hi ${userName},</p>
+            <p style="color: #6B7280; margin: 0 0 24px 0;">Here's a summary of your <strong>${domainList.length} monitored domain${domainList.length > 1 ? 's' : ''}</strong>.</p>
+            
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+              <div style="flex: 1; background: #F0FDF4; border-radius: 12px; padding: 16px; text-align: center;">
+                <div style="font-size: 24px; font-weight: 700; color: #16A34A;">${domainList.length}</div>
+                <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">Total Domains</div>
+              </div>
+              <div style="flex: 1; background: ${criticalCount > 0 ? '#FEF2F2' : '#F0FDF4'}; border-radius: 12px; padding: 16px; text-align: center;">
+                <div style="font-size: 24px; font-weight: 700; color: ${criticalCount > 0 ? '#DC2626' : '#16A34A'};">${criticalCount}</div>
+                <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">Domain Alerts</div>
+              </div>
+              <div style="flex: 1; background: ${sslCriticalCount > 0 ? '#FEF2F2' : '#F0FDF4'}; border-radius: 12px; padding: 16px; text-align: center;">
+                <div style="font-size: 24px; font-weight: 700; color: ${sslCriticalCount > 0 ? '#DC2626' : '#16A34A'};">${sslCriticalCount}</div>
+                <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">SSL Alerts</div>
+              </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                  <tr style="background: #F9FAFB; border-bottom: 2px solid #E5E7EB;">
+                    <th style="padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: #6B7280; letter-spacing: 0.05em;">Domain</th>
+                    <th style="padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: #6B7280; letter-spacing: 0.05em;">Registrar</th>
+                    <th style="padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: #6B7280; letter-spacing: 0.05em;">Domain Expiry</th>
+                    <th style="padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: #6B7280; letter-spacing: 0.05em;">SSL Expiry</th>
+                    <th style="padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: #6B7280; letter-spacing: 0.05em;">Last Checked</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${domainRows}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #E5E7EB; text-align: center;">
+              <p style="color: #9CA3AF; font-size: 12px; margin: 0;">Sent from Adiology Domain Monitoring</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>`;
+
+    const result = await sendEmail({
+      to: userEmail,
+      subject: `Domain Monitoring Report — ${domainList.length} Domain${domainList.length > 1 ? 's' : ''} Tracked`,
+      html,
+    });
+
+    if (!result.success && !result.simulated) {
+      console.error('[DomainReport] Failed to send email:', result.error);
+      return c.json({ error: 'Failed to send email report' }, 500);
+    }
+
+    return c.json({ success: true, email: userEmail, simulated: result.simulated });
+  } catch (error) {
+    console.error('Failed to send domain report:', error);
+    return c.json({ error: 'Failed to send domain report' }, 500);
   }
 });

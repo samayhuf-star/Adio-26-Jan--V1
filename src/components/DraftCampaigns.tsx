@@ -88,7 +88,24 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
         }))
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       
-      setCampaigns(campaignItems);
+      const deduped = new Map<string, CampaignItem>();
+      for (const item of campaignItems) {
+        const url = item.data?.url || item.data?.website_url || item.data?.websiteUrl || '';
+        const dedupeKey = `${item.name}||${url}||${item.type}`;
+        
+        if (!deduped.has(dedupeKey)) {
+          deduped.set(dedupeKey, item);
+        } else {
+          const existing = deduped.get(dedupeKey)!;
+          const existingTime = new Date(existing.lastModified || existing.timestamp).getTime();
+          const itemTime = new Date(item.lastModified || item.timestamp).getTime();
+          if (itemTime > existingTime) {
+            deduped.set(dedupeKey, item);
+          }
+        }
+      }
+      
+      setCampaigns(Array.from(deduped.values()));
     } catch (error) {
       console.error('Failed to load campaigns:', error);
       notifications.error('Failed to load campaigns');
@@ -146,12 +163,12 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
   };
 
   const handleResume = (campaign: CampaignItem) => {
-    onLoadCampaign(campaign.data, 'resume');
+    onLoadCampaign({ ...campaign.data, _savedCampaignId: campaign.id }, 'resume');
     notifications.success(`Resuming "${campaign.name}"`);
   };
 
   const handleEdit = (campaign: CampaignItem) => {
-    onLoadCampaign(campaign.data, 'edit');
+    onLoadCampaign({ ...campaign.data, _savedCampaignId: campaign.id }, 'edit');
     notifications.success(`Editing "${campaign.name}"`);
   };
 

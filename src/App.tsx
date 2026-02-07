@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
-  LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare, Globe
+  LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare, Globe, Mail
 } from 'lucide-react';
 
 declare global {
@@ -75,6 +75,7 @@ const TaskManager = lazy(() => import('./components/TaskManager').then(m => ({ d
 const CommunityPage = lazy(() => import('./modules/community').then(m => ({ default: m.CommunityPage })));
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then(m => ({ default: m.AcceptInvite })));
 const DomainMonitoring = lazy(() => import('./components/DomainMonitoring').then(m => ({ default: m.default })));
+const TempMail = lazy(() => import('./components/TempMail').then(m => ({ default: m.default })));
 
 // Loading component for lazy-loaded modules
 const ComponentLoader = () => (
@@ -278,6 +279,7 @@ const AppContent = () => {
     'blog',
     'community',
     'domain-monitoring',
+    'temp-mail',
     // 'call-forwarding', // Hidden - module disabled
   ]);
 
@@ -932,6 +934,7 @@ const AppContent = () => {
     },
 
     { id: 'domain-monitoring', label: 'Domain Monitor', icon: Globe, module: null },
+    { id: 'temp-mail', label: 'Temp Mail', icon: Mail, module: null },
     // Blog hidden - disabled
     // { id: 'blog', label: 'Blog', icon: BookOpen, module: null },
     { id: 'settings', label: 'Settings', icon: Settings, module: 'settings' },
@@ -1586,6 +1589,12 @@ const AppContent = () => {
         return (
           <Suspense fallback={<ComponentLoader />}>
             <DomainMonitoring />
+          </Suspense>
+        );
+      case 'temp-mail':
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <TempMail />
           </Suspense>
         );
       case 'dashboard':

@@ -40,6 +40,16 @@ Preferred communication style: Simple, everyday language.
   - Uses free Node.js packages: whois npm package, native tls/dns modules
   - API: /api/domains endpoints for CRUD and lookups
   - Database: monitored_domains, domain_snapshots, domain_alerts tables
+- **Temp Mail**: Disposable temporary email addresses for privacy and testing.
+  - Generate random temp email addresses via temp-mail.io API
+  - Real-time inbox with auto-refresh (10s polling)
+  - Read full email content with HTML rendering in sandboxed iframe
+  - Copy email address, generate new address, delete email/messages
+  - TTL countdown timer showing email expiration
+  - Attachment listing for received emails
+  - Creative UI with gradient cards, animated transitions, avatar colors
+  - API: /api/tempmail proxy routes (no database needed, API handles storage)
+  - Requires: TEMP_MAIL_API_KEY secret
 
 ## Backend
 - **Primary API**: Hono (Node.js/TypeScript) for all API endpoints, with optional FastAPI (Python) for legacy ad generation.

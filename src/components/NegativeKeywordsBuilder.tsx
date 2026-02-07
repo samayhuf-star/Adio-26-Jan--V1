@@ -174,7 +174,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
     const [competitorBrands, setCompetitorBrands] = useState('');
     const [excludeCompetitors, setExcludeCompetitors] = useState(false);
     const [keywordCount, setKeywordCount] = useState(1000);
-    const [generationMode, setGenerationMode] = useState<'smart' | 'ai'>('smart');
+    const generationMode = 'smart' as const;
     const [selectedVertical, setSelectedVertical] = useState('');
     
     const [isGenerating, setIsGenerating] = useState(false);
@@ -753,54 +753,17 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                     {/* Generation Mode Card */}
                                     <Card className="border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm overflow-hidden">
                                         <CardContent className="p-4 space-y-3">
-                                            <label className="text-sm font-medium text-slate-700">Generation Mode</label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setGenerationMode('smart')}
-                                                    className={`relative p-3 rounded-xl border-2 transition-all text-left ${
-                                                        generationMode === 'smart'
-                                                            ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-200'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-white'
-                                                    }`}
-                                                >
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${
-                                                        generationMode === 'smart' ? 'bg-violet-500' : 'bg-slate-100'
-                                                    }`}>
-                                                        <Zap className={`h-4 w-4 ${generationMode === 'smart' ? 'text-white' : 'text-slate-500'}`} />
-                                                    </div>
-                                                    <div className={`text-sm font-semibold ${generationMode === 'smart' ? 'text-violet-700' : 'text-slate-700'}`}>
-                                                        Smart Engine
-                                                    </div>
-                                                    <div className={`text-xs ${generationMode === 'smart' ? 'text-violet-500' : 'text-slate-400'}`}>
-                                                        Instant · 1,000+ negatives
-                                                    </div>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setGenerationMode('ai')}
-                                                    className={`relative p-3 rounded-xl border-2 transition-all text-left ${
-                                                        generationMode === 'ai'
-                                                            ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-white'
-                                                    }`}
-                                                >
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${
-                                                        generationMode === 'ai' ? 'bg-indigo-500' : 'bg-slate-100'
-                                                    }`}>
-                                                        <Brain className={`h-4 w-4 ${generationMode === 'ai' ? 'text-white' : 'text-slate-500'}`} />
-                                                    </div>
-                                                    <div className={`text-sm font-semibold ${generationMode === 'ai' ? 'text-indigo-700' : 'text-slate-700'}`}>
-                                                        AI Contextual
-                                                    </div>
-                                                    <div className={`text-xs ${generationMode === 'ai' ? 'text-indigo-500' : 'text-slate-400'}`}>
-                                                        ~10s · URL analysis
-                                                    </div>
-                                                </button>
+                                            <div className="flex items-center gap-2 p-3 rounded-xl border-2 border-violet-500 bg-violet-50">
+                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-500">
+                                                    <Zap className="h-4 w-4 text-white" />
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-semibold text-violet-700">Smart Engine</div>
+                                                    <div className="text-xs text-violet-500">Instant · 1,000+ negatives</div>
+                                                </div>
                                             </div>
 
-                                            {generationMode === 'smart' && (
-                                                <div className="space-y-2 pt-2">
+                                            <div className="space-y-2 pt-2">
                                                     <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
                                                         <Filter className="h-3.5 w-3.5 text-slate-400" />
                                                         Business Vertical
@@ -825,39 +788,13 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                         </p>
                                                     )}
                                                 </div>
-                                            )}
-
-                                            {generationMode === 'ai' && (
-                                                <div className="space-y-2 pt-2">
-                                                    <label className="text-sm font-medium text-slate-600">
-                                                        User Goal <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Select value={userGoal} onValueChange={setUserGoal}>
-                                                        <SelectTrigger className="bg-white text-sm">
-                                                            <SelectValue placeholder="Select goal..." />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="leads">Leads (High-Intent)</SelectItem>
-                                                            <SelectItem value="calls">Calls / Appointments</SelectItem>
-                                                            <SelectItem value="signups">Signups / Trials</SelectItem>
-                                                            <SelectItem value="branding">Branding / Awareness</SelectItem>
-                                                            <SelectItem value="ecommerce">E-commerce</SelectItem>
-                                                            <SelectItem value="other">Other</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            )}
 
                                             {/* Generate Button */}
                                             <Button 
-                                                className={`w-full mt-2 shadow-lg transition-all ${
-                                                    generationMode === 'smart' 
-                                                        ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-violet-200' 
-                                                        : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-indigo-200'
-                                                }`}
+                                                className="w-full mt-2 shadow-lg transition-all bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-violet-200"
                                                 size="lg"
-                                                onClick={generationMode === 'smart' ? handleSmartGenerate : handleGenerate}
-                                                disabled={isGenerating || !coreKeywords || (generationMode === 'ai' && (!url || !userGoal))}
+                                                onClick={handleSmartGenerate}
+                                                disabled={isGenerating || !coreKeywords}
                                             >
                                                 {isGenerating ? (
                                                     <>
@@ -866,8 +803,8 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                     </>
                                                 ) : (
                                                     <>
-                                                        {generationMode === 'smart' ? <Zap className="h-4 w-4 mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                                                        Generate {generationMode === 'smart' ? 'Smart' : 'AI'} Negatives
+                                                        <Zap className="h-4 w-4 mr-2" />
+                                                        Generate Smart Negatives
                                                     </>
                                                 )}
                                             </Button>
