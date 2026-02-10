@@ -10,7 +10,18 @@ const { Pool } = pg;
 const pool = new Pool({ connectionString: getDatabaseUrl() });
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'adiology-jwt-secret-key';
-const BASE_URL = process.env.APP_URL || process.env.DOMAIN || 'https://adiology.io';
+const FALLBACK_BASE_URL = process.env.APP_URL || 'https://adiology.io';
+
+function getBaseUrl(c: any): string {
+  const origin = c.req.header('origin');
+  if (origin) return origin;
+  const host = c.req.header('x-forwarded-host') || c.req.header('host');
+  if (host) {
+    const proto = c.req.header('x-forwarded-proto') || 'https';
+    return `${proto}://${host}`;
+  }
+  return FALLBACK_BASE_URL;
+}
 
 export const accountRoutes = new Hono();
 
@@ -45,10 +56,11 @@ accountRoutes.post('/register', async (c) => {
       [userId, token]
     );
 
-    const verificationUrl = `${BASE_URL}/verify-email?token=${token}&email=${encodeURIComponent(email.toLowerCase().trim())}`;
+    const baseUrl = getBaseUrl(c);
+    const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email.toLowerCase().trim())}`;
     await EmailService.sendRaw(email.toLowerCase().trim(), 'emailVerification', { verification_url: verificationUrl });
 
-    console.log(`[Auth] User registered: ${email}`);
+    console.log(`[Auth] User registered: ${email} (verification link base: ${baseUrl})`);
     return c.json({
       success: true,
       message: 'Please check your email to verify your account',
@@ -221,10 +233,11 @@ accountRoutes.post('/resend-verification', async (c) => {
       [user.id, token]
     );
 
-    const verificationUrl = `${BASE_URL}/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
+    const baseUrl = getBaseUrl(c);
+    const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
     await EmailService.sendRaw(user.email, 'emailVerification', { verification_url: verificationUrl });
 
-    console.log(`[Auth] Verification email resent: ${email}`);
+    console.log(`[Auth] Verification email resent: ${email} (verification link base: ${baseUrl})`);
     return c.json({ success: true, message: 'Verification email sent' });
   } catch (error: any) {
     console.error('[Auth] Resend verification error:', error);
@@ -240,13 +253,20 @@ accountRoutes.post('/forgot-password', async (c) => {
       return c.json({ success: false, error: 'Email is required' }, 400);
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
     const userResult = await pool.query(
       'SELECT * FROM users WHERE email = $1',
-      [email.toLowerCase().trim()]
+      [normalizedEmail]
     );
 
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0];
+
+      await pool.query(
+        'UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL',
+        [user.id]
+      );
+
       const token = crypto.randomUUID();
 
       await pool.query(
@@ -255,10 +275,15 @@ accountRoutes.post('/forgot-password', async (c) => {
         [user.id, token]
       );
 
-      const resetUrl = `${BASE_URL}/reset-password?token=${token}`;
-      await EmailService.sendRaw(user.email, 'passwordReset', { reset_url: resetUrl });
+      const baseUrl = getBaseUrl(c);
+      const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+      const emailResult = await EmailService.sendRaw(user.email, 'passwordReset', { reset_url: resetUrl });
 
-      console.log(`[Auth] Password reset requested: ${email}`);
+      if (emailResult.success) {
+        console.log(`[Auth] Password reset email sent to: ${normalizedEmail}`);
+      } else {
+        console.error(`[Auth] Failed to send password reset email to ${normalizedEmail}:`, emailResult.error);
+      }
     }
 
     return c.json({ success: true, message: 'If an account exists with this email, a password reset link has been sent' });

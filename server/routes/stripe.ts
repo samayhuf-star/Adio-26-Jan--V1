@@ -4,7 +4,7 @@
  */
 
 import { Hono } from 'hono';
-import { getStripePublishableKey } from '../stripeClient';
+import { getStripePublishableKey, getUncachableStripeClient } from '../stripeClient';
 import { stripeService } from '../stripeService';
 
 const stripe = new Hono();
@@ -191,5 +191,112 @@ async function subscriptionHandler(c: any, emailFromParam: string | null) {
     return c.json({ error: 'Failed to fetch subscription' }, 500);
   }
 }
+
+function getAuthEmail(c: any): string | null {
+  const auth = c.req.header('Authorization');
+  const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  return (payload?.email as string) || null;
+}
+
+/** GET /api/stripe/payment-methods/:email – list saved payment methods */
+stripe.get('/payment-methods/:email', async (c) => {
+  try {
+    const email = decodeURIComponent(c.req.param('email') || '');
+    if (!email) return c.json({ error: 'Email required' }, 400);
+
+    const authEmail = getAuthEmail(c);
+    if (!authEmail || authEmail.toLowerCase() !== email.toLowerCase()) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const user = await stripeService.getUserByEmail(email);
+    if (!user?.stripe_customer_id) return c.json({ paymentMethods: [] });
+
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) return c.json({ paymentMethods: [] });
+
+    const methods = await stripeClient.paymentMethods.list({
+      customer: user.stripe_customer_id,
+      type: 'card',
+    });
+
+    const customer = await stripeClient.customers.retrieve(user.stripe_customer_id);
+    const defaultPmId = (customer as any).invoice_settings?.default_payment_method;
+
+    const paymentMethods = methods.data.map(pm => ({
+      id: pm.id,
+      brand: pm.card?.brand || 'unknown',
+      last4: pm.card?.last4 || '****',
+      expMonth: pm.card?.exp_month?.toString().padStart(2, '0') || '',
+      expYear: pm.card?.exp_year?.toString().slice(-2) || '',
+      isDefault: pm.id === defaultPmId,
+    }));
+
+    return c.json({ paymentMethods });
+  } catch (error) {
+    console.error('[Stripe] Payment methods error:', error);
+    return c.json({ paymentMethods: [] });
+  }
+});
+
+/** POST /api/stripe/setup-intent – create a SetupIntent for securely collecting card details */
+stripe.post('/setup-intent', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const email = (body.email as string)?.trim();
+    if (!email) return c.json({ error: 'Missing required field: email' }, 400);
+
+    const authEmail = getAuthEmail(c);
+    if (!authEmail || authEmail.toLowerCase() !== email.toLowerCase()) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const resolved = await resolveCustomerId(email);
+    if (!resolved) return c.json({ error: 'Could not resolve Stripe customer' }, 500);
+
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) return c.json({ error: 'Stripe not configured' }, 500);
+
+    const setupIntent = await stripeClient.setupIntents.create({
+      customer: resolved.customerId,
+      payment_method_types: ['card'],
+    });
+
+    return c.json({ clientSecret: setupIntent.client_secret });
+  } catch (error: any) {
+    console.error('[Stripe] SetupIntent error:', error);
+    return c.json({ error: error?.message || 'Failed to create setup intent' }, 500);
+  }
+});
+
+/** DELETE /api/stripe/payment-methods/:paymentMethodId – detach a payment method */
+stripe.delete('/payment-methods/:paymentMethodId', async (c) => {
+  try {
+    const paymentMethodId = c.req.param('paymentMethodId') || '';
+    if (!paymentMethodId) return c.json({ error: 'Payment method ID required' }, 400);
+
+    const authEmail = getAuthEmail(c);
+    if (!authEmail) return c.json({ error: 'Unauthorized' }, 401);
+
+    const user = await stripeService.getUserByEmail(authEmail);
+    if (!user?.stripe_customer_id) return c.json({ error: 'No Stripe customer found' }, 404);
+
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) return c.json({ error: 'Stripe not configured' }, 500);
+
+    const pm = await stripeClient.paymentMethods.retrieve(paymentMethodId);
+    if (pm.customer !== user.stripe_customer_id) {
+      return c.json({ error: 'Unauthorized' }, 403);
+    }
+
+    await stripeClient.paymentMethods.detach(paymentMethodId);
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('[Stripe] Detach payment method error:', error);
+    return c.json({ error: error?.message || 'Failed to remove payment method' }, 500);
+  }
+});
 
 export { stripe as stripeRoutes };

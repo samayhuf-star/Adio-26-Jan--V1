@@ -186,14 +186,25 @@ export async function analyzeUrlWithCheerio(url: string): Promise<AnalysisResult
   }
 
   const services: string[] = [];
-  $('[class*="service"], .services, section').each((_, section) => {
-    $(section).find('li, h3, h4, .service-item').each((_, item) => {
+  const serviceJunkPatterns = /^(www|http|home|menu|about|contact|blog|login|sign|subscribe|copyright|privacy|terms|cookie|toggle|close|open|skip|back|next|search|loading)/i;
+  $('[class*="service"], .services, [class*="product"], .products, [class*="offering"], [class*="feature"]').each((_, section) => {
+    $(section).find('li, h3, h4, .service-item, .product-item').each((_, item) => {
       const text = cleanText($(item).text());
-      if (text && text.length > 3 && text.length < 100) {
+      if (text && text.length > 3 && text.length < 80 && !serviceJunkPatterns.test(text)) {
         services.push(text);
       }
     });
   });
+
+  // If no services found from class-based selectors, try headings from sections
+  if (services.length === 0) {
+    $('section h2, section h3').each((_, heading) => {
+      const text = cleanText($(heading).text());
+      if (text && text.length > 3 && text.length < 60 && !serviceJunkPatterns.test(text)) {
+        services.push(text);
+      }
+    });
+  }
 
   const mainContent = cleanText($('body').text()).slice(0, 3000);
 

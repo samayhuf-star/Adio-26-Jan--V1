@@ -38,9 +38,17 @@ adminRoutes.get('/stats', async (c) => {
       .from(subscriptions)
       .where(eq(subscriptions.status, 'active'));
     
-    // Get monthly revenue (simplified - sum of subscription amounts)
     const monthlyRevenue = await db
-      .select({ revenue: sql<number>`coalesce(sum(amount_cents), 0)` })
+      .select({ 
+        revenue: sql<number>`COALESCE(SUM(CASE WHEN status = 'active' THEN 
+          CASE plan_name 
+            WHEN 'Starter' THEN 2900
+            WHEN 'Professional' THEN 5900
+            WHEN 'Agency' THEN 12900
+            ELSE 0 
+          END 
+        ELSE 0 END), 0)` 
+      })
       .from(subscriptions);
     
     // Get error count from audit logs

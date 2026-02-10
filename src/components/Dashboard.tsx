@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { 
   Activity, Zap, Sparkles, Package, Target, Globe, FolderOpen, Terminal,
-  CheckCircle2, FileText, Layers, TrendingUp, ArrowUp, MessageSquare, Mail, Shield
+  CheckCircle2, FileText, Layers, TrendingUp, ArrowUp, MessageSquare, Mail, Shield, ShieldCheck
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -277,8 +277,9 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
     { id: 'preset-campaigns', title: 'Campaign Presets', icon: Package },
     { id: 'keyword-planner', title: 'Keywords Planner', icon: Target },
     { id: 'draft-campaigns', title: 'Saved Campaigns', icon: FolderOpen },
-    { id: 'temp-mail', title: 'Temp Mail', icon: Mail },
+    { id: 'temp-mail', title: 'Proxy Mail', icon: Mail },
     { id: 'domain-monitoring', title: 'Domain Monitor', icon: Shield },
+    { id: 'click-guard', title: 'Click Guard', icon: ShieldCheck },
   ];
 
   const myCampaigns = stats?.userResources?.myCampaigns || 0;

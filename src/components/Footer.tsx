@@ -2,14 +2,14 @@ interface FooterProps {
   onNavigateToPolicy?: (policy: string) => void;
   onNavigateToSection?: (section: string) => void;
   onNavigateToApp?: (tab: string) => void;
+  onNavigateToPage?: (page: string) => void;
 }
 
-export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToApp }: FooterProps) {
+export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToApp, onNavigateToPage }: FooterProps) {
   const navigateToPolicy = (policy: string) => {
     if (onNavigateToPolicy) {
       onNavigateToPolicy(policy);
     } else {
-      // Fallback: use URL-based navigation
       const policyPaths: Record<string, string> = {
         'privacy': '/privacy-policy',
         'terms': '/terms-of-service',
@@ -23,10 +23,17 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToAp
     }
   };
 
+  const navigateToPage = (path: string) => {
+    if (onNavigateToPage) {
+      onNavigateToPage(path);
+    } else {
+      window.location.href = path;
+    }
+  };
+
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string, category: string) => {
     e.preventDefault();
     
-    // Product links - scroll to sections on homepage, or navigate to app
     if (link === 'Features') {
       const element = document.querySelector('#features');
       if (element) {
@@ -60,13 +67,14 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToAp
         window.location.href = '/?tab=ads-builder';
       }
     }
-    // Resources links
-    else if (link === 'Documentation' || link === 'Help Center') {
+    else if (link === 'Documentation') {
       if (onNavigateToApp) {
         onNavigateToApp('docs');
       } else {
         window.location.href = '/?tab=docs';
       }
+    } else if (link === 'Help Center') {
+      navigateToPage('/help-center');
     } else if (link === 'Blog') {
       if (onNavigateToApp) {
         onNavigateToApp('blog');
@@ -86,7 +94,6 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToAp
         window.location.href = '/?tab=docs';
       }
     }
-    // Company links
     else if (link === 'About Us') {
       const element = document.querySelector('#features');
       if (element) {
@@ -95,13 +102,14 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToAp
         window.location.href = '/#features';
       }
     } else if (link === 'Contact') {
-      window.location.href = 'mailto:support@adiology.io';
+      navigateToPage('/contact');
+    } else if (link === 'Community') {
+      navigateToPage('/community');
     } else if (link === 'Careers') {
       window.location.href = 'mailto:careers@adiology.io';
     } else if (link === 'Partners') {
       window.location.href = 'mailto:partners@adiology.io';
     }
-    // Legal links
     else if (category === 'Legal') {
       const policyMap: Record<string, string> = {
         'Privacy Policy': 'privacy',
@@ -136,7 +144,7 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToAp
     },
     {
       title: 'Company',
-      links: ['About Us', 'Contact', 'Careers', 'Partners']
+      links: ['About Us', 'Contact', 'Community', 'Careers', 'Partners']
     }
   ];
 
@@ -144,7 +152,6 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToAp
     <footer className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white w-full">
       <div className="max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
-          {/* Logo Column */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -157,7 +164,6 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToAp
             </p>
           </div>
 
-          {/* Links Columns */}
           {footerSections.map((section) => (
             <div key={section.title}>
               <h4 className="text-white font-semibold mb-4">{section.title}</h4>

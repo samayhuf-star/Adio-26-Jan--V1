@@ -13,7 +13,11 @@ export async function getUserIdFromToken(c: any): Promise<string | null> {
     const token = authHeader.substring(7);
 
     if (!token || token.length < 10) {
-      console.warn('[Auth] Invalid token format');
+      return null;
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) {
       return null;
     }
 
@@ -23,11 +27,9 @@ export async function getUserIdFromToken(c: any): Promise<string | null> {
 
       if (userId) {
         return userId;
-      } else {
-        console.warn('[Auth] User ID not found in JWT payload');
       }
     } catch (jwtError: any) {
-      console.warn('[Auth] JWT verification failed:', jwtError.message);
+      // Token is a valid JWT format but failed verification (expired, wrong secret, etc.)
     }
 
     return null;

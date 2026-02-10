@@ -44,7 +44,6 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
                 <Sparkle className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
-              <p className="text-xs text-slate-500 -mt-0.5">~ Samay</p>
             </div>
             <CardTitle className="text-2xl font-bold text-slate-900">
               Payment Successful!

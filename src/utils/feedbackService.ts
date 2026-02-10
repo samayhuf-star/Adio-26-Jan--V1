@@ -1,6 +1,4 @@
-// Supabase removed - using API endpoints instead
 import { getCurrentAuthUser } from './auth';
-import { api } from './api';
 
 export interface FeedbackData {
   type: 'feedback' | 'feature_request' | 'bug_report';
@@ -20,112 +18,37 @@ export interface FeedbackRecord {
   type: 'feedback' | 'feature_request' | 'bug_report';
   rating: number | null;
   message: string;
-  screenshots: string[] | null;
-  page_url: string | null;
-  page_name: string | null;
-  browser_info: string | null;
-  screen_size: string | null;
   status: 'new' | 'reviewed' | 'in_progress' | 'resolved';
   created_at: string;
   updated_at: string;
 }
 
-/**
- * Submit feedback, feature request, or bug report
- */
 export async function submitFeedback(data: FeedbackData): Promise<void> {
   try {
     const user = await getCurrentAuthUser();
     const userEmail = user?.email || null;
     const userId = user?.id || null;
 
-    // Prepare screenshot data (limit size for DB storage)
-    const screenshotData = data.screenshots?.map(img => {
-      // Only store first 500 chars of base64 for reference in DB
-      // Full images would be sent via email or stored separately
-      return img.substring(0, 500) + '...';
-    }) || null;
-
-    // Save to Supabase
-    const { error: dbError } = await supabase
-      .from('feedback')
-      .insert({
-        user_id: userId,
-        user_email: userEmail,
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        userEmail,
         type: data.type,
         rating: data.rating || null,
         message: data.message,
-        screenshots: screenshotData,
-        page_url: data.pageUrl || null,
-        page_name: data.pageName || null,
-        browser_info: data.browserInfo || null,
-        screen_size: data.screenSize || null,
-        status: 'new',
-      });
+        pageUrl: data.pageUrl || null,
+        pageName: data.pageName || null,
+        browserInfo: data.browserInfo || null,
+        screenSize: data.screenSize || null,
+        screenshots: data.screenshots || [],
+      }),
+    });
 
-    if (dbError) {
-      console.error('Database error:', dbError);
-      // Continue even if DB insert fails, try to send email
-    }
-
-    // Build type-specific subject
-    let subject = '';
-    switch (data.type) {
-      case 'bug_report':
-        subject = `Bug Report from ${userEmail || 'Anonymous User'}`;
-        break;
-      case 'feature_request':
-        subject = `Feature Request from ${userEmail || 'Anonymous User'}`;
-        break;
-      default:
-        subject = `Feedback from ${userEmail || 'Anonymous User'}`;
-    }
-
-    // Build type label
-    const typeLabel = data.type === 'bug_report' 
-      ? 'Bug Report' 
-      : data.type === 'feature_request' 
-      ? 'Feature Request' 
-      : 'Feedback';
-
-    // Send email notification
-    try {
-      await api.post('/send-feedback-email', {
-        to: 'samayhuf@gmail.com',
-        subject,
-        body: `
-          Type: ${typeLabel}
-          ${data.rating ? `Rating: ${data.rating}/5` : ''}
-          User: ${userEmail || 'Anonymous'}
-          ${userId ? `User ID: ${userId}` : ''}
-          
-          Page: ${data.pageName || 'Unknown'}
-          URL: ${data.pageUrl || 'Unknown'}
-          Screen Size: ${data.screenSize || 'Unknown'}
-          Browser: ${data.browserInfo?.substring(0, 100) || 'Unknown'}
-          
-          Message:
-          ${data.message}
-          
-          Screenshots Attached: ${data.screenshots?.length || 0}
-          
-          ---
-          Submitted at: ${new Date().toISOString()}
-        `,
-        feedbackType: data.type,
-        rating: data.rating,
-        userEmail: userEmail,
-        screenshots: data.screenshots, // Send full screenshots in email
-        pageInfo: {
-          url: data.pageUrl,
-          name: data.pageName,
-          screenSize: data.screenSize,
-          browser: data.browserInfo,
-        },
-      });
-    } catch (emailError) {
-      console.error('Email error:', emailError);
-      // Don't fail the whole operation if email fails
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to submit feedback');
     }
   } catch (error) {
     console.error('Failed to submit feedback:', error);
@@ -133,45 +56,33 @@ export async function submitFeedback(data: FeedbackData): Promise<void> {
   }
 }
 
-/**
- * Get all feedback (for admin)
- */
 export async function getAllFeedback(): Promise<FeedbackRecord[]> {
   try {
-    const { data, error } = await supabase
-      .from('feedback')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw error;
+    const response = await fetch('/api/feedback');
+    if (!response.ok) {
+      throw new Error('Failed to fetch feedback');
     }
-
-    return data || [];
+    const data = await response.json();
+    return data.feedback || [];
   } catch (error) {
     console.error('Failed to fetch feedback:', error);
     throw error;
   }
 }
 
-/**
- * Update feedback status (for admin)
- */
 export async function updateFeedbackStatus(
   feedbackId: string,
   status: FeedbackRecord['status']
 ): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('feedback')
-      .update({ 
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', feedbackId);
+    const response = await fetch(`/api/feedback/${feedbackId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
 
-    if (error) {
-      throw error;
+    if (!response.ok) {
+      throw new Error('Failed to update feedback status');
     }
   } catch (error) {
     console.error('Failed to update feedback status:', error);

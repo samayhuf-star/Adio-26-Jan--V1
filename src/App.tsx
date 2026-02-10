@@ -23,6 +23,7 @@ import { Switch } from './components/ui/switch';
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from './components/ui/sheet';
@@ -46,6 +47,7 @@ import { PlanSelection } from './components/PlanSelection';
 import CreativeMinimalistHomepage from './components/CreativeMinimalistHomepage';
 import { MobileNavigation, MobileQuickActions } from './components/MobileNavigation';
 import { LiveLogs } from './components/LiveLogs';
+import { FloatingFeedback } from './components/FloatingFeedback';
 
 // Lazy load heavy components for code splitting
 const CampaignBuilder3 = lazy(() => import('./components/CampaignBuilder3').then(m => ({ default: m.CampaignBuilder3 })));
@@ -76,8 +78,15 @@ const TaskManager = lazy(() => import('./components/TaskManager').then(m => ({ d
 const CommunityPage = lazy(() => import('./modules/community').then(m => ({ default: m.CommunityPage })));
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then(m => ({ default: m.AcceptInvite })));
 const DomainMonitoring = lazy(() => import('./components/DomainMonitoring').then(m => ({ default: m.default })));
+const CampaignBuilderPage = lazy(() => import('./components/feature-pages/CampaignBuilderPage'));
+const ClickGuardPage = lazy(() => import('./components/feature-pages/ClickGuardPage'));
+const ProxyMailPage = lazy(() => import('./components/feature-pages/InstantMailPage'));
+const DomainMonitorPage = lazy(() => import('./components/feature-pages/DomainMonitorPage'));
 const TempMail = lazy(() => import('./components/TempMail').then(m => ({ default: m.default })));
 const ClickGuard = lazy(() => import('./components/ClickGuard').then(m => ({ default: m.default })));
+const ContactPage = lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));
+const HelpCenterPage = lazy(() => import('./components/HelpCenterPage').then(m => ({ default: m.HelpCenterPage })));
+const CommunityPageStandalone = lazy(() => import('./components/CommunityPage').then(m => ({ default: m.CommunityPage })));
 
 // Loading component for lazy-loaded modules
 const ComponentLoader = () => (
@@ -89,7 +98,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'admin-panel' | 'accept-invite' | 'superadmin';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -596,7 +605,7 @@ const AppContent = () => {
       const isAdminPath = path.startsWith('/admin') || hostname.startsWith('admin.') || hostname === 'admin.adiology.io';
       
       // Whitelisted super admin emails
-      const superAdminEmails = ['samayhuf@gmail.com'];
+      const superAdminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
       const userEmail = user?.email?.toLowerCase();
       const isWhitelistedEmail = userEmail && superAdminEmails.includes(userEmail);
       
@@ -733,6 +742,36 @@ const AppContent = () => {
         return;
       }
 
+      if (path === '/contact') {
+        setView('contact');
+        return;
+      }
+      if (path === '/help-center') {
+        setView('help-center');
+        return;
+      }
+      if (path === '/community') {
+        setView('community-page');
+        return;
+      }
+
+      if (path === '/features/campaign-builder') {
+        setView('feature-campaign-builder');
+        return;
+      }
+      if (path === '/features/click-guard') {
+        setView('feature-click-guard');
+        return;
+      }
+      if (path === '/features/proxy-mail') {
+        setView('feature-proxy-mail');
+        return;
+      }
+      if (path === '/features/domain-monitor') {
+        setView('feature-domain-monitor');
+        return;
+      }
+
       // Admin panel - detect subdomain or /admin path
       // Super admin has its own authentication system (username/password)
       const hostname = window.location.hostname;
@@ -834,6 +873,23 @@ const AppContent = () => {
         }
         return;
       }
+
+      if (path === '/features/campaign-builder') {
+        setAppView('feature-campaign-builder');
+        return;
+      }
+      if (path === '/features/click-guard') {
+        setAppView('feature-click-guard');
+        return;
+      }
+      if (path === '/features/proxy-mail') {
+        setAppView('feature-proxy-mail');
+        return;
+      }
+      if (path === '/features/domain-monitor') {
+        setAppView('feature-domain-monitor');
+        return;
+      }
       
       if (user) {
         const subscriptionPlan = user.subscription_plan || 'free';
@@ -899,7 +955,9 @@ const AppContent = () => {
 
   // Whitelisted super admin emails (fallback if database role not set)
   const superAdminEmails = [
-    'samayhuf@gmail.com'
+    'samayhuf@gmail.com',
+    'adiologyads@gmail.com',
+    'oadiology@gmail.com'
   ];
   
   // Check if current user is super admin - use database role OR email whitelist
@@ -949,7 +1007,7 @@ const AppContent = () => {
       ]
     },
     { id: 'domain-monitoring', label: 'Domain Monitor', icon: Globe, module: null },
-    { id: 'temp-mail', label: 'Temp Mail', icon: Mail, module: null },
+    { id: 'temp-mail', label: 'Proxy Mail', icon: Mail, module: null },
     { id: 'settings', label: 'Settings', icon: Settings, module: 'settings' },
     { id: 'tickets', label: 'Tickets', icon: Ticket, module: 'support' },
     { id: 'help-docs', label: 'Help / Docs', icon: FileText, module: null },
@@ -1209,6 +1267,107 @@ const AppContent = () => {
     );
   }
 
+  if (appView === 'contact') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <ContactPage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setAppView(previousView);
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'help-center') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <HelpCenterPage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setAppView(previousView);
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'community-page') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <CommunityPageStandalone onBack={() => {
+          window.history.pushState({}, '', '/');
+          setAppView(previousView);
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-campaign-builder') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <CampaignBuilderPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            setAuthMode('sign-up');
+            setAppView('auth');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-click-guard') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <ClickGuardPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            setAuthMode('sign-up');
+            setAppView('auth');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-proxy-mail') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <ProxyMailPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            setAuthMode('sign-up');
+            setAppView('auth');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-domain-monitor') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <DomainMonitorPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            setAuthMode('sign-up');
+            setAppView('auth');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   if (appView === 'plan-selection') {
     return (
       <PlanSelection
@@ -1349,6 +1508,23 @@ const AppContent = () => {
           else if (policy === 'cookie') setAppView('cookie-policy');
           else if (policy === 'gdpr') setAppView('gdpr-compliance');
           else if (policy === 'refund') setAppView('refund-policy');
+        }}
+        onNavigateToPage={(page: string) => {
+          setPreviousView('homepage');
+          const pageMap: Record<string, { path: string; view: AppView }> = {
+            '/contact': { path: '/contact', view: 'contact' },
+            '/help-center': { path: '/help-center', view: 'help-center' },
+            '/community': { path: '/community', view: 'community-page' },
+            '/features/campaign-builder': { path: '/features/campaign-builder', view: 'feature-campaign-builder' },
+            '/features/click-guard': { path: '/features/click-guard', view: 'feature-click-guard' },
+            '/features/proxy-mail': { path: '/features/proxy-mail', view: 'feature-proxy-mail' },
+            '/features/domain-monitor': { path: '/features/domain-monitor', view: 'feature-domain-monitor' },
+          };
+          const target = pageMap[page];
+          if (target) {
+            window.history.pushState({}, '', target.path);
+            setAppView(target.view);
+          }
         }}
         onNavigateToApp={(tab: string) => {
           // Store the intended destination tab in sessionStorage
@@ -1863,6 +2039,11 @@ const AppContent = () => {
                         }`}>
                           {item.label}
                         </span>
+                        {(item as any).badge && (
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold rounded-full uppercase tracking-wide shrink-0">
+                            {(item as any).badge}
+                          </span>
+                        )}
                       </>
                     )}
                   </div>
@@ -2072,6 +2253,7 @@ const AppContent = () => {
               </div>
             </div>
           </SheetHeader>
+          <SheetDescription className="sr-only">Mobile navigation menu</SheetDescription>
           
           <div className="px-5 pt-4 pb-1">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Menu</span>
@@ -2438,6 +2620,7 @@ const AppContent = () => {
 
       {/* Live Logs Panel */}
       <LiveLogs />
+      <FloatingFeedback />
     </div>
   );
 };

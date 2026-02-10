@@ -20,7 +20,7 @@ import { clickGuardRoutes } from './routes/clickguard';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
-import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains } from '../shared/schema';
+import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains, feedback } from '../shared/schema';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
 import { eq, desc, asc, and } from 'drizzle-orm';
@@ -98,7 +98,7 @@ app.get('/t.js', async (c) => {
     const scriptPath = path.resolve(process.cwd(), 'public/t.js');
     const script = fs.readFileSync(scriptPath, 'utf-8');
     c.header('Content-Type', 'application/javascript');
-    c.header('Cache-Control', 'public, max-age=3600');
+    c.header('Cache-Control', 'public, max-age=300');
     c.header('Access-Control-Allow-Origin', '*');
     return c.body(script);
   } catch (e) {
@@ -1276,9 +1276,64 @@ app.post('/api/campaigns/one-click', async (c) => {
     const campaignName = `Campaign-${analysisResult.url.replace(/^https?:\/\//, '').split('/')[0]}-${new Date().toISOString().split('T')[0]}`;
     
     // Extract services/keywords from analysis - get more seed terms
-    const seedServices = analysisResult.services.slice(0, 15).map((s: string) => s.toLowerCase().trim()).filter(Boolean);
+    const seedServices = analysisResult.services
+      .slice(0, 15)
+      .map((s: string) => s.toLowerCase().trim())
+      .filter((s: string) => {
+        if (!s || s.length < 3) return false;
+        const junkTerms = ['www', 'http', 'https', 'com', 'org', 'net', 'home', 'menu', 'click here', 'read more', 'learn more', 'submit', 'search', 'login', 'sign up', 'subscribe', 'close', 'open', 'back', 'next', 'previous', 'loading', 'copyright', 'all rights reserved', 'privacy policy', 'terms of service', 'cookie'];
+        return !junkTerms.includes(s) && !/^https?:\/\//.test(s) && !/^www\./.test(s);
+      });
+
     if (seedServices.length === 0) {
-      seedServices.push(analysisResult.url.split('/')[2]?.split('.')[0] || 'service');
+      // Try to extract meaningful keywords from page title, meta description, and headings
+      const fallbackSources = [
+        analysisResult.seoSignals?.title,
+        analysisResult.seoSignals?.metaDescription,
+        analysisResult.seoSignals?.ogTitle,
+        analysisResult.seoSignals?.ogDescription,
+        ...analysisResult.headings.filter(h => h.level === 'h1' || h.level === 'h2').map(h => h.text)
+      ].filter(Boolean);
+
+      const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'it', 'its', 'we', 'our', 'your', 'their', 'this', 'that', 'these', 'those', 'i', 'me', 'my', 'he', 'she', 'his', 'her', 'they', 'them', 'you', 'us', 'who', 'what', 'which', 'when', 'where', 'how', 'why', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'about', 'above', 'after', 'again', 'also', 'am', 'as', 'because', 'before', 'below', 'between', 'from', 'get', 'here', 'if', 'into', 'like', 'make', 'much', 'new', 'now', 'over', 'out', 'then', 'up', 'www', 'com', 'http', 'https', 'org', 'net', 'home', 'welcome']);
+
+      for (const source of fallbackSources) {
+        if (source && seedServices.length < 5) {
+          const words = source.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+          // Extract meaningful 2-3 word phrases from the source
+          const cleanSource = source.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+          const sourceWords = cleanSource.split(' ').filter(w => w.length > 2 && !stopWords.has(w));
+          // Add individual meaningful words
+          for (const word of sourceWords) {
+            if (word.length >= 4 && seedServices.length < 10 && !seedServices.includes(word)) {
+              seedServices.push(word);
+            }
+          }
+          // Add 2-word phrases
+          for (let i = 0; i < sourceWords.length - 1; i++) {
+            const phrase = `${sourceWords[i]} ${sourceWords[i + 1]}`;
+            if (seedServices.length < 10 && !seedServices.includes(phrase)) {
+              seedServices.push(phrase);
+            }
+          }
+        }
+      }
+
+      // Last resort: extract the actual brand/domain name (not "www")
+      if (seedServices.length === 0) {
+        try {
+          const parsedUrl = new URL(websiteUrl);
+          const hostname = parsedUrl.hostname.replace(/^www\./, '');
+          const domainName = hostname.split('.')[0];
+          if (domainName && domainName.length >= 3 && domainName !== 'www') {
+            seedServices.push(domainName);
+          } else {
+            seedServices.push('service');
+          }
+        } catch {
+          seedServices.push('service');
+        }
+      }
     }
 
     // Generate comprehensive keyword variations (200-300 keywords)
@@ -2108,10 +2163,96 @@ app.get('/api/analyses', async (c) => {
 });
 
 // ============================================
+// Feedback Endpoints
+// ============================================
+app.post('/api/feedback', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, userEmail, type, rating, message, pageUrl, pageName, browserInfo, screenSize, screenshots } = body;
+
+    if (!message || !type) {
+      return c.json({ error: 'Message and type are required' }, 400);
+    }
+
+    const database = getDb();
+    await database.insert(feedback).values({
+      userId: userId || null,
+      userEmail: userEmail || null,
+      type,
+      rating: rating || null,
+      message,
+      status: 'new',
+    });
+
+    // Send email notification
+    try {
+      const { EmailService } = await import('./emailService');
+      const typeLabel = type === 'bug_report' ? 'Bug Report' : type === 'feature_request' ? 'Feature Request' : 'Feedback';
+      const subject = `${typeLabel} from ${userEmail || 'Anonymous User'}`;
+
+      await EmailService.sendRaw('samayhuf@gmail.com', 'feedbackNotification' as any, {
+        type: typeLabel,
+        rating: rating ? `${rating}/5` : 'N/A',
+        user: userEmail || 'Anonymous',
+        page: pageName || 'Unknown',
+        url: pageUrl || 'Unknown',
+        message: message,
+        screenshots: screenshots?.length ? `${screenshots.length} attached` : 'None',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (emailError) {
+      console.error('Feedback email notification error:', emailError);
+    }
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('Submit feedback error:', error);
+    return c.json({ error: 'Failed to submit feedback' }, 500);
+  }
+});
+
+app.get('/api/feedback', async (c) => {
+  try {
+    const database = getDb();
+    const results = await database
+      .select()
+      .from(feedback)
+      .orderBy(desc(feedback.createdAt))
+      .limit(100);
+
+    return c.json({ success: true, feedback: results });
+  } catch (error: any) {
+    console.error('Get feedback error:', error);
+    return c.json({ error: 'Failed to get feedback' }, 500);
+  }
+});
+
+app.patch('/api/feedback/:id/status', async (c) => {
+  try {
+    const feedbackId = c.req.param('id');
+    const { status } = await c.req.json();
+
+    if (!status) {
+      return c.json({ error: 'Status is required' }, 400);
+    }
+
+    const database = getDb();
+    await database
+      .update(feedback)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(feedback.id, feedbackId));
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('Update feedback status error:', error);
+    return c.json({ error: 'Failed to update feedback status' }, 500);
+  }
+});
+
+// ============================================
 // Long-tail Keywords Endpoints
 // ============================================
 app.post('/api/long-tail-keywords/generate', async (c) => {
-  // Parse request body outside try block so it's accessible in catch
   let seedKeywords: string[] = [];
   let country = 'US';
   let device = 'all';
@@ -2126,67 +2267,12 @@ app.post('/api/long-tail-keywords/generate', async (c) => {
       return c.json({ error: 'Seed keywords array is required' }, 400);
     }
 
-    // Use OpenAI to generate long-tail keywords (prefers AI Integrations if available)
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({ 
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
-    });
-    
-    const prompt = `Generate comprehensive long-tail keyword variations for the following seed keywords:
-
-Seed Keywords: ${seedKeywords.join(', ')}
-Target Country: ${country || 'US'}
-Device: ${device || 'all'}
-
-Generate 100-150 unique long-tail keywords (4+ words each) that would be good for Google Ads.
-For each seed keyword, create variations using ALL of these patterns:
-- Question phrases: "how to find X", "what is the best X", "where to get X", "how much does X cost", "when to hire X", "why choose X"
-- Location modifiers: "X near me", "X in my area", "local X services", "X nearby today"
-- Intent modifiers: "buy X", "hire X", "get X quote", "find affordable X", "best X services", "cheap X near me", "professional X"
-- Comparison phrases: "X vs Y", "X compared to Y", "X or Y which is better", "X alternative"
-- Benefit phrases: "fast X services", "reliable X company", "trusted X provider", "quality X near me"
-- Cost phrases: "X prices", "X cost estimate", "affordable X rates", "cheap X services"
-- Review phrases: "best rated X", "top X reviews", "X recommendations"
-- Emergency phrases: "emergency X", "24 hour X", "same day X", "urgent X services"
-- Business phrases: "X for small business", "commercial X services", "residential X"
-
-For each keyword, estimate:
-- searchVolume: a number between 100-50000
-- cpc: a number between 0.50-10.00
-- difficulty: "easy", "medium", or "hard"
-
-Return ONLY valid JSON array with 100+ keywords:
-[
-  {"keyword": "string", "source": "ai", "searchVolume": number, "cpc": number, "difficulty": "easy|medium|hard"},
-  ...
-]`;
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 8000,
-    });
-
-    const content = completion.choices[0]?.message?.content || '';
-    
-    // Parse JSON from response
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      const keywords = JSON.parse(jsonMatch[0]);
-      return c.json({ success: true, keywords });
-    }
-    
-    // Fallback with generated keywords
-    const fallbackKeywords = generateComprehensiveFallbackKeywords(seedKeywords);
-    return c.json({ success: true, keywords: fallbackKeywords });
+    const keywords = generateComprehensiveFallbackKeywords(seedKeywords);
+    return c.json({ success: true, keywords });
   } catch (error: any) {
     console.error('Generate long-tail keywords error:', error);
-    
-    // Return fallback keywords when OpenAI is unavailable
-    const fallbackKeywords = generateComprehensiveFallbackKeywords(seedKeywords);
-    return c.json({ success: true, keywords: fallbackKeywords, fallback: true });
+    const keywords = generateComprehensiveFallbackKeywords(seedKeywords);
+    return c.json({ success: true, keywords });
   }
 });
 
@@ -2489,11 +2575,48 @@ const port = parseInt(process.env.PORT || (isProduction ? '5000' : '3001'), 10);
 console.log(`Starting Admin API Server on port ${port}...`);
 console.log(`Environment: ${isProduction ? 'production' : 'development'}`);
 
+async function seedClickGuardDomains() {
+  try {
+    const database = getDb();
+    if (!database) return;
+
+    const requiredDomains = [
+      {
+        userId: '80f89e58-674d-49ef-a0e3-ac996a37b380',
+        domain: 'www.clickblock.co',
+        siteId: 'b9c309afd23cb9d3ff7d78dd958d7c36',
+        verified: true,
+      },
+      {
+        userId: '80f89e58-674d-49ef-a0e3-ac996a37b380',
+        domain: 'trackabletravel.com',
+        siteId: 'ef6e06adc7f2faed812405426cc45013',
+        verified: true,
+      },
+    ];
+
+    for (const d of requiredDomains) {
+      const [existing] = await database
+        .select()
+        .from(clickGuardDomains)
+        .where(eq(clickGuardDomains.siteId, d.siteId));
+
+      if (!existing) {
+        await database.insert(clickGuardDomains).values(d);
+        console.log(`[ClickGuard Seed] Added domain ${d.domain} with siteId ${d.siteId}`);
+      }
+    }
+  } catch (error) {
+    console.error('[ClickGuard Seed] Error seeding domains:', error);
+  }
+}
+
 serve({
   fetch: app.fetch,
   port,
-}, (info) => {
+}, async (info) => {
   console.log(`Admin API Server running on http://localhost:${info.port}`);
+  await seedClickGuardDomains();
 });
 
 // Export for Vercel serverless functions

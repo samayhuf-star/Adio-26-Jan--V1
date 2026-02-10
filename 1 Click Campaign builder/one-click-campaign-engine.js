@@ -31,12 +31,22 @@ export async function generateOneClickCampaign(websiteUrl, userId, onProgress) {
     // Step 3: Generate Keywords
     onProgress?.({
       step: 3,
-      status: 'Generating 100+ keywords...',
+      status: 'Generating high-quality keywords...',
       progress: 50
     });
 
     const { seedKeywords, keywords, negativeKeywords } = 
       await generateKeywords(websiteAnalysis, campaignStructure);
+
+    // Filter and enhance keywords
+    const enhancedKeywords = keywords.filter(kw => {
+      const lower = kw.toLowerCase();
+      // Filter out low quality keywords like "website today"
+      if (lower.split(' ').length < 2) return false;
+      const genericTerms = ['website today', 'website provider', 'website now', 'website brand', 'website best', 'website near me today', 'website near me provider', 'website near me now', 'website near me company', 'trusted website', 'trusted server', 'trusted online', 'trusted monitoring', 'trusted host', 'trusted check'];
+      if (genericTerms.some(term => lower.includes(term))) return false;
+      return true;
+    });
 
     // Step 4: Generate Ad Copy
     onProgress?.({
@@ -54,7 +64,7 @@ export async function generateOneClickCampaign(websiteUrl, userId, onProgress) {
       progress: 80
     });
 
-    const adGroups = createAdGroups(keywords, adCopy);
+    const adGroups = createAdGroups(enhancedKeywords, adCopy);
 
     // Step 6: Generate CSV
     onProgress?.({
@@ -63,7 +73,7 @@ export async function generateOneClickCampaign(websiteUrl, userId, onProgress) {
       progress: 90
     });
 
-    const csvData = generateGoogleAdsCSV(campaignStructure, adGroups, keywords, adCopy);
+    const csvData = generateGoogleAdsCSV(campaignStructure, adGroups, enhancedKeywords, adCopy);
 
     // Step 7: Save Campaign
     onProgress?.({
@@ -76,7 +86,7 @@ export async function generateOneClickCampaign(websiteUrl, userId, onProgress) {
       userId,
       websiteAnalysis,
       campaignStructure,
-      keywords,
+      enhancedKeywords,
       negativeKeywords,
       adGroups,
       adCopy,
@@ -224,32 +234,40 @@ Return ONLY the JSON object.`
  */
 async function generateKeywords(analysis, structure) {
   const message = await client.messages.create({
-    model: 'claude-opus-4-1',
+    model: 'claude-3-5-sonnet-20241022',
     max_tokens: 2000,
     messages: [
       {
         role: 'user',
-        content: `Generate comprehensive keyword list for this campaign.
+        content: `Generate a high-quality, professional Google Ads keyword list for this campaign. 
+Avoid generic terms like "website near me", "provider", or "now". 
+Focus on high-intent keywords that customers use when they are ready to buy or hire.
 
 Business: ${analysis.businessName}
-Value: ${analysis.mainValue}
+Industry: ${analysis.industry}
+Main Service: ${analysis.mainValue}
 Products: ${analysis.products?.join(', ')}
 Benefits: ${analysis.keyBenefits?.join(', ')}
-Target: ${analysis.targetAudience}
 Ad Group Themes: ${structure.adGroupThemes?.join(', ')}
 
-Generate JSON with:
+Guidelines:
+1. Use specific service terms (e.g., "emergency 24h plumber" instead of "website today").
+2. Include location-based modifiers if applicable.
+3. Focus on "Commercial Intent" (buy, hire, service, professional, best).
+4. Mix Broad Match, Phrase Match, and Exact Match patterns.
+5. Generate 100+ keywords total.
+
+Return JSON with:
 {
-  "seedKeywords": ["kw1", "kw2", "kw3"],
+  "seedKeywords": ["high intent kw1", "high intent kw2"],
   "keywords": {
-    "theme1": ["kw1", "kw2", "kw3"],
-    "theme2": ["kw4", "kw5", "kw6"]
+    "theme1": ["specific kw1", "specific kw2"],
+    "theme2": ["specific kw3", "specific kw4"]
   },
-  "longTailKeywords": ["long tail kw1", "long tail kw2"],
-  "negativeKeywords": ["negative1", "negative2", "negative3"]
+  "longTailKeywords": ["very specific long tail kw1"],
+  "negativeKeywords": ["free", "cheap", "diy", "jobs"]
 }
 
-Generate 100+ keywords total across all categories.
 Return ONLY JSON.`
       }
     ]

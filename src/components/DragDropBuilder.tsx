@@ -454,7 +454,7 @@ const getSectionBlocks = (primaryColor: string): SectionBlock[] => [
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; max-width: 1000px; margin: 0 auto;">
           <div style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
             <h3 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 8px;">Basic</h3>
-            <div style="font-size: 2.5rem; font-weight: bold; color: ${primaryColor}; margin-bottom: 16px;">$29<span style="font-size: 1rem; color: #6b7280;">/mo</span></div>
+            <div style="font-size: 2.5rem; font-weight: bold; color: ${primaryColor}; margin-bottom: 16px;">$49<span style="font-size: 1rem; color: #6b7280;">/mo</span></div>
             <ul style="list-style: none; padding: 0; margin-bottom: 24px; color: #4b5563;">
               <li style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">✓ Feature One</li>
               <li style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">✓ Feature Two</li>

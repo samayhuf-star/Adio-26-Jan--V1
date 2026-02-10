@@ -214,6 +214,10 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/t.js': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
     watch: {
       ignored: [

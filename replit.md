@@ -40,14 +40,15 @@ Preferred communication style: Simple, everyday language.
   - Uses free Node.js packages: whois npm package, native tls/dns modules
   - API: /api/domains endpoints for CRUD and lookups
   - Database: monitored_domains, domain_snapshots, domain_alerts tables
-- **Temp Mail**: Disposable temporary email addresses for privacy and testing.
-  - Generate random temp email addresses via temp-mail.io API
-  - Real-time inbox with auto-refresh (10s polling)
+- **Proxy Mail**: Anonymous email generator for competitive research. Rebranded from "Temp Mail" with competitive intelligence positioning.
+  - Generate anonymous proxy email addresses via temp-mail.io API
+  - Subscribe to competitor newsletters, lead magnets, and webinar lists invisibly
+  - Real-time inbox with auto-refresh (10s polling) to track competitor email sequences
   - Read full email content with HTML rendering in sandboxed iframe
   - Copy email address, generate new address, delete email/messages
   - TTL countdown timer showing email expiration
   - Attachment listing for received emails
-  - Creative UI with gradient cards, animated transitions, avatar colors
+  - Feature page at /features/proxy-mail with competitive intelligence angle
   - API: /api/tempmail proxy routes (no database needed, API handles storage)
   - Requires: TEMP_MAIL_API_KEY secret
 - **Click Guard**: Click fraud protection and traffic analytics module.
@@ -109,7 +110,10 @@ Preferred communication style: Simple, everyday language.
 - **Authorization**: Role-based access (users, paid users, super admins) with API key authentication, CORS, and Content Security Policy.
 
 ## Super Admin Panel
-- **Access**: Restricted to specific users via /admin path or admin.adiology.io subdomain.
+- **Access**: Restricted via /admin path or admin.adiology.io subdomain. Two authentication systems:
+  1. **SuperAdminApp** (`/admin`): Standalone login with SUPERADMIN_USERNAME/SUPERADMIN_PASSWORD env vars. Uses `/api/superadmin/*` endpoints with session tokens.
+  2. **SuperAdminPanel** (sidebar): Accessible to users with `superadmin` role in DB or whitelisted emails. Uses `/api/admin/*` endpoints with Clerk auth + X-Admin-Email header.
+- **Admin Emails**: samayhuf@gmail.com, adiologyads@gmail.com, oadiology@gmail.com (whitelisted in frontend App.tsx and backend adminAuthService.ts).
 - **Authentication**: Server-side middleware protects API endpoints.
 - **Dashboard**: Real-time statistics including users, subscriptions, revenue, and errors.
 - **Management**: User management (block, edit roles), subscription & billing management (Stripe sync), database management (browse/edit records).

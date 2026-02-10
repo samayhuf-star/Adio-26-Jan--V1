@@ -96,8 +96,10 @@ async function getGeoData(ip: string) {
 }
 
 function generateSnippet(siteId: string, domain: string): string {
-  const devDomain = process.env.REPLIT_DEV_DOMAIN;
-  const host = devDomain ? `https://${devDomain}` : (process.env.PUBLIC_BASE_URL || '');
+  const host = process.env.PUBLIC_BASE_URL
+    || (process.env.REPLIT_DEPLOYMENT_URL ? `https://${process.env.REPLIT_DEPLOYMENT_URL}` : '')
+    || (process.env.REPLIT_DOMAINS?.split(',')[0]?.trim() ? `https://${process.env.REPLIT_DOMAINS.split(',')[0].trim()}` : '')
+    || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '');
   return `<!-- Click Guard by Adiology - Fraud Protection -->
 <script src="${host}/t.js?sid=${siteId}" async></script>`;
 }
@@ -402,9 +404,17 @@ clickGuardRoutes.post('/track', async (c) => {
   c.header('Access-Control-Allow-Origin', '*');
   c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
   c.header('Access-Control-Allow-Headers', 'Content-Type');
+  c.header('Access-Control-Max-Age', '86400');
 
   try {
-    const raw = await c.req.json();
+    let raw: any;
+    const contentType = c.req.header('content-type') || '';
+    const text = await c.req.text();
+    try {
+      raw = JSON.parse(text);
+    } catch {
+      return c.json({ error: 'Invalid JSON payload' }, 400);
+    }
 
     const siteId = raw.siteId || raw.sid;
     const fingerprint = raw.fingerprint || raw.fp || null;
@@ -706,7 +716,12 @@ clickGuardRoutes.get('/fraud-events/:siteId', async (c) => {
       .orderBy(desc(clickGuardFraudEvents.createdAt))
       .limit(100);
 
-    return c.json(events);
+    const safeEvents = events.map((ev: any) => ({
+      ...ev,
+      details: typeof ev.details === 'object' ? JSON.stringify(ev.details) : ev.details,
+    }));
+
+    return c.json(safeEvents);
   } catch (error) {
     console.error('Failed to fetch fraud events:', error);
     return c.json({ error: 'Failed to fetch fraud events' }, 500);
@@ -744,6 +759,164 @@ clickGuardRoutes.get('/blocked-ips/:siteId', async (c) => {
   } catch (error) {
     console.error('Failed to fetch blocked IPs:', error);
     return c.json({ error: 'Failed to fetch blocked IPs' }, 500);
+  }
+});
+
+// ========== Protection Rules Endpoints ==========
+
+const DEFAULT_PROTECTION_RULES = {
+  repetitiveClickDetection: {
+    enabled: true,
+    maxClicksPerMinute: 5,
+    maxClicksPerHour: 10,
+    blockDuration: 24,
+  },
+  vpnProxyBlocking: {
+    enabled: true,
+    blockVpn: true,
+    blockProxy: true,
+    blockTor: true,
+  },
+  aiFraudDetection: {
+    enabled: true,
+    threshold: 70,
+    autoBlock: true,
+    sensitivity: 'medium' as 'low' | 'medium' | 'high',
+  },
+  ipClusterBlocking: {
+    enabled: false,
+    maxClicksFromCluster: 20,
+    clusterRange: 24,
+  },
+  ipWhitelistBlacklist: {
+    enabled: true,
+    whitelist: [] as string[],
+    blacklist: [] as string[],
+  },
+  vpnClickFraud: {
+    enabled: true,
+    autoBlockAfterClicks: 2,
+    blockDuration: 48,
+  },
+};
+
+clickGuardRoutes.get('/protection-rules/:siteId', async (c) => {
+  try {
+    const userId = await getUserId(c);
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+    const siteId = c.req.param('siteId');
+    const [domain] = await db
+      .select()
+      .from(clickGuardDomains)
+      .where(and(
+        eq(clickGuardDomains.siteId, siteId),
+        eq(clickGuardDomains.userId, userId)
+      ));
+
+    if (!domain) return c.json({ error: 'Domain not found' }, 404);
+
+    const settings = (domain.settings as any) || {};
+    const protectionRules = settings.protectionRules || DEFAULT_PROTECTION_RULES;
+
+    return c.json({ protectionRules });
+  } catch (error) {
+    console.error('Failed to get protection rules:', error);
+    return c.json({ error: 'Failed to get protection rules' }, 500);
+  }
+});
+
+clickGuardRoutes.put('/protection-rules/:siteId', async (c) => {
+  try {
+    const userId = await getUserId(c);
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+    const siteId = c.req.param('siteId');
+    const [domain] = await db
+      .select()
+      .from(clickGuardDomains)
+      .where(and(
+        eq(clickGuardDomains.siteId, siteId),
+        eq(clickGuardDomains.userId, userId)
+      ));
+
+    if (!domain) return c.json({ error: 'Domain not found' }, 404);
+
+    const body = await c.req.json();
+    const { protectionRules } = body;
+
+    if (!protectionRules || typeof protectionRules !== 'object') return c.json({ error: 'Protection rules are required' }, 400);
+
+    const validKeys = ['repetitiveClickDetection', 'vpnProxyBlocking', 'aiFraudDetection', 'ipClusterBlocking', 'ipWhitelistBlacklist', 'vpnClickFraud'];
+    const sanitized: Record<string, any> = {};
+    for (const key of validKeys) {
+      if (protectionRules[key] && typeof protectionRules[key] === 'object') {
+        sanitized[key] = { ...DEFAULT_PROTECTION_RULES[key as keyof typeof DEFAULT_PROTECTION_RULES], ...protectionRules[key] };
+      } else {
+        sanitized[key] = DEFAULT_PROTECTION_RULES[key as keyof typeof DEFAULT_PROTECTION_RULES];
+      }
+    }
+
+    const existingSettings = (domain.settings as any) || {};
+    const updatedSettings = { ...existingSettings, protectionRules: sanitized };
+
+    await db
+      .update(clickGuardDomains)
+      .set({ settings: updatedSettings, updatedAt: new Date() })
+      .where(eq(clickGuardDomains.id, domain.id));
+
+    return c.json({ protectionRules, message: 'Protection rules updated' });
+  } catch (error) {
+    console.error('Failed to update protection rules:', error);
+    return c.json({ error: 'Failed to update protection rules' }, 500);
+  }
+});
+
+// Export blocked IPs for Google Ads exclusion
+clickGuardRoutes.get('/export-blocked-ips/:siteId', async (c) => {
+  try {
+    const userId = await getUserId(c);
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+    const siteId = c.req.param('siteId');
+    const [domain] = await db
+      .select()
+      .from(clickGuardDomains)
+      .where(and(
+        eq(clickGuardDomains.siteId, siteId),
+        eq(clickGuardDomains.userId, userId)
+      ));
+
+    if (!domain) return c.json({ error: 'Domain not found' }, 404);
+
+    const blocked = await db
+      .select()
+      .from(clickGuardBlockedIps)
+      .where(eq(clickGuardBlockedIps.siteId, siteId))
+      .orderBy(desc(clickGuardBlockedIps.createdAt));
+
+    const format = c.req.query('format') || 'csv';
+
+    if (format === 'csv') {
+      const csvLines = ['IP Address,Reason,Type,Date Blocked'];
+      blocked.forEach(b => {
+        csvLines.push(`${b.ipAddress},"${b.reason || ''}",${b.autoBlocked ? 'Auto' : 'Manual'},${new Date(b.createdAt!).toISOString()}`);
+      });
+      return c.text(csvLines.join('\n'), 200, {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': `attachment; filename="blocked-ips-${siteId}.csv"`,
+      });
+    }
+
+    // Google Ads format - just IP list, one per line
+    const googleAdsFormat = blocked.map(b => b.ipAddress).join('\n');
+    return c.text(googleAdsFormat, 200, {
+      'Content-Type': 'text/plain',
+      'Content-Disposition': `attachment; filename="google-ads-ip-exclusions-${siteId}.txt"`,
+    });
+  } catch (error) {
+    console.error('Failed to export blocked IPs:', error);
+    return c.json({ error: 'Failed to export blocked IPs' }, 500);
   }
 });
 

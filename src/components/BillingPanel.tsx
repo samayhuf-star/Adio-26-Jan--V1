@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-    CreditCard, CheckCircle, Shield, Download, 
+    CreditCard, CheckCircle, Download, 
     Calendar, FileText, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -8,14 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { api } from '../utils/api';
 import { createCheckoutSession, createCustomerPortalSession } from '../utils/stripe';
 import { notifications } from '../utils/notifications';
 import { isPaidUser } from '../utils/userPlan';
 
-import { getCurrentUserProfile } from '../utils/auth';
+import { getCurrentUserProfile, getCurrentAuthUser } from '../utils/auth';
 
 export const BillingPanel = () => {
     const [info, setInfo] = useState<any>(null);
@@ -26,22 +24,30 @@ export const BillingPanel = () => {
     const [isPaid, setIsPaid] = useState(false);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-    const [showAddCardDialog, setShowAddCardDialog] = useState(false);
-    const [pendingPlan, setPendingPlan] = useState<{ name: string; priceId: string } | null>(null);
     const pricingSectionRef = useRef<HTMLDivElement>(null);
-    
-    // Card form state
-    const [cardNumber, setCardNumber] = useState('');
-    const [cardName, setCardName] = useState('');
-    const [cardExpiry, setCardExpiry] = useState('');
-    const [cardCVV, setCardCVV] = useState('');
-    const [cardErrors, setCardErrors] = useState<{
-        number?: string;
-        name?: string;
-        expiry?: string;
-        cvv?: string;
-    }>({});
     const [savedCards, setSavedCards] = useState<any[]>([]);
+    const [loadingCards, setLoadingCards] = useState(false);
+
+    const fetchSavedCards = async () => {
+        try {
+            setLoadingCards(true);
+            const user = await getCurrentAuthUser();
+            if (!user?.email) return;
+            const { getSessionToken } = await import('../utils/auth');
+            const token = await getSessionToken();
+            const response = await fetch(`/api/stripe/payment-methods/${encodeURIComponent(user.email)}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setSavedCards(data.paymentMethods || []);
+            }
+        } catch (err) {
+            console.error('Error fetching saved cards:', err);
+        } finally {
+            setLoadingCards(false);
+        }
+    };
 
     useEffect(() => {
         const fetchInfo = async () => {
@@ -112,6 +118,7 @@ export const BillingPanel = () => {
             }
         };
         fetchInfo();
+        fetchSavedCards();
         
         // Check if user is paid
         const checkPaidStatus = async () => {
@@ -138,10 +145,10 @@ export const BillingPanel = () => {
             });
             // Remove session_id from URL
             window.history.replaceState({}, '', window.location.pathname);
-            // Refresh subscription data
             setTimeout(() => {
                 fetchInfo();
                 checkPaidStatus();
+                fetchSavedCards();
             }, 1000);
         } else if (canceled) {
             notifications.info('Payment was canceled. You can try again anytime.', {
@@ -154,13 +161,6 @@ export const BillingPanel = () => {
 
     const handleSubscribe = async (planName?: string, priceId?: string) => {
         const selectedPlan = planName || 'Lifetime Unlimited';
-        
-        if (savedCards.length === 0) {
-            setPendingPlan({ name: selectedPlan, priceId: priceId || '' });
-            setShowAddCardDialog(true);
-            return;
-        }
-        
         await proceedWithSubscription(selectedPlan, priceId);
     };
 
@@ -231,7 +231,6 @@ export const BillingPanel = () => {
     const handleUpdatePaymentMethod = async () => {
         setProcessing(true);
         try {
-            // Open Stripe Customer Portal for payment method management
             await createCustomerPortalSession();
             setShowPaymentDialog(false);
         } catch (error) {
@@ -246,167 +245,19 @@ export const BillingPanel = () => {
         }
     };
 
-
-    // Card validation functions
-    const validateCardNumber = (value: string) => {
-        const cleanValue = value.replace(/\s/g, '');
-        if (!cleanValue) {
-            setCardErrors(prev => ({ ...prev, number: undefined }));
-            return;
-        }
-        if (cleanValue.length < 13 || cleanValue.length > 19) {
-            setCardErrors(prev => ({ ...prev, number: 'Card number must be between 13 and 19 digits' }));
-        } else if (!/^\d+$/.test(cleanValue)) {
-            setCardErrors(prev => ({ ...prev, number: 'Card number must contain only digits' }));
-        } else {
-            setCardErrors(prev => ({ ...prev, number: undefined }));
-        }
-    };
-
-    const validateCardName = (value: string) => {
-        if (!value.trim()) {
-            setCardErrors(prev => ({ ...prev, name: 'Cardholder name is required' }));
-        } else if (value.trim().length < 2) {
-            setCardErrors(prev => ({ ...prev, name: 'Cardholder name must be at least 2 characters' }));
-        } else {
-            setCardErrors(prev => ({ ...prev, name: undefined }));
-        }
-    };
-
-    const validateCardExpiry = (value: string) => {
-        if (!value) {
-            setCardErrors(prev => ({ ...prev, expiry: undefined }));
-            return;
-        }
-        const expiryMatch = value.match(/^(\d{2})\/(\d{2})$/);
-        if (!expiryMatch) {
-            setCardErrors(prev => ({ ...prev, expiry: 'Please enter a valid expiry date (MM/YY)' }));
-        } else {
-            const month = parseInt(expiryMatch[1], 10);
-            const year = parseInt(expiryMatch[2], 10);
-            const currentYear = new Date().getFullYear() % 100;
-            const currentMonth = new Date().getMonth() + 1;
-            
-            if (month < 1 || month > 12) {
-                setCardErrors(prev => ({ ...prev, expiry: 'Month must be between 01 and 12' }));
-            } else if (year < currentYear || (year === currentYear && month < currentMonth)) {
-                setCardErrors(prev => ({ ...prev, expiry: 'Card has expired' }));
-            } else {
-                setCardErrors(prev => ({ ...prev, expiry: undefined }));
-            }
-        }
-    };
-
-    const validateCardCVV = (value: string) => {
-        if (!value) {
-            setCardErrors(prev => ({ ...prev, cvv: undefined }));
-            return;
-        }
-        if (value.length < 3 || value.length > 4) {
-            setCardErrors(prev => ({ ...prev, cvv: 'CVV must be 3 or 4 digits' }));
-        } else if (!/^\d+$/.test(value)) {
-            setCardErrors(prev => ({ ...prev, cvv: 'CVV must contain only digits' }));
-        } else {
-            setCardErrors(prev => ({ ...prev, cvv: undefined }));
-        }
-    };
-
-    const resetCardForm = () => {
-        setCardNumber('');
-        setCardName('');
-        setCardExpiry('');
-        setCardCVV('');
-        setCardErrors({});
-    };
-
     const handleAddCard = async () => {
-        if (!isCardFormValid()) {
-            notifications.error('Please fix all errors before adding the card', {
-                title: 'Validation Error',
-                description: 'All card fields must be valid.',
-            });
-            return;
-        }
-
         setProcessing(true);
         try {
-            // In a real implementation, you would call Stripe API here to add the payment method
-            // For now, we'll just simulate adding the card
-            const cardNumberClean = cardNumber.replace(/\s/g, '');
-            const last4 = cardNumberClean.slice(-4);
-            const expiryParts = cardExpiry.split('/');
-            
-            // Simulate adding card to saved cards
-            const newCard = {
-                id: Date.now().toString(),
-                brand: cardNumberClean.startsWith('4') ? 'visa' : cardNumberClean.startsWith('5') ? 'mastercard' : 'amex',
-                last4: last4,
-                expMonth: expiryParts[0] || '',
-                expYear: expiryParts[1] || '',
-                isDefault: savedCards.length === 0
-            };
-            
-            setSavedCards(prev => [...prev, newCard]);
-            setShowAddCardDialog(false);
-            resetCardForm();
-            
-            notifications.success('Card added successfully', {
-                title: 'Payment Method Added',
-                description: `Your card ending in ${last4} has been added.`,
-            });
-            
-            if (pendingPlan) {
-                const plan = pendingPlan;
-                setPendingPlan(null);
-                await proceedWithSubscription(plan.name, plan.priceId || undefined);
-            }
+            await createCustomerPortalSession();
         } catch (error) {
             console.error("Add card error", error);
-            notifications.error('Failed to add card. Please try again.', {
+            notifications.error('Failed to open payment portal. Please try again.', {
                 title: 'Error',
                 description: error instanceof Error ? error.message : 'Unknown error occurred',
             });
         } finally {
             setProcessing(false);
         }
-    };
-
-    // Validate card form
-    const isCardFormValid = (): boolean => {
-        // Check if all fields are filled
-        if (!cardNumber.trim() || !cardName.trim() || !cardExpiry.trim() || !cardCVV.trim()) {
-            return false;
-        }
-
-        // Check if there are any errors
-        if (Object.keys(cardErrors).length > 0 && Object.values(cardErrors).some(err => err !== undefined && err !== '')) {
-            return false;
-        }
-
-        // Basic validation
-        const cardNumberClean = cardNumber.replace(/\s/g, '');
-        if (cardNumberClean.length < 13 || cardNumberClean.length > 19) {
-            return false;
-        }
-
-        // Validate expiry date format (MM/YY)
-        const expiryMatch = cardExpiry.match(/^(\d{2})\/(\d{2})$/);
-        if (!expiryMatch) {
-            return false;
-        }
-
-        const month = parseInt(expiryMatch[1], 10);
-        const year = parseInt(expiryMatch[2], 10);
-        if (month < 1 || month > 12) {
-            return false;
-        }
-
-        // Validate CVV (3-4 digits)
-        if (cardCVV.length < 3 || cardCVV.length > 4) {
-            return false;
-        }
-
-        return true;
     };
 
     const handleDownloadInvoice = async (invoiceId: string, invoiceDate: string, invoiceAmount: string) => {
@@ -618,11 +469,11 @@ Generated on ${new Date().toLocaleDateString()}`;
                                 <Button 
                                     variant="outline" 
                                     className="flex-1 min-w-0"
-                                    onClick={() => setShowAddCardDialog(true)}
+                                    onClick={handleAddCard}
                                     disabled={processing}
                                 >
                                     <CreditCard className="w-4 h-4 mr-2 flex-shrink-0" />
-                                    <span className="truncate">{savedCards.length > 0 ? 'Add New Card' : 'Add Payment Card'}</span>
+                                    <span className="truncate">{savedCards.length > 0 ? 'Manage Cards' : 'Add Payment Card'}</span>
                                 </Button>
                                 {savedCards.length > 0 && (
                                     <Button 
@@ -844,157 +695,6 @@ Generated on ${new Date().toLocaleDateString()}`;
                             {processing ? "Cancelling..." : "Yes, Cancel Subscription"}
                         </Button>
                     </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Add Payment Card Dialog */}
-            <Dialog open={showAddCardDialog} onOpenChange={(open) => {
-                setShowAddCardDialog(open);
-                if (!open) setPendingPlan(null);
-            }}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Add Payment Card</DialogTitle>
-                        <DialogDescription>
-                            {pendingPlan 
-                                ? `Add a payment card to continue with the ${pendingPlan.name} plan. Your card will be securely stored.`
-                                : 'Add a payment card to enable plan upgrades. Your card will be securely stored for future transactions.'}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        handleAddCard();
-                    }} className="space-y-4">
-                        {/* Card Number */}
-                        <div className="space-y-2">
-                            <Label htmlFor="cardNumber">Card Number</Label>
-                            <Input
-                                id="cardNumber"
-                                type="text"
-                                placeholder="1234 5678 9012 3456"
-                                value={cardNumber}
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-                                    if (value.length <= 16) {
-                                        const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
-                                        setCardNumber(formatted);
-                                        validateCardNumber(value);
-                                    }
-                                }}
-                                className={cardErrors.number ? 'border-red-500' : ''}
-                            />
-                            {cardErrors.number && (
-                                <p className="text-xs text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3" />
-                                    {cardErrors.number}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Cardholder Name */}
-                        <div className="space-y-2">
-                            <Label htmlFor="cardName">Cardholder Name</Label>
-                            <Input
-                                id="cardName"
-                                type="text"
-                                placeholder="John Doe"
-                                value={cardName}
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                                    setCardName(value);
-                                    validateCardName(value);
-                                }}
-                                className={cardErrors.name ? 'border-red-500' : ''}
-                            />
-                            {cardErrors.name && (
-                                <p className="text-xs text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3" />
-                                    {cardErrors.name}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Expiry and CVV */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="cardExpiry">Expiry Date</Label>
-                                <Input
-                                    id="cardExpiry"
-                                    type="text"
-                                    placeholder="MM/YY"
-                                    value={cardExpiry}
-                                    onChange={(e) => {
-                                        let value = e.target.value.replace(/\D/g, '');
-                                        if (value.length >= 2) {
-                                            value = value.slice(0, 2) + '/' + value.slice(2, 4);
-                                        }
-                                        if (value.length <= 5) {
-                                            setCardExpiry(value);
-                                            validateCardExpiry(value);
-                                        }
-                                    }}
-                                    className={cardErrors.expiry ? 'border-red-500' : ''}
-                                />
-                                {cardErrors.expiry && (
-                                    <p className="text-xs text-red-600 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {cardErrors.expiry}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="cardCVV">CVV</Label>
-                                <Input
-                                    id="cardCVV"
-                                    type="text"
-                                    placeholder="123"
-                                    value={cardCVV}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                                        setCardCVV(value);
-                                        validateCardCVV(value);
-                                    }}
-                                    className={cardErrors.cvv ? 'border-red-500' : ''}
-                                />
-                                {cardErrors.cvv && (
-                                    <p className="text-xs text-red-600 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {cardErrors.cvv}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Security Notice */}
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                            <div className="flex items-start gap-2">
-                                <Shield className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-slate-600">
-                                    Your card details are encrypted and securely stored. We use industry-standard security measures to protect your information.
-                                </p>
-                            </div>
-                        </div>
-
-                        <DialogFooter>
-                            <Button 
-                                type="button"
-                                variant="outline" 
-                                onClick={() => {
-                                    setShowAddCardDialog(false);
-                                    resetCardForm();
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button 
-                                type="submit"
-                                disabled={processing || !isCardFormValid()}
-                                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
-                            >
-                                {processing ? "Processing..." : "Add Card"}
-                            </Button>
-                        </DialogFooter>
-                    </form>
                 </DialogContent>
             </Dialog>
 

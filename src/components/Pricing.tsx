@@ -27,7 +27,6 @@ interface PricingPlan {
 
 const featureList = [
   { name: 'Campaigns/month', basic: '25', pro: '∞', lifetime: '∞' },
-  { name: 'Team members', basic: '2', pro: '5', lifetime: '∞' },
   { name: 'Dashboard', basic: true, pro: true, lifetime: true },
   { name: '1-Click Builder', basic: true, pro: true, lifetime: true },
   { name: 'Builder 3.0', basic: true, pro: true, lifetime: true },
@@ -239,10 +238,6 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                       <div className="text-2xl font-bold text-gray-900">{plan.limits.campaigns}</div>
                       <div className="text-xs text-gray-500">Campaigns/mo</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900">{plan.limits.teamMembers}</div>
-                      <div className="text-xs text-gray-500">Team Members</div>
-                    </div>
                   </div>
 
                   {/* CTA Button */}
@@ -258,7 +253,7 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                   </button>
 
                   <p className="text-center text-xs text-gray-500 mt-3">
-                    No credit card required • Cancel anytime
+                    Cancel anytime
                   </p>
                 </div>
               </motion.div>

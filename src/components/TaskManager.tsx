@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -1004,6 +1005,7 @@ export function TaskManager() {
         <DialogContent className="bg-white border-gray-200 text-gray-900 w-[95vw] max-w-md mx-auto rounded-xl max-h-[90vh] overflow-y-auto shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-lg text-gray-900">{editingTask ? 'Edit Task' : 'New Task'}</DialogTitle>
+            <DialogDescription className="sr-only">{editingTask ? 'Edit an existing task' : 'Create a new task'}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {taskError && (
@@ -1094,6 +1096,7 @@ export function TaskManager() {
         <DialogContent className="bg-white border-gray-200 text-gray-900 w-[95vw] max-w-md mx-auto rounded-xl max-h-[90vh] overflow-y-auto shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-lg text-gray-900">{editingProject ? 'Edit Project' : 'New Project'}</DialogTitle>
+            <DialogDescription className="sr-only">{editingProject ? 'Edit project details' : 'Create a new project'}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {error && (
@@ -1162,6 +1165,7 @@ export function TaskManager() {
               <AlertTriangle className="w-5 h-5 text-red-500" />
               Delete Project
             </DialogTitle>
+            <DialogDescription className="sr-only">Confirm project deletion</DialogDescription>
           </DialogHeader>
           
           {deleteConfirmStep === 1 ? (

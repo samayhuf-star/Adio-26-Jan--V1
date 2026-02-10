@@ -105,11 +105,8 @@
     state.top = Math.floor((Date.now() - state.startTime) / 1000);
   }
 
-  // Send tracking data
-  function sendTrackingData() {
-    updateTimeOnPage();
-    
-    const payload = {
+  function buildPayload() {
+    return {
       sid: state.sid,
       ua: state.ua,
       sw: state.sw,
@@ -124,22 +121,27 @@
       top: state.top,
       hb: state.hb
     };
+  }
 
+  function sendTrackingData() {
+    updateTimeOnPage();
     var trackUrl = _apiBase + '/api/clickguard/track';
+    var body = JSON.stringify(buildPayload());
 
-    if (navigator.sendBeacon) {
-      var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-      navigator.sendBeacon(trackUrl, blob);
-    } else if (typeof fetch !== 'undefined') {
+    if (typeof fetch !== 'undefined') {
       fetch(trackUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'text/plain' },
+        body: body,
+        mode: 'cors',
         keepalive: true
       }).catch(function() {});
+    } else if (navigator.sendBeacon) {
+      var blob = new Blob([body], { type: 'text/plain' });
+      navigator.sendBeacon(trackUrl, blob);
     } else {
       var img = new Image();
-      img.src = trackUrl + '?data=' + encodeURIComponent(JSON.stringify(payload));
+      img.src = trackUrl + '?data=' + encodeURIComponent(body);
     }
   }
 
@@ -157,27 +159,11 @@
     sendTrackingData();
   }, 30000);
 
-  // Send beacon on unload
   window.addEventListener('beforeunload', function() {
     updateTimeOnPage();
-    const payload = {
-      sid: state.sid,
-      ua: state.ua,
-      sw: state.sw,
-      sh: state.sh,
-      lang: state.lang,
-      tz: state.tz,
-      ref: state.ref,
-      url: state.url,
-      fp: state.fp,
-      mm: state.mm,
-      cc: state.cc,
-      top: state.top,
-      hb: state.hb
-    };
-    
+    var body = JSON.stringify(buildPayload());
     if (navigator.sendBeacon) {
-      var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      var blob = new Blob([body], { type: 'text/plain' });
       navigator.sendBeacon(_apiBase + '/api/clickguard/track', blob);
     }
   });

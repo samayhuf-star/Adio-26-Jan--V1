@@ -421,92 +421,6 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
   campaignRow[COLUMN_INDEX['Campaign Status']] = campaign.status || 'Enabled';
   campaignRow[COLUMN_INDEX['Campaign Labels']] = campaign.labels || '';
   
-  // Add call extensions
-  if (campaign.callExtensions && campaign.callExtensions.length > 0) {
-    const callExt = campaign.callExtensions[0]; // Use first call extension
-    campaignRow[COLUMN_INDEX['PhoneNumber']] = callExt.phoneNumber || '';
-    campaignRow[COLUMN_INDEX['VerificationURL']] = callExt.verificationUrl || '';
-    campaignRow[COLUMN_INDEX['Call Extension Status']] = callExt.status || 'Enabled';
-    campaignRow[COLUMN_INDEX['Call Extension Scheduling']] = callExt.scheduling || '';
-  }
-  
-  // Add price extensions
-  if (campaign.priceExtensions && campaign.priceExtensions.length > 0) {
-    const priceExt = campaign.priceExtensions[0]; // Use first price extension
-    campaignRow[COLUMN_INDEX['Price Extension Type']] = priceExt.type || '';
-    campaignRow[COLUMN_INDEX['Price Extension Price Qualifier']] = priceExt.priceQualifier || '';
-    
-    // Add price extension items (up to 4)
-    if (priceExt.items && priceExt.items.length > 0) {
-      campaignRow[COLUMN_INDEX['Price Extension Item Header']] = priceExt.items[0]?.header || '';
-      campaignRow[COLUMN_INDEX['Price Extension Item Price']] = priceExt.items[0]?.price || '';
-      campaignRow[COLUMN_INDEX['Price Extension Item Final URL']] = priceExt.items[0]?.finalUrl || '';
-      
-      // Additional price extension items
-      for (let i = 0; i < Math.min(4, priceExt.items.length); i++) {
-        const item = priceExt.items[i];
-        const itemNum = i + 1;
-        campaignRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Header`]] = item.header || '';
-        campaignRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Price`]] = item.price || '';
-        campaignRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Final URL`]] = item.finalUrl || '';
-      }
-    }
-  }
-  
-  // Add promotion extensions
-  if (campaign.promotions && campaign.promotions.length > 0) {
-    const promotion = campaign.promotions[0]; // Use first promotion
-    campaignRow[COLUMN_INDEX['Promotion Target']] = promotion.target || '';
-    campaignRow[COLUMN_INDEX['Promotion Discount Modifier']] = promotion.discountModifier || '';
-    campaignRow[COLUMN_INDEX['Promotion Percent Off']] = promotion.percentOff || '';
-    campaignRow[COLUMN_INDEX['Promotion Money Amount Off']] = promotion.moneyAmountOff || '';
-    campaignRow[COLUMN_INDEX['Promotion Final URL']] = promotion.finalUrl || '';
-    campaignRow[COLUMN_INDEX['Promotion Status']] = promotion.status || 'Enabled';
-    campaignRow[COLUMN_INDEX['Promotion Start Date']] = promotion.startDate || '';
-    campaignRow[COLUMN_INDEX['Promotion End Date']] = promotion.endDate || '';
-  }
-  
-  // Add app extensions
-  if (campaign.appExtensions && campaign.appExtensions.length > 0) {
-    const appExt = campaign.appExtensions[0]; // Use first app extension
-    campaignRow[COLUMN_INDEX['App ID']] = appExt.appId || '';
-    campaignRow[COLUMN_INDEX['App Store']] = appExt.appStore || '';
-    campaignRow[COLUMN_INDEX['App Link Text']] = appExt.linkText || '';
-    campaignRow[COLUMN_INDEX['App Final URL']] = appExt.finalUrl || '';
-    campaignRow[COLUMN_INDEX['App Status']] = appExt.status || 'Enabled';
-  }
-  
-  // Add message extensions
-  if (campaign.messageExtensions && campaign.messageExtensions.length > 0) {
-    const msgExt = campaign.messageExtensions[0]; // Use first message extension
-    campaignRow[COLUMN_INDEX['Message Text']] = msgExt.text || '';
-    campaignRow[COLUMN_INDEX['Message Final URL']] = msgExt.finalUrl || '';
-    campaignRow[COLUMN_INDEX['Message Business Name']] = msgExt.businessName || '';
-    campaignRow[COLUMN_INDEX['Message Country Code']] = msgExt.countryCode || '';
-    campaignRow[COLUMN_INDEX['Message Phone Number']] = msgExt.phoneNumber || '';
-    campaignRow[COLUMN_INDEX['Message Status']] = msgExt.status || 'Enabled';
-  }
-  
-  // Add lead form extensions
-  if (campaign.leadFormExtensions && campaign.leadFormExtensions.length > 0) {
-    const leadForm = campaign.leadFormExtensions[0]; // Use first lead form
-    campaignRow[COLUMN_INDEX['Lead Form ID']] = leadForm.id || '';
-    campaignRow[COLUMN_INDEX['Lead Form Name']] = leadForm.name || '';
-    campaignRow[COLUMN_INDEX['Lead Form Headline']] = leadForm.headline || '';
-    campaignRow[COLUMN_INDEX['Lead Form Description']] = leadForm.description || '';
-    campaignRow[COLUMN_INDEX['Lead Form Call-to-action']] = leadForm.callToAction || '';
-    campaignRow[COLUMN_INDEX['Lead Form Status']] = leadForm.status || 'Enabled';
-  }
-  
-  // Add business info
-  if (campaign.businessInfo) {
-    campaignRow[COLUMN_INDEX['Business Name']] = campaign.businessInfo.name || '';
-    campaignRow[COLUMN_INDEX['Business Address']] = campaign.businessInfo.address || '';
-    campaignRow[COLUMN_INDEX['Business Phone']] = campaign.businessInfo.phone || '';
-    campaignRow[COLUMN_INDEX['Business Website']] = campaign.businessInfo.website || '';
-    campaignRow[COLUMN_INDEX['Business Profile Location']] = campaign.businessInfo.location || '';
-  }
-  
   rows.push(campaignRow);
   
   // Ad Group rows (one per ad group) - REQUIRED for Google Ads Editor
@@ -782,6 +696,109 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
     });
   }
   
+  // Call extension rows - each call extension gets its own row
+  if (campaign.callExtensions && campaign.callExtensions.length > 0) {
+    campaign.callExtensions.forEach((callExt) => {
+      const ceRow = createEmptyRow();
+      ceRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      ceRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      ceRow[COLUMN_INDEX['PhoneNumber']] = callExt.phoneNumber || '';
+      ceRow[COLUMN_INDEX['VerificationURL']] = callExt.verificationUrl || '';
+      ceRow[COLUMN_INDEX['Call Extension Status']] = callExt.status || 'Enabled';
+      ceRow[COLUMN_INDEX['Call Extension Scheduling']] = callExt.scheduling || '';
+      rows.push(ceRow);
+    });
+  }
+  
+  // Price extension rows - each price extension gets its own row
+  if (campaign.priceExtensions && campaign.priceExtensions.length > 0) {
+    campaign.priceExtensions.forEach((priceExt) => {
+      const peRow = createEmptyRow();
+      peRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      peRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      peRow[COLUMN_INDEX['Price Extension Type']] = priceExt.type || '';
+      peRow[COLUMN_INDEX['Price Extension Price Qualifier']] = priceExt.priceQualifier || '';
+      if (priceExt.items && priceExt.items.length > 0) {
+        peRow[COLUMN_INDEX['Price Extension Item Header']] = priceExt.items[0]?.header || '';
+        peRow[COLUMN_INDEX['Price Extension Item Price']] = priceExt.items[0]?.price || '';
+        peRow[COLUMN_INDEX['Price Extension Item Final URL']] = priceExt.items[0]?.finalUrl || '';
+        for (let i = 0; i < Math.min(4, priceExt.items.length); i++) {
+          const item = priceExt.items[i];
+          const itemNum = i + 1;
+          peRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Header`]] = item.header || '';
+          peRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Price`]] = item.price || '';
+          peRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Final URL`]] = item.finalUrl || '';
+        }
+      }
+      rows.push(peRow);
+    });
+  }
+  
+  // Promotion extension rows - each promotion gets its own row
+  if (campaign.promotions && campaign.promotions.length > 0) {
+    campaign.promotions.forEach((promotion) => {
+      const promoRow = createEmptyRow();
+      promoRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      promoRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      promoRow[COLUMN_INDEX['Promotion Target']] = promotion.target || '';
+      promoRow[COLUMN_INDEX['Promotion Discount Modifier']] = promotion.discountModifier || '';
+      promoRow[COLUMN_INDEX['Promotion Percent Off']] = promotion.percentOff || '';
+      promoRow[COLUMN_INDEX['Promotion Money Amount Off']] = promotion.moneyAmountOff || '';
+      promoRow[COLUMN_INDEX['Promotion Final URL']] = promotion.finalUrl || '';
+      promoRow[COLUMN_INDEX['Promotion Status']] = promotion.status || 'Enabled';
+      promoRow[COLUMN_INDEX['Promotion Start Date']] = promotion.startDate || '';
+      promoRow[COLUMN_INDEX['Promotion End Date']] = promotion.endDate || '';
+      rows.push(promoRow);
+    });
+  }
+  
+  // App extension rows - each app extension gets its own row
+  if (campaign.appExtensions && campaign.appExtensions.length > 0) {
+    campaign.appExtensions.forEach((appExt) => {
+      const appRow = createEmptyRow();
+      appRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      appRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      appRow[COLUMN_INDEX['App ID']] = appExt.appId || '';
+      appRow[COLUMN_INDEX['App Store']] = appExt.appStore || '';
+      appRow[COLUMN_INDEX['App Link Text']] = appExt.linkText || '';
+      appRow[COLUMN_INDEX['App Final URL']] = appExt.finalUrl || '';
+      appRow[COLUMN_INDEX['App Status']] = appExt.status || 'Enabled';
+      rows.push(appRow);
+    });
+  }
+  
+  // Message extension rows - each message extension gets its own row
+  if (campaign.messageExtensions && campaign.messageExtensions.length > 0) {
+    campaign.messageExtensions.forEach((msgExt) => {
+      const msgRow = createEmptyRow();
+      msgRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      msgRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      msgRow[COLUMN_INDEX['Message Text']] = msgExt.text || '';
+      msgRow[COLUMN_INDEX['Message Final URL']] = msgExt.finalUrl || '';
+      msgRow[COLUMN_INDEX['Message Business Name']] = msgExt.businessName || '';
+      msgRow[COLUMN_INDEX['Message Country Code']] = msgExt.countryCode || '';
+      msgRow[COLUMN_INDEX['Message Phone Number']] = msgExt.phoneNumber || '';
+      msgRow[COLUMN_INDEX['Message Status']] = msgExt.status || 'Enabled';
+      rows.push(msgRow);
+    });
+  }
+  
+  // Lead form extension rows - each lead form gets its own row
+  if (campaign.leadFormExtensions && campaign.leadFormExtensions.length > 0) {
+    campaign.leadFormExtensions.forEach((leadForm) => {
+      const lfRow = createEmptyRow();
+      lfRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      lfRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      lfRow[COLUMN_INDEX['Lead Form ID']] = leadForm.id || '';
+      lfRow[COLUMN_INDEX['Lead Form Name']] = leadForm.name || '';
+      lfRow[COLUMN_INDEX['Lead Form Headline']] = leadForm.headline || '';
+      lfRow[COLUMN_INDEX['Lead Form Description']] = leadForm.description || '';
+      lfRow[COLUMN_INDEX['Lead Form Call-to-action']] = leadForm.callToAction || '';
+      lfRow[COLUMN_INDEX['Lead Form Status']] = leadForm.status || 'Enabled';
+      rows.push(lfRow);
+    });
+  }
+  
   // Image asset rows
   if (campaign.imageAssets && campaign.imageAssets.length > 0) {
     campaign.imageAssets.forEach(img => {
@@ -857,7 +874,15 @@ export function convertToV5Format(legacyData: any): CampaignDataV5 {
     },
     sitelinks: [],
     callouts: [],
-    snippets: []
+    snippets: [],
+    callExtensions: [],
+    priceExtensions: [],
+    promotions: [],
+    appExtensions: [],
+    messageExtensions: [],
+    leadFormExtensions: [],
+    imageAssets: [],
+    videoAssets: []
   };
   
   // Convert ad groups

@@ -3,11 +3,13 @@ import {
   Shield, LogOut, Users, CreditCard, RefreshCw, Search, 
   Ban, CheckCircle, Eye, TrendingUp, DollarSign, Activity,
   UserCheck, AlertTriangle, Calendar, Mail, ChevronRight,
-  Edit, Trash2, X, Save, MoreHorizontal
+  Edit, Trash2, X, Save, MoreHorizontal, MessageSquare
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
+import { FeedbackManagement } from '../FeedbackManagement';
+import { NotificationProvider } from '../../contexts/NotificationContext';
 import {
   Dialog,
   DialogContent,
@@ -63,7 +65,7 @@ interface SubscriptionRecord {
   createdAt: string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'subscriptions';
+type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'feedback';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -443,7 +445,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           {[
             { id: 'overview', label: 'Overview', icon: Activity },
             { id: 'users', label: 'Users', icon: Users },
-            { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard }
+            { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+            { id: 'feedback', label: 'Feedback', icon: MessageSquare }
           ].map(tab => (
             <Button
               key={tab.id}
@@ -790,6 +793,13 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
               )}
             </div>
           </div>
+        )}
+
+        {/* Feedback Tab */}
+        {activeTab === 'feedback' && (
+          <NotificationProvider>
+            <FeedbackManagement />
+          </NotificationProvider>
         )}
       </div>
 

@@ -249,6 +249,9 @@ export const historyService = {
         }
 
         if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Unauthorized');
+          }
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           console.warn('Failed to load from database:', errorData);
           throw new Error(errorData.error || 'Failed to load');

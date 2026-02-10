@@ -60,7 +60,6 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     isSubscription: true,
     features: [
       '25 Campaigns/month',
-      '2 Team Members',
       'Dashboard & 1-Click Builder',
       'Builder 3.0 & Preset Campaigns',
       'Full Draft/Custom Campaigns',
@@ -81,7 +80,6 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     isSubscription: true,
     features: [
       'Unlimited Campaigns',
-      '5 Team Members',
       'All Builder Features',
       'Full Draft/Custom Campaigns',
       'All Keyword Tools',
@@ -102,7 +100,6 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     isSubscription: false,
     features: [
       'Unlimited Campaigns Forever',
-      'Unlimited Team Members',
       'All Professional Features',
       'Dedicated Account Manager',
       'Priority Support (1h+)',

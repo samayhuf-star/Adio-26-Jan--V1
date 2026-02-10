@@ -226,7 +226,7 @@ export default function TempMail() {
       const updated = addToHistory(data.email, data.ttl || 600);
       setHistoryEntries(updated);
     } catch (err: any) {
-      setError(err.message || 'Failed to create temporary email');
+      setError(err.message || 'Failed to create proxy email');
     } finally {
       setCreating(false);
     }
@@ -419,7 +419,7 @@ export default function TempMail() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
-              title="Back to Temp Mail Home"
+              title="Back to Proxy Mail Home"
             >
               <ChevronLeft className="w-5 h-5 text-gray-600" />
             </motion.button>
@@ -428,8 +428,8 @@ export default function TempMail() {
             <Mail className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Temp Mail</h1>
-            <p className="text-sm text-gray-500">Disposable email for privacy & testing</p>
+            <h1 className="text-2xl font-bold text-gray-900">Proxy Mail</h1>
+            <p className="text-sm text-gray-500">Anonymous email for competitive research</p>
           </div>
         </div>
       </div>
@@ -472,17 +472,17 @@ export default function TempMail() {
               </div>
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-3 text-center">
-              Disposable Email in Seconds
+              Proxy Email in Seconds
             </h2>
             <p className="text-gray-500 text-center max-w-md mb-8 leading-relaxed">
-              Generate a temporary email address instantly. Perfect for testing sign-ups,
-              verifying services, or keeping your real inbox clean.
+              Generate an anonymous proxy email instantly. Subscribe to competitor newsletters,
+              study their campaigns, and stay completely invisible.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 max-w-lg w-full">
               {[
-                { icon: Shield, label: 'Privacy First', desc: 'No personal data needed' },
-                { icon: Timer, label: 'Auto-Expiry', desc: 'Emails self-destruct' },
-                { icon: Inbox, label: 'Real Inbox', desc: 'Receive actual emails' },
+                { icon: Shield, label: '100% Anonymous', desc: 'No identity exposure' },
+                { icon: Timer, label: 'Auto-Expiry', desc: 'Dispose when done' },
+                { icon: Inbox, label: 'Live Inbox', desc: 'Track competitor emails' },
               ].map((feature, i) => (
                 <motion.div
                   key={i}
@@ -544,7 +544,7 @@ export default function TempMail() {
                       <Mail className="w-5 h-5 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-0.5">Your Temporary Email</p>
+                      <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-0.5">Your Proxy Email</p>
                       <p className="text-white text-lg font-mono font-bold truncate">{email.email}</p>
                     </div>
                   </div>
