@@ -10,9 +10,12 @@ const { Pool } = pg;
 const pool = new Pool({ connectionString: getDatabaseUrl() });
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'adiology-jwt-secret-key';
-const FALLBACK_BASE_URL = process.env.APP_URL || 'https://adiology.io';
+const PRODUCTION_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
 
 function getBaseUrl(c: any): string {
+  if (PRODUCTION_URL && PRODUCTION_URL !== 'https://adiology.io') {
+    return PRODUCTION_URL;
+  }
   const origin = c.req.header('origin');
   if (origin) return origin;
   const host = c.req.header('x-forwarded-host') || c.req.header('host');
@@ -20,7 +23,20 @@ function getBaseUrl(c: any): string {
     const proto = c.req.header('x-forwarded-proto') || 'https';
     return `${proto}://${host}`;
   }
-  return FALLBACK_BASE_URL;
+  return PRODUCTION_URL;
+}
+
+function getEmailBaseUrl(c?: any): string {
+  if (c) {
+    const origin = c.req.header('origin');
+    if (origin) return origin;
+    const host = c.req.header('x-forwarded-host') || c.req.header('host');
+    if (host) {
+      const proto = c.req.header('x-forwarded-proto') || 'https';
+      return `${proto}://${host}`;
+    }
+  }
+  return PRODUCTION_URL;
 }
 
 export const accountRoutes = new Hono();
@@ -50,17 +66,20 @@ accountRoutes.post('/register', async (c) => {
     }
 
     const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+    
     await pool.query(
       `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
-       VALUES (gen_random_uuid(), $1, $2, NOW() + INTERVAL '24 hours', NOW())`,
-      [userId, token]
+       VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
+      [userId, token, expiresAt]
     );
 
-    const baseUrl = getBaseUrl(c);
-    const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email.toLowerCase().trim())}`;
+    const emailBase = getEmailBaseUrl(c);
+    const verificationUrl = `${emailBase}/verify-email?token=${token}&email=${encodeURIComponent(email.toLowerCase().trim())}`;
     await EmailService.sendRaw(email.toLowerCase().trim(), 'emailVerification', { verification_url: verificationUrl });
 
-    console.log(`[Auth] User registered: ${email} (verification link base: ${baseUrl})`);
+    console.log(`[Auth] User registered: ${email} (verification link base: ${emailBase})`);
     return c.json({
       success: true,
       message: 'Please check your email to verify your account',
@@ -130,7 +149,9 @@ accountRoutes.post('/login', async (c) => {
         subscription_status: user.subscription_status,
         stripe_customer_id: user.stripe_customer_id,
         ai_usage: user.ai_usage,
-        created_at: user.created_at
+        created_at: user.created_at,
+        card_validated: user.card_validated,
+        selected_plan: user.selected_plan
       }
     });
   } catch (error: any) {
@@ -193,7 +214,9 @@ accountRoutes.post('/verify-email', async (c) => {
         subscription_status: user.subscription_status,
         stripe_customer_id: user.stripe_customer_id,
         ai_usage: user.ai_usage,
-        created_at: user.created_at
+        created_at: user.created_at,
+        card_validated: user.card_validated,
+        selected_plan: user.selected_plan
       }
     });
   } catch (error: any) {
@@ -227,17 +250,20 @@ accountRoutes.post('/resend-verification', async (c) => {
     );
 
     const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
     await pool.query(
       `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
-       VALUES (gen_random_uuid(), $1, $2, NOW() + INTERVAL '24 hours', NOW())`,
-      [user.id, token]
+       VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
+      [user.id, token, expiresAt]
     );
 
-    const baseUrl = getBaseUrl(c);
-    const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
+    const emailBase = getEmailBaseUrl(c);
+    const verificationUrl = `${emailBase}/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
     await EmailService.sendRaw(user.email, 'emailVerification', { verification_url: verificationUrl });
 
-    console.log(`[Auth] Verification email resent: ${email} (verification link base: ${baseUrl})`);
+    console.log(`[Auth] Verification email resent: ${email} (verification link base: ${emailBase})`);
     return c.json({ success: true, message: 'Verification email sent' });
   } catch (error: any) {
     console.error('[Auth] Resend verification error:', error);
@@ -371,7 +397,9 @@ accountRoutes.get('/me', async (c) => {
         is_blocked: user.is_blocked,
         last_sign_in: user.last_sign_in,
         created_at: user.created_at,
-        updated_at: user.updated_at
+        updated_at: user.updated_at,
+        card_validated: user.card_validated || false,
+        selected_plan: user.selected_plan || null
       }
     });
   } catch (error: any) {

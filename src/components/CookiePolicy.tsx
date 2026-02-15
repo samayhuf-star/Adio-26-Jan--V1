@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { Footer } from './Footer';
 
 interface CookiePolicyProps {
   onBack: () => void;
@@ -7,82 +8,108 @@ interface CookiePolicyProps {
 
 export const CookiePolicy: React.FC<CookiePolicyProps> = ({ onBack }) => {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0f0d24] to-slate-950 text-slate-300">
       <div className="max-w-4xl mx-auto px-6 py-12">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-8"
+          className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
-        
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">Cookie Policy</h1>
-        <div className="prose prose-lg max-w-none text-gray-700 space-y-6">
+
+        <h1 className="text-4xl font-bold text-white mb-2">Cookie Policy</h1>
+        <p className="text-slate-400 mb-10">Adiology.io &mdash; Effective Date: February 12, 2026</p>
+
+        <div className="space-y-10">
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. What Are Cookies?</h2>
-            <p>
-              Cookies are small data files that are placed on your computer or mobile device when you visit a website.
-              They serve various purposes, including remembering login information and tracking user preferences.
-            </p>
+            <h2 className="text-xl font-semibold text-white mb-3">1. What Are Cookies</h2>
+            <p>Cookies are small text files stored on your device when you visit our website. They help us provide a better user experience and analyze site usage.</p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Types of Cookies We Use</h2>
-            <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-2">Essential Cookies</h3>
-            <p>
-              These cookies are necessary for the website to function properly. They enable core functionality such as security,
-              network management, and accessibility.
-            </p>
-            
-            <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-2">Performance Cookies</h3>
-            <p>
-              These cookies collect information about how you use our website, such as which pages you visit and any errors you
-              encounter. This information is used to improve website performance.
-            </p>
-            
-            <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-2">Functional Cookies</h3>
-            <p>
-              These cookies allow the website to remember choices you make (such as your username, language, or the region you are
-              in) and provide enhanced, more personal features.
-            </p>
-            
-            <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-2">Marketing Cookies</h3>
-            <p>
-              These cookies are used to track visitors across websites and display relevant advertisements to them based on their
-              browsing history and interests.
-            </p>
+            <h2 className="text-xl font-semibold text-white mb-3">2. Types of Cookies We Use</h2>
+
+            <h3 className="text-lg font-medium text-slate-200 mb-2">2.1 Essential Cookies</h3>
+            <p className="mb-2">Required for the Service to function:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Authentication tokens</li>
+              <li>Session management</li>
+              <li>Security features</li>
+            </ul>
+
+            <h3 className="text-lg font-medium text-slate-200 mt-4 mb-2">2.2 Analytics Cookies</h3>
+            <p className="mb-2">Help us understand user behavior:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Google Analytics (anonymized IP)</li>
+              <li>Usage patterns and feature adoption</li>
+              <li>Performance metrics</li>
+            </ul>
+
+            <h3 className="text-lg font-medium text-slate-200 mt-4 mb-2">2.3 Functional Cookies</h3>
+            <p className="mb-2">Remember your preferences:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Language preferences</li>
+              <li>Theme settings (light/dark mode)</li>
+              <li>Display preferences</li>
+            </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">3. Third-Party Cookies</h2>
-            <p>
-              We use third-party services that may place cookies on your device. These include analytics providers and advertising
-              partners. You can control third-party cookies through your browser settings.
-            </p>
+            <h2 className="text-xl font-semibold text-white mb-3">3. Third-Party Cookies</h2>
+            <p className="mb-2">We use third-party services that may set cookies:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Google Analytics (analytics and performance)</li>
+              <li>Stripe (payment processing)</li>
+              <li>Vercel (hosting and CDN)</li>
+              <li>Supabase (authentication)</li>
+            </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">4. Managing Cookies</h2>
-            <p>
-              You can control and manage cookies through your web browser settings. Most browsers allow you to refuse cookies or
-              alert you when cookies are being sent. However, blocking cookies may affect website functionality.
-            </p>
+            <h2 className="text-xl font-semibold text-white mb-3">4. Managing Cookies</h2>
+            <p className="mb-3">You can control cookies through your browser settings. Most browsers allow you to refuse cookies or delete existing cookies. Note that disabling cookies may affect Service functionality.</p>
+            <p className="mb-2">Browser instructions:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li><span className="text-slate-200">Chrome:</span> Settings &gt; Privacy and security &gt; Cookies</li>
+              <li><span className="text-slate-200">Firefox:</span> Options &gt; Privacy &amp; Security &gt; Cookies</li>
+              <li><span className="text-slate-200">Safari:</span> Preferences &gt; Privacy &gt; Cookies</li>
+              <li><span className="text-slate-200">Edge:</span> Settings &gt; Privacy &gt; Cookies</li>
+            </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. Updates to This Policy</h2>
-            <p>
-              We may update this Cookie Policy from time to time to reflect changes in our practices or for other operational, legal,
-              or regulatory reasons. We encourage you to review this policy regularly.
-            </p>
+            <h2 className="text-xl font-semibold text-white mb-3">5. Cookie Duration</h2>
+            <p className="mb-2">Cookie lifespan:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Session cookies: Deleted when you close browser</li>
+              <li>Persistent cookies: Remain until expiration or deletion</li>
+              <li>Authentication: 30 days</li>
+              <li>Analytics: 2 years</li>
+              <li>Preferences: 1 year</li>
+            </ul>
           </section>
 
-          <p className="text-sm text-gray-500 mt-12">
-            Last updated: December 2025
-          </p>
+          <section>
+            <h2 className="text-xl font-semibold text-white mb-3">6. Updates to This Policy</h2>
+            <p>We may update this Cookie Policy. Changes will be posted on this page with an updated effective date.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-white mb-3">7. Contact</h2>
+            <p className="mb-2">Questions about cookies:</p>
+            <ul className="list-none space-y-1">
+              <li>Email: <a href="mailto:privacy@adiology.io" className="text-indigo-400 hover:text-indigo-300">privacy@adiology.io</a></li>
+              <li>Website: <a href="https://adiology.io" className="text-indigo-400 hover:text-indigo-300">https://adiology.io</a></li>
+            </ul>
+          </section>
+        </div>
+
+        <div className="mt-12 pt-8 border-t border-slate-800 text-center text-sm text-slate-500">
+          &copy; {new Date().getFullYear()} Adiology. All rights reserved.
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

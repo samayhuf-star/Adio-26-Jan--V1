@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { 
-  Activity, Zap, Sparkles, Package, Target, Globe, FolderOpen, Terminal,
+  Activity, Zap, Sparkles, Package, Target, Globe, FolderOpen,
   CheckCircle2, FileText, Layers, TrendingUp, ArrowUp, MessageSquare, Mail, Shield, ShieldCheck
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { TerminalCard, TerminalLine } from './ui/terminal-card';
 import { getUserPreferences, saveUserPreferences, initializeUserPreferences } from '../utils/userPreferences';
 import { historyService } from '../utils/historyService';
 import { 
@@ -144,7 +143,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
         setStats({
           subscription: {
             plan: user.subscription_plan || 'free',
-            status: user.subscription_status || 'active',
+            status: user.subscription_status || 'inactive',
             periodEnd: null,
           },
           usage: {
@@ -179,7 +178,7 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
     setStats({
       subscription: {
         plan: user?.subscription_plan || 'free',
-        status: user?.subscription_status || 'active',
+        status: user?.subscription_status || 'inactive',
         periodEnd: null,
       },
       usage: { apiCalls: 0, campaigns: 0, keywords: 0 },
@@ -272,7 +271,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   }
 
   const quickActions = [
-    { id: 'one-click-builder', title: '1 Click Campaign', icon: Zap },
     { id: 'builder-3', title: 'Campaign Builder', icon: Sparkles },
     { id: 'preset-campaigns', title: 'Campaign Presets', icon: Package },
     { id: 'keyword-planner', title: 'Keywords Planner', icon: Target },
@@ -289,7 +287,8 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
   return (
     <div className="bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 min-h-screen p-6 sm:p-8 lg:p-10 space-y-8" style={{
       '--user-spacing-multiplier': preferences.spacing,
-      '--user-font-size-multiplier': preferences.fontSize
+      '--user-font-size-multiplier': preferences.fontSize,
+      fontSize: '110%',
     } as React.CSSProperties}>
       {/* My Resources Section */}
       <div className="space-y-6 slide-in-up">

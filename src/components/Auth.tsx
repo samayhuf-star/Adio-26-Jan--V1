@@ -11,11 +11,12 @@ interface AuthProps {
   onLoginSuccess: () => void;
   onSignupSuccess?: (userEmail: string, userName: string) => void;
   onBackToHome: () => void;
+  onSignupRedirect?: () => void;
   initialMode?: 'login' | 'signup';
   isAdminLogin?: boolean;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onBackToHome, initialMode = 'login', isAdminLogin = false }) => {
+export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onBackToHome, onSignupRedirect, initialMode = 'login', isAdminLogin = false }) => {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -134,8 +135,9 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
           } else {
             if (onSignupSuccess) {
               onSignupSuccess(email, name);
+            } else {
+              onLoginSuccess();
             }
-            onLoginSuccess();
           }
         } else {
           throw new Error(result.error?.message || 'Signup failed');
@@ -524,12 +526,15 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
                         <button
                           type="button"
                           onClick={() => {
-                            setIsLogin(false);
-                            setError('');
-                            setIsForgotPassword(false);
+                            if (onSignupRedirect) {
+                              onSignupRedirect();
+                            } else {
+                              setIsLogin(false);
+                              setError('');
+                              setIsForgotPassword(false);
+                            }
                           }}
                           className="text-indigo-400 hover:text-indigo-300 font-semibold"
-                          disabled={SIGNUP_DISABLED}
                         >
                           Sign up
                         </button>

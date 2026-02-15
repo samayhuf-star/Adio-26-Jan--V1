@@ -51,6 +51,8 @@ export async function createCheckoutSession(priceId: string, planName: string, u
       throw new Error('Please sign in to subscribe');
     }
 
+    const isLifetime = planName.toLowerCase().includes('lifetime');
+
     const response = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -59,6 +61,7 @@ export async function createCheckoutSession(priceId: string, planName: string, u
         planName,
         userId: currentUserId,
         email: currentUserEmail,
+        mode: isLifetime ? 'payment' : 'subscription',
       }),
     });
 
@@ -169,9 +172,25 @@ export async function fetchProducts() {
  */
 export async function getPriceIdForPlan(planName: string, interval: 'month' | 'year' = 'month'): Promise<string | null> {
   const products = await fetchProducts();
-  const product = products.find((p: any) => 
-    p.name.toLowerCase() === planName.toLowerCase()
-  );
+  
+  const aliasMap: Record<string, string[]> = {
+    'starter': ['starter'],
+    'professional': ['pro', 'professional'],
+    'agency': ['enterprise', 'agency'],
+    'lifetime': ['lifetime'],
+  };
+  
+  const normalizedPlan = planName.toLowerCase().replace('adiology ', '').trim();
+  const aliases = aliasMap[normalizedPlan] || [normalizedPlan];
+  
+  const product = products.find((p: any) => {
+    const normalizedProduct = p.name.toLowerCase().replace('adiology ', '').trim();
+    return aliases.some(alias => 
+      normalizedProduct === alias
+      || normalizedProduct.includes(alias)
+      || alias.includes(normalizedProduct)
+    );
+  });
   
   if (!product) return null;
   
@@ -184,6 +203,7 @@ export async function getPriceIdForPlan(planName: string, interval: 'month' | 'y
     return p.recurring.interval === interval;
   });
   
+  const unitAmount = price?.unitAmount || price?.unit_amount;
   return price?.id || null;
 }
 

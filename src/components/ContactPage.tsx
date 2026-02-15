@@ -40,8 +40,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
     {
       icon: <Mail className="w-6 h-6" />,
       title: 'Email Us',
-      content: 'support@adiology.online',
-      link: 'mailto:support@adiology.online',
+      content: 'support@adiology.io',
+      link: 'mailto:support@adiology.io',
       description: 'Send us an email anytime'
     },
     {
@@ -283,11 +283,11 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
                 Need dedicated support for your organization? Our enterprise plans include priority support with a dedicated account manager.
               </p>
               <a
-                href="mailto:enterprise@adiology.online"
+                href="mailto:enterprise@adiology.io"
                 className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-medium text-sm"
               >
                 <Mail className="w-4 h-4" />
-                enterprise@adiology.online
+                enterprise@adiology.io
               </a>
             </div>
           </div>

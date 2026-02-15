@@ -38,8 +38,8 @@ export function ContactUs() {
     {
       icon: <Mail className="w-6 h-6" />,
       title: 'Email Us',
-      content: 'support@adiology.online',
-      link: 'mailto:support@adiology.online',
+      content: 'support@adiology.io',
+      link: 'mailto:support@adiology.io',
       color: 'from-blue-400 to-blue-600'
     },
     {

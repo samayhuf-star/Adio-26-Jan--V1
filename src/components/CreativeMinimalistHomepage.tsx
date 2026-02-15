@@ -27,7 +27,7 @@ export default function CreativeMinimalistHomepage({
   onNavigateToPage
 }: CreativeMinimalistHomepageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
+    <div id="main-content" className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
       <Navigation onGetStarted={onGetStarted} onLogin={onLogin} onNavigateToPage={onNavigateToPage} />
       <HeroSection onGetStarted={onGetStarted} />
       <PlatformFeaturesSection onGetStarted={onGetStarted} />
@@ -120,7 +120,7 @@ function HeroSection({ onGetStarted }: { onGetStarted?: () => void }) {
   const heroFeatures = [
     {
       icon: Rocket,
-      title: 'AI Builder',
+      title: 'Campaign Builder',
       desc: 'Campaigns + extensions + 25K ZIPs',
       gradient: 'from-violet-500 to-indigo-600',
       iconColor: 'text-violet-400',
@@ -1061,6 +1061,35 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
     'Dedicated account manager',
   ];
 
+  const lifetimeFeatures = [
+    'Unlimited campaigns',
+    'All Professional features',
+    'Keyword Planner & Mixer',
+    'Long Tail Generator',
+    'Negative Keywords',
+    '10+ ad extension types',
+    'CSV export to Google Ads Editor',
+    'Click Guard',
+    'Domain Monitor',
+    'Proxy Mail',
+    'Priority support',
+    'No recurring fees ever',
+    'Lifetime updates',
+  ];
+
+  const lifetimePlan = {
+    name: 'Lifetime',
+    price: '$149',
+    period: 'one-time',
+    features: lifetimeFeatures,
+    gradient: 'from-emerald-500 to-teal-500',
+    priceId: 'price_lifetime',
+    amount: 14900,
+    popular: false,
+    isLifetime: true,
+    limitedTime: true,
+  };
+
   const plans = isAnnual ? [
     {
       name: 'Starter',
@@ -1093,6 +1122,7 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
       priceId: 'price_agency_annual',
       amount: 142800,
     },
+    lifetimePlan,
   ] : [
     {
       name: 'Starter',
@@ -1122,6 +1152,7 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
       priceId: 'price_agency_monthly',
       amount: 14900,
     },
+    lifetimePlan,
   ];
 
   return (
@@ -1158,8 +1189,11 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
           </div>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map((plan, i) => (
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          {plans.map((plan, i) => {
+            const isLifetime = 'isLifetime' in plan && plan.isLifetime;
+            const isLimited = 'limitedTime' in plan && plan.limitedTime;
+            return (
             <motion.div
               key={plan.name}
               initial={{ opacity: 0, y: 30 }}
@@ -1170,12 +1204,19 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
               className={`relative bg-white/5 rounded-3xl p-8 border-2 transition-all ${
                 plan.popular 
                   ? 'border-violet-500 shadow-xl shadow-violet-900/30' 
-                  : 'border-white/10 shadow-sm hover:shadow-lg hover:border-violet-500/30'
+                  : isLifetime
+                    ? 'border-emerald-500 shadow-xl shadow-emerald-900/30'
+                    : 'border-white/10 shadow-sm hover:shadow-lg hover:border-violet-500/30'
               }`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold rounded-full">
                   Most Popular
+                </div>
+              )}
+              {isLimited && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold rounded-full whitespace-nowrap">
+                  Limited Time Offer
                 </div>
               )}
 
@@ -1187,29 +1228,35 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
               {'originalPrice' in plan && plan.originalPrice && (
                 <div className="text-sm text-gray-500 line-through mb-4">{plan.originalPrice}/mo</div>
               )}
-              {!('originalPrice' in plan) && <div className="mb-4" />}
+              {isLifetime && (
+                <div className="text-sm text-emerald-400 font-medium mb-4">No recurring fees ever</div>
+              )}
+              {!('originalPrice' in plan) && !isLifetime && <div className="mb-4" />}
 
               <button
-                onClick={() => onSelectPlan?.(plan.name, plan.priceId, plan.amount, true)}
+                onClick={() => onSelectPlan?.(plan.name, plan.priceId, plan.amount, !isLifetime)}
                 className={`w-full py-3 rounded-xl font-semibold text-sm mb-6 transition-all ${
-                  plan.popular
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-900/30 hover:shadow-xl'
-                    : 'bg-white/10 text-white hover:bg-white/20'
+                  isLifetime
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/30 hover:shadow-xl'
+                    : plan.popular
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-900/30 hover:shadow-xl'
+                      : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
-                Start Free Trial
+                {isLifetime ? 'Get Lifetime Access' : 'Start Free Trial'}
               </button>
 
               <ul className="space-y-3">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
+                    <Check className={`w-4 h-4 ${isLifetime ? 'text-emerald-500' : 'text-violet-500'} mt-0.5 flex-shrink-0`} />
                     <span className="text-sm text-gray-300">{feature}</span>
                   </li>
                 ))}
               </ul>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
 
         <motion.div
@@ -1325,16 +1372,16 @@ function Footer({ onNavigateToPolicy, onNavigateToApp, onNavigateToPage }: { onN
             <h4 className="text-white font-semibold mb-4 text-sm">Product</h4>
             <ul className="space-y-3 text-sm">
               {[
-                { label: 'Campaign Builder', tab: 'campaign-builder' },
-                { label: 'Keyword Planner', tab: 'keyword-planner' },
-                { label: 'Keyword Mixer', tab: 'keyword-mixer' },
-                { label: 'Negative Keywords', tab: 'negative-keywords' },
-                { label: 'Long Tail Generator', tab: 'long-tail' },
+                { label: 'Campaign Builder', page: '/features/campaign-builder' },
+                { label: 'Keyword Planner', page: '/features/campaign-builder' },
+                { label: 'Keyword Mixer', page: '/features/campaign-builder' },
+                { label: 'Negative Keywords', page: '/features/campaign-builder' },
+                { label: 'Long Tail Generator', page: '/features/campaign-builder' },
               ].map(link => (
                 <li key={link.label}>
-                  <button onClick={() => onNavigateToApp?.(link.tab)} className="hover:text-white transition-colors text-left">
+                  <a href={link.page} onClick={(e) => { e.preventDefault(); onNavigateToPage?.(link.page); }} className="hover:text-white transition-colors">
                     {link.label}
-                  </button>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -1344,15 +1391,15 @@ function Footer({ onNavigateToPolicy, onNavigateToApp, onNavigateToPage }: { onN
             <h4 className="text-white font-semibold mb-4 text-sm">More</h4>
             <ul className="space-y-3 text-sm">
               {[
-                { label: 'Click Guard', tab: 'click-guard' },
-                { label: 'Domain Monitor', tab: 'domain-monitor' },
-                { label: 'Proxy Mail', tab: 'temp-mail' },
-                { label: 'Preset Campaigns', tab: 'preset-campaigns' },
+                { label: 'Click Guard', page: '/features/click-guard' },
+                { label: 'Domain Monitor', page: '/features/domain-monitor' },
+                { label: 'Proxy Mail', page: '/features/proxy-mail' },
+                { label: 'Preset Campaigns', page: '/features/campaign-builder' },
               ].map(link => (
                 <li key={link.label}>
-                  <button onClick={() => onNavigateToApp?.(link.tab)} className="hover:text-white transition-colors text-left">
+                  <a href={link.page} onClick={(e) => { e.preventDefault(); onNavigateToPage?.(link.page); }} className="hover:text-white transition-colors">
                     {link.label}
-                  </button>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -1362,16 +1409,16 @@ function Footer({ onNavigateToPolicy, onNavigateToApp, onNavigateToPage }: { onN
             <h4 className="text-white font-semibold mb-4 text-sm">Legal</h4>
             <ul className="space-y-3 text-sm">
               {[
-                { label: 'Privacy Policy', action: 'privacy' },
-                { label: 'Terms of Service', action: 'terms' },
-                { label: 'Cookie Policy', action: 'cookie' },
-                { label: 'GDPR Compliance', action: 'gdpr' },
-                { label: 'Refund Policy', action: 'refund' },
+                { label: 'Privacy Policy', action: 'privacy', href: '/privacy-policy' },
+                { label: 'Terms of Service', action: 'terms', href: '/terms-of-service' },
+                { label: 'Cookie Policy', action: 'cookie', href: '/cookie-policy' },
+                { label: 'GDPR Compliance', action: 'gdpr', href: '/gdpr-compliance' },
+                { label: 'Refund Policy', action: 'refund', href: '/refund-policy' },
               ].map(link => (
                 <li key={link.label}>
-                  <button onClick={() => onNavigateToPolicy?.(link.action)} className="hover:text-white transition-colors text-left">
+                  <a href={link.href} onClick={(e) => { e.preventDefault(); onNavigateToPolicy?.(link.action); }} className="hover:text-white transition-colors">
                     {link.label}
-                  </button>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -1380,9 +1427,9 @@ function Footer({ onNavigateToPolicy, onNavigateToApp, onNavigateToPage }: { onN
           <div>
             <h4 className="text-white font-semibold mb-4 text-sm">Company</h4>
             <ul className="space-y-3 text-sm">
-              <li><button onClick={() => onNavigateToPage?.('/contact')} className="hover:text-white transition-colors text-left">Contact</button></li>
-              <li><button onClick={() => onNavigateToPage?.('/help-center')} className="hover:text-white transition-colors text-left">Help Center</button></li>
-              <li><button onClick={() => onNavigateToPage?.('/community')} className="hover:text-white transition-colors text-left">Community</button></li>
+              <li><a href="/contact" onClick={(e) => { e.preventDefault(); onNavigateToPage?.('/contact'); }} className="hover:text-white transition-colors">Contact</a></li>
+              <li><a href="/help-center" onClick={(e) => { e.preventDefault(); onNavigateToPage?.('/help-center'); }} className="hover:text-white transition-colors">Help Center</a></li>
+              <li><a href="/community" onClick={(e) => { e.preventDefault(); onNavigateToPage?.('/community'); }} className="hover:text-white transition-colors">Community</a></li>
             </ul>
           </div>
         </div>
@@ -1393,9 +1440,9 @@ function Footer({ onNavigateToPolicy, onNavigateToApp, onNavigateToPage }: { onN
               &copy; {currentYear} Adiology. All rights reserved.
             </p>
             <div className="flex items-center gap-6 text-sm text-gray-600">
-              <button onClick={() => onNavigateToPolicy?.('privacy')} className="hover:text-white transition-colors">Privacy</button>
-              <button onClick={() => onNavigateToPolicy?.('terms')} className="hover:text-white transition-colors">Terms</button>
-              <button onClick={() => onNavigateToPolicy?.('cookie')} className="hover:text-white transition-colors">Cookies</button>
+              <a href="/privacy-policy" onClick={(e) => { e.preventDefault(); onNavigateToPolicy?.('privacy'); }} className="hover:text-white transition-colors">Privacy</a>
+              <a href="/terms-of-service" onClick={(e) => { e.preventDefault(); onNavigateToPolicy?.('terms'); }} className="hover:text-white transition-colors">Terms</a>
+              <a href="/cookie-policy" onClick={(e) => { e.preventDefault(); onNavigateToPolicy?.('cookie'); }} className="hover:text-white transition-colors">Cookies</a>
             </div>
           </div>
         </div>

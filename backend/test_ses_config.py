@@ -58,7 +58,7 @@ async def send_test_email():
         # Send test verification email
         result = await email_service.send_verification_email(
             email=test_email,
-            verification_link="https://adiology.online/verify?token=test123",
+            verification_link="https://adiology.io/verify?token=test123",
             user_name="Test User"
         )
         

@@ -9,6 +9,9 @@ import { ScrollArea } from './ui/scroll-area';
 import { notifications } from '../utils/notifications';
 import { generateMasterCSV, CampaignDataV5, AdGroupV5, KeywordV5, AdV5 } from '../utils/googleAdsEditorCSVExporterV5';
 import { historyService } from '../utils/historyService';
+import { GoogleAdsPushButton } from './GoogleAdsPushButton';
+import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
+import { isSuperAdmin } from '../utils/auth';
 
 interface GeneratedCampaign {
   id: string;
@@ -313,6 +316,36 @@ export function OneClickCampaignBuilder() {
         };
       });
       
+      const calloutItems = (adCopy.callouts || [])
+        .filter((c: string) => c && c.trim())
+        .slice(0, 4)
+        .map((c: string) => ({ text: c.substring(0, 25), status: 'Enabled' as const }));
+
+      const sitelinkItems = ((campaignData as any).sitelinks || [])
+        .slice(0, 4)
+        .map((sl: any) => ({
+          text: (sl.text || sl.linkText || '').substring(0, 25),
+          description1: sl.description1 || sl.description || '',
+          description2: sl.description2 || '',
+          finalUrl: sl.finalUrl || sl.url || generatedCampaign.website_url,
+          status: 'Enabled' as const
+        }));
+
+      const snippetItems = ((campaignData as any).structured_snippets || (campaignData as any).snippets || [])
+        .slice(0, 2)
+        .map((sn: any) => ({
+          header: sn.header || 'Types',
+          values: Array.isArray(sn.values) ? sn.values.join('; ') : (sn.values || ''),
+          status: 'Enabled' as const
+        }));
+
+      const callExtItems = ((campaignData as any).callExtensions || [])
+        .map((ce: any) => ({
+          phoneNumber: ce.phoneNumber || ce.phone || '',
+          countryCode: ce.countryCode || 'US',
+          status: 'Enabled' as const
+        }));
+
       const campaignV5: CampaignDataV5 = {
         campaignName: generatedCampaign.campaign_name,
         dailyBudget: campaignData.structure.dailyBudget || 100,
@@ -322,7 +355,11 @@ export function OneClickCampaignBuilder() {
         status: 'Enabled',
         url: generatedCampaign.website_url,
         adGroups: adGroupsV5,
-        locations: { countries: ['United States'], countryCode: 'US' }
+        locations: { countries: ['United States'], countryCode: 'US' },
+        callouts: calloutItems.length > 0 ? calloutItems : undefined,
+        sitelinks: sitelinkItems.length > 0 ? sitelinkItems : undefined,
+        snippets: snippetItems.length > 0 ? snippetItems : undefined,
+        callExtensions: callExtItems.length > 0 ? callExtItems : undefined,
       };
       
       const csvContent = generateMasterCSV(campaignV5);
@@ -676,7 +713,12 @@ export function OneClickCampaignBuilder() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-700 flex gap-3 flex-wrap">
+            {isSuperAdmin() && (
+            <div className="px-4 pt-3 border-t border-slate-700">
+              <GoogleAdsConnectionStatus variant="compact" className="text-slate-300 [&_button]:text-slate-400 [&_button:hover]:text-red-400" />
+            </div>
+            )}
+            <div className="p-4 flex gap-3 flex-wrap">
               <Button
                 onClick={downloadCSV}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -684,6 +726,22 @@ export function OneClickCampaignBuilder() {
                 <Download className="w-5 h-5 mr-2" />
                 Download CSV for Google Ads
               </Button>
+
+              {isSuperAdmin() && (
+              <GoogleAdsPushButton
+                campaignData={{
+                  campaignName: generatedCampaign.campaign_name,
+                  dailyBudget: generatedCampaign.campaign_data?.structure?.dailyBudget || Math.round((generatedCampaign.monthly_budget || 1500) / 30),
+                  monthlyBudget: generatedCampaign.monthly_budget,
+                  adGroups: generatedCampaign.campaign_data?.adGroups || [],
+                  adCopy: generatedCampaign.campaign_data?.adCopy,
+                  url: generatedCampaign.website_url,
+                }}
+                campaignHistoryId={savedCampaignId || undefined}
+                variant="primary"
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              />
+              )}
 
               <Button
                 onClick={resetBuilder}

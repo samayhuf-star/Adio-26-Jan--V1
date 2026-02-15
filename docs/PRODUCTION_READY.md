@@ -167,8 +167,8 @@ Consider adding:
 
 ## 📞 Support
 
-- Support email: support@adiology.com
-- Contact: contact@adiology.com
+- Support email: support@adiology.io
+- Contact: contact@adiology.io
 - Address: Sheridan, Wyoming USA 82801
 
 ## 🎯 Next Steps

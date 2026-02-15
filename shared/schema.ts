@@ -10,7 +10,7 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   role: text("role").default("user"),
   subscriptionPlan: text("subscription_plan").default("free"),
-  subscriptionStatus: text("subscription_status").default("active"),
+  subscriptionStatus: text("subscription_status").default("inactive"),
   stripeCustomerId: text("stripe_customer_id").unique(),
   stripeSubscriptionId: text("stripe_subscription_id"),
   aiUsage: integer("ai_usage").default(0),
@@ -20,6 +20,8 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
   passwordHash: text("password_hash"),
   emailVerified: boolean("email_verified").default(false),
+  cardValidated: boolean("card_validated").default(false),
+  selectedPlan: text("selected_plan"),
 }, (table) => ({
   emailIdx: index("idx_users_email").on(table.email),
   roleIdx: index("idx_users_role").on(table.role),
@@ -118,7 +120,7 @@ export const emails = pgTable("emails", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: text("user_id"),
   recipientEmail: text("recipient_email").notNull(),
-  senderEmail: text("sender_email").default("noreply@adiology.com"),
+  senderEmail: text("sender_email").default("noreply@adiology.io"),
   subject: text("subject").notNull(),
   templateName: text("template_name"),
   templateData: jsonb("template_data"),
@@ -194,6 +196,9 @@ export const campaignHistory = pgTable("campaign_history", {
   status: text("status").notNull().default("completed"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  googleAdsId: text("google_ads_id"),
+  googleAdsPushStatus: text("google_ads_push_status"),
+  googleAdsPushedAt: timestamp("google_ads_pushed_at"),
 }, (table) => ({
   userIdIdx: index("idx_campaign_history_user_id").on(table.userId),
   typeIdx: index("idx_campaign_history_type").on(table.type),
@@ -817,6 +822,25 @@ export const clickGuardFraudEvents = pgTable("click_guard_fraud_events", {
   createdAtIdx: index("idx_cg_fraud_created_at").on(table.createdAt),
 }));
 
+export const clickGuardIpPushLog = pgTable("click_guard_ip_push_log", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: text("site_id").notNull(),
+  userId: text("user_id").notNull(),
+  googleAdsCustomerId: text("google_ads_customer_id").notNull(),
+  campaignIds: jsonb("campaign_ids").default([]),
+  ipsCount: integer("ips_count").default(0),
+  ipsPushed: jsonb("ips_pushed").default([]),
+  status: text("status").default("success"),
+  errorMessage: text("error_message"),
+  pushedAt: timestamp("pushed_at").defaultNow(),
+}, (table) => ({
+  siteIdIdx: index("idx_cg_ip_push_site_id").on(table.siteId),
+  userIdIdx: index("idx_cg_ip_push_user_id").on(table.userId),
+  pushedAtIdx: index("idx_cg_ip_push_pushed_at").on(table.pushedAt),
+}));
+
+export type ClickGuardIpPushLog = typeof clickGuardIpPushLog.$inferSelect;
+
 export const insertClickGuardDomainSchema = createInsertSchema(clickGuardDomains).omit({
   id: true,
   createdAt: true,
@@ -877,3 +901,27 @@ export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit
 
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+
+export const googleAdsTokens = pgTable("google_ads_tokens", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  accessToken: text("access_token"),
+  accessTokenExpiry: timestamp("access_token_expiry"),
+  customerId: text("customer_id"),
+  loginCustomerId: text("login_customer_id"),
+  connectedAt: timestamp("connected_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_google_ads_tokens_user_id").on(table.userId),
+  customerIdIdx: index("idx_google_ads_tokens_customer_id").on(table.customerId),
+}));
+
+export const insertGoogleAdsTokenSchema = createInsertSchema(googleAdsTokens).omit({
+  id: true,
+  connectedAt: true,
+  updatedAt: true,
+});
+
+export type GoogleAdsToken = typeof googleAdsTokens.$inferSelect;
+export type InsertGoogleAdsToken = z.infer<typeof insertGoogleAdsTokenSchema>;

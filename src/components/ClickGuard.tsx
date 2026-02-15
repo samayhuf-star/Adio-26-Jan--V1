@@ -201,6 +201,7 @@ const tabs = [
   { id: 'traffic', label: 'Live Traffic', icon: Activity },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'protection', label: 'Protection', icon: Lock },
+  { id: 'blockedips', label: 'Blocked IPs', icon: Ban },
 ] as const;
 
 type TabId = typeof tabs[number]['id'];
@@ -310,6 +311,19 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
   const [newWhitelistIP, setNewWhitelistIP] = useState('');
   const [newBlacklistIP, setNewBlacklistIP] = useState('');
   const [exportingIPs, setExportingIPs] = useState(false);
+
+  const [selectedIPs, setSelectedIPs] = useState<Set<string>>(new Set());
+  const [showGAdsPushDialog, setShowGAdsPushDialog] = useState(false);
+  const [gAdsConnected, setGAdsConnected] = useState(false);
+  const [gAdsAccounts, setGAdsAccounts] = useState<any[]>([]);
+  const [gAdsSelectedAccount, setGAdsSelectedAccount] = useState('');
+  const [gAdsLoginCustomerId, setGAdsLoginCustomerId] = useState('');
+  const [gAdsCampaigns, setGAdsCampaigns] = useState<any[]>([]);
+  const [gAdsSelectedCampaigns, setGAdsSelectedCampaigns] = useState<Set<string>>(new Set());
+  const [gAdsCampaignsLoading, setGAdsCampaignsLoading] = useState(false);
+  const [gAdsPushing, setGAdsPushing] = useState(false);
+  const [gAdsPushResult, setGAdsPushResult] = useState<any>(null);
+  const [lastIpPush, setLastIpPush] = useState<any>(null);
 
   const [error, setError] = useState<string | null>(null);
   const refreshInterval = useRef<NodeJS.Timeout | null>(null);
@@ -589,7 +603,7 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'protection' && selectedSiteId) {
+    if ((activeTab === 'protection' || activeTab === 'blockedips') && selectedSiteId) {
       fetchProtectionData(selectedSiteId);
     }
   }, [activeTab, selectedSiteId, fetchProtectionData]);
@@ -713,6 +727,162 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
       setBlockedIPs((prev) => prev.filter((b) => b.id !== id));
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const toggleIPSelection = (ipAddress: string) => {
+    setSelectedIPs(prev => {
+      const next = new Set(prev);
+      if (next.has(ipAddress)) next.delete(ipAddress);
+      else next.add(ipAddress);
+      return next;
+    });
+  };
+
+  const toggleAllIPs = () => {
+    if (selectedIPs.size === blockedIPs.length) {
+      setSelectedIPs(new Set());
+    } else {
+      setSelectedIPs(new Set(blockedIPs.map(b => b.ipAddress)));
+    }
+  };
+
+  const fetchGAdsStatus = async () => {
+    try {
+      const headers = await authHeaders();
+      const statusRes = await fetch('/api/google-ads/auth/status', { headers });
+      if (statusRes.ok) {
+        const data = await statusRes.json();
+        setGAdsConnected(data.connected);
+        if (data.connected) {
+          const accRes = await fetch('/api/google-ads/auth/accounts', { headers });
+          if (accRes.ok) {
+            const accData = await accRes.json();
+            setGAdsAccounts(accData.accounts || []);
+            if (accData.selectedCustomerId) {
+              setGAdsSelectedAccount(accData.selectedCustomerId);
+            }
+            if (accData.loginCustomerId) {
+              setGAdsLoginCustomerId(accData.loginCustomerId);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check Google Ads status:', err);
+    }
+  };
+
+  const fetchGAdsCampaigns = async (accountId: string) => {
+    if (!accountId) return;
+    setGAdsCampaignsLoading(true);
+    setGAdsCampaigns([]);
+    try {
+      const headers = await authHeaders();
+      const account = gAdsAccounts.find(a => a.id === accountId);
+      const loginCid = account?.managerId || gAdsLoginCustomerId || '';
+      const res = await fetch(`/api/google-ads/campaigns?customerId=${accountId}&loginCustomerId=${loginCid}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setGAdsCampaigns(data.campaigns || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch campaigns:', err);
+    } finally {
+      setGAdsCampaignsLoading(false);
+    }
+  };
+
+  const fetchLastIpPush = async (siteId: string) => {
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`/api/google-ads/ip-push-history/${siteId}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setLastIpPush(data.lastPush);
+      }
+    } catch (err) {
+      console.error('Failed to fetch IP push history:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedSiteId) {
+      fetchLastIpPush(selectedSiteId);
+    }
+  }, [selectedSiteId]);
+
+  const openGAdsPushDialog = async () => {
+    setShowGAdsPushDialog(true);
+    setGAdsPushResult(null);
+    setGAdsSelectedCampaigns(new Set());
+    await fetchGAdsStatus();
+  };
+
+  useEffect(() => {
+    if (activeTab === 'blockedips') {
+      fetchGAdsStatus();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (gAdsSelectedAccount) {
+      fetchGAdsCampaigns(gAdsSelectedAccount);
+    }
+  }, [gAdsSelectedAccount]);
+
+  const toggleCampaignSelection = (campaignId: string) => {
+    setGAdsSelectedCampaigns(prev => {
+      const next = new Set(prev);
+      if (next.has(campaignId)) next.delete(campaignId);
+      else next.add(campaignId);
+      return next;
+    });
+  };
+
+  const toggleAllCampaigns = () => {
+    if (gAdsSelectedCampaigns.size === gAdsCampaigns.length) {
+      setGAdsSelectedCampaigns(new Set());
+    } else {
+      setGAdsSelectedCampaigns(new Set(gAdsCampaigns.map(c => String(c.id))));
+    }
+  };
+
+  const handlePushIPsToGAds = async () => {
+    const ips = selectedIPs.size > 0 ? Array.from(selectedIPs) : blockedIPs.map(b => b.ipAddress);
+    const campaigns = Array.from(gAdsSelectedCampaigns);
+
+    if (ips.length === 0 || campaigns.length === 0) return;
+
+    setGAdsPushing(true);
+    setGAdsPushResult(null);
+    try {
+      const headers = await authHeaders();
+      const account = gAdsAccounts.find(a => a.id === gAdsSelectedAccount);
+      const loginCid = account?.managerId || gAdsLoginCustomerId || '';
+
+      const res = await fetch('/api/google-ads/push-ip-exclusions', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ipAddresses: ips,
+          campaignIds: campaigns,
+          customerId: gAdsSelectedAccount,
+          loginCustomerId: loginCid,
+          siteId: selectedSiteId,
+        }),
+      });
+
+      const data = await res.json();
+      setGAdsPushResult(data);
+
+      if (data.success || data.status === 'partial') {
+        fetchLastIpPush(selectedSiteId);
+      }
+    } catch (err: any) {
+      setGAdsPushResult({ success: false, error: err.message });
+    } finally {
+      setGAdsPushing(false);
     }
   };
 
@@ -2021,21 +2191,41 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                   </div>
 
                   <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <Lock className="w-4 h-4" /> Blocked IPs ({blockedIPs.length})
-                      </h3>
-                      {blockedIPs.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <button onClick={copyBlockedIPsToClipboard} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors">
-                            <Copy className="w-3.5 h-3.5" /> Copy All
-                          </button>
-                          <button onClick={() => handleExportBlockedIPs('googleads')} disabled={exportingIPs} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50">
-                            <Download className="w-3.5 h-3.5" /> Google Ads Format
-                          </button>
-                          <button onClick={() => handleExportBlockedIPs('csv')} disabled={exportingIPs} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50">
-                            <Download className="w-3.5 h-3.5" /> Export CSV
-                          </button>
+                    <div className="flex flex-col gap-3 mb-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                          <Lock className="w-4 h-4" /> Blocked IPs ({blockedIPs.length})
+                        </h3>
+                        {blockedIPs.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button onClick={copyBlockedIPsToClipboard} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium transition-colors">
+                              <Copy className="w-3.5 h-3.5" /> Copy All
+                            </button>
+                            <button onClick={() => handleExportBlockedIPs('csv')} disabled={exportingIPs} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50">
+                              <Download className="w-3.5 h-3.5" /> Export CSV
+                            </button>
+                            <button onClick={() => handleExportBlockedIPs('googleads')} disabled={exportingIPs} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50">
+                              <Download className="w-3.5 h-3.5" /> Download Google Ads Format
+                            </button>
+                            <button
+                              onClick={openGAdsPushDialog}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              {selectedIPs.size > 0 ? `Push ${selectedIPs.size} IPs to Google Ads` : 'Push to Google Ads'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {lastIpPush && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                          <CheckCircle className="w-3.5 h-3.5 text-orange-500" />
+                          <span>
+                            Last pushed to Google Ads: <strong className="text-slate-700">{new Date(lastIpPush.pushedAt).toLocaleDateString()} at {new Date(lastIpPush.pushedAt).toLocaleTimeString()}</strong>
+                            {' '}&middot; {lastIpPush.ipsCount} IP{lastIpPush.ipsCount !== 1 ? 's' : ''} to {(lastIpPush.campaignIds as any[])?.length || 0} campaign{(lastIpPush.campaignIds as any[])?.length !== 1 ? 's' : ''}
+                            {' '}&middot; Account: {lastIpPush.googleAdsCustomerId}
+                            {lastIpPush.status === 'partial' && <span className="text-amber-600 ml-1">(partial)</span>}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -2046,6 +2236,14 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-gray-200">
+                              <th className="py-2 px-2 w-8">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIPs.size === blockedIPs.length && blockedIPs.length > 0}
+                                  onChange={toggleAllIPs}
+                                  className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                />
+                              </th>
                               <th className="text-left py-2 px-3 text-slate-500 font-medium">IP Address</th>
                               <th className="text-left py-2 px-3 text-slate-500 font-medium">Reason</th>
                               <th className="text-left py-2 px-3 text-slate-500 font-medium">Type</th>
@@ -2055,7 +2253,15 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                           </thead>
                           <tbody>
                             {blockedIPs.map((b) => (
-                              <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50">
+                              <tr key={b.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selectedIPs.has(b.ipAddress) ? 'bg-orange-50/50' : ''}`}>
+                                <td className="py-2.5 px-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedIPs.has(b.ipAddress)}
+                                    onChange={() => toggleIPSelection(b.ipAddress)}
+                                    className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                  />
+                                </td>
                                 <td className="py-2.5 px-3 font-mono text-slate-600">{b.ipAddress}</td>
                                 <td className="py-2.5 px-3 text-slate-500">{b.reason}</td>
                                 <td className="py-2.5 px-3">
@@ -2076,6 +2282,178 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                       </div>
                     )}
                   </div>
+
+                  <AnimatePresence>
+                    {showGAdsPushDialog && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                        onClick={(e) => { if (e.target === e.currentTarget) setShowGAdsPushDialog(false); }}
+                      >
+                        <motion.div
+                          initial={{ scale: 0.95, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.95, opacity: 0 }}
+                          className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
+                        >
+                          <div className="p-6 border-b border-gray-100">
+                            <div className="flex items-center justify-between">
+                              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <ExternalLink className="w-5 h-5 text-orange-500" />
+                                Push Blocked IPs to Google Ads
+                              </h2>
+                              <button onClick={() => setShowGAdsPushDialog(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                                <X className="w-5 h-5 text-slate-400" />
+                              </button>
+                            </div>
+                            <p className="text-sm text-slate-500 mt-1">
+                              Add IP exclusions to your Google Ads campaigns to block fraudulent traffic.
+                            </p>
+                          </div>
+
+                          <div className="p-6 space-y-5">
+                            {!gAdsConnected ? (
+                              <div className="text-center py-6">
+                                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                  <Globe className="w-6 h-6 text-orange-500" />
+                                </div>
+                                <h3 className="font-semibold text-slate-700 mb-2">Connect Google Ads</h3>
+                                <p className="text-sm text-slate-500 mb-4">
+                                  You need to connect your Google Ads account first. Go to Campaign Builder and connect via the Push to Google Ads feature.
+                                </p>
+                              </div>
+                            ) : (
+                              <>
+                                <div>
+                                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Google Ads Account</label>
+                                  {gAdsAccounts.length > 0 ? (
+                                    <select
+                                      value={gAdsSelectedAccount}
+                                      onChange={(e) => setGAdsSelectedAccount(e.target.value)}
+                                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none"
+                                    >
+                                      <option value="">Select account</option>
+                                      {gAdsAccounts.filter(a => !a.isManager).map(a => (
+                                        <option key={a.id} value={a.id}>
+                                          {a.name} ({a.id})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <p className="text-sm text-slate-400">No accounts found</p>
+                                  )}
+                                </div>
+
+                                {gAdsSelectedAccount && (
+                                  <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <label className="text-xs font-semibold text-slate-600">Select Campaigns</label>
+                                      {gAdsCampaigns.length > 0 && (
+                                        <button
+                                          onClick={toggleAllCampaigns}
+                                          className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                                        >
+                                          {gAdsSelectedCampaigns.size === gAdsCampaigns.length ? 'Deselect All' : 'Select All'}
+                                        </button>
+                                      )}
+                                    </div>
+                                    {gAdsCampaignsLoading ? (
+                                      <div className="flex items-center gap-2 text-sm text-slate-400 py-4">
+                                        <Loader2 className="w-4 h-4 animate-spin" /> Loading campaigns...
+                                      </div>
+                                    ) : gAdsCampaigns.length === 0 ? (
+                                      <p className="text-sm text-slate-400 py-2">No active campaigns found in this account.</p>
+                                    ) : (
+                                      <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                                        {gAdsCampaigns.map(c => (
+                                          <label key={c.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              checked={gAdsSelectedCampaigns.has(String(c.id))}
+                                              onChange={() => toggleCampaignSelection(String(c.id))}
+                                              className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                              <span className="text-sm text-slate-700 truncate block">{c.name}</span>
+                                              <span className="text-xs text-slate-400">{c.status} &middot; {c.channelType}</span>
+                                            </div>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                  <h4 className="text-xs font-semibold text-slate-600 mb-1">IPs to push</h4>
+                                  <p className="text-sm text-slate-700">
+                                    {selectedIPs.size > 0
+                                      ? `${selectedIPs.size} selected IP${selectedIPs.size !== 1 ? 's' : ''}`
+                                      : `All ${blockedIPs.length} blocked IP${blockedIPs.length !== 1 ? 's' : ''}`
+                                    }
+                                  </p>
+                                  <div className="mt-2 max-h-20 overflow-y-auto text-xs font-mono text-slate-500 space-y-0.5">
+                                    {(selectedIPs.size > 0 ? Array.from(selectedIPs) : blockedIPs.map(b => b.ipAddress)).slice(0, 10).map(ip => (
+                                      <div key={ip}>{ip}</div>
+                                    ))}
+                                    {(selectedIPs.size > 0 ? selectedIPs.size : blockedIPs.length) > 10 && (
+                                      <div className="text-slate-400">...and {(selectedIPs.size > 0 ? selectedIPs.size : blockedIPs.length) - 10} more</div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {gAdsPushResult && (
+                                  <div className={`rounded-lg p-3 border text-sm ${gAdsPushResult.success ? 'bg-green-50 border-green-200 text-green-700' : gAdsPushResult.status === 'partial' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                                    {gAdsPushResult.success ? (
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span>Successfully pushed {gAdsPushResult.totalIpsPushed} IP{gAdsPushResult.totalIpsPushed !== 1 ? 's' : ''} to {gAdsPushResult.totalCampaigns} campaign{gAdsPushResult.totalCampaigns !== 1 ? 's' : ''}</span>
+                                      </div>
+                                    ) : gAdsPushResult.status === 'partial' ? (
+                                      <div className="flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4" />
+                                        <span>Partially pushed. Some IPs may already be excluded.</span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2">
+                                        <XCircle className="w-4 h-4" />
+                                        <span>{gAdsPushResult.error || 'Failed to push IP exclusions'}</span>
+                                      </div>
+                                    )}
+                                    {gAdsPushResult.pushedAt && (
+                                      <div className="text-xs mt-1 opacity-75">
+                                        Pushed at: {new Date(gAdsPushResult.pushedAt).toLocaleString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                <button
+                                  onClick={handlePushIPsToGAds}
+                                  disabled={gAdsPushing || gAdsSelectedCampaigns.size === 0 || blockedIPs.length === 0}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                                >
+                                  {gAdsPushing ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                      Pushing to Google Ads...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ExternalLink className="w-4 h-4" />
+                                      Push {selectedIPs.size > 0 ? selectedIPs.size : blockedIPs.length} IP{(selectedIPs.size > 0 ? selectedIPs.size : blockedIPs.length) !== 1 ? 's' : ''} to {gAdsSelectedCampaigns.size} Campaign{gAdsSelectedCampaigns.size !== 1 ? 's' : ''}
+                                    </>
+                                  )}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
                     <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
@@ -2101,6 +2479,388 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                         ))}
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'blockedips' && (
+            <motion.div
+              key="blockedips"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {!selectedSiteId ? (
+                <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
+                  <Ban className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <h3 className="font-semibold text-slate-700 mb-1">Select a Domain</h3>
+                  <p className="text-sm text-slate-400">Choose a domain above to view and manage blocked IPs.</p>
+                  <DomainSelector domains={domains} selectedId={selectedSiteId} onChange={setSelectedSiteId} />
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+                    <DomainSelector domains={domains} selectedId={selectedSiteId} onChange={setSelectedSiteId} />
+                    <div className="flex items-center gap-2 ml-auto">
+                      <button
+                        onClick={() => fetchProtectionData(selectedSiteId)}
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 hover:text-slate-800 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Refresh
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setExportingIPs(true);
+                          try {
+                            const headers = await authHeaders();
+                            const res = await fetch(`${API_BASE}/export-blocked-ips/${selectedSiteId}?format=csv`, { headers });
+                            if (res.ok) {
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `blocked-ips-${selectedSiteId}.csv`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }
+                          } catch (err: any) {
+                            setError(err.message);
+                          } finally {
+                            setExportingIPs(false);
+                          }
+                        }}
+                        disabled={exportingIPs || blockedIPs.length === 0}
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 hover:text-slate-800 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-indigo-500" />
+                      Add IP to Block List
+                    </h3>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        value={blockIP}
+                        onChange={(e) => setBlockIP(e.target.value)}
+                        placeholder="e.g. 192.168.1.100"
+                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={blockReason}
+                        onChange={(e) => setBlockReason(e.target.value)}
+                        placeholder="Reason (optional)"
+                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                      <button
+                        onClick={() => handleBlockIP()}
+                        disabled={blocking || !blockIP.trim()}
+                        className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all shadow-sm"
+                      >
+                        {blocking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        Block IP
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <div className="p-5 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                          <Ban className="w-4 h-4 text-red-500" />
+                          Blocked IPs
+                          {blockedIPs.length > 0 && (
+                            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">{blockedIPs.length}</span>
+                          )}
+                        </h3>
+                        {blockedIPs.length > 0 && (
+                          <button
+                            onClick={toggleAllIPs}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                          >
+                            {selectedIPs.size === blockedIPs.length ? 'Deselect All' : 'Select All'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {protectionLoading ? (
+                      <div className="flex items-center justify-center gap-2 py-12 text-slate-400">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="text-sm">Loading blocked IPs...</span>
+                      </div>
+                    ) : blockedIPs.length === 0 ? (
+                      <div className="py-12 text-center">
+                        <Shield className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+                        <p className="text-sm text-slate-400">No blocked IPs yet</p>
+                        <p className="text-xs text-slate-300 mt-1">Add IPs manually above or enable auto-blocking in the Protection tab.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-200">
+                              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase w-10">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIPs.size === blockedIPs.length && blockedIPs.length > 0}
+                                  onChange={toggleAllIPs}
+                                  className="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500"
+                                />
+                              </th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">IP Address</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Reason</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Type</th>
+                              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Blocked</th>
+                              <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {blockedIPs.map((ip) => (
+                              <tr key={ip.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedIPs.has(ip.ipAddress)}
+                                    onChange={() => toggleIPSelection(ip.ipAddress)}
+                                    className="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500"
+                                  />
+                                </td>
+                                <td className="px-4 py-3 font-mono text-slate-800 font-medium">{ip.ipAddress}</td>
+                                <td className="px-4 py-3 text-slate-600 max-w-[200px] truncate">{ip.reason || 'No reason'}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                                    ip.autoBlocked
+                                      ? 'bg-orange-50 text-orange-600 border-orange-200'
+                                      : 'bg-blue-50 text-blue-600 border-blue-200'
+                                  }`}>
+                                    {ip.autoBlocked ? 'Auto' : 'Manual'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-xs text-slate-400 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {new Date(ip.createdAt).toLocaleDateString()}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => handleUnblockIP(ip.id)}
+                                    className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                                    title="Unblock IP"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <div className="p-5 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                          <ExternalLink className="w-4 h-4 text-orange-500" />
+                          Sync to Google Ads
+                        </h3>
+                        {lastIpPush && (
+                          <span className="text-xs text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Last synced: {new Date(lastIpPush.pushedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Push blocked IPs as exclusions to your Google Ads campaigns to prevent fraudulent clicks.
+                      </p>
+                    </div>
+
+                    <div className="p-5 space-y-4">
+                      {!gAdsConnected ? (
+                        <div className="flex flex-col items-center text-center py-4">
+                          <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-3">
+                            <Globe className="w-6 h-6 text-orange-500" />
+                          </div>
+                          <h4 className="font-semibold text-slate-700 mb-1">Connect Google Ads</h4>
+                          <p className="text-xs text-slate-400 mb-4 max-w-xs">
+                            Link your Google Ads account to automatically sync blocked IPs as campaign exclusions.
+                          </p>
+                          <button
+                            onClick={async () => {
+                              await fetchGAdsStatus();
+                              if (!gAdsConnected) {
+                                try {
+                                  const headers = await authHeaders();
+                                  const res = await fetch('/api/google-ads/auth/url', { headers });
+                                  if (res.ok) {
+                                    const data = await res.json();
+                                    window.location.href = data.url;
+                                  }
+                                } catch (err) {
+                                  setError('Failed to connect to Google Ads');
+                                }
+                              }
+                            }}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold rounded-lg hover:from-orange-600 hover:to-amber-600 transition-all shadow-sm"
+                          >
+                            <Link className="w-4 h-4" />
+                            Connect Google Ads Account
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                              <span className="text-sm font-medium text-green-700">Google Ads Connected</span>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const headers = await authHeaders();
+                                  const res = await fetch('/api/google-ads/auth/disconnect', { method: 'POST', headers });
+                                  if (res.ok) {
+                                    setGAdsConnected(false);
+                                    setGAdsAccounts([]);
+                                    setGAdsSelectedAccount('');
+                                    setGAdsCampaigns([]);
+                                    setGAdsSelectedCampaigns(new Set());
+                                  }
+                                } catch (err) {
+                                  setError('Failed to disconnect Google Ads');
+                                }
+                              }}
+                              className="text-xs text-slate-400 hover:text-red-600 flex items-center gap-1 transition-colors"
+                              title="Disconnect Google Ads"
+                            >
+                              <X className="w-3 h-3" />
+                              Disconnect
+                            </button>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Google Ads Account</label>
+                            {gAdsAccounts.length > 0 ? (
+                              <select
+                                value={gAdsSelectedAccount}
+                                onChange={(e) => setGAdsSelectedAccount(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none"
+                              >
+                                <option value="">Select account</option>
+                                {gAdsAccounts.filter(a => !a.isManager).map(a => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.name} ({a.id.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')})
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <p className="text-sm text-slate-400">No accounts found. Your developer token may be in test mode.</p>
+                            )}
+                          </div>
+
+                          {gAdsSelectedAccount && (
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-semibold text-slate-600">Select Campaigns</label>
+                                {gAdsCampaigns.length > 0 && (
+                                  <button
+                                    onClick={toggleAllCampaigns}
+                                    className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                                  >
+                                    {gAdsSelectedCampaigns.size === gAdsCampaigns.length ? 'Deselect All' : 'Select All'}
+                                  </button>
+                                )}
+                              </div>
+                              {gAdsCampaignsLoading ? (
+                                <div className="flex items-center gap-2 text-sm text-slate-400 py-4">
+                                  <Loader2 className="w-4 h-4 animate-spin" /> Loading campaigns...
+                                </div>
+                              ) : gAdsCampaigns.length === 0 ? (
+                                <p className="text-sm text-slate-400 py-2">No active campaigns found in this account.</p>
+                              ) : (
+                                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                                  {gAdsCampaigns.map(c => (
+                                    <label key={c.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={gAdsSelectedCampaigns.has(String(c.id))}
+                                        onChange={() => toggleCampaignSelection(String(c.id))}
+                                        className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-sm text-slate-700 truncate block">{c.name}</span>
+                                        <span className="text-xs text-slate-400">{c.status} &middot; {c.channelType}</span>
+                                      </div>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <h4 className="text-xs font-semibold text-slate-600 mb-1">IPs to sync</h4>
+                            <p className="text-sm text-slate-700">
+                              {selectedIPs.size > 0
+                                ? `${selectedIPs.size} selected IP${selectedIPs.size !== 1 ? 's' : ''}`
+                                : `All ${blockedIPs.length} blocked IP${blockedIPs.length !== 1 ? 's' : ''}`
+                              }
+                            </p>
+                          </div>
+
+                          {gAdsPushResult && (
+                            <div className={`rounded-lg p-3 border text-sm ${gAdsPushResult.success ? 'bg-green-50 border-green-200 text-green-700' : gAdsPushResult.status === 'partial' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                              {gAdsPushResult.success ? (
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span>Successfully synced {gAdsPushResult.totalIpsPushed} IP{gAdsPushResult.totalIpsPushed !== 1 ? 's' : ''} to {gAdsPushResult.totalCampaigns} campaign{gAdsPushResult.totalCampaigns !== 1 ? 's' : ''}</span>
+                                </div>
+                              ) : gAdsPushResult.status === 'partial' ? (
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  <span>Partially synced. Some IPs may already be excluded.</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <XCircle className="w-4 h-4" />
+                                  <span>{gAdsPushResult.error || 'Failed to sync IP exclusions'}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <button
+                            onClick={handlePushIPsToGAds}
+                            disabled={gAdsPushing || gAdsSelectedCampaigns.size === 0 || blockedIPs.length === 0}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                          >
+                            {gAdsPushing ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Syncing to Google Ads...
+                              </>
+                            ) : (
+                              <>
+                                <ExternalLink className="w-4 h-4" />
+                                Sync {selectedIPs.size > 0 ? selectedIPs.size : blockedIPs.length} IP{(selectedIPs.size > 0 ? selectedIPs.size : blockedIPs.length) !== 1 ? 's' : ''} to {gAdsSelectedCampaigns.size} Campaign{gAdsSelectedCampaigns.size !== 1 ? 's' : ''}
+                              </>
+                            )}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

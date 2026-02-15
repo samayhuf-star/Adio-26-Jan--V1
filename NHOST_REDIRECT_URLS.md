@@ -19,10 +19,10 @@ Email verification links are going to `localhost:3000` instead of the production
 Add each URL one by one:
 
 ```
-https://www.adiology.online/verify-email
-https://www.adiology.online/reset-password
-https://adiology.online/verify-email
-https://adiology.online/reset-password
+https://www.adiology.io/verify-email
+https://www.adiology.io/reset-password
+https://adiology.io/verify-email
+https://adiology.io/reset-password
 ```
 
 **For Preview Deployments (optional but recommended):**
@@ -37,8 +37,8 @@ https://*.vercel.app/reset-password
 
 ## What This Fixes
 
-✅ Email verification links will now point to `https://www.adiology.online/verify-email`  
-✅ Password reset links will point to `https://www.adiology.online/reset-password`  
+✅ Email verification links will now point to `https://www.adiology.io/verify-email`  
+✅ Password reset links will point to `https://www.adiology.io/reset-password`  
 ✅ No more `localhost:3000` errors
 
 ## Important Notes
@@ -53,4 +53,4 @@ https://*.vercel.app/reset-password
 After adding the URLs:
 1. Try registering a new account
 2. Check the verification email
-3. The link should point to `https://www.adiology.online/verify-email` (not localhost)
+3. The link should point to `https://www.adiology.io/verify-email` (not localhost)

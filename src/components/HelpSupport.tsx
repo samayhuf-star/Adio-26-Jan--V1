@@ -54,7 +54,7 @@ const categories: DocCategory[] = [
                 tags: ['overview', 'intro'],
                 content: [
                     { type: 'text', body: 'Adiology is an all-in-one Google Ads campaign builder platform designed to automate and simplify the creation of professional advertising campaigns. Whether you are a solo marketer or an agency managing dozens of clients, Adiology gives you the tools to build, optimize, and export campaigns in minutes.' },
-                    { type: 'list', heading: 'What You Can Do', body: 'Build complete Google Ads campaigns with a 7-step guided wizard\nGenerate 410-710 AI-powered keywords per campaign\nCreate RSA, DKI, and Call-Only ads with policy-compliant guardrails\nExport campaigns in full 183-column Google Ads Editor CSV format\nResearch competitor ads through Google Ads Transparency\nGenerate AI-powered blog content for your marketing\nManage tasks and projects with a built-in task manager\nMonitor domains for expiry, SSL, and DNS changes\nProtect your ads from click fraud with Click Guard\nUse disposable temp emails for testing and privacy' },
+                    { type: 'list', heading: 'What You Can Do', body: 'Build complete Google Ads campaigns with a 7-step guided wizard\nGenerate 410-710 AI-powered keywords per campaign\nCreate RSA, DKI, and Call-Only ads with policy-compliant guardrails\nExport campaigns in full 183-column Google Ads Editor CSV format\nResearch competitor ads through Google Ads Transparency\nGenerate AI-powered blog content for your marketing\nMonitor domains for expiry, SSL, and DNS changes\nProtect your ads from click fraud with Click Guard\nUse disposable temp emails for testing and privacy' },
                     { type: 'tip', body: 'Start with the Campaign Builder to create your first campaign, then explore the other tools as you grow more comfortable with the platform.' }
                 ]
             },
@@ -232,28 +232,6 @@ const categories: DocCategory[] = [
         ]
     },
     {
-        id: 'task-manager',
-        title: 'Task Manager',
-        description: 'Manage projects and tasks with built-in project management',
-        icon: FolderKanban,
-        color: 'text-teal-600',
-        bgColor: 'bg-teal-50',
-        borderColor: 'border-teal-200',
-        articles: [
-            {
-                id: 'task-overview',
-                title: 'Projects & Tasks',
-                description: 'Create projects, manage tasks, and stay organized.',
-                tags: ['tasks', 'projects', 'kanban', 'management'],
-                content: [
-                    { type: 'text', body: 'The Task Manager is a full project management system built into Adiology. Create projects, add tasks, set priorities and due dates, and track progress with a Kanban board view.' },
-                    { type: 'list', heading: 'Features', body: 'Create and manage multiple projects with custom colors\nAdd tasks with titles, descriptions, priorities, and due dates\nMark tasks as complete and track progress\nKanban board view for visual task management\nAll Projects grid view for a high-level overview\nSidebar navigation for quick project switching\nEdit and delete projects with confirmation dialogs\nFull CRUD operations on both projects and tasks' },
-                    { type: 'steps', heading: 'Getting Started with Tasks', body: 'Open Task Manager from the sidebar\nCreate a new project and give it a name and color\nAdd tasks to your project with priorities (Low, Medium, High)\nSet due dates to keep yourself on track\nUse the Kanban board to drag tasks between status columns\nMark tasks complete as you finish them' }
-                ]
-            }
-        ]
-    },
-    {
         id: 'domain-monitoring',
         title: 'Domain Monitoring',
         description: 'Track domain expiry, SSL certificates, and DNS records',
@@ -317,7 +295,8 @@ const categories: DocCategory[] = [
                     { type: 'list', heading: 'How It Works', body: 'Add your domains and install a lightweight tracking script on your website\nThe script collects visitor data: browser, device, OS, mouse movements, click patterns\nVisitor fingerprinting identifies unique visitors across sessions\nBot detection engine scores each visit based on behavioral signals\nHeadless browser detection catches automated click bots\nIP geolocation and VPN/proxy detection flag suspicious traffic\nHigh-threat IPs are automatically blocked\nAll data is displayed in a real-time analytics dashboard' },
                     { type: 'text', heading: 'Threat Levels', body: 'Each visitor receives a threat score. Critical (70+): Very likely fraudulent, auto-blocked. High (50-69): Suspicious behavior, flagged for review. Medium (30-49): Some anomalies detected. Low (under 30): Normal traffic.' },
                     { type: 'steps', heading: 'Getting Started', body: 'Open Click Guard from the sidebar\nAdd your domain in the Domains tab\nCopy the tracking script snippet provided\nPaste the script into your website before the closing body tag\nThe domain verifies automatically when the first tracking ping arrives\nMonitor traffic in the Live Traffic and Analytics tabs\nManage blocked IPs and whitelists in the Protection tab' },
-                    { type: 'tip', body: 'Install the tracking script on all pages where you run Google Ads traffic. The script is lightweight and does not affect page load speed.' }
+                    { type: 'steps', heading: 'How to Export and Block IPs in Google Ads', body: 'Go to the Protection tab in Click Guard\nClick "Download Blocked IPs (CSV)" to get the latest list of fraudulent IPs\nSign in to your Google Ads account\nNavigate to Settings > Campaign Settings\nSelect the campaign you want to protect\nClick "Additional settings" and find "IP exclusions"\nPaste the IPs from your CSV file or upload the list to block these users from seeing your ads' },
+                    { type: 'tip', body: 'Install the tracking script on all pages where you run Google Ads traffic. The script is lightweight and does not affect page load speed. Update your IP exclusions in Google Ads weekly for maximum protection.' }
                 ]
             }
         ]
@@ -407,6 +386,21 @@ const faqItems = [
         category: 'Exporting'
     },
     {
+        question: 'How do I use Click Guard with Google Ads?',
+        answer: 'First, add your domain to Click Guard and install the tracking script on your site. Once traffic starts flowing, Click Guard will identify fraudulent IPs. Download these IPs from the Protection tab and add them to the "IP exclusions" section in your Google Ads campaign settings.',
+        category: 'Click Guard'
+    },
+    {
+        question: 'How do I download and upload blocked IPs?',
+        answer: 'In Click Guard > Protection, click the "Download CSV" button to get the list of high-threat IPs. In Google Ads, go to Campaign Settings > Additional Settings > IP Exclusions, and paste or upload the IP addresses from your CSV file.',
+        category: 'Click Guard'
+    },
+    {
+        question: 'Where do I find IP Exclusions in Google Ads?',
+        answer: 'Log in to Google Ads, select a campaign, go to "Settings", click "Additional settings" at the bottom, and you will see "IP exclusions". This is where you paste the fraudulent IPs identified by Click Guard.',
+        category: 'Click Guard'
+    },
+    {
         question: 'What is Click Guard?',
         answer: 'Click Guard is a click fraud protection system. It monitors your website traffic, detects bots and suspicious clicks using behavioral analysis, and automatically blocks fraudulent IP addresses. This helps protect your ad budget from invalid clicks.',
         category: 'Click Guard'
@@ -435,11 +429,6 @@ const faqItems = [
         question: 'Is my data secure?',
         answer: 'Yes. All data is encrypted in transit, stored securely, and never shared with third parties. Authentication is handled by Clerk with industry-standard security. You can delete your data at any time from your account settings.',
         category: 'Account & Billing'
-    },
-    {
-        question: 'How do I use the Task Manager?',
-        answer: 'Open Task Manager from the sidebar. Create a project, then add tasks with priorities and due dates. Use the Kanban board view to visually manage your workflow, or the grid view for a high-level overview of all projects.',
-        category: 'Task Manager'
     },
     {
         question: 'How do I join the Community?',

@@ -72,7 +72,7 @@ BEGIN
   RAISE NOTICE '   Email: %', user_email;
   RAISE NOTICE '   Role: superadmin';
   RAISE NOTICE '';
-  RAISE NOTICE 'You can now login at: https://www.adiology.online/superadmin';
+  RAISE NOTICE 'You can now login at: https://www.adiology.io/superadmin';
 END $$;
 
 -- Verify the user was created

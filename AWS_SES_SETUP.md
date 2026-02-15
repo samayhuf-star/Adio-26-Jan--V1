@@ -1,12 +1,12 @@
 # AWS SES Email Setup Guide for Adiology
 
-This guide will help you configure AWS SES (Simple Email Service) to replace Supabase email functionality with your verified domain `adiology.online`.
+This guide will help you configure AWS SES (Simple Email Service) to replace Supabase email functionality with your verified domain `adiology.io`.
 
 ## Prerequisites
 
 ✅ **Already Completed:**
 - AWS Account with SES access
-- Domain `adiology.online` verified in AWS SES
+- Domain `adiology.io` verified in AWS SES
 - Login credentials: `samay@adiology.io`
 
 ## 1. AWS SES Configuration
@@ -14,7 +14,7 @@ This guide will help you configure AWS SES (Simple Email Service) to replace Sup
 ### Verify Domain Status
 1. Go to [AWS SES Console](https://console.aws.amazon.com/ses/)
 2. Navigate to **Configuration** > **Verified identities**
-3. Confirm `adiology.online` shows as **Verified** ✅
+3. Confirm `adiology.io` shows as **Verified** ✅
 
 ### Check Sending Limits
 1. In SES Console, go to **Account dashboard**
@@ -28,7 +28,7 @@ If still in sandbox mode:
 1. Go to **Account dashboard** > **Request production access**
 2. Fill out the form with:
    - **Use case**: Transactional emails for SaaS application
-   - **Website URL**: https://adiology.online
+   - **Website URL**: https://adiology.io
    - **Description**: Authentication emails, password resets, notifications for Google Ads campaign builder
 
 ## 2. Create IAM User for Email Service
@@ -136,7 +136,7 @@ curl -X POST http://localhost:5001/send-verification \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
-    "verification_link": "https://adiology.online/verify?token=test123",
+    "verification_link": "https://adiology.io/verify?token=test123",
     "user_name": "Test User"
   }'
 ```
@@ -147,7 +147,7 @@ curl -X POST http://localhost:5001/send-password-reset \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
-    "reset_link": "https://adiology.online/reset?token=test123",
+    "reset_link": "https://adiology.io/reset?token=test123",
     "user_name": "Test User"
   }'
 ```
@@ -166,30 +166,30 @@ Update `VITE_EMAIL_API_URL` to point to your production email API:
 
 ```bash
 # Production
-VITE_EMAIL_API_URL=https://email-api.adiology.online
+VITE_EMAIL_API_URL=https://email-api.adiology.io
 ```
 
 ### DNS Configuration (Optional)
 Create a subdomain for your email API:
 1. Go to your DNS provider
-2. Add CNAME record: `email-api.adiology.online` → your-server-domain
+2. Add CNAME record: `email-api.adiology.io` → your-server-domain
 
 ## 7. Email Templates
 
 The service includes pre-built templates for:
 
 ### ✅ Verification Email
-- **From**: `Adiology <noreply@adiology.online>`
+- **From**: `Adiology <noreply@adiology.io>`
 - **Subject**: "Verify your Adiology account"
 - **Includes**: Branded HTML template with verification button
 
 ### ✅ Password Reset Email
-- **From**: `Adiology <noreply@adiology.online>`
+- **From**: `Adiology <noreply@adiology.io>`
 - **Subject**: "Reset your Adiology password"
 - **Includes**: Security warnings and reset button
 
 ### ✅ Welcome Email
-- **From**: `Adiology <noreply@adiology.online>`
+- **From**: `Adiology <noreply@adiology.io>`
 - **Subject**: "Welcome to Adiology - Let's build winning campaigns!"
 - **Includes**: Feature overview and getting started guide
 
@@ -236,7 +236,7 @@ Email API logs include:
 - Review CloudWatch logs for errors
 
 **"Email address not verified" error:**
-- Ensure sender domain `adiology.online` is verified
+- Ensure sender domain `adiology.io` is verified
 - Check if account is still in SES sandbox mode
 
 **API connection failed:**
@@ -252,7 +252,7 @@ Email API logs include:
 ## Summary
 
 ✅ **What's Configured:**
-- AWS SES with verified domain `adiology.online`
+- AWS SES with verified domain `adiology.io`
 - Python Flask email API with professional templates
 - Frontend integration with fallback handling
 - Comprehensive error handling and logging

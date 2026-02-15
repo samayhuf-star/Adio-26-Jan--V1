@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, X, Sparkles, Star, Crown, Clock, Users, Zap, Shield, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, X, Sparkles, Star, Crown, Clock, Users, Zap, Shield, Calendar, ChevronDown, ChevronUp, Infinity } from 'lucide-react';
 
 interface PricingPlan {
   name: string;
@@ -13,48 +13,49 @@ interface PricingPlan {
   popular: boolean;
   earlyBirdDiscount: number;
   tagline: string;
+  isLifetime?: boolean;
   limits: {
     campaigns: string;
     teamMembers: string;
   };
   features: {
     name: string;
-    basic: boolean | string;
-    pro: boolean | string;
-    lifetime: boolean | string;
+    starter: boolean | string;
+    professional: boolean | string;
+    agency: boolean | string;
   }[];
 }
 
 const featureList = [
-  { name: 'Campaigns/month', basic: '25', pro: '∞', lifetime: '∞' },
-  { name: 'Dashboard', basic: true, pro: true, lifetime: true },
-  { name: '1-Click Builder', basic: true, pro: true, lifetime: true },
-  { name: 'Builder 3.0', basic: true, pro: true, lifetime: true },
-  { name: 'Preset Campaigns', basic: true, pro: true, lifetime: true },
-  { name: 'Draft/Custom Campaigns', basic: 'Full', pro: 'Full', lifetime: 'Full' },
-  { name: 'Keyword Planner', basic: true, pro: true, lifetime: true },
-  { name: 'Keyword Mixer', basic: true, pro: true, lifetime: true },
-  { name: 'Negative Keywords', basic: true, pro: true, lifetime: true },
-  { name: 'Long-Tail Keywords', basic: true, pro: true, lifetime: true },
-  { name: 'Email Support', basic: true, pro: true, lifetime: true },
-  { name: 'Support Response Time', basic: '24-48h', pro: '12h', lifetime: '1h Priority' },
-  { name: 'Priority Queue', basic: false, pro: true, lifetime: true },
+  { name: 'Campaigns/month', starter: '25', professional: '∞', agency: '∞' },
+  { name: 'Dashboard', starter: true, professional: true, agency: true },
+  { name: '1-Click Builder', starter: true, professional: true, agency: true },
+  { name: 'Builder 3.0', starter: true, professional: true, agency: true },
+  { name: 'Preset Campaigns', starter: true, professional: true, agency: true },
+  { name: 'Draft/Custom Campaigns', starter: 'Full', professional: 'Full', agency: 'Full' },
+  { name: 'Keyword Planner', starter: true, professional: true, agency: true },
+  { name: 'Keyword Mixer', starter: true, professional: true, agency: true },
+  { name: 'Negative Keywords', starter: true, professional: true, agency: true },
+  { name: 'Long-Tail Keywords', starter: true, professional: true, agency: true },
+  { name: 'Email Support', starter: true, professional: true, agency: true },
+  { name: 'Support Response Time', starter: '24-48h', professional: '12h', agency: '1h Priority' },
+  { name: 'Priority Queue', starter: false, professional: true, agency: true },
 ];
 
 const comingSoonFeatures = [
-  { name: 'CSV Export', basic: true, pro: true, lifetime: true },
-  { name: 'Live Ad Preview', basic: true, pro: true, lifetime: true },
-  { name: 'Analytics', basic: 'Q2', pro: true, lifetime: true },
-  { name: 'Landing Page Builder', basic: 'Q2', pro: 'Q2', lifetime: 'Q2' },
-  { name: 'Call Tracking', basic: 'Q2', pro: 'Q2', lifetime: 'Q2' },
-  { name: 'API Access', basic: false, pro: 'Q2', lifetime: 'Q2' },
+  { name: 'CSV Export', starter: true, professional: true, agency: true },
+  { name: 'Live Ad Preview', starter: true, professional: true, agency: true },
+  { name: 'Analytics', starter: 'Q2', professional: true, agency: true },
+  { name: 'Landing Page Builder', starter: 'Q2', professional: 'Q2', agency: 'Q2' },
+  { name: 'Call Tracking', starter: 'Q2', professional: 'Q2', agency: 'Q2' },
+  { name: 'API Access', starter: false, professional: 'Q2', agency: 'Q2' },
 ];
 
 const plans: PricingPlan[] = [
   {
-    name: 'Basic',
-    monthlyPrice: 69.99,
-    yearlyPrice: 671.90,
+    name: 'Starter',
+    monthlyPrice: 49,
+    yearlyPrice: 470.40,
     icon: Zap,
     color: 'blue',
     gradientFrom: 'from-blue-500',
@@ -66,9 +67,9 @@ const plans: PricingPlan[] = [
     features: []
   },
   {
-    name: 'Pro',
-    monthlyPrice: 129.99,
-    yearlyPrice: 1247.90,
+    name: 'Professional',
+    monthlyPrice: 99,
+    yearlyPrice: 950.40,
     icon: Star,
     color: 'purple',
     gradientFrom: 'from-purple-500',
@@ -80,17 +81,32 @@ const plans: PricingPlan[] = [
     features: []
   },
   {
-    name: 'Lifetime',
-    monthlyPrice: 49.99,
-    yearlyPrice: 49.99,
+    name: 'Agency',
+    monthlyPrice: 149,
+    yearlyPrice: 1430.40,
     icon: Crown,
     color: 'amber',
     gradientFrom: 'from-amber-500',
     gradientTo: 'to-orange-500',
     popular: false,
     earlyBirdDiscount: 0,
-    tagline: 'One-time payment, forever access',
+    tagline: 'Built for agencies & teams',
     limits: { campaigns: '∞', teamMembers: '∞' },
+    features: []
+  },
+  {
+    name: 'Lifetime',
+    monthlyPrice: 149,
+    yearlyPrice: 149,
+    icon: Infinity,
+    color: 'emerald',
+    gradientFrom: 'from-emerald-500',
+    gradientTo: 'to-teal-500',
+    popular: false,
+    earlyBirdDiscount: 0,
+    tagline: 'Pay once, use forever',
+    isLifetime: true,
+    limits: { campaigns: '∞', teamMembers: '5' },
     features: []
   }
 ];
@@ -113,14 +129,12 @@ export function Pricing({ onSelectPlan }: PricingProps) {
   };
 
   const getPriceId = (planName: string) => {
-    const priceIds: Record<string, { monthly: string; yearly: string; oneTime?: string }> = {
-      'Basic': { monthly: 'price_1Sf7Z2AYv17Z995VOMSBG7GX', yearly: 'price_1Sf7Z2AYv17Z995VKDFZ119S' },
-      'Pro': { monthly: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN', yearly: 'price_1Sf7Z4AYv17Z995VKY5BkfdB' },
-      'Lifetime': { monthly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI', yearly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI', oneTime: 'price_1Sf7Z5AYv17Z995V7ROFNbzI' },
+    const priceIds: Record<string, { monthly: string; yearly: string }> = {
+      'Starter': { monthly: 'price_1Sf7Z2AYv17Z995VOMSBG7GX', yearly: 'price_1Sf7Z2AYv17Z995VKDFZ119S' },
+      'Professional': { monthly: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN', yearly: 'price_1Sf7Z4AYv17Z995VKY5BkfdB' },
+      'Agency': { monthly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI', yearly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI' },
+      'Lifetime': { monthly: 'price_lifetime', yearly: 'price_lifetime' },
     };
-    if (planName === 'Lifetime') {
-      return priceIds[planName]?.oneTime;
-    }
     return isYearly ? priceIds[planName]?.yearly : priceIds[planName]?.monthly;
   };
 
@@ -128,7 +142,7 @@ export function Pricing({ onSelectPlan }: PricingProps) {
     if (onSelectPlan) {
       const priceId = getPriceId(plan.name);
       const amount = getPrice(plan) * 100;
-      onSelectPlan(plan.name, priceId || '', amount, true);
+      onSelectPlan(plan.name, priceId || '', amount, !plan.isLifetime);
     }
   };
 
@@ -182,7 +196,7 @@ export function Pricing({ onSelectPlan }: PricingProps) {
         </motion.div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-12">
+        <div className="grid md:grid-cols-4 gap-6 lg:gap-8 mb-12">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             return (
@@ -192,7 +206,7 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className={`relative bg-white rounded-2xl border-2 ${plan.popular ? 'border-purple-500 shadow-2xl scale-[1.02]' : 'border-gray-200 shadow-lg'} overflow-hidden`}
+                className={`relative bg-white rounded-2xl border-2 ${plan.popular ? 'border-purple-500 shadow-2xl scale-[1.02]' : plan.isLifetime ? 'border-emerald-500 shadow-2xl ring-2 ring-emerald-200' : 'border-gray-200 shadow-lg'} overflow-hidden`}
               >
                 {/* Popular Badge */}
                 {plan.popular && (
@@ -201,7 +215,14 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                   </div>
                 )}
 
-                <div className={`p-6 ${plan.popular ? 'pt-12' : ''}`}>
+                {/* Lifetime Badge */}
+                {plan.isLifetime && (
+                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-center py-2 text-sm font-semibold">
+                    Limited Time Offer
+                  </div>
+                )}
+
+                <div className={`p-6 ${plan.popular || plan.isLifetime ? 'pt-12' : ''}`}>
                   {/* Plan Icon & Name */}
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.gradientFrom} ${plan.gradientTo} flex items-center justify-center`}>
@@ -214,22 +235,31 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                   </div>
 
                   {/* Early Bird Discount */}
+                  {!plan.isLifetime && (
                   <div className="mb-4">
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                       <Sparkles className="w-3 h-3" />
                       {plan.earlyBirdDiscount}% off - Early Adopter
                     </span>
                   </div>
+                  )}
 
                   {/* Price */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-bold text-gray-900">${getPrice(plan)}</span>
-                      <span className="text-gray-500">/{isYearly ? 'year' : 'month'}</span>
+                      <span className="text-4xl font-bold text-gray-900">${plan.isLifetime ? plan.monthlyPrice : getPrice(plan)}</span>
+                      <span className="text-gray-500">{plan.isLifetime ? 'one-time' : `/${isYearly ? 'year' : 'month'}`}</span>
                     </div>
+                    {!plan.isLifetime && (
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-gray-400 line-through text-sm">${getOriginalPrice(plan)}/{isYearly ? 'year' : 'month'}</span>
                     </div>
+                    )}
+                    {plan.isLifetime && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-emerald-600 text-sm font-medium">No recurring fees ever</span>
+                    </div>
+                    )}
                   </div>
 
                   {/* Quick Stats */}
@@ -244,16 +274,18 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                   <button
                     onClick={() => handleSelectPlan(plan)}
                     className={`w-full py-3 px-6 rounded-xl font-semibold transition-all ${
-                      plan.popular
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg hover:scale-[1.02]'
-                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                      plan.isLifetime
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-lg hover:scale-[1.02]'
+                        : plan.popular
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg hover:scale-[1.02]'
+                          : 'bg-gray-900 text-white hover:bg-gray-800'
                     }`}
                   >
-                    Start 7-Day Free Trial
+                    {plan.isLifetime ? 'Get Lifetime Access' : 'Start 7-Day Free Trial'}
                   </button>
 
                   <p className="text-center text-xs text-gray-500 mt-3">
-                    Cancel anytime
+                    {plan.isLifetime ? '14-day money-back guarantee' : 'Cancel anytime'}
                   </p>
                 </div>
               </motion.div>
@@ -277,29 +309,32 @@ export function Pricing({ onSelectPlan }: PricingProps) {
               <thead>
                 <tr className="bg-gray-50">
                   <th className="text-left py-4 px-6 font-medium text-gray-600">Feature</th>
-                  <th className="text-center py-4 px-6 font-medium text-gray-600">Basic</th>
-                  <th className="text-center py-4 px-6 font-medium text-purple-600 bg-purple-50">Pro</th>
-                  <th className="text-center py-4 px-6 font-medium text-gray-600">Lifetime</th>
+                  <th className="text-center py-4 px-6 font-medium text-gray-600">Starter</th>
+                  <th className="text-center py-4 px-6 font-medium text-purple-600 bg-purple-50">Professional</th>
+                  <th className="text-center py-4 px-6 font-medium text-gray-600">Agency</th>
+                  <th className="text-center py-4 px-6 font-medium text-emerald-600 bg-emerald-50">Lifetime</th>
                 </tr>
               </thead>
               <tbody>
                 {featureList.map((feature, index) => (
                   <tr key={feature.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="py-3 px-6 text-gray-700">{feature.name}</td>
-                    <td className="py-3 px-6 text-center">{renderFeatureValue(feature.basic)}</td>
-                    <td className="py-3 px-6 text-center bg-purple-50/50">{renderFeatureValue(feature.pro)}</td>
-                    <td className="py-3 px-6 text-center">{renderFeatureValue(feature.lifetime)}</td>
+                    <td className="py-3 px-6 text-center">{renderFeatureValue(feature.starter)}</td>
+                    <td className="py-3 px-6 text-center bg-purple-50/50">{renderFeatureValue(feature.professional)}</td>
+                    <td className="py-3 px-6 text-center">{renderFeatureValue(feature.agency)}</td>
+                    <td className="py-3 px-6 text-center bg-emerald-50/50">{renderFeatureValue(feature.professional)}</td>
                   </tr>
                 ))}
                 <tr className="bg-gray-100">
-                  <td colSpan={4} className="py-3 px-6 font-medium text-gray-600">Coming Soon</td>
+                  <td colSpan={5} className="py-3 px-6 font-medium text-gray-600">Coming Soon</td>
                 </tr>
                 {comingSoonFeatures.map((feature, index) => (
                   <tr key={feature.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="py-3 px-6 text-gray-700">{feature.name}</td>
-                    <td className="py-3 px-6 text-center">{renderFeatureValue(feature.basic)}</td>
-                    <td className="py-3 px-6 text-center bg-purple-50/50">{renderFeatureValue(feature.pro)}</td>
-                    <td className="py-3 px-6 text-center">{renderFeatureValue(feature.lifetime)}</td>
+                    <td className="py-3 px-6 text-center">{renderFeatureValue(feature.starter)}</td>
+                    <td className="py-3 px-6 text-center bg-purple-50/50">{renderFeatureValue(feature.professional)}</td>
+                    <td className="py-3 px-6 text-center">{renderFeatureValue(feature.agency)}</td>
+                    <td className="py-3 px-6 text-center bg-emerald-50/50">{renderFeatureValue(feature.professional)}</td>
                   </tr>
                 ))}
               </tbody>

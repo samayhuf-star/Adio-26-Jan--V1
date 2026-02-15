@@ -220,6 +220,63 @@ export class StripeService {
       return null;
     }
   }
+  async getActiveSubscriptionForCustomer(customerId: string) {
+    try {
+      const stripe = await getUncachableStripeClient();
+      if (!stripe) {
+        throw new Error('Stripe not configured');
+      }
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'active',
+        limit: 1,
+      });
+      if (subscriptions.data.length === 0) {
+        const trialingSubs = await stripe.subscriptions.list({
+          customer: customerId,
+          status: 'trialing',
+          limit: 1,
+        });
+        return trialingSubs.data[0] || null;
+      }
+      return subscriptions.data[0];
+    } catch (error) {
+      console.error('Error getting active subscription:', error);
+      return null;
+    }
+  }
+
+  async upgradeSubscription(customerId: string, newPriceId: string) {
+    const stripe = await getUncachableStripeClient();
+    if (!stripe) {
+      throw new Error('Stripe not configured');
+    }
+
+    const subscription = await this.getActiveSubscriptionForCustomer(customerId);
+    if (!subscription) {
+      throw new Error('NO_ACTIVE_SUBSCRIPTION');
+    }
+
+    const currentItemId = subscription.items.data[0]?.id;
+    if (!currentItemId) {
+      throw new Error('No subscription item found');
+    }
+
+    const currentPriceId = subscription.items.data[0]?.price?.id;
+    if (currentPriceId === newPriceId) {
+      throw new Error('You are already on this plan');
+    }
+
+    const updated = await stripe.subscriptions.update(subscription.id, {
+      items: [{
+        id: currentItemId,
+        price: newPriceId,
+      }],
+      proration_behavior: 'create_prorations',
+    });
+
+    return updated;
+  }
 }
 
 export const stripeService = new StripeService();

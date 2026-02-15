@@ -24,6 +24,8 @@ export interface User {
   created?: string;
   updated?: string;
   email_confirmed_at?: string | null;
+  card_validated?: boolean;
+  selected_plan?: string | null;
 }
 
 const API_BASE = '/api/account';
@@ -126,7 +128,9 @@ export async function signInWithEmail(
       avatar: result.user.avatar_url,
       role: result.user.role || 'user',
       subscription_plan: result.user.subscription_plan || 'free',
-      subscription_status: result.user.subscription_status || 'active',
+      subscription_status: result.user.subscription_status || 'inactive',
+      card_validated: result.user.card_validated || false,
+      selected_plan: result.user.selected_plan || null,
       email_confirmed_at: new Date().toISOString(),
       created: result.user.created_at,
     };
@@ -253,7 +257,9 @@ export async function getCurrentUserAsync(): Promise<User | null> {
         avatar: result.user.avatar_url,
         role: result.user.role || 'user',
         subscription_plan: result.user.subscription_plan || 'free',
-        subscription_status: result.user.subscription_status || 'active',
+        subscription_status: result.user.subscription_status || 'inactive',
+        card_validated: result.user.card_validated || false,
+        selected_plan: result.user.selected_plan || null,
         email_confirmed_at: result.user.email_verified ? new Date().toISOString() : null,
         created: result.user.created_at,
         updated: result.user.updated_at,
@@ -315,7 +321,7 @@ export async function createUserProfile(
     full_name: fullName,
     role: 'user',
     subscription_plan: 'free',
-    subscription_status: 'active',
+    subscription_status: 'inactive',
   };
 
   if (typeof window !== 'undefined') {

@@ -921,7 +921,7 @@ function ContactUs() {
   };
 
   const contactInfo = [
-    { icon: <Mail className="w-6 h-6" />, title: 'Email Us', content: 'support@adiology.online', link: 'mailto:support@adiology.online', color: 'from-blue-400 to-blue-600' },
+    { icon: <Mail className="w-6 h-6" />, title: 'Email Us', content: 'support@adiology.io', link: 'mailto:support@adiology.io', color: 'from-blue-400 to-blue-600' },
     { icon: <Phone className="w-6 h-6" />, title: 'Call Us', content: '+1 304-305-1702', link: 'tel:+13043051702', color: 'from-purple-400 to-purple-600' },
     { icon: <MapPin className="w-6 h-6" />, title: 'Visit Us', content: 'San Francisco, CA', link: '#', color: 'from-pink-400 to-pink-600' }
   ];

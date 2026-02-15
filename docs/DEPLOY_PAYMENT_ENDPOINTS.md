@@ -52,12 +52,12 @@ After deployment, add these secrets in Supabase Dashboard:
 ```
 STRIPE_SECRET_KEY=sk_test_xxx (or sk_live_xxx for production)
 STRIPE_WEBHOOK_SECRET=whsec_xxx (optional but recommended)
-FRONTEND_URL=https://adiology.online
+FRONTEND_URL=https://adiology.io
 SUPABASE_URL=https://kkdnnrwhzofttzajnwlj.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 GEMINI_API_KEY=your_gemini_key (if using AI features)
 SENDUNE_API_KEY=your_sendune_key (if using email)
-SENDUNE_FROM_EMAIL=noreply@adiology.online
+SENDUNE_FROM_EMAIL=noreply@adiology.io
 ```
 
 ## Verify Deployment

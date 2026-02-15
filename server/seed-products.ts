@@ -108,6 +108,27 @@ async function seedProducts() {
   console.log(`  Monthly: ${enterpriseMonthlyPrice.id} ($199/mo)`);
   console.log(`  Yearly: ${enterpriseYearlyPrice.id} ($1,990/yr)`);
 
+  const lifetimeProduct = await stripe.products.create({
+    name: 'Lifetime',
+    description: 'Pay once, use forever. Unlimited campaigns, all professional features, priority support, and lifetime updates.',
+    metadata: {
+      tier: 'lifetime',
+      campaigns: 'unlimited',
+      keywords: 'unlimited',
+      features: 'ai_keywords,priority_support,csv_export,web_templates,ad_extensions,lifetime_updates'
+    }
+  });
+
+  const lifetimePrice = await stripe.prices.create({
+    product: lifetimeProduct.id,
+    unit_amount: 14900,
+    currency: 'usd',
+    metadata: { billing: 'lifetime' }
+  });
+
+  console.log(`Created Lifetime: ${lifetimeProduct.id}`);
+  console.log(`  One-time: ${lifetimePrice.id} ($149)`);
+
   console.log('\nDone! Products and prices created successfully.');
 }
 

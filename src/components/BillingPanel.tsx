@@ -76,7 +76,8 @@ export const BillingPanel = () => {
                                 'free': 'Free',
                                 'starter': 'Monthly Limited',
                                 'professional': 'Monthly Unlimited',
-                                'enterprise': 'Lifetime Unlimited'
+                                'enterprise': 'Lifetime Unlimited',
+                                'lifetime': 'Lifetime'
                             };
                             
                             userPlan = planMap[userProfile.subscription_plan || 'free'] || userProfile.subscription_plan || "Free";
@@ -168,16 +169,15 @@ export const BillingPanel = () => {
         setProcessingPlan(planName);
         setProcessing(true);
         try {
-            let selectedPriceId = priceId;
+            let selectedPriceId = priceId || null;
             
-            if (!selectedPriceId || selectedPriceId.startsWith('price_basic') || selectedPriceId.startsWith('price_pro') || selectedPriceId === 'price_lifetime') {
+            if (!selectedPriceId) {
                 const { getPriceIdForPlan } = await import('../utils/stripe');
-                const fetchedPriceId = await getPriceIdForPlan(planName, 'month');
-                if (fetchedPriceId) {
-                    selectedPriceId = fetchedPriceId;
-                } else {
-                    throw new Error(`The ${planName} plan is not yet configured. Please contact support or try a different plan.`);
-                }
+                selectedPriceId = await getPriceIdForPlan(planName, 'month');
+            }
+            
+            if (!selectedPriceId) {
+                throw new Error(`The ${planName} plan is not yet configured in Stripe. Please contact support or try a different plan.`);
             }
             
             const { getCurrentAuthUser } = await import('../utils/auth');
@@ -202,6 +202,110 @@ export const BillingPanel = () => {
                     description: errorMessage,
                 });
             }
+            setProcessing(false);
+            setProcessingPlan(null);
+        }
+    };
+
+    const PLAN_TIERS = ['free', 'starter', 'professional', 'agency'];
+
+    const getCurrentPlanTier = (): string => {
+        const currentInfo = info || { plan: 'Free' };
+        const plan = (currentInfo?.plan || 'Free').toLowerCase();
+        const planMap: Record<string, string> = {
+            'free': 'free',
+            'monthly limited': 'starter',
+            'starter': 'starter',
+            'monthly unlimited': 'professional',
+            'professional': 'professional',
+            'pro': 'professional',
+            'agency': 'agency',
+            'enterprise': 'agency',
+            'lifetime unlimited': 'lifetime',
+            'lifetime': 'lifetime',
+        };
+        return planMap[plan] || 'free';
+    };
+
+    const getNextTier = (currentTier: string): string | null => {
+        if (currentTier === 'lifetime') return null;
+        const idx = PLAN_TIERS.indexOf(currentTier);
+        if (idx === -1 || idx >= PLAN_TIERS.length - 1) return null;
+        return PLAN_TIERS[idx + 1];
+    };
+
+    const getUpgradeButtonLabel = (): string => {
+        const tier = getCurrentPlanTier();
+        if (tier === 'lifetime' || tier === 'agency') return 'Top Plan';
+        const next = getNextTier(tier);
+        if (!next) return 'Upgrade Plan';
+        const nameMap: Record<string, string> = { starter: 'Starter', professional: 'Professional', agency: 'Agency' };
+        return `Upgrade to ${nameMap[next] || next}`;
+    };
+
+    const handleUpgradePlan = async () => {
+        const currentTier = getCurrentPlanTier();
+
+        if (currentTier === 'lifetime' || currentTier === 'agency') {
+            notifications.info('You are already on the highest plan.', { title: 'Top Plan' });
+            return;
+        }
+
+        if (currentTier === 'free') {
+            pricingSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        const nextTier = getNextTier(currentTier);
+        if (!nextTier) return;
+
+        const nameMap: Record<string, string> = { starter: 'Starter', professional: 'Professional', agency: 'Agency' };
+        const nextPlanName = nameMap[nextTier] || nextTier;
+
+        setProcessingPlan('upgrade');
+        setProcessing(true);
+        try {
+            const { getPriceIdForPlan } = await import('../utils/stripe');
+            const newPriceId = await getPriceIdForPlan(nextPlanName, 'month');
+            if (!newPriceId) {
+                throw new Error(`The ${nextPlanName} plan is not configured in Stripe.`);
+            }
+
+            const { getCurrentAuthUser, getSessionToken } = await import('../utils/auth');
+            const user = await getCurrentAuthUser();
+            if (!user?.email) throw new Error('You must be logged in.');
+
+            const token = await getSessionToken();
+            const response = await fetch('/api/stripe/upgrade-subscription', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ email: user.email, newPriceId, newPlanName: nextPlanName }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.error === 'NO_ACTIVE_SUBSCRIPTION') {
+                    await handleSubscribe(nextPlanName, newPriceId);
+                    return;
+                }
+                throw new Error(data.error || 'Upgrade failed');
+            }
+
+            notifications.success(`Successfully upgraded to ${nextPlanName}! Prorated charges have been applied.`, {
+                title: 'Plan Upgraded',
+            });
+
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (error) {
+            console.error('Upgrade error:', error);
+            notifications.error(error instanceof Error ? error.message : 'Upgrade failed. Please try again.', {
+                title: 'Upgrade Error',
+            });
+        } finally {
             setProcessing(false);
             setProcessingPlan(null);
         }
@@ -405,13 +509,11 @@ Generated on ${new Date().toLocaleDateString()}`;
                     <CardFooter className="bg-slate-50/50 border-t border-slate-100 p-4 sm:p-6 flex flex-col gap-3">
                         <div className="flex flex-col sm:flex-row gap-3 w-full">
                             <Button 
-                                onClick={() => {
-                                    pricingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }}
-                                disabled={processing} 
+                                onClick={handleUpgradePlan}
+                                disabled={processing || getCurrentPlanTier() === 'agency' || getCurrentPlanTier() === 'lifetime'} 
                                 className="bg-indigo-600 text-white hover:bg-indigo-700 flex-1 min-w-0"
                             >
-                                Upgrade Plan
+                                {processingPlan === 'upgrade' ? "Upgrading..." : getUpgradeButtonLabel()}
                             </Button>
                         </div>
                         {billingInfo.plan !== 'Free' && !billingInfo.plan.includes('Lifetime') && (
@@ -468,21 +570,21 @@ Generated on ${new Date().toLocaleDateString()}`;
                             <div className="flex flex-col sm:flex-row gap-2">
                                 <Button 
                                     variant="outline" 
-                                    className="flex-1 min-w-0"
+                                    className="flex-1 min-w-0 px-2 sm:px-4"
                                     onClick={handleAddCard}
                                     disabled={processing}
                                 >
-                                    <CreditCard className="w-4 h-4 mr-2 flex-shrink-0" />
-                                    <span className="truncate">{savedCards.length > 0 ? 'Manage Cards' : 'Add Payment Card'}</span>
+                                    <CreditCard className="w-4 h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                                    <span className="truncate text-xs sm:text-sm">{savedCards.length > 0 ? 'Manage Cards' : 'Add Card'}</span>
                                 </Button>
                                 {savedCards.length > 0 && (
                                     <Button 
                                         variant="outline" 
-                                        className="flex-1 min-w-0"
+                                        className="flex-1 min-w-0 px-2 sm:px-4"
                                         onClick={() => setShowPaymentDialog(true)}
                                         disabled={processing}
                                     >
-                                        <span className="truncate">Update Payment</span>
+                                        <span className="truncate text-xs sm:text-sm">Update</span>
                                     </Button>
                                 )}
                             </div>
@@ -494,7 +596,6 @@ Generated on ${new Date().toLocaleDateString()}`;
 
             {/* Upgrade Plan Section - Inline Pricing */}
             <div ref={pricingSectionRef}>
-            {!isPaid && (
                 <Card className="border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-xl">
                     <CardHeader>
                         <CardTitle className="text-xl sm:text-2xl">Choose Your Plan</CardTitle>
@@ -503,14 +604,14 @@ Generated on ${new Date().toLocaleDateString()}`;
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
-                            {/* Basic Plan */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                            {/* Starter Plan */}
                             <Card className="border-2 border-blue-200 hover:border-blue-300 transition-all hover:shadow-lg relative flex flex-col h-full bg-blue-50/30">
                                 <CardHeader className="flex-shrink-0 pb-3">
                                     <div className="text-center">
                                         <Badge className="mb-2 bg-blue-100 text-blue-700 border-blue-200 text-xs">Monthly</Badge>
-                                        <CardTitle className="text-lg mb-2">Basic</CardTitle>
-                                        <div className="text-2xl font-bold text-slate-800 mb-1">$69.99</div>
+                                        <CardTitle className="text-lg mb-2">Starter</CardTitle>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$49</div>
                                         <div className="text-xs text-slate-600">per month</div>
                                     </div>
                                 </CardHeader>
@@ -518,59 +619,51 @@ Generated on ${new Date().toLocaleDateString()}`;
                                     <ul className="space-y-2">
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">10 Active Campaigns</span>
+                                            <span className="text-xs text-slate-700">15 Active Campaigns</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">5 Draft Campaigns</span>
+                                            <span className="text-xs text-slate-700">1 Team Member</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">50 Campaign Exports/Month</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">500 Keyword Credits/Month</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">10 Landing Page Templates</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">3 Connected Domains</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">2 User Seats</span>
+                                            <span className="text-xs text-slate-700">Basic Analytics</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                                             <span className="text-xs text-slate-700">Email Support</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">Keyword Planner & Mixer</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">CSV Export</span>
                                         </li>
                                     </ul>
                                 </CardContent>
                                 <CardFooter className="flex-shrink-0 pt-3 pb-4">
                                     <Button 
                                         className="w-full bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-300 text-sm"
-                                        onClick={() => handleSubscribe("Basic", "price_basic_monthly")}
-                                        disabled={processing || billingInfo.plan === "Basic"}
+                                        onClick={() => handleSubscribe("Starter")}
+                                        disabled={processing || billingInfo.plan?.toLowerCase() === "starter"}
                                     >
-                                        {billingInfo.plan === "Basic" ? "Current Plan" : processingPlan === "Basic" ? "Processing..." : "Get Started"}
+                                        {billingInfo.plan?.toLowerCase() === "starter" ? "Current Plan" : processingPlan === "Starter" ? "Processing..." : "Get Started"}
                                     </Button>
                                 </CardFooter>
                             </Card>
 
-                            {/* Pro Plan - Popular */}
+                            {/* Professional Plan - Most Popular */}
                             <Card className="border-2 border-purple-400 hover:border-purple-500 transition-all hover:shadow-xl relative bg-gradient-to-br from-purple-50 to-indigo-50 flex flex-col h-full">
                                 <div className="absolute top-2 right-2 z-10">
-                                    <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-0 text-xs">Popular</Badge>
+                                    <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-0 text-xs">Most Popular</Badge>
                                 </div>
                                 <CardHeader className="flex-shrink-0 pb-3">
                                     <div className="text-center">
                                         <Badge className="mb-2 bg-purple-100 text-purple-700 border-purple-200 text-xs">Monthly</Badge>
-                                        <CardTitle className="text-lg mb-2">Pro</CardTitle>
-                                        <div className="text-2xl font-bold text-slate-800 mb-1">$129.99</div>
+                                        <CardTitle className="text-lg mb-2">Professional</CardTitle>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$99</div>
                                         <div className="text-xs text-slate-600">per month</div>
                                     </div>
                                 </CardHeader>
@@ -582,41 +675,142 @@ Generated on ${new Date().toLocaleDateString()}`;
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Draft Campaigns</span>
+                                            <span className="text-xs text-slate-700 font-semibold">3 Team Members</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Campaign Exports</span>
+                                            <span className="text-xs text-slate-700 font-semibold">Advanced Analytics</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">2,500 Keyword Credits/Month</span>
+                                            <span className="text-xs text-slate-700">Priority Support</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">50+ Landing Page Templates</span>
+                                            <span className="text-xs text-slate-700">Click Guard Protection</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">15 Connected Domains</span>
+                                            <span className="text-xs text-slate-700">Domain Monitoring</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">5 User Seats</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">Email Support & Tickets</span>
+                                            <span className="text-xs text-slate-700">All Keyword Tools</span>
                                         </li>
                                     </ul>
                                 </CardContent>
                                 <CardFooter className="flex-shrink-0 pt-3 pb-4">
                                     <Button 
                                         className="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white shadow-lg hover:shadow-xl text-sm"
-                                        onClick={() => handleSubscribe("Pro", "price_pro_monthly")}
-                                        disabled={processing || billingInfo.plan === "Pro"}
+                                        onClick={() => handleSubscribe("Professional")}
+                                        disabled={processing || billingInfo.plan?.toLowerCase() === "professional"}
                                     >
-                                        {billingInfo.plan === "Pro" ? "Current Plan" : processingPlan === "Pro" ? "Processing..." : "Get Started"}
+                                        {billingInfo.plan?.toLowerCase() === "professional" ? "Current Plan" : processingPlan === "Professional" ? "Processing..." : "Get Started"}
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+
+                            {/* Agency Plan */}
+                            <Card className="border-2 border-amber-300 hover:border-amber-400 transition-all hover:shadow-lg relative flex flex-col h-full bg-gradient-to-br from-amber-50 to-orange-50">
+                                <CardHeader className="flex-shrink-0 pb-3">
+                                    <div className="text-center">
+                                        <Badge className="mb-2 bg-amber-100 text-amber-700 border-amber-200 text-xs">Monthly</Badge>
+                                        <CardTitle className="text-lg mb-2">Agency</CardTitle>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$149</div>
+                                        <div className="text-xs text-slate-600">per month</div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="flex-1 pb-3">
+                                    <ul className="space-y-2">
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Campaigns</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Team Members</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700 font-semibold">Full Analytics Suite</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">Dedicated Support</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">All Features Included</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">White Label Reports</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">API Access</span>
+                                        </li>
+                                    </ul>
+                                </CardContent>
+                                <CardFooter className="flex-shrink-0 pt-3 pb-4">
+                                    <Button 
+                                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:shadow-xl text-sm"
+                                        onClick={() => handleSubscribe("Agency")}
+                                        disabled={processing || billingInfo.plan?.toLowerCase() === "agency"}
+                                    >
+                                        {billingInfo.plan?.toLowerCase() === "agency" ? "Current Plan" : processingPlan === "Agency" ? "Processing..." : "Get Started"}
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+
+                            {/* Lifetime Plan */}
+                            <Card className="border-2 border-emerald-400 hover:border-emerald-500 transition-all hover:shadow-xl relative bg-gradient-to-br from-emerald-50 to-teal-50 flex flex-col h-full">
+                                <div className="absolute top-2 right-2 z-10">
+                                    <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0 text-xs">Limited Time</Badge>
+                                </div>
+                                <CardHeader className="flex-shrink-0 pb-3">
+                                    <div className="text-center">
+                                        <Badge className="mb-2 bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">One-Time</Badge>
+                                        <CardTitle className="text-lg mb-2">Lifetime</CardTitle>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$149</div>
+                                        <div className="text-xs text-slate-600">one-time payment</div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="flex-1 pb-3">
+                                    <ul className="space-y-2">
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Campaigns</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700 font-semibold">All Pro Features</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">Priority Support</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">All Keyword Tools</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">No Recurring Fees</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">Lifetime Updates</span>
+                                        </li>
+                                    </ul>
+                                </CardContent>
+                                <CardFooter className="flex-shrink-0 pt-3 pb-4">
+                                    <Button 
+                                        className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg hover:shadow-xl text-sm"
+                                        onClick={() => handleSubscribe("Lifetime")}
+                                        disabled={processing || billingInfo.plan?.toLowerCase()?.includes("lifetime")}
+                                    >
+                                        {billingInfo.plan?.toLowerCase()?.includes("lifetime") ? "Current Plan" : processingPlan === "Lifetime" ? "Processing..." : "Get Lifetime Access"}
                                     </Button>
                                 </CardFooter>
                             </Card>
@@ -624,7 +818,6 @@ Generated on ${new Date().toLocaleDateString()}`;
                         </div>
                     </CardContent>
                 </Card>
-            )}
             </div>
 
             {/* Invoices */}

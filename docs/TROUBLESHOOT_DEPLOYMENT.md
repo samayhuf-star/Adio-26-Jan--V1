@@ -43,8 +43,8 @@ Getting "Project not specified" error when calling the Edge Function.
 Make sure these are set in **Project Settings → Edge Functions → Secrets**:
 ```
 SENDUNE_API_KEY=bc9029fb-e5a1-45b9-a94e-11ee31e23a68
-SENDUNE_FROM_EMAIL=noreply@adiology.online
-FRONTEND_URL=https://adiology.online
+SENDUNE_FROM_EMAIL=noreply@adiology.io
+FRONTEND_URL=https://adiology.io
 ```
 
 ### 6. Test After Deployment

@@ -5,150 +5,43 @@ Adiology is a Google Ads campaign builder platform designed to automate and stre
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
+- **Master Rule**: Never generate single-word keywords. Keywords must always be a minimum of 2 words. This applies to all modules and generation logic.
 
 # System Architecture
 
 ## Frontend
-- **Framework**: React 18 with TypeScript and Vite, utilizing Radix UI and Tailwind CSS.
-- **UI/UX**: Component-based architecture, multi-step wizards for Campaign and Ads Builders, client-side routing, React hooks, and context-based notification system. Features include a SuperAdmin Console and Real-time Expense Tracking. The design is mobile-responsive with collapsible sidebar navigation, responsive grids, compact navigation, and mobile-optimized data tables.
-- **Ads Search (Google Ads Transparency)**: Allows users to research competitor ads from Google Ads Transparency Center using a Playwright-based scraper and an asynchronous job queue system.
-- **Campaign Builder**: A 7-step wizard that guides users through URL input with AI analysis, structure selection (SKAG, STAG, Intent-Based, Alpha-Beta), keyword generation (410-710 keywords), ad generation, geo-targeting, and CSV generation.
-- **Saved Campaigns**: Displays campaign history with search and filter options, including Google Ads OAuth integration for direct, paused campaign pushes to Google Ads.
-- **Data Export**: Generates a master 183-column Google Ads Editor CSV format, ensuring full compatibility for various campaign, ad group, keyword, and extension data.
-- **AI Blog Generator**: Generates 2000+ word blog posts with 5+ content sections, case studies, tips, image prompts, optional code snippets and statistics. Configurable content type, tone, and target audience. Includes HTML export, markdown preview, and copy-to-clipboard.
-- **Task Manager**: Full task and project management system with CRUD operations for projects and tasks. Features include:
-  - Projects: Create, edit, delete with 2-step confirmation dialog
-  - Tasks: Create, edit, delete, mark complete, set priority and due dates
-  - Views: Sidebar navigation, All Projects grid view, Kanban board
-  - Visible Edit/Delete buttons on project cards and in sidebar (no hidden menus)
-  - Database: task_projects (user_id varchar, name, color, order) and tasks tables
-- **Community Integration**: Discourse-powered community forum with native React UI.
-  - Dashboard widget showing latest 3 topics with "Ask Community" button
-  - Full community page with topic cards, search, and category filtering
-  - SSO auto-login via Clerk authentication (HMAC-SHA256 signature verification)
-  - "Ask Community" modal for creating new discussion posts
-  - Mobile-responsive design with modern card-based UI
-  - API: /api/community endpoints for SSO, topics, posts, and categories
-  - Requires: DISCOURSE_URL, DISCOURSE_API_KEY, DISCOURSE_SSO_SECRET environment variables
-  - Setup guide: docs/discourse-setup.md
-- **Domain Monitoring**: Track domain expiry, SSL certificates, and DNS records.
-  - Real-time WHOIS lookups for domain registration and expiry dates
-  - SSL certificate checking with validity status and expiry alerts
-  - DNS record viewing (A, AAAA, MX, TXT, NS, CNAME records)
-  - Change detection with historical snapshots
-  - Email alert configuration for expiring domains/certificates
-  - Uses free Node.js packages: whois npm package, native tls/dns modules
-  - API: /api/domains endpoints for CRUD and lookups
-  - Database: monitored_domains, domain_snapshots, domain_alerts tables
-- **Proxy Mail**: Anonymous email generator for competitive research. Rebranded from "Temp Mail" with competitive intelligence positioning.
-  - Generate anonymous proxy email addresses via temp-mail.io API
-  - Subscribe to competitor newsletters, lead magnets, and webinar lists invisibly
-  - Real-time inbox with auto-refresh (10s polling) to track competitor email sequences
-  - Read full email content with HTML rendering in sandboxed iframe
-  - Copy email address, generate new address, delete email/messages
-  - TTL countdown timer showing email expiration
-  - Attachment listing for received emails
-  - Feature page at /features/proxy-mail with competitive intelligence angle
-  - API: /api/tempmail proxy routes (no database needed, API handles storage)
-  - Requires: TEMP_MAIL_API_KEY secret
-- **Click Guard**: Click fraud protection and traffic analytics module.
-  - Domain management: Add domains, generate tracking snippets, verify via first ping
-  - Tracking script (public/t.js): Lightweight JS snippet embedded on external websites
-    - Collects visitor data: browser, device, OS, screen size, language, timezone
-    - Behavioral analysis: mouse movements, click patterns, time on page
-    - Visitor fingerprinting from browser attributes
-    - Headless browser detection (webdriver, plugins, UA checks)
-    - Sends data to /api/clickguard/track via sendBeacon/fetch
-    - Auto-detects API base URL from script src for cross-origin support
-  - Bot detection engine with scoring: headless (+40), no mouse (+20), short visit (+10), suspicious UA (+30)
-  - Threat levels: critical (>=70), high (>=50), medium (>=30), low (<30)
-  - IP geolocation via ip-api.com (free tier, 45 req/min)
-  - VPN/Proxy detection via ip-api.com proxy field
-  - Auto-blocking of high-threat IPs
-  - Live traffic monitor: Real-time visitor feed with 10s auto-refresh
-  - Analytics dashboard: Traffic stats by device, browser, OS, country, ISP, threat level
-  - Bar charts: Simple div-based percentage bars (no chart library)
-  - Protection settings: Manual IP blocking, whitelist management, fraud event logs
-  - 4-tab UI: Domains, Live Traffic, Analytics, Protection
-  - API: /api/clickguard endpoints for domains, tracking, analytics, blocked IPs
-  - Database: click_guard_domains, click_guard_visitors, click_guard_blocked_ips, click_guard_fraud_events
-  - Served at /t.js route from server for cross-domain script loading
+- **Framework & UI/UX**: React 18 with TypeScript and Vite, Radix UI, and Tailwind CSS for a component-based, mobile-responsive design. Features include multi-step wizards, a SuperAdmin Console, Real-time Expense Tracking, and collapsible sidebar navigation.
+- **Campaign Management**: Includes a 7-step Campaign Builder with AI analysis for URL input, various structure selections (SKAG, STAG, Intent-Based, Alpha-Beta), keyword generation, ad generation, geo-targeting, and CSV generation. Saved Campaigns display history and integrate with Google Ads OAuth for direct campaign pushes via REST API v18.
+- **Content & Tools**: Ads Search (Google Ads Transparency) uses a Playwright-based scraper for competitor research. An AI Blog Generator creates long-form content with configurable parameters. A Task Manager provides full CRUD operations for projects and tasks with Kanban views.
+- **Monitoring & Utility**: Community Integration via Discourse with SSO for community forums. Domain Monitoring tracks domain expiry, SSL certificates, and DNS records with email alerts. Proxy Mail offers anonymous email generation for competitive intelligence.
+- **Click Guard**: Provides click fraud protection with a lightweight tracking script, bot detection engine, live traffic monitor, and analytics dashboard, including IP blocking capabilities.
 
 ## Backend
-- **Primary API**: Hono (Node.js/TypeScript) for all API endpoints, with optional FastAPI (Python) for legacy ad generation.
-- **URL Analyzer**: Cheerio-based HTML parser for website analysis, extracting key information and integrating with OpenAI for marketing insights.
-- **Background Processing**: Celery with Redis for asynchronous tasks like keyword generation and AI-powered keyword suggestions.
-- **Ads Transparency Scraper**: Playwright-based web scraper for competitor ad data, processed by an hourly cron job.
-- **Edge Functions**: Supabase Edge Functions (Deno/TypeScript) for health checks, payment processing, and campaign history storage.
-- **Fallback Systems**: Python-based ad generator, local storage, and a three-tier save system.
-- **Business Logic**: Automatic business type detection, intent classification, service/product-specific ad templates, and Dynamic Keyword Insertion (DKI).
-- **Ad Generation Guardrails**: Enforces Google Search Ads policies for RSA, DKI, Call-Only ads, uniqueness checks (Levenshtein distance), and ad strength calculation.
+- **Core API**: Hono (Node.js/TypeScript) for primary API endpoints, with optional FastAPI (Python) for legacy ad generation.
+- **Intelligence**: Cheerio-based URL Analyzer for website analysis and OpenAI integration for marketing insights.
+- **Asynchronous Processing**: Celery with Redis for background tasks like keyword generation and AI suggestions.
+- **Data Guardrails**: Ad generation enforces Google Search Ads policies for RSA, DKI, Call-Only ads, uniqueness, and ad strength calculation.
 
 ## Data Storage
-- **Primary Database**: Replit PostgreSQL (Neon-backed) for user data, campaign history, subscriptions, and billing. Managed via Drizzle ORM.
-- **Schema**: Defined in `shared/schema.ts` with Drizzle schema definitions. Use `npm run db:push` to sync schema changes.
-- **Caching**: KV store for edge functions, localStorage for offline data, and Redis for Celery.
-- **API Response Cache**: Centralized cache utility (`src/utils/apiCache.ts`) with:
-  - TTL-based expiration (default 5 minutes)
-  - Request deduplication to prevent duplicate API calls
-  - Stale-while-revalidate pattern for instant cached responses with background refresh
-  - Pattern-based cache invalidation
-- **Data Models**: Supports campaign structure, user profiles, and billing records.
-- **Website Analysis Storage**: localStorage-based analysis service for quick reuse of URL analysis results, with backend sync.
-
-## Performance Optimizations
-- **Visibility-based loading**: CommunityDashboardWidget uses Intersection Observer to defer API calls until visible
-- **API request deduplication**: Concurrent duplicate requests are merged into a single network call
-- **Stale-while-revalidate**: Cached data is shown immediately while fresh data is fetched in background
-- **Lazy loading**: Non-critical dashboard widgets are lazy-loaded with React.lazy()
-- **Dashboard optimization**: Single consolidated API endpoint (`/api/dashboard/all/:userId`) with duplicate prevention
+- **Database**: Replit PostgreSQL (Neon-backed) managed by Drizzle ORM for user data, campaign history, subscriptions, and billing.
+- **Caching**: KV store for edge functions, localStorage for offline data, and Redis for Celery. API Response Cache provides TTL-based expiration, request deduplication, and stale-while-revalidate patterns.
 
 ## Authentication & Authorization
-- **Authentication Provider**: Clerk with email/password, social login, and managed user sessions.
-- **Frontend Integration**: ClerkProvider wraps the app, useUser/useAuth/useClerk hooks for auth state.
-- **Backend Verification**: @clerk/backend.verifyToken() validates JWT tokens on API endpoints.
-- **Authorization**: Role-based access (users, paid users, super admins) with API key authentication, CORS, and Content Security Policy.
+- **Authentication**: Clerk handles email/password, social login, and user sessions.
+- **Authorization**: Role-based access control (users, paid users, super admins) with API key authentication, CORS, and Content Security Policy.
 
 ## Super Admin Panel
-- **Access**: Restricted via /admin path or admin.adiology.io subdomain. Two authentication systems:
-  1. **SuperAdminApp** (`/admin`): Standalone login with SUPERADMIN_USERNAME/SUPERADMIN_PASSWORD env vars. Uses `/api/superadmin/*` endpoints with session tokens.
-  2. **SuperAdminPanel** (sidebar): Accessible to users with `superadmin` role in DB or whitelisted emails. Uses `/api/admin/*` endpoints with Clerk auth + X-Admin-Email header.
-- **Admin Emails**: samayhuf@gmail.com, adiologyads@gmail.com, oadiology@gmail.com (whitelisted in frontend App.tsx and backend adminAuthService.ts).
-- **Authentication**: Server-side middleware protects API endpoints.
-- **Dashboard**: Real-time statistics including users, subscriptions, revenue, and errors.
-- **Management**: User management (block, edit roles), subscription & billing management (Stripe sync), database management (browse/edit records).
-- **System Logs**: View error, activity, and API logs.
-- **Email Management**: Comprehensive email marketing automation with Resend API integration.
-  - **Email Sequences**: 25-email marketing funnel across 5 customer journey stages:
-    - Lead Nurturing (5 emails): Day 0-10 from lead magnet download
-    - Onboarding (8 emails): Day 0-13 of trial period
-    - Conversion (6 emails): Day 1-35 post-trial expiry
-    - Churn Prevention (3 emails): Cancel events + 60 days after
-    - Advocacy (3 emails): 30-365 days for loyal customers
-  - **Email Flows UI**: Visual timeline interface showing all sequences with expandable sections
-  - **Email Logs**: Searchable/filterable table with delivery status, opens, clicks tracking
-  - **Templates**: server/email-sequence-templates.ts contains all 25 email templates with HTML content
-  - **Database Tables**: email_sequence_progress (user progress), email_logs (delivery tracking)
-- **Security & Firewall**: IP blocking and rate limiting configuration.
-- **Documentation Manager**: Create, edit, and publish help documentation with rich text, images, and video.
-- **Template Management**: Manage campaign templates, versions, and status.
-- **Website Management**: Track deployed websites and domains.
-- **Real-time Expenses**: Integrates with various APIs (Stripe, OpenAI, Supabase, Vercel, GitHub) to track and calculate actual usage costs from production data.
-- **AI Usage Tracking**: Monitors AI token consumption per user.
-- **Database Admin**: Full CRUD interface for all database tables using React-Admin.
+- **Access & Functionality**: Restricted access for managing users, subscriptions (Stripe sync), and the database. Includes real-time statistics, system logs, and comprehensive email marketing automation with Resend API for managing email sequences and tracking.
+- **Operational Management**: Features for security (IP blocking, rate limiting), documentation management, campaign template management, website tracking, AI usage tracking, and a full CRUD interface for database administration.
 
 # External Dependencies
 
 ## Third-Party Services
-- **Clerk**: Authentication provider with email/password and social login support.
-- **Supabase**: PostgreSQL database and Edge Functions (Note: Auth migrated to Clerk).
-- **Stripe**: Payment processing for subscriptions, integrated via `stripe-replit-sync`. Three pricing tiers:
-  - Starter: $29/month (5 campaigns, 1 team member, 25% early adopter discount)
-  - Professional: $59/month (50 campaigns, 3 team members, 45% early adopter discount, Most Popular)
-  - Agency: $129/month (unlimited campaigns/members, 65% early adopter discount)
-  - Features: 7-day free trial, 14-day money-back guarantee, 20% annual discount
-- **Redis**: Message broker and result backend for Celery tasks.
-- **OpenAI**: Natural language processing for the web template editor chatbot and AI Blog Generator (gpt-4o-mini).
+- **Clerk**: Authentication provider.
+- **Supabase**: PostgreSQL database and Edge Functions.
+- **Stripe**: Payment processing for subscriptions with four pricing tiers (Starter, Professional, Agency, Lifetime), supporting a 7-day free trial and 14-day money-back guarantee. The Lifetime plan ($149 one-time payment) uses Stripe's `mode: 'payment'` instead of subscriptions.
+- **Redis**: Message broker and result backend for Celery.
+- **OpenAI**: Natural language processing for AI features like the AI Blog Generator.
 - **ResellerClub**: Email/webmail management API.
 - **GitHub**: Version control and CI/CD.
 - **Vercel**: Deployment platform.
@@ -156,5 +49,5 @@ Preferred communication style: Simple, everyday language.
 
 ## APIs & Integrations
 - **Backend API (FastAPI)**: Provides endpoints for keyword generation, ad generation, and CSV export.
-- **Google Ads Editor CSV Format**: Adheres strictly to Google's schema for data export.
+- **Google Ads Editor CSV Format**: Strict adherence to Google's schema for data export.
 - **Real-time Expense Tracking**: Integrates with Stripe, OpenAI, Supabase, Vercel, SendGrid, GitHub, and Replit APIs.

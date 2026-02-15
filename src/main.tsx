@@ -3,8 +3,16 @@ import { Suspense } from "react";
 import App from "./App.tsx";
 import "./index.css";
 import "./styles/themes.css";
-import "./styles/dashboard-theme-modern.css";
-import "./styles/userPreferences.css";
+
+const loadDeferredStyles = () => {
+  import("./styles/dashboard-theme-modern.css");
+  import("./styles/userPreferences.css");
+};
+if (typeof requestIdleCallback === 'function') {
+  requestIdleCallback(loadDeferredStyles, { timeout: 2000 });
+} else {
+  setTimeout(loadDeferredStyles, 100);
+}
 import { Toaster } from "./components/ui/sonner";
 import { notifications } from "./utils/notifications";
 import { toast } from "sonner";

@@ -679,97 +679,65 @@ export const KeywordPlanner = ({ initialData }: { initialData?: any }) => {
                 throw new Error('No keywords returned from API');
             }
         } catch (error: any) {
-            console.log('[Keyword Planner] API unavailable - using local fallback');
+            console.log('[Keyword Planner] Primary API unavailable - trying Alphabet Soup...');
             setDataSource('local');
             
-            // FALLBACK: Generate 150-200 quality keywords locally
             const seeds = seedKeywords.split(',').map(s => s.trim()).filter(Boolean);
             const negatives = normalizedNegativeKeywords.map(n => n.toLowerCase());
             
-            const mockKeywords: string[] = [];
+            let uniqueKeywords: string[] = [];
             
-            const preModifiers = [
-                'best', 'top', 'professional', 'reliable', 'trusted', 'local',
-                'affordable', 'certified', 'licensed', '24/7', 'emergency', 'same day',
-                'quality', 'experienced', 'expert', 'rated', 'recommended', 'nearby',
-                'fast', 'quick', 'urgent', 'premier', 'leading', 'premium'
-            ];
-            
-            const postModifiers = [
-                'near me', 'services', 'company', 'companies', 'contractor',
-                'specialist', 'expert', 'repair', 'cost', 'prices', 'quote',
-                'in my area', 'nearby', 'local', 'professionals', 'providers',
-                'solutions', 'options', 'assistance', 'help', 'support', 'consultation'
-            ];
-            
-            const combinedModifiers = [
-                'best {seed} near me',
-                'top rated {seed} services',
-                'professional {seed} company',
-                'affordable {seed} near me',
-                'local {seed} services',
-                '24/7 {seed} services',
-                'emergency {seed} near me',
-                'trusted {seed} company',
-                'certified {seed} professionals',
-                'licensed {seed} contractor'
-            ];
-            
-            const questionTemplates = [
-                'how much does {seed} cost',
-                '{seed} pricing guide',
-                'where to get {seed}',
-                '{seed} options near me',
-                'compare {seed} prices',
-                'find {seed} near me',
-                'get {seed} quote',
-                '{seed} estimates',
-                'hire {seed} professional',
-                'book {seed} service'
-            ];
-            
-            seeds.forEach(seed => {
-                if (seed.split(' ').length >= 2 && !negatives.some(neg => seed.toLowerCase().includes(neg))) {
-                    mockKeywords.push(seed);
+            try {
+                const soupResponse = await fetch('/api/keywords/alphabet-soup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seedKeywords: seeds, maxKeywordsPerSeed: 100 }),
+                });
+                if (soupResponse.ok) {
+                    const soupData = await soupResponse.json();
+                    if (soupData.success && soupData.keywords?.length > 0) {
+                        uniqueKeywords = soupData.keywords
+                            .map((k: any) => (k.keyword || '').toLowerCase().trim())
+                            .filter((kw: string) => kw.length >= 3 && !negatives.some(neg => kw.includes(neg)));
+                        uniqueKeywords = [...new Set(uniqueKeywords)].slice(0, 200);
+                        console.log(`[Keyword Planner] Alphabet Soup returned ${uniqueKeywords.length} keywords`);
+                    }
                 }
-                
-                preModifiers.forEach(modifier => {
-                    const combined = `${modifier} ${seed}`;
-                    if (!negatives.some(neg => combined.toLowerCase().includes(neg))) {
-                        mockKeywords.push(combined);
-                    }
-                });
-                
-                postModifiers.forEach(modifier => {
-                    const combined = `${seed} ${modifier}`;
-                    if (!negatives.some(neg => combined.toLowerCase().includes(neg))) {
-                        mockKeywords.push(combined);
-                    }
-                });
-                
-                combinedModifiers.forEach(template => {
-                    const combined = template.replace('{seed}', seed);
-                    if (!negatives.some(neg => combined.toLowerCase().includes(neg))) {
-                        mockKeywords.push(combined);
-                    }
-                });
-                
-                questionTemplates.forEach(template => {
-                    const combined = template.replace('{seed}', seed);
-                    if (!negatives.some(neg => combined.toLowerCase().includes(neg))) {
-                        mockKeywords.push(combined);
-                    }
-                });
-            });
+            } catch (soupErr) {
+                console.warn('[Keyword Planner] Alphabet Soup also failed:', soupErr);
+            }
             
-            // Deduplicate keywords and cap at 150-200 base keywords
-            const uniqueKeywords = [...new Set(mockKeywords)].slice(0, 200);
+            if (uniqueKeywords.length === 0) {
+                const preModifiers = [
+                    'best', 'top', 'professional', 'reliable', 'trusted', 'local',
+                    'affordable', 'certified', 'licensed', '24/7', 'emergency', 'same day',
+                    'quality', 'experienced', 'expert', 'rated', 'recommended', 'nearby',
+                ];
+                const postModifiers = [
+                    'near me', 'services', 'company', 'cost', 'prices', 'quote',
+                    'in my area', 'nearby', 'local', 'professionals', 'providers',
+                ];
+                const mockKeywords: string[] = [];
+                seeds.forEach(seed => {
+                    if (seed.split(' ').length >= 2 && !negatives.some(neg => seed.toLowerCase().includes(neg))) {
+                        mockKeywords.push(seed);
+                    }
+                    preModifiers.forEach(mod => {
+                        const kw = `${mod} ${seed}`;
+                        if (!negatives.some(neg => kw.toLowerCase().includes(neg))) mockKeywords.push(kw);
+                    });
+                    postModifiers.forEach(mod => {
+                        const kw = `${seed} ${mod}`;
+                        if (!negatives.some(neg => kw.toLowerCase().includes(neg))) mockKeywords.push(kw);
+                    });
+                });
+                uniqueKeywords = [...new Set(mockKeywords)].slice(0, 200);
+            }
             
             const formattedKeywords: string[] = [];
             const enriched: EnrichedKeyword[] = [];
             
             uniqueKeywords.forEach((keyword: string) => {
-                // Generate mock metrics for local fallback
                 const mockMetrics = {
                     keyword,
                     avgMonthlySearches: Math.floor(Math.random() * 5000) + 500,

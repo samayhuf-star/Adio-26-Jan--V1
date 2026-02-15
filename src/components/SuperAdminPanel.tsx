@@ -21,7 +21,7 @@ interface SuperAdminPanelProps {
   onLogout: () => void;
 }
 
-type AdminSection = 'dashboard' | 'users' | 'subscriptions' | 'database' | 'logs' | 'emails' | 'security' | 'settings' | 'blogs';
+type AdminSection = 'dashboard' | 'users' | 'subscriptions' | 'database' | 'logs' | 'emails' | 'security' | 'settings' | 'blogs' | 'analytics';
 
 interface DashboardStats {
   totalUsers: number;
@@ -388,6 +388,7 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
     else if (activeSection === 'logs') fetchLogs();
     else if (activeSection === 'security') fetchSecurityRules();
     else if (activeSection === 'database') fetchTables();
+    else if (activeSection === 'analytics') { /* Analytics view handles itself */ }
     else if (activeSection === 'subscriptions') fetchBillingStats();
     else if (activeSection === 'emails') fetchEmailStats();
   }, [activeSection]);
@@ -405,8 +406,44 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
     { id: 'emails', label: 'Email Management', icon: Mail },
     { id: 'blogs', label: 'Blog Generator', icon: BookOpen },
     { id: 'security', label: 'Security & Firewall', icon: Shield },
+    { id: 'analytics', label: 'Live Analytics', icon: BarChart },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+
+  const renderAnalytics = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">Live Analytics</h2>
+        <Button 
+          onClick={() => window.open(`https://analytics.google.com/analytics/web/#/p${import.meta.env.VITE_GA_MEASUREMENT_ID?.replace('G-', '')}/realtime`, '_blank')} 
+          variant="outline" 
+          size="sm"
+        >
+          View Realtime
+        </Button>
+      </div>
+      
+      <div className="bg-slate-800 border border-white/10 rounded-xl p-8 text-center">
+        <div className="max-w-md mx-auto space-y-4">
+          <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <BarChart className="w-8 h-8 text-blue-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-white">Google Analytics Integrated</h3>
+          <p className="text-gray-400">
+            Real-time tracking is active across all pages. You can view detailed live traffic, user behavior, and conversion data directly in your Google Analytics dashboard.
+          </p>
+          <div className="pt-4">
+            <Button 
+              onClick={() => window.open('https://analytics.google.com/', '_blank')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+            >
+              Open Google Analytics
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderDashboard = () => (
     <div className="space-y-4 sm:space-y-6">
@@ -1140,9 +1177,12 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
     </div>
   );
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard': return renderDashboard();
+      case 'analytics': return renderAnalytics();
       case 'users': return renderUsers();
       case 'subscriptions': return renderSubscriptions();
       case 'database': return renderDatabase();
@@ -1154,8 +1194,6 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
       default: return renderDashboard();
     }
   };
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-900 flex">

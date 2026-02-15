@@ -3,6 +3,9 @@ import {
   LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare, Globe, Mail, Plus, Minus, Circle, Keyboard, BarChart3, Activity, Lock, Ticket, FileText
 } from 'lucide-react';
 
+import { initGA, trackPageView } from './lib/analytics';
+import { useAnalytics } from './hooks/use-analytics';
+
 declare global {
   interface Window {
     Helploom: (action: string, data?: { uniqueId?: string; name?: string; email?: string }) => void;
@@ -37,17 +40,18 @@ import { setAuthGetToken } from './utils/historyService';
 import { DataSourceIndicator } from './components/DataSourceIndicator';
 import { useDataSource } from './hooks/useDataSource';
 import { initStorageManager, clearStorageNow } from './utils/storageManager';
-import { Auth } from './components/Auth';
-import { Dashboard } from './components/Dashboard';
-import { EmailVerification } from './components/EmailVerification';
-import { ResetPassword } from './components/ResetPassword';
-import { PaymentPage } from './components/PaymentPage';
-import { PaymentSuccess } from './components/PaymentSuccess';
-import { PlanSelection } from './components/PlanSelection';
-import CreativeMinimalistHomepage from './components/CreativeMinimalistHomepage';
-import { MobileNavigation, MobileQuickActions } from './components/MobileNavigation';
-import { LiveLogs } from './components/LiveLogs';
-import { FloatingFeedback } from './components/FloatingFeedback';
+const Auth = lazy(() => import('./components/Auth').then(m => ({ default: m.Auth })));
+const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const EmailVerification = lazy(() => import('./components/EmailVerification').then(m => ({ default: m.EmailVerification })));
+const ResetPassword = lazy(() => import('./components/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const PaymentPage = lazy(() => import('./components/PaymentPage').then(m => ({ default: m.PaymentPage })));
+const PaymentSuccess = lazy(() => import('./components/PaymentSuccess').then(m => ({ default: m.PaymentSuccess })));
+const PlanSelection = lazy(() => import('./components/PlanSelection').then(m => ({ default: m.PlanSelection })));
+const SignupWizard = lazy(() => import('./components/SignupWizard').then(m => ({ default: m.SignupWizard })));
+const CreativeMinimalistHomepage = lazy(() => import('./components/CreativeMinimalistHomepage'));
+const MobileNavigation = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileNavigation })));
+const MobileQuickActions = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileQuickActions })));
+const FloatingFeedback = lazy(() => import('./components/FloatingFeedback').then(m => ({ default: m.FloatingFeedback })));
 
 // Lazy load heavy components for code splitting
 const CampaignBuilder3 = lazy(() => import('./components/CampaignBuilder3').then(m => ({ default: m.CampaignBuilder3 })));
@@ -98,7 +102,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -116,6 +120,19 @@ const AppContent = () => {
   const [viewMode, setViewMode] = useState<'admin' | 'user'>('admin');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Track page views when tab or view changes
+  useEffect(() => {
+    const location = appView === 'user' ? `/dashboard/${activeTab}` : `/${appView}`;
+    trackPageView(location);
+  }, [appView, activeTab]);
+
+  // Initialize Google Analytics when app loads
+  useEffect(() => {
+    if (import.meta.env.VITE_GA_MEASUREMENT_ID) {
+      initGA();
+    }
+  }, []);
   
   // Initialize auth state
   useEffect(() => {
@@ -638,8 +655,8 @@ const AppContent = () => {
   useEffect(() => {
     if (loading) return;
     
-    // Don't interfere with auth flow
-    if (appView === 'auth') return;
+    // Don't interfere with auth or signup-wizard flow
+    if (appView === 'auth' || appView === 'signup-wizard') return;
 
     const path = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
@@ -676,6 +693,15 @@ const AppContent = () => {
         } else {
           setAuthMode('sign-in');
           setView('auth');
+        }
+        return;
+      }
+
+      if (path === '/signup' || path.startsWith('/signup')) {
+        if (!user) {
+          setView('signup-wizard');
+        } else {
+          setView('user');
         }
         return;
       }
@@ -784,49 +810,32 @@ const AppContent = () => {
 
       // Show homepage on root path
       if (path === '/' || path === '') {
-        // If user is logged in, check subscription status
         if (user) {
-          const subscriptionPlan = user.subscription_plan || 'free';
-          const subscriptionStatus = user.subscription_status || 'active'; // Default to active instead of inactive
-          const isSuperAdmin = user.role === 'superadmin' || user.role === 'super_admin';
-          const hasPaidPlan = isSuperAdmin || (subscriptionPlan !== 'free' && subscriptionStatus === 'active');
-          
-          if (hasPaidPlan) {
+          const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+          const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
+          const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
+
+          if (hasAccess) {
             setView('user');
           } else {
-            // Only redirect to plan selection if user explicitly has inactive status
-            // This prevents new users from being immediately redirected
-            if (subscriptionStatus === 'inactive' && subscriptionPlan === 'free') {
-              window.history.replaceState({}, '', '/plan-selection');
-              setView('plan-selection');
-            } else {
-              // For new users or users with active free plans, show the user dashboard
-              setView('user');
-            }
+            setView('homepage');
           }
           return;
         }
-        // If no user, show homepage
         setView('homepage');
         return;
       }
 
       // For non-root paths, use normal logic
       if (user) {
-        const subscriptionPlan = user.subscription_plan || 'free';
-        const subscriptionStatus = user.subscription_status || 'active'; // Default to active instead of inactive
-        const isSuperAdmin = user.role === 'superadmin' || user.role === 'super_admin';
-        const hasPaidPlan = isSuperAdmin || (subscriptionPlan !== 'free' && subscriptionStatus === 'active');
-        
-        if (hasPaidPlan) {
+        const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+        const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
+        const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
+
+        if (hasAccess) {
           setView('user');
         } else {
-          // Only redirect to plan selection if explicitly inactive
-          if (subscriptionStatus === 'inactive') {
-            setView('plan-selection');
-          } else {
-            setView('user');
-          }
+          setView('homepage');
         }
       } else {
         setView('homepage');
@@ -844,7 +853,7 @@ const AppContent = () => {
   useEffect(() => {
     if (!loading && !user && (window.location.pathname === '/' || window.location.pathname === '')) {
       // Only set to homepage if we're not already on a specific route
-      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'promo' && appView !== 'accept-invite') {
+      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'signup-wizard' && appView !== 'promo' && appView !== 'accept-invite' && appView !== 'privacy-policy' && appView !== 'terms-of-service' && appView !== 'cookie-policy' && appView !== 'gdpr-compliance' && appView !== 'refund-policy' && appView !== 'contact' && appView !== 'help-center' && appView !== 'community-page' && appView !== 'feature-campaign-builder' && appView !== 'feature-click-guard' && appView !== 'feature-proxy-mail' && appView !== 'feature-domain-monitor') {
         setAppView('homepage');
       }
     }
@@ -865,6 +874,15 @@ const AppContent = () => {
         return;
       }
       
+      if (path === '/signup' || path.startsWith('/signup')) {
+        if (!user) {
+          setAppView('signup-wizard');
+        } else {
+          setAppView('user');
+        }
+        return;
+      }
+
       if (path === '/plan-selection' || path.startsWith('/plan-selection')) {
         if (user) {
           setAppView('plan-selection');
@@ -892,23 +910,16 @@ const AppContent = () => {
       }
       
       if (user) {
-        const subscriptionPlan = user.subscription_plan || 'free';
-        const subscriptionStatus = user.subscription_status || 'active'; // Default to active instead of inactive
-        const isSuperAdmin = user.role === 'superadmin' || user.role === 'super_admin';
-        const hasPaidPlan = isSuperAdmin || (subscriptionPlan !== 'free' && subscriptionStatus === 'active');
-        
-        if (hasPaidPlan) {
+        const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+        const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
+        const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
+
+        if (hasAccess) {
           setAppView('user');
         } else {
-          // Only redirect to plan selection if explicitly inactive
-          if (subscriptionStatus === 'inactive') {
-            setAppView('plan-selection');
-          } else {
-            setAppView('user');
-          }
+          setAppView('homepage');
         }
       } else {
-        // Show homepage for all paths when not logged in
         setAppView('homepage');
       }
     };
@@ -927,26 +938,44 @@ const AppContent = () => {
     }
   }, [user, appView, loading]);
 
+  // Gate: redirect to signup wizard if user hasn't validated their card
+  useEffect(() => {
+    if (user && appView === 'user' && !loading) {
+      const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+      const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
+      
+      const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
+
+      if (!hasAccess) {
+        window.history.pushState({}, '', '/signup');
+        setAppView('signup-wizard');
+      }
+    }
+  }, [user, appView, loading]);
+
 
   // Function to handle plan selection
   const handleSelectPlan = async (planName: string, priceId: string, amount: number, isSubscription: boolean) => {
-    // Check if user is logged in
+    sessionStorage.setItem('selectedPlan', JSON.stringify({ name: planName, priceId, amount, isSubscription }));
+    setSelectedPlan({ name: planName, priceId, amount, isSubscription });
+
     if (!user) {
-      // User not logged in, redirect to signup and store plan selection
-      setSelectedPlan({ name: planName, priceId, amount, isSubscription });
-      setAuthMode('sign-up'); // Enable signups for new users
-      setAppView('auth');
+      window.history.pushState({}, '', '/signup');
+      setAppView('signup-wizard');
       return;
     }
 
-    // User is logged in, create Stripe checkout session
+    if (!user.card_validated && user.subscription_status !== 'active' && user.subscription_status !== 'trialing') {
+      window.history.pushState({}, '', '/signup');
+      setAppView('signup-wizard');
+      return;
+    }
+
     try {
       const { createCheckoutSession } = await import('./utils/stripe');
       await createCheckoutSession(priceId, planName, user.id, user.email);
-      // User will be redirected to Stripe, so we don't need to change appView
     } catch (error) {
       console.error('Checkout error:', error);
-      // Fallback to payment page if Stripe fails
       setSelectedPlan({ name: planName, priceId, amount, isSubscription });
       window.history.pushState({}, '', `/payment?plan=${encodeURIComponent(planName)}&priceId=${encodeURIComponent(priceId)}&amount=${amount}&subscription=${isSubscription}`);
       setAppView('payment');
@@ -1309,8 +1338,12 @@ const AppContent = () => {
             setAppView('homepage');
           }}
           onGetStarted={() => {
-            setAuthMode('sign-up');
-            setAppView('auth');
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
           }}
         />
       </Suspense>
@@ -1326,8 +1359,12 @@ const AppContent = () => {
             setAppView('homepage');
           }}
           onGetStarted={() => {
-            setAuthMode('sign-up');
-            setAppView('auth');
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
           }}
         />
       </Suspense>
@@ -1343,8 +1380,12 @@ const AppContent = () => {
             setAppView('homepage');
           }}
           onGetStarted={() => {
-            setAuthMode('sign-up');
-            setAppView('auth');
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
           }}
         />
       </Suspense>
@@ -1360,8 +1401,12 @@ const AppContent = () => {
             setAppView('homepage');
           }}
           onGetStarted={() => {
-            setAuthMode('sign-up');
-            setAppView('auth');
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
           }}
         />
       </Suspense>
@@ -1401,6 +1446,52 @@ const AppContent = () => {
       />
     );
   }
+
+  if (appView === 'signup-wizard') {
+    const storedPlan = sessionStorage.getItem('selectedPlan');
+    const plan = storedPlan ? JSON.parse(storedPlan) : selectedPlan;
+
+    return (
+      <SignupWizard
+        selectedPlan={{
+          name: plan?.name || 'Pro',
+          priceId: plan?.priceId || '',
+          amount: plan?.amount || 9900,
+          isSubscription: plan?.isSubscription !== false,
+          period: plan?.period || 'monthly',
+        }}
+        onSuccess={async () => {
+          sessionStorage.removeItem('selectedPlan');
+          try {
+            const profile = await getCurrentUserProfile();
+            if (profile) {
+              setUser(profile);
+              setCurrentUserId(profile.id);
+            }
+          } catch (err) {
+            console.error('Error refreshing profile after signup wizard:', err);
+          }
+          setLoading(false);
+          window.history.pushState({}, '', '/');
+          setAppView('user');
+          setActiveTab('dashboard');
+        }}
+        onBackToHome={() => {
+          window.history.pushState({}, '', '/');
+          setAppView('homepage');
+        }}
+        onBackToPricing={() => {
+          window.history.pushState({}, '', '/');
+          setAppView('homepage');
+        }}
+        onLogin={() => {
+          setAuthMode('sign-in');
+          setAppView('auth');
+        }}
+      />
+    );
+  }
+
 
   if (appView === 'accept-invite') {
     return (
@@ -1493,8 +1584,12 @@ const AppContent = () => {
     return (
       <CreativeMinimalistHomepage
         onGetStarted={() => {
-          setAuthMode('sign-up');
-          setAppView('auth');
+          if (!selectedPlan) {
+            sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+            setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+          }
+          window.history.pushState({}, '', '/signup');
+          setAppView('signup-wizard');
         }}
         onLogin={() => {
           setAuthMode('sign-in');
@@ -1503,11 +1598,18 @@ const AppContent = () => {
         onSelectPlan={handleSelectPlan}
         onNavigateToPolicy={(policy: string) => {
           setPreviousView('homepage');
-          if (policy === 'privacy') setAppView('privacy-policy');
-          else if (policy === 'terms') setAppView('terms-of-service');
-          else if (policy === 'cookie') setAppView('cookie-policy');
-          else if (policy === 'gdpr') setAppView('gdpr-compliance');
-          else if (policy === 'refund') setAppView('refund-policy');
+          const policyMap: Record<string, { path: string; view: AppView }> = {
+            'privacy': { path: '/privacy-policy', view: 'privacy-policy' },
+            'terms': { path: '/terms-of-service', view: 'terms-of-service' },
+            'cookie': { path: '/cookie-policy', view: 'cookie-policy' },
+            'gdpr': { path: '/gdpr-compliance', view: 'gdpr-compliance' },
+            'refund': { path: '/refund-policy', view: 'refund-policy' },
+          };
+          const target = policyMap[policy];
+          if (target) {
+            window.history.pushState({}, '', target.path);
+            setAppView(target.view);
+          }
         }}
         onNavigateToPage={(page: string) => {
           setPreviousView('homepage');
@@ -1549,7 +1651,6 @@ const AppContent = () => {
       <Auth
         initialMode={authMode === 'sign-in' ? 'login' : 'signup'}
         onLoginSuccess={async () => {
-          // First, get user state before navigating
           try {
             const currentUser = getCurrentUser();
             if (currentUser) {
@@ -1557,22 +1658,32 @@ const AppContent = () => {
               if (profile) {
                 setUser(profile);
                 setCurrentUserId(currentUser.id);
+
+                const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+                const isAdmin = profile.role === 'superadmin' || profile.role === 'super_admin' || adminEmails.includes(profile.email?.toLowerCase() || '');
+
+                // Check if user has access: admin OR card validated OR active subscription status
+                const hasAccess = isAdmin || profile.card_validated || profile.subscription_status === 'active' || profile.subscription_status === 'trialing';
+
+                if (!hasAccess) {
+                  setLoading(false);
+                  window.history.pushState({}, '', '/signup');
+                  setAppView('signup-wizard');
+                  return;
+                }
               }
             }
-            // Set loading to false and navigate after user state is set
             setLoading(false);
             setAppView('user');
             setActiveTab('dashboard');
           } catch (err) {
             console.error('Error setting user state after login:', err);
-            // Still navigate even if profile fetch fails
             setLoading(false);
             setAppView('user');
             setActiveTab('dashboard');
           }
         }}
         onSignupSuccess={async (email, name) => {
-          // After signup, navigate to dashboard if user is authenticated
           try {
             const currentUser = getCurrentUser();
             if (currentUser || isAuthenticated()) {
@@ -1582,12 +1693,16 @@ const AppContent = () => {
                 setCurrentUserId(profile.id);
               }
               setLoading(false);
-              setAppView('user');
-              setActiveTab('dashboard');
+              window.history.pushState({}, '', '/signup');
+              setAppView('signup-wizard');
             }
           } catch (err) {
             console.error('Error after signup:', err);
           }
+        }}
+        onSignupRedirect={() => {
+          window.history.pushState({}, '', '/signup');
+          setAppView('signup-wizard');
         }}
         onBackToHome={() => {
           setAppView('homepage');
@@ -1596,8 +1711,7 @@ const AppContent = () => {
     );
   }
 
-  // Protect user view - require authentication
-  // If user isn't signed in on user view, redirect to auth
+  // Protect user view - require authentication and card validation
   if (appView === 'user') {
     if (loading) {
       return (
@@ -1652,6 +1766,10 @@ const AppContent = () => {
                 setAppView('user');
                 setActiveTab('dashboard');
               }
+            }}
+            onSignupRedirect={() => {
+              window.history.pushState({}, '', '/signup');
+              setAppView('signup-wizard');
             }}
             onBackToHome={() => {
               setAppView('homepage');
@@ -1774,12 +1892,6 @@ const AppContent = () => {
         return (
           <Suspense fallback={<ComponentLoader />}>
             <SettingsPanel defaultTab="billing" />
-          </Suspense>
-        );
-      case 'task-manager':
-        return (
-          <Suspense fallback={<ComponentLoader />}>
-            <TaskManager />
           </Suspense>
         );
       case 'click-guard':
@@ -2600,7 +2712,7 @@ const AppContent = () => {
         </header>
 
         {/* Enhanced Content Area */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-20 md:pb-6 w-full min-w-0 relative bg-gradient-to-br from-slate-50/50 via-indigo-50/30 to-purple-50/50">
+        <main id="main-content" className="flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-20 md:pb-6 w-full min-w-0 relative bg-gradient-to-br from-slate-50/50 via-indigo-50/30 to-purple-50/50">
           <div className="slide-in-up">
             {renderContent()}
           </div>
@@ -2618,8 +2730,6 @@ const AppContent = () => {
         />
       </div>
 
-      {/* Live Logs Panel */}
-      <LiveLogs />
       <FloatingFeedback />
     </div>
   );

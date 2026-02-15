@@ -125,7 +125,7 @@ export const HelpCenterPage: React.FC<HelpCenterPageProps> = ({ onBack }) => {
     },
     {
       question: 'How do I contact support?',
-      answer: 'You can reach our support team via email at support@adiology.online, by phone at +1 304-305-1702, or through the in-app support chat. We typically respond within 24 hours on business days.'
+      answer: 'You can reach our support team via email at support@adiology.io, by phone at +1 304-305-1702, or through the in-app support chat. We typically respond within 24 hours on business days.'
     },
     {
       question: 'Is my data secure?',
@@ -277,19 +277,14 @@ export const HelpCenterPage: React.FC<HelpCenterPageProps> = ({ onBack }) => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a
-                  href="/contact"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.history.pushState({}, '', '/contact');
-                    window.dispatchEvent(new PopStateEvent('popstate'));
-                  }}
+                  href="mailto:support@adiology.io"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 rounded-xl font-medium hover:bg-gray-100 transition-colors"
                 >
                   <MessageSquare className="w-5 h-5" />
                   Contact Support
                 </a>
                 <a
-                  href="mailto:support@adiology.online"
+                  href="mailto:support@adiology.io"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-colors border border-white/20"
                 >
                   <Mail className="w-5 h-5" />

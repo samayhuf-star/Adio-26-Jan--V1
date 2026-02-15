@@ -3,7 +3,7 @@ import { getCurrentUserProfile, getCurrentUser, isAuthenticated, getSessionToken
 import { 
   User, Mail, Lock, Globe,
   Save, Eye, EyeOff,
-  CheckCircle2, AlertCircle, Loader,
+  CheckCircle2, AlertCircle, Loader, Unlink,
   PanelLeftClose, PanelLeftOpen,
   Settings, CreditCard, Shield, ChevronRight
 } from 'lucide-react';
@@ -119,6 +119,27 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
     }
   };
   
+  const disconnectGoogleAds = async () => {
+    try {
+      const token = await getToken();
+      const response = await fetch('/api/google-ads/auth/disconnect', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setGoogleAdsConnected(false);
+        setGoogleAdsAccounts([]);
+        setDefaultAccount('');
+        notifications.success('Google Ads disconnected');
+      } else {
+        notifications.error('Failed to disconnect Google Ads');
+      }
+    } catch (err) {
+      console.error('Failed to disconnect:', err);
+      notifications.error('Failed to disconnect Google Ads');
+    }
+  };
+
   const saveDefaultAccount = async () => {
     try {
       const userProfile = await getCurrentUserProfile();
@@ -552,10 +573,20 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
                         Checking...
                       </span>
                     ) : googleAdsConnected ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                        Connected
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                          Connected
+                        </span>
+                        <button
+                          onClick={disconnectGoogleAds}
+                          className="text-xs text-slate-400 hover:text-red-600 flex items-center gap-1 transition-colors"
+                          title="Disconnect Google Ads"
+                        >
+                          <Unlink className="w-3 h-3" />
+                          Disconnect
+                        </button>
+                      </div>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
                         Disconnected

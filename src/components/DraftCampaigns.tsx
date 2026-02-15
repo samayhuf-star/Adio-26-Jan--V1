@@ -36,6 +36,9 @@ import {
 } from './ui/alert-dialog';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
+import { GoogleAdsPushButton } from './GoogleAdsPushButton';
+import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
+import { isSuperAdmin } from '../utils/auth';
 
 interface DraftCampaignsProps {
   onLoadCampaign: (data: any, mode: 'resume' | 'edit') => void;
@@ -252,6 +255,8 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
         </Button>
       </div>
 
+      {isSuperAdmin() && <GoogleAdsConnectionStatus variant="full" />}
+
       {/* Shell View - Two Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Card 1: Campaign Stats */}
@@ -449,6 +454,25 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
                             >
                               <Download className="w-4 h-4" />
                             </Button>
+                            {isSuperAdmin() && (
+                            <GoogleAdsPushButton
+                              campaignData={{
+                                campaignName: campaign.name,
+                                adGroups: campaign.data?.adGroups || campaign.data?.campaign_data?.adGroups || [],
+                                ads: campaign.data?.ads,
+                                adCopy: campaign.data?.campaign_data?.adCopy || campaign.data?.adCopy,
+                                url: campaign.data?.url || campaign.data?.website_url || '',
+                                dailyBudget: campaign.data?.dailyBudget || campaign.data?.campaign_data?.structure?.dailyBudget,
+                                monthlyBudget: campaign.data?.monthly_budget,
+                                locations: campaign.data?.locations,
+                                targetCountry: campaign.data?.targetCountry,
+                              }}
+                              campaignHistoryId={campaign.id}
+                              googleAdsId={campaign.data?.googleAdsId}
+                              googleAdsPushStatus={campaign.data?.googleAdsPushStatus}
+                              variant="icon"
+                            />
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"

@@ -72,7 +72,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
               full_name: result.user.full_name || '',
               role: result.user.role || 'user',
               subscription_plan: result.user.subscription_plan || 'free',
-              subscription_status: result.user.subscription_status || 'active',
+              subscription_status: result.user.subscription_status || 'inactive',
               email_confirmed_at: new Date().toISOString(),
             }));
           }

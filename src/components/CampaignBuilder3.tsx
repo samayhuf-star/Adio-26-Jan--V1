@@ -7,7 +7,7 @@ import {
   Target, Zap, Layers, TrendingUp, Building, ShoppingBag,
   Phone, Mail, Calendar, Clock, Eye, FileSpreadsheet, Copy,
   MessageSquare, Gift, Image as ImageIcon, DollarSign, MapPin as MapPinIcon,
-  Star, RefreshCw, Smartphone, Megaphone, FolderOpen,
+  Star, RefreshCw, Smartphone, Megaphone, FolderOpen, Film,
   Type, ChevronUp, ChevronDown, ChevronRight, MousePointerClick, Briefcase, Info
 } from 'lucide-react';
 import JSZip from 'jszip';
@@ -61,6 +61,9 @@ import { generateDKIAdWithAI } from '../utils/dkiAdGeneratorAI';
 import { CampaignFlowDiagram } from './CampaignFlowDiagram';
 import { TerminalCard, TerminalLine } from './ui/terminal-card';
 import { ApiStatusIndicator } from './ApiStatusIndicator';
+import { GoogleAdsPushButton } from './GoogleAdsPushButton';
+import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
+import { isSuperAdmin } from '../utils/auth';
 
 // Campaign Structure Types (14 structures)
 const CAMPAIGN_STRUCTURES = [
@@ -967,7 +970,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         minKeywords: 410
       });
       
-      const localKeywords = generateKeywordsUtil({
+      const localKeywords = await generateKeywordsUtil({
         seedKeywords: seedKeywordsString,
         negativeKeywords: negativeKeywordsString,
         vertical: campaignData.vertical || 'Services',
@@ -1591,6 +1594,8 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           keywords: [kw], // Keep full keyword object with matchType
         });
       });
+      // Ensure the counts match
+      console.log(`[SKAG] Generated ${groups.length} ad groups for ${keywords.length} keywords`);
     } else if (structureType === 'stag') {
       // STAG: Group by theme (first word)
       const themeGroups: { [key: string]: any[] } = {};
@@ -1610,7 +1615,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         groups.push({
           id: `ag-${idx + 1}`,
           name: `Ad Group ${idx + 1} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}`,
-          keywords: kwList.slice(0, 20), // Keep full keyword objects
+          keywords: kwList,
         });
       });
     } else {
@@ -2331,12 +2336,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
               newExtension.phoneNumber = extensionData.phone;
               newExtension.countryCode = 'US';
               newExtension.text = newExtension.phone;
-            } else if (extensionType === 'message' && extensionData.message) {
-              newExtension.message = extensionData.message;
-              newExtension.text = newExtension.message;
-            } else if (extensionType === 'promotion' && extensionData.promotionText) {
-              newExtension.promotionText = extensionData.promotionText;
-              newExtension.text = newExtension.promotionText;
             } else {
               newExtension.text = extensionData.text || 'Extension';
             }
@@ -2430,13 +2429,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             newExtension.countryCode = 'US';
             newExtension.text = newExtension.phone;
             break;
-          case 'price':
-            newExtension.priceQualifier = 'From';
-            newExtension.price = '$99';
-            newExtension.currency = 'USD';
-            newExtension.unit = 'per service';
-            newExtension.text = `${newExtension.priceQualifier} ${newExtension.price} ${newExtension.unit}`;
-            break;
           default:
             newExtension.text = newExtension.label;
         }
@@ -2475,24 +2467,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       const callouts: any[] = [];
       const snippets: any[] = [];
       const callExtensions: any[] = [];
-      const priceExtensions: any[] = [];
-      const promotions: any[] = [];
-      const appExtensions: any[] = [];
-      const messageExtensions: any[] = [];
-      const leadFormExtensions: any[] = [];
-      const imageAssets: any[] = [];
-      const businessInfo: any = {};
       const seenSitelinks = new Set<string>();
       const seenCallouts = new Set<string>();
       const seenSnippets = new Set<string>();
       let hasCallExt = false;
-      let hasPriceExt = false;
-      let hasPromotionExt = false;
-      let hasAppExt = false;
-      let hasMessageExt = false;
-      let hasLeadFormExt = false;
-      let hasImageExt = false;
-      let hasLocationExt = false;
       
       (campaignData.ads || []).forEach((ad: any) => {
         if (ad.extensions && Array.isArray(ad.extensions)) {
@@ -2560,70 +2538,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                 countryCode: ext.countryCode || 'US',
                 status: 'Enabled'
               });
-            } else if (ext.type === 'price' && !hasPriceExt) {
-              hasPriceExt = true;
-              const priceValue = ext.price || '$99';
-              const unit = ext.unit || 'per service';
-              priceExtensions.push({
-                type: ext.priceType || 'Services',
-                priceQualifier: ext.priceQualifier || 'From',
-                items: ext.items || [
-                  { header: campaignData.campaignName || 'Service', price: priceValue, finalUrl: campaignData.url || '' }
-                ]
-              });
-            } else if (ext.type === 'promotion' && !hasPromotionExt) {
-              hasPromotionExt = true;
-              promotions.push({
-                target: ext.promotionText || ext.target || campaignData.campaignName || 'Special Offer',
-                discountModifier: ext.discountModifier || '',
-                percentOff: ext.percentOff || '',
-                moneyAmountOff: ext.moneyAmountOff || '',
-                finalUrl: campaignData.url || '',
-                status: 'Enabled'
-              });
-            } else if (ext.type === 'app' && !hasAppExt) {
-              hasAppExt = true;
-              appExtensions.push({
-                appId: ext.appId || '',
-                appStore: ext.appStore || 'Google Play',
-                linkText: ext.linkText || ext.text || 'Download App',
-                finalUrl: ext.finalUrl || campaignData.url || '',
-                status: 'Enabled'
-              });
-            } else if (ext.type === 'message' && !hasMessageExt) {
-              hasMessageExt = true;
-              messageExtensions.push({
-                text: ext.message || ext.text || 'Send us a message',
-                businessName: ext.businessName || campaignData.campaignName || 'Business',
-                countryCode: ext.countryCode || 'US',
-                phoneNumber: ext.phoneNumber || ext.phone || '',
-                finalUrl: campaignData.url || '',
-                status: 'Enabled'
-              });
-            } else if (ext.type === 'leadform' && !hasLeadFormExt) {
-              hasLeadFormExt = true;
-              leadFormExtensions.push({
-                id: ext.formId || '',
-                name: ext.formName || ext.text || 'Lead Form',
-                headline: ext.headline || 'Get in Touch',
-                description: ext.description || 'Fill out this form',
-                callToAction: ext.callToAction || 'Submit',
-                status: 'Enabled'
-              });
-            } else if (ext.type === 'image' && !hasImageExt) {
-              hasImageExt = true;
-              imageAssets.push({
-                name: ext.imageName || ext.text || 'Campaign Image',
-                url: ext.imageUrl || ext.url || '',
-                status: 'Enabled'
-              });
-            } else if (ext.type === 'location' && !hasLocationExt) {
-              hasLocationExt = true;
-              businessInfo.name = ext.businessName || campaignData.campaignName || '';
-              businessInfo.address = ext.address || '';
-              businessInfo.phone = ext.phone || '';
-              businessInfo.website = campaignData.url || '';
-              businessInfo.location = ext.location || '';
             }
           });
         }
@@ -2634,13 +2548,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         callouts: callouts.length, 
         snippets: snippets.length,
         callExtensions: callExtensions.length,
-        priceExtensions: priceExtensions.length,
-        promotions: promotions.length,
-        appExtensions: appExtensions.length,
-        messageExtensions: messageExtensions.length,
-        leadFormExtensions: leadFormExtensions.length,
-        imageAssets: imageAssets.length,
-        hasLocation: hasLocationExt
       });
       
       // Build the V5 campaign data structure with all 183 columns
@@ -2691,13 +2598,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         callouts: callouts.slice(0, 4),
         snippets: snippets.slice(0, 2),
         callExtensions: callExtensions.length > 0 ? callExtensions : undefined,
-        priceExtensions: priceExtensions.length > 0 ? priceExtensions : undefined,
-        promotions: promotions.length > 0 ? promotions : undefined,
-        appExtensions: appExtensions.length > 0 ? appExtensions : undefined,
-        messageExtensions: messageExtensions.length > 0 ? messageExtensions : undefined,
-        leadFormExtensions: leadFormExtensions.length > 0 ? leadFormExtensions : undefined,
-        imageAssets: imageAssets.length > 0 ? imageAssets : undefined,
-        businessInfo: hasLocationExt ? businessInfo : undefined,
       };
       
       // Add ads to ALL ad groups - each ad group should have the same ads
@@ -4061,17 +3961,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
     const allAdGroups = ['ALL_AD_GROUPS', ...campaignData.adGroups.map(ag => ag.name)];
     const displayAds = campaignData.ads.length > 0 ? campaignData.ads : [];
     const extensionTypes = [
-      { id: 'snippet', label: 'SNIPPET EXTENSION', icon: FileText },
-      { id: 'callout', label: 'CALLOUT EXTENSION', icon: MessageSquare },
-      { id: 'sitelink', label: 'SITELINK EXTENSION', icon: Link2 },
-      { id: 'call', label: 'CALL EXTENSION', icon: Phone },
-      { id: 'price', label: 'PRICE EXTENSION', icon: DollarSign },
-      { id: 'app', label: 'APP EXTENSION', icon: Smartphone },
-      { id: 'location', label: 'LOCATION EXTENSION', icon: MapPinIcon },
-      { id: 'message', label: 'MESSAGE EXTENSION', icon: MessageSquare },
-      { id: 'leadform', label: 'LEAD FORM EXTENSION', icon: FileText },
-      { id: 'promotion', label: 'PROMOTION EXTENSION', icon: Gift },
-      { id: 'image', label: 'IMAGE EXTENSION', icon: ImageIcon },
+      { id: 'snippet', label: 'SNIPPET', icon: FileText },
+      { id: 'callout', label: 'CALLOUT', icon: MessageSquare },
+      { id: 'sitelink', label: 'SITELINK', icon: Link2 },
+      { id: 'call', label: 'CALL', icon: Phone },
     ];
 
     return (
@@ -4331,6 +4224,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                                     {ext.type === 'leadform' && <FileText className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />}
                                     {ext.type === 'promotion' && <Gift className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />}
                                     {ext.type === 'image' && <ImageIcon className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />}
+                                    {ext.type === 'video' && <Film className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />}
                                     <div className="flex-1 min-w-0">
                                       <span className="text-xs text-slate-500 uppercase font-semibold block mb-1">
                                         {ext.label || ext.type.charAt(0).toUpperCase() + ext.type.slice(1).replace(/([A-Z])/g, ' $1')}
@@ -5152,7 +5046,11 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center mx-auto mb-2 shadow-lg">
                   <FileText className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-0.5">{campaignData.ads.length * Math.max(1, campaignData.adGroups.length)}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-0.5">
+                  {campaignData.selectedStructure === 'skag' 
+                    ? campaignData.adGroups.length * Math.min(3, campaignData.ads.filter(a => a.type === 'rsa' || a.type === 'dki').length) 
+                    : campaignData.ads.length * Math.max(1, campaignData.adGroups.length)}
+                </div>
                 <div className="text-xs font-medium text-slate-700">Ads</div>
               </CardContent>
             </Card>
@@ -5162,7 +5060,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-2 shadow-lg">
                   <Hash className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-0.5">{campaignData.selectedKeywords.length}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-0.5">{campaignData.adGroups.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0)}</div>
                 <div className="text-xs font-medium text-slate-700">Keywords</div>
               </CardContent>
             </Card>
@@ -5244,7 +5142,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   <span className="text-emerald-400">&#10003;</span>
                   <span className="text-slate-400">[{new Date().toLocaleTimeString('en-US', { hour12: false })}]</span>
                   <span className="text-slate-300">Keywords Selected:</span>
-                  <span className="text-pink-400 font-semibold">{campaignData.selectedKeywords.length}</span>
+                  <span className="text-pink-400 font-semibold">{campaignData.adGroups.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0)}</span>
                 </div>
                 
                 <div className="flex items-start gap-2">
@@ -5293,8 +5191,14 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             </div>
           </div>
 
+          {isSuperAdmin() && (
+          <div className="mb-4">
+            <GoogleAdsConnectionStatus variant="full" />
+          </div>
+          )}
+
           {/* Primary Action Section */}
-          <div className="mb-6">
+          <div className="mb-6 space-y-3">
           <Button
             onClick={handleDownloadCSV}
             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-purple-700 text-white shadow-lg shadow-green-200/50 h-14 text-lg font-semibold"
@@ -5302,6 +5206,26 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             <Download className="w-5 h-5 mr-2" />
             Download CSV for Google Ads Editor
           </Button>
+          {isSuperAdmin() && (
+          <GoogleAdsPushButton
+            campaignData={{
+              campaignName: campaignData.campaignName,
+              dailyBudget: 50,
+              adGroups: campaignData.adGroups.map(ag => ({
+                name: ag.name || 'Ad Group',
+                keywords: ag.keywords?.map((kw: any) => typeof kw === 'string' ? kw : kw?.text || kw?.keyword || '') || [],
+              })),
+              ads: campaignData.ads,
+              url: campaignData.url,
+              locations: campaignData.locations,
+              targetCountry: campaignData.targetCountry,
+            }}
+            campaignHistoryId={draftCampaignId || undefined}
+            variant="primary"
+            size="lg"
+            className="w-full h-14 text-lg font-semibold"
+          />
+          )}
           </div>
 
 

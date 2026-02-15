@@ -1,12 +1,7 @@
 modules = ["web", "python-3.11", "nodejs-20", "postgresql-16"]
 [agent]
 expertMode = true
-integrations = [
-  "javascript_openai_ai_integrations:2.0.0",
-  "stripe:2.0.0",
-  "javascript_database:1.0.0",
-  "resend:1.0.0",
-]
+integrations = ["javascript_openai_ai_integrations:2.0.0", "stripe:2.0.0", "javascript_database:1.0.0", "resend:1.0.0", "javascript_google_analytics:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
@@ -80,8 +75,8 @@ VITE_RESELLERCLUB_CLIENT_ID = "1301617"
 VITE_RESELLERCLUB_API_URL = "https://httpapi.com/api"
 VITE_RESELLERCLUB_API_KEY = "3K0BpCJoVQvX2uCvbSeHS357hNdRsyZ4"
 VITE_NAMECOM_API_URL = "https://api.name.com"
-GOOGLE_ADS_CLIENT_ID = "301579464387-v6ls7i4r8b193s45de0vt5vc389o5b7i.apps.googleusercontent.com"
-GOOGLE_ADS_CLIENT_SECRET = "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"
+GOOGLE_ADS_CLIENT_ID = "55750058912-9ufbot82r5mg02r0i4u7dlkcjrb0fenc.apps.googleusercontent.com"
+GOOGLE_ADS_CLIENT_SECRET = "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"
 GOOGLE_ADS_DEVELOPER_TOKEN = "UzifgEs9SwOBo5bP_vmi2A"
 WEBSITE_DOMAIN = "adiology.io"
 SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrZG5ucndoem9mdHR6YWpud2xqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzQ2OTY4MCwiZXhwIjoyMDc5MDQ1NjgwfQ._pfgPzHV2k4MJxpe626aHf4CzWcfkD2RTYRtobvVymQ"

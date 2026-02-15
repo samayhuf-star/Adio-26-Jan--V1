@@ -173,7 +173,7 @@ services:
       - redis
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - FRONTEND_URL=https://www.adiology.online
+      - FRONTEND_URL=https://www.adiology.io
 ```
 
 ### Option 2: Cloud Deployment
@@ -186,7 +186,7 @@ services:
 **Environment Variables:**
 ```env
 REDIS_URL=redis://your-redis-host:6379/0
-FRONTEND_URL=https://www.adiology.online
+FRONTEND_URL=https://www.adiology.io
 ```
 
 ## Testing

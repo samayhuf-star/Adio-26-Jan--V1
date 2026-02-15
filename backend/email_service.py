@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class EmailService:
     def __init__(self):
         self.aws_region = os.getenv('AWS_REGION', 'us-east-1')
-        self.verified_domain = 'adiology.online'
+        self.verified_domain = 'adiology.io'
         self.from_email = f'noreply@{self.verified_domain}'
         self.from_name = 'Adiology'
         
@@ -328,15 +328,15 @@ Security Notice:
                     </div>
                     
                     <div style="text-align: center;">
-                        <a href="https://adiology.online/dashboard" class="button">Start Building Campaigns</a>
+                        <a href="https://adiology.io/dashboard" class="button">Start Building Campaigns</a>
                     </div>
                     
-                    <p>Need help getting started? Check out our <a href="https://adiology.online/support" style="color: #6366f1;">help center</a> or reach out to our support team.</p>
+                    <p>Need help getting started? Check out our <a href="https://adiology.io/support" style="color: #6366f1;">help center</a> or reach out to our support team.</p>
                 </div>
                 
                 <div class="footer">
                     <p>© 2024 Adiology. All rights reserved.</p>
-                    <p>Questions? Contact us at <a href="mailto:support@adiology.online" style="color: #6366f1;">support@adiology.online</a></p>
+                    <p>Questions? Contact us at <a href="mailto:support@adiology.io" style="color: #6366f1;">support@adiology.io</a></p>
                 </div>
             </div>
         </body>
@@ -359,12 +359,12 @@ Discover high-performing keywords and optimize your targeting strategy.
 📊 Performance Analytics
 Track your campaigns and get insights to improve your ROI.
 
-Get started: https://adiology.online/dashboard
+Get started: https://adiology.io/dashboard
 
-Need help? Visit our help center: https://adiology.online/support
+Need help? Visit our help center: https://adiology.io/support
 
 © 2024 Adiology. All rights reserved.
-Questions? Contact us at support@adiology.online
+Questions? Contact us at support@adiology.io
         """
 
         return await self.send_email(

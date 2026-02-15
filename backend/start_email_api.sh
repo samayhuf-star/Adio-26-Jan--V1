@@ -32,7 +32,7 @@ export PORT=${PORT:-5001}
 export AWS_REGION=${AWS_REGION:-us-east-1}
 
 echo "🌐 Starting Email API on port $PORT..."
-echo "📧 Verified domain: adiology.online"
+echo "📧 Verified domain: adiology.io"
 echo "🔧 Environment: $FLASK_ENV"
 
 # Start the Flask application

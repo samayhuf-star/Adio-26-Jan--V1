@@ -17,6 +17,7 @@ import { domainsRoutes } from './routes/domains';
 import { accountRoutes } from './routes/account';
 import { tempMailRoutes } from './routes/tempmail';
 import { clickGuardRoutes } from './routes/clickguard';
+import { googleAdsRoutes } from './routes/googleads';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -41,9 +42,36 @@ app.use('/*', cors({
   maxAge: 600,
 }));
 
+app.use('/assets/*', async (c, next) => {
+  await next();
+  c.header('Cache-Control', 'public, max-age=31536000, immutable');
+});
+
 app.onError((err, c) => {
   console.error('Server Error:', err);
   return c.json({ error: err.message || 'Internal Server Error' }, 500);
+});
+
+app.get('/sitemap.xml', (c) => {
+  const currentDir = path.dirname(new URL(import.meta.url).pathname);
+  const sitemapPath = path.resolve(currentDir, '../public/sitemap.xml');
+  try {
+    const content = fs.readFileSync(sitemapPath, 'utf-8');
+    return c.text(content, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
+  } catch {
+    return c.text('Not found', 404);
+  }
+});
+
+app.get('/robots.txt', (c) => {
+  const currentDir = path.dirname(new URL(import.meta.url).pathname);
+  const robotsPath = path.resolve(currentDir, '../public/robots.txt');
+  try {
+    const content = fs.readFileSync(robotsPath, 'utf-8');
+    return c.text(content, 200, { 'Content-Type': 'text/plain; charset=utf-8' });
+  } catch {
+    return c.text('Not found', 404);
+  }
 });
 
 app.get('/api/health', (c) => {
@@ -92,6 +120,18 @@ app.route('/api/domains', domainsRoutes);
 app.route('/api/account', accountRoutes);
 app.route('/api/tempmail', tempMailRoutes);
 app.route('/api/clickguard', clickGuardRoutes);
+app.route('/api/google-ads', googleAdsRoutes);
+
+app.get('/googlebc7aae8bc89f46c1.html', async (c) => {
+  try {
+    const filePath = path.resolve(process.cwd(), 'public/googlebc7aae8bc89f46c1.html');
+    const content = fs.readFileSync(filePath, 'utf-8');
+    c.header('Content-Type', 'text/html');
+    return c.body(content);
+  } catch (e) {
+    return c.text('Not found', 404);
+  }
+});
 
 app.get('/t.js', async (c) => {
   try {
@@ -2610,6 +2650,113 @@ async function seedClickGuardDomains() {
     console.error('[ClickGuard Seed] Error seeding domains:', error);
   }
 }
+
+// ============================================
+// Alphabet Soup Keyword Generation (Google Autocomplete)
+// ============================================
+
+async function fetchGoogleAutocomplete(query: string): Promise<string[]> {
+  try {
+    const url = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data[1] || []).filter((s: string) => typeof s === 'string' && s.trim().length > 0);
+  } catch (err) {
+    return [];
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+app.post('/api/keywords/alphabet-soup', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { seedKeywords, maxKeywordsPerSeed = 300 } = body;
+
+    if (!seedKeywords || !Array.isArray(seedKeywords) || seedKeywords.length === 0) {
+      return c.json({ error: 'seedKeywords array is required' }, 400);
+    }
+
+    const allKeywords = new Set<string>();
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+    const digits = '0123456789'.split('');
+    const DELAY_MS = 80;
+
+    for (const seed of seedKeywords.slice(0, 5)) {
+      const trimmedSeed = seed.trim().toLowerCase();
+      if (!trimmedSeed || trimmedSeed.length < 2) continue;
+
+      const words = trimmedSeed.split(/\s+/);
+      const queries: string[] = [];
+
+      for (const letter of alphabet) {
+        queries.push(`${trimmedSeed} ${letter}`);
+      }
+
+      for (const letter of alphabet) {
+        queries.push(`${letter} ${trimmedSeed}`);
+      }
+
+      for (const digit of digits) {
+        queries.push(`${trimmedSeed} ${digit}`);
+      }
+
+      if (words.length > 1) {
+        for (const letter of alphabet) {
+          queries.push(`${words[0]} ${letter} ${words.slice(1).join(' ')}`);
+        }
+      }
+
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < queries.length; i += BATCH_SIZE) {
+        const batch = queries.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(batch.map(q => fetchGoogleAutocomplete(q)));
+        for (const suggestions of results) {
+          for (const suggestion of suggestions) {
+            const cleaned = suggestion.toLowerCase().trim();
+            if (cleaned.length >= 3 && cleaned.length <= 80) {
+              allKeywords.add(cleaned);
+            }
+          }
+        }
+        if (i + BATCH_SIZE < queries.length) {
+          await sleep(DELAY_MS);
+        }
+
+        if (allKeywords.size >= maxKeywordsPerSeed * seedKeywords.length) {
+          break;
+        }
+      }
+    }
+
+    const keywordsArray = Array.from(allKeywords).map((kw, index) => ({
+      keyword: kw,
+      source: 'google_autocomplete',
+      matchType: 'broad' as const,
+    }));
+
+    console.log(`[Alphabet Soup] Generated ${keywordsArray.length} unique keywords from ${seedKeywords.length} seeds`);
+
+    return c.json({
+      success: true,
+      keywords: keywordsArray,
+      total: keywordsArray.length,
+      method: 'alphabet_soup',
+      seedCount: seedKeywords.length,
+    });
+  } catch (error: any) {
+    console.error('[Alphabet Soup] Error:', error);
+    return c.json({ error: 'Failed to generate keywords', message: error.message }, 500);
+  }
+});
 
 serve({
   fetch: app.fetch,

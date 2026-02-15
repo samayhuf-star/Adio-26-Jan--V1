@@ -6,6 +6,11 @@
 import { Hono } from 'hono';
 import { getStripePublishableKey, getUncachableStripeClient } from '../stripeClient';
 import { stripeService } from '../stripeService';
+import { getDatabaseUrl } from '../dbConfig';
+import pg from 'pg';
+
+const { Pool: StripePool } = pg;
+const stripePool = new StripePool({ connectionString: getDatabaseUrl() });
 
 const stripe = new Hono();
 
@@ -156,6 +161,51 @@ stripe.post('/portal', async (c) => {
   }
 });
 
+/** POST /api/stripe/upgrade-subscription – { email, newPriceId, newPlanName } → { success, subscription } */
+stripe.post('/upgrade-subscription', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { email, newPriceId, newPlanName } = body as { email?: string; newPriceId?: string; newPlanName?: string };
+
+    if (!email || !newPriceId) {
+      return c.json({ error: 'Missing required fields: email, newPriceId' }, 400);
+    }
+
+    const resolved = await resolveCustomerId(email);
+    if (!resolved) {
+      return c.json({ error: 'Could not resolve Stripe customer' }, 500);
+    }
+
+    try {
+      const updatedSubscription = await stripeService.upgradeSubscription(resolved.customerId, newPriceId);
+
+      if (resolved.userId && newPlanName) {
+        await stripeService.updateUserStripeInfo(resolved.userId, {
+          subscriptionPlan: newPlanName.toLowerCase(),
+          stripeSubscriptionId: updatedSubscription.id,
+        });
+      }
+
+      return c.json({
+        success: true,
+        subscription: {
+          id: updatedSubscription.id,
+          status: updatedSubscription.status,
+          currentPeriodEnd: updatedSubscription.current_period_end,
+        },
+      });
+    } catch (upgradeError: any) {
+      if (upgradeError.message === 'NO_ACTIVE_SUBSCRIPTION') {
+        return c.json({ error: 'NO_ACTIVE_SUBSCRIPTION' }, 404);
+      }
+      throw upgradeError;
+    }
+  } catch (error: any) {
+    console.error('[Stripe] Upgrade subscription error:', error);
+    return c.json({ error: error?.message || 'Failed to upgrade subscription' }, 500);
+  }
+});
+
 /** GET /api/stripe/subscription (Bearer) or GET /api/stripe/subscription/:email – { plan } */
 stripe.get('/subscription', async (c) => {
   return subscriptionHandler(c, null);
@@ -296,6 +346,356 @@ stripe.delete('/payment-methods/:paymentMethodId', async (c) => {
   } catch (error: any) {
     console.error('[Stripe] Detach payment method error:', error);
     return c.json({ error: error?.message || 'Failed to remove payment method' }, 500);
+  }
+});
+
+/** POST /api/stripe/create-trial – validate card and create trial subscription */
+stripe.post('/create-trial', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { email, planName, paymentMethodId, couponCode } = body as { email?: string; planName?: string; paymentMethodId?: string; couponCode?: string };
+
+    console.log(`[Stripe] create-trial request: email=${email}, plan=${planName}, pmId=${paymentMethodId?.slice(0, 10)}..., coupon=${couponCode || 'none'}`);
+
+    if (!email || !planName || !paymentMethodId) {
+      return c.json({ error: 'Missing required fields: email, planName, paymentMethodId' }, 400);
+    }
+
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      console.error('[Stripe] Stripe client not available');
+      return c.json({ error: 'Payment system is temporarily unavailable. Please try again later.' }, 500);
+    }
+
+    const resolved = await resolveCustomerId(email);
+    if (!resolved) {
+      console.error('[Stripe] Could not resolve customer for email:', email);
+      return c.json({ error: 'Could not set up your payment profile. Please try again.' }, 500);
+    }
+
+    const { customerId, userId } = resolved;
+    console.log(`[Stripe] Resolved customer: ${customerId}, userId: ${userId}`);
+
+    try {
+      await stripeClient.paymentMethods.attach(paymentMethodId, { customer: customerId });
+    } catch (attachErr: any) {
+      if (attachErr?.code !== 'resource_already_exists') {
+        console.error('[Stripe] Failed to attach payment method:', attachErr);
+        return c.json({ error: attachErr?.message || 'Failed to attach your card. Please try again.' }, 400);
+      }
+    }
+
+    await stripeClient.customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    try {
+      const authIntent = await stripeClient.paymentIntents.create({
+        amount: 100,
+        currency: 'usd',
+        customer: customerId,
+        payment_method: paymentMethodId,
+        capture_method: 'manual',
+        confirm: true,
+        automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+      });
+
+      console.log(`[Stripe] Auth intent status: ${authIntent.status}`);
+
+      if (authIntent.status !== 'requires_capture' && authIntent.status !== 'succeeded') {
+        return c.json({ error: 'Card validation failed. Please check your card details and try again.' }, 400);
+      }
+
+      await stripeClient.paymentIntents.cancel(authIntent.id);
+      console.log(`[Stripe] Auth intent cancelled (hold released)`);
+    } catch (authError: any) {
+      console.error('[Stripe] Card auth failed:', authError?.message);
+      return c.json({ error: authError?.message || 'Card validation failed. Please check your card details and try again.' }, 400);
+    }
+
+    const products = await stripeClient.products.list({ active: true, limit: 100 });
+    let priceId: string | null = null;
+    const normalizedPlan = planName.toLowerCase().trim();
+
+    console.log(`[Stripe] Searching for plan "${normalizedPlan}" among ${products.data.length} products`);
+
+    for (const product of products.data) {
+      const productNameLower = product.name.toLowerCase();
+      const metaPlan = product.metadata?.plan_name?.toLowerCase();
+      const nameMatch = productNameLower.includes(normalizedPlan) ||
+        normalizedPlan.includes(productNameLower) ||
+        metaPlan === normalizedPlan;
+
+      if (nameMatch) {
+        console.log(`[Stripe] Matched product: "${product.name}" (${product.id})`);
+        const prices = await stripeClient.prices.list({ product: product.id, active: true, limit: 10 });
+        if (prices.data.length > 0) {
+          const recurringPrice = prices.data.find(p => p.recurring) || prices.data[0];
+          priceId = recurringPrice.id;
+          break;
+        }
+      }
+    }
+
+    if (!priceId) {
+      const allPrices = await stripeClient.prices.list({ active: true, limit: 100 });
+      for (const price of allPrices.data) {
+        if (price.recurring && price.nickname?.toLowerCase().includes(normalizedPlan)) {
+          priceId = price.id;
+          console.log(`[Stripe] Found price by nickname: "${price.nickname}" (${price.id})`);
+          break;
+        }
+      }
+    }
+
+    if (!priceId) {
+      console.error(`[Stripe] No price found for plan "${planName}". Available products: ${products.data.map(p => p.name).join(', ')}`);
+      return c.json({ error: `No matching pricing plan found for "${planName}". Please contact support.` }, 400);
+    }
+
+    const subscriptionParams: any = {
+      customer: customerId,
+      items: [{ price: priceId }],
+      trial_period_days: 7,
+      default_payment_method: paymentMethodId,
+    };
+
+    if (couponCode) {
+      try {
+        const promotionCodes = await stripeClient.promotionCodes.list({ code: couponCode, active: true, limit: 1 });
+        if (promotionCodes.data.length > 0) {
+          subscriptionParams.promotion_code = promotionCodes.data[0].id;
+          console.log(`[Stripe] Applied promotion code: ${couponCode}`);
+        } else {
+          const coupon = await stripeClient.coupons.retrieve(couponCode).catch(() => null);
+          if (coupon && coupon.valid) {
+            subscriptionParams.coupon = coupon.id;
+            console.log(`[Stripe] Applied coupon: ${couponCode}`);
+          } else {
+            console.warn(`[Stripe] Coupon/promo code "${couponCode}" not found or invalid, proceeding without discount`);
+          }
+        }
+      } catch (couponErr: any) {
+        console.warn(`[Stripe] Error applying coupon "${couponCode}":`, couponErr?.message);
+      }
+    }
+
+    const subscription = await stripeClient.subscriptions.create(subscriptionParams);
+
+    console.log(`[Stripe] Subscription created: ${subscription.id}, status: ${subscription.status}`);
+
+    const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
+
+    const updateResult = await stripePool.query(
+      `UPDATE users SET 
+        card_validated = true,
+        selected_plan = $1,
+        stripe_customer_id = $2,
+        stripe_subscription_id = $3,
+        subscription_plan = $1,
+        subscription_status = 'trialing',
+        updated_at = NOW()
+      WHERE id = $4 OR LOWER(email) = LOWER($5)`,
+      [planName, customerId, subscription.id, userId, email]
+    );
+
+    console.log(`[Stripe] Users table updated: ${updateResult.rowCount} rows for userId=${userId}, email=${email}`);
+
+    if (updateResult.rowCount === 0) {
+      console.warn(`[Stripe] WARNING: No user row updated! userId=${userId}, email=${email}. Attempting insert fallback.`);
+    }
+
+    try {
+      await stripePool.query(
+        `INSERT INTO subscriptions (id, user_id, stripe_customer_id, stripe_subscription_id, stripe_price_id, plan_name, status, trial_start, trial_end, current_period_start, current_period_end, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'trialing', NOW(), $6, NOW(), $6, NOW(), NOW())
+         ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+           status = 'trialing',
+           trial_start = NOW(),
+           trial_end = $6,
+           updated_at = NOW()`,
+        [userId, customerId, subscription.id, priceId, planName, trialEnd]
+      );
+    } catch (subInsertErr: any) {
+      console.error('[Stripe] Subscription record insert failed (non-fatal):', subInsertErr?.message);
+    }
+
+    console.log(`[Stripe] Trial subscription created for ${email}, plan: ${planName}, sub: ${subscription.id}`);
+    return c.json({
+      success: true,
+      subscriptionId: subscription.id,
+      trialEnd: trialEnd?.toISOString() || null,
+    });
+  } catch (error: any) {
+    console.error('[Stripe] Create trial error:', error?.message, error?.stack);
+    return c.json({ error: error?.message || 'Failed to create trial subscription. Please try again.' }, 500);
+  }
+});
+
+/** POST /api/stripe/check-trial-status – check trial/subscription status for authenticated user */
+stripe.post('/check-trial-status', async (c) => {
+  try {
+    const email = getAuthEmail(c);
+    if (!email) {
+      return c.json({ error: 'Authorization required' }, 401);
+    }
+
+    const result = await stripePool.query(
+      'SELECT email_verified, card_validated, subscription_plan, subscription_status, stripe_subscription_id FROM users WHERE email = $1',
+      [email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    const user = result.rows[0];
+    let trialEnd: string | null = null;
+
+    if (user.stripe_subscription_id) {
+      try {
+        const stripeClient = await getUncachableStripeClient();
+        if (stripeClient) {
+          const sub = await stripeClient.subscriptions.retrieve(user.stripe_subscription_id);
+          if (sub.trial_end) {
+            trialEnd = new Date(sub.trial_end * 1000).toISOString();
+          }
+        }
+      } catch (subError) {
+        console.error('[Stripe] Error fetching subscription for trial status:', subError);
+      }
+    }
+
+    return c.json({
+      cardValidated: user.card_validated || false,
+      emailVerified: user.email_verified || false,
+      subscriptionPlan: user.subscription_plan || 'free',
+      subscriptionStatus: user.subscription_status || 'inactive',
+      trialEnd,
+    });
+  } catch (error: any) {
+    console.error('[Stripe] Check trial status error:', error);
+    return c.json({ error: error?.message || 'Failed to check trial status' }, 500);
+  }
+});
+
+/** POST /api/stripe/validate-coupon – validate a coupon/promo code */
+stripe.post('/validate-coupon', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { code } = body as { code?: string };
+
+    if (!code || !code.trim()) {
+      return c.json({ valid: false, error: 'Please enter a coupon code' }, 400);
+    }
+
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ valid: false, error: 'Payment system is temporarily unavailable' }, 500);
+    }
+
+    const promotionCodes = await stripeClient.promotionCodes.list({ code: code.trim(), active: true, limit: 1 });
+    if (promotionCodes.data.length > 0) {
+      const promo = promotionCodes.data[0];
+      const couponData = (promo as any).coupon;
+      return c.json({
+        valid: true,
+        discount: couponData.percent_off
+          ? { type: 'percent', value: couponData.percent_off }
+          : { type: 'amount', value: (couponData.amount_off || 0) / 100, currency: couponData.currency || 'usd' },
+        name: couponData.name || code.trim(),
+      });
+    }
+
+    try {
+      const coupon = await stripeClient.coupons.retrieve(code.trim());
+      if (coupon && coupon.valid) {
+        return c.json({
+          valid: true,
+          discount: coupon.percent_off
+            ? { type: 'percent', value: coupon.percent_off }
+            : { type: 'amount', value: (coupon.amount_off || 0) / 100, currency: coupon.currency || 'usd' },
+          name: coupon.name || code.trim(),
+        });
+      }
+    } catch {
+      // not a coupon ID either
+    }
+
+    return c.json({ valid: false, error: 'Invalid or expired coupon code' });
+  } catch (error: any) {
+    console.error('[Stripe] Validate coupon error:', error?.message);
+    return c.json({ valid: false, error: 'Failed to validate coupon' }, 500);
+  }
+});
+
+/** POST /api/stripe/send-welcome-email – send welcome email after signup + payment */
+stripe.post('/send-welcome-email', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { email, name, planName } = body as { email?: string; name?: string; planName?: string };
+
+    if (!email) {
+      return c.json({ error: 'Email is required' }, 400);
+    }
+
+    const userCheck = await stripePool.query(
+      `SELECT id, card_validated FROM users WHERE LOWER(email) = LOWER($1)`,
+      [email]
+    );
+    if (userCheck.rows.length === 0) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    if (!userCheck.rows[0].card_validated) {
+      return c.json({ error: 'Payment not verified' }, 403);
+    }
+
+    const { sendEmail } = await import('../resendClient');
+
+    const result = await sendEmail({
+      to: email,
+      subject: `Welcome to Adiology, ${name || 'there'}! 🚀`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0f172a;font-family:'Inter',system-ui,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+<div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:16px;padding:40px;text-align:center;">
+  <div style="width:64px;height:64px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:16px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+    <span style="font-size:32px;">🚀</span>
+  </div>
+  <h1 style="color:#ffffff;font-size:28px;margin:0 0 8px;">Welcome to Adiology!</h1>
+  <p style="color:#c7d2fe;font-size:16px;margin:0 0 32px;">Your ${planName || 'Pro'} plan is ready. Let's build your first campaign.</p>
+  
+  <div style="background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);border-radius:12px;padding:20px;margin-bottom:32px;text-align:left;">
+    <h3 style="color:#a5b4fc;font-size:14px;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Getting Started</h3>
+    <div style="color:#e0e7ff;font-size:14px;line-height:2;">
+      ✅ Account created<br>
+      ✅ Payment method verified<br>
+      ✅ 7-day free trial started<br>
+      🎯 Next: Create your first campaign
+    </div>
+  </div>
+  
+  <a href="https://adiology.io" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:16px;">
+    Go to Dashboard
+  </a>
+  
+  <p style="color:#6366f1;font-size:12px;margin-top:32px;">Need help? Reply to this email or visit our help center.</p>
+</div>
+<p style="color:#4b5563;font-size:11px;text-align:center;margin-top:24px;">&copy; ${new Date().getFullYear()} Adiology. All rights reserved.</p>
+</div>
+</body>
+</html>
+      `,
+    });
+
+    console.log(`[Stripe] Welcome email sent to ${email}: ${result.success ? 'OK' : result.error || 'simulated'}`);
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('[Stripe] Send welcome email error:', error?.message);
+    return c.json({ success: false, error: 'Failed to send welcome email' }, 500);
   }
 });
 

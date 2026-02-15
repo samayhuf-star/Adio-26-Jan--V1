@@ -1,7 +1,7 @@
 # Email Migration to AWS SES - Implementation Summary
 
 ## 🎯 Objective Completed
-Successfully migrated from Supabase email system to AWS SES using your verified domain `adiology.online` with login `samay@adiology.io`.
+Successfully migrated from Supabase email system to AWS SES using your verified domain `adiology.io` with login `samay@adiology.io`.
 
 ## 📁 Files Created/Modified
 
@@ -28,8 +28,8 @@ Successfully migrated from Supabase email system to AWS SES using your verified 
 ## 🔧 Technical Implementation
 
 ### AWS SES Integration
-- **Domain**: `adiology.online` (already verified ✅)
-- **From Address**: `noreply@adiology.online`
+- **Domain**: `adiology.io` (already verified ✅)
+- **From Address**: `noreply@adiology.io`
 - **From Name**: `Adiology`
 - **Region**: `us-east-1` (configurable)
 
@@ -123,7 +123,7 @@ VITE_EMAIL_API_URL=http://localhost:5001
 - **Supabase**: Limited by plan, less control
 
 ### Professional Branding
-- Custom domain `adiology.online`
+- Custom domain `adiology.io`
 - Branded email templates
 - Consistent user experience
 
@@ -161,7 +161,7 @@ VITE_EMAIL_API_URL=http://localhost:5001
 ## 🎉 Success Metrics
 
 Once deployed, you'll have:
-- ✅ Professional branded emails from `noreply@adiology.online`
+- ✅ Professional branded emails from `noreply@adiology.io`
 - ✅ Full control over email templates and content
 - ✅ Scalable email infrastructure
 - ✅ Detailed email analytics and monitoring
@@ -172,7 +172,7 @@ Once deployed, you'll have:
 
 ### Common Issues
 1. **"SES not configured"** → Check AWS credentials in environment variables
-2. **"Domain not verified"** → Verify `adiology.online` is verified in AWS SES Console
+2. **"Domain not verified"** → Verify `adiology.io` is verified in AWS SES Console
 3. **"Email not sending"** → Check SES sending limits and sandbox status
 4. **API connection failed** → Verify email service is running on port 5001
 

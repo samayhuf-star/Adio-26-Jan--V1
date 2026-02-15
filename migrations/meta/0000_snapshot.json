@@ -1086,7 +1086,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "default": "'noreply@adiology.com'"
+          "default": "'noreply@adiology.io'"
         },
         "subject": {
           "name": "subject",

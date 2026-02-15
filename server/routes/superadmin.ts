@@ -491,4 +491,52 @@ app.delete('/subscriptions/:subId', authMiddleware, async (c) => {
   }
 });
 
+app.get('/email-stats', authMiddleware, async (c) => {
+  try {
+    const sentTodayResult = await db.execute(sql`
+      SELECT COUNT(*) as count FROM email_logs 
+      WHERE created_at >= CURRENT_DATE
+    `).catch(() => ({ rows: [{ count: 0 }] }));
+
+    const deliveredResult = await db.execute(sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE status = 'delivered') as delivered,
+        COUNT(*) as total
+      FROM email_logs
+    `).catch(() => ({ rows: [{ delivered: 0, total: 0 }] }));
+
+    const openedResult = await db.execute(sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE opened = true) as opened,
+        COUNT(*) as total
+      FROM email_logs
+    `).catch(() => ({ rows: [{ opened: 0, total: 0 }] }));
+
+    const bouncedResult = await db.execute(sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE status = 'bounced') as bounced,
+        COUNT(*) as total
+      FROM email_logs
+    `).catch(() => ({ rows: [{ bounced: 0, total: 0 }] }));
+
+    const sentToday = Number(sentTodayResult.rows[0]?.count || 0);
+    const delivered = Number(deliveredResult.rows[0]?.delivered || 0);
+    const totalDelivery = Number(deliveredResult.rows[0]?.total || 0);
+    const opened = Number(openedResult.rows[0]?.opened || 0);
+    const totalOpened = Number(openedResult.rows[0]?.total || 0);
+    const bounced = Number(bouncedResult.rows[0]?.bounced || 0);
+    const totalBounced = Number(bouncedResult.rows[0]?.total || 0);
+
+    return c.json({
+      sentToday,
+      deliveryRate: totalDelivery > 0 ? Math.round((delivered / totalDelivery) * 100) : 0,
+      openRate: totalOpened > 0 ? Math.round((opened / totalOpened) * 100) : 0,
+      bounceRate: totalBounced > 0 ? Math.round((bounced / totalBounced) * 100) : 0,
+    });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Email stats error:', error);
+    return c.json({ sentToday: 0, deliveryRate: 0, openRate: 0, bounceRate: 0 });
+  }
+});
+
 export { app as superadminRoutes };

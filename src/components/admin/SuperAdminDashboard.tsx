@@ -10,6 +10,8 @@ import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { FeedbackManagement } from '../FeedbackManagement';
 import { NotificationProvider } from '../../contexts/NotificationContext';
+import EmailFlows from './EmailFlows';
+import EmailLogs from './EmailLogs';
 import {
   Dialog,
   DialogContent,
@@ -65,7 +67,7 @@ interface SubscriptionRecord {
   createdAt: string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'feedback';
+type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'emails' | 'analytics' | 'feedback';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -446,6 +448,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             { id: 'overview', label: 'Overview', icon: Activity },
             { id: 'users', label: 'Users', icon: Users },
             { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+            { id: 'emails', label: 'Email Management', icon: Mail },
+            { id: 'analytics', label: 'Analytics', icon: Activity },
             { id: 'feedback', label: 'Feedback', icon: MessageSquare }
           ].map(tab => (
             <Button
@@ -795,6 +799,32 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           </div>
         )}
 
+        {/* Emails Tab */}
+        {activeTab === 'emails' && (
+          <EmailManagementSection token={token} />
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 min-h-[600px] flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Activity className="w-6 h-6 text-blue-400" />
+                Live Traffic Analytics
+              </h3>
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                Live Data
+              </div>
+            </div>
+            <iframe 
+              src={`https://analytics.google.com/analytics/web/?authuser=0#/p/451310650/reports/intelligenthome?params=_u..nav%3Ddefault`}
+              className="w-full flex-grow border-0 rounded-lg bg-white"
+              title="Google Analytics"
+            />
+          </div>
+        )}
+
         {/* Feedback Tab */}
         {activeTab === 'feedback' && (
           <NotificationProvider>
@@ -1018,6 +1048,107 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function EmailManagementSection({ token }: { token: string }) {
+  const [emailTab, setEmailTab] = useState<'overview' | 'flows' | 'logs'>('overview');
+  const [emailStats, setEmailStats] = useState({ sentToday: 0, deliveryRate: 0, openRate: 0, bounceRate: 0 });
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/superadmin/email-stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setEmailStats(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch email stats:', err);
+      }
+    }
+    fetchStats();
+  }, [token]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex gap-2 border-b border-slate-700 pb-2">
+        {[
+          { id: 'overview', label: 'Overview', icon: Activity },
+          { id: 'flows', label: 'Email Flows (25)', icon: Mail },
+          { id: 'logs', label: 'Email Logs', icon: CheckCircle },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setEmailTab(tab.id as any)}
+            className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              emailTab === tab.id
+                ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {emailTab === 'overview' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Mail className="w-5 h-5 text-blue-400" />
+                <span className="text-slate-400 text-sm">Sent Today</span>
+              </div>
+              <div className="text-2xl font-bold text-white">{emailStats.sentToday}</div>
+            </div>
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <span className="text-slate-400 text-sm">Delivery Rate</span>
+              </div>
+              <div className="text-2xl font-bold text-white">{emailStats.deliveryRate}%</div>
+            </div>
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye className="w-5 h-5 text-amber-400" />
+                <span className="text-slate-400 text-sm">Open Rate</span>
+              </div>
+              <div className="text-2xl font-bold text-white">{emailStats.openRate}%</div>
+            </div>
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <span className="text-slate-400 text-sm">Bounce Rate</span>
+              </div>
+              <div className="text-2xl font-bold text-white">{emailStats.bounceRate}%</div>
+            </div>
+          </div>
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-white mb-3">Email Sequence Overview</h3>
+            <p className="text-slate-400 text-sm">
+              25 automated emails across 5 customer journey stages: Lead Nurturing (5), Onboarding (8), Conversion (6), Churn Prevention (3), and Advocacy (3).
+              Switch to the "Email Flows" tab to view and manage individual sequences.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {emailTab === 'flows' && (
+        <div className="bg-white rounded-xl p-6">
+          <EmailFlows />
+        </div>
+      )}
+
+      {emailTab === 'logs' && (
+        <div className="bg-white rounded-xl p-6">
+          <EmailLogs />
+        </div>
+      )}
     </div>
   );
 }

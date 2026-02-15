@@ -49,7 +49,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
 3. Run the script:
 ```bash
-node scripts/create-superadmin-user.js admin@adiology.com YourSecurePassword "Super Admin"
+node scripts/create-superadmin-user.js admin@adiology.io YourSecurePassword "Super Admin"
 ```
 
 #### Option B: Manual Setup via Supabase Dashboard
@@ -70,7 +70,7 @@ node scripts/create-superadmin-user.js admin@adiology.com YourSecurePassword "Su
    INSERT INTO users (id, email, full_name, role, subscription_plan, subscription_status)
    VALUES (
      'USER_ID_FROM_AUTH',
-     'admin@adiology.com',
+     'admin@adiology.io',
      'Super Admin',
      'superadmin',
      'free',
@@ -83,7 +83,7 @@ node scripts/create-superadmin-user.js admin@adiology.com YourSecurePassword "Su
 
 ### Step 3: Verify Setup
 
-1. Go to: https://www.adiology.online/superadmin
+1. Go to: https://www.adiology.io/superadmin
 2. Login with your superadmin credentials
 3. You should see the admin panel
 

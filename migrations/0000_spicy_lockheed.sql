@@ -1,418 +1,418 @@
 CREATE TABLE "activity_log" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"saved_site_id" uuid,
-	"workspace_id" uuid,
-	"action" text NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
-	"created_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "saved_site_id" uuid,
+        "workspace_id" uuid,
+        "action" text NOT NULL,
+        "metadata" jsonb DEFAULT '{}'::jsonb,
+        "created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "ad_search_requests" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"search_query" text NOT NULL,
-	"advertiser_domain" text,
-	"status" text DEFAULT 'pending' NOT NULL,
-	"results" jsonb,
-	"error" text,
-	"created_at" timestamp DEFAULT now(),
-	"completed_at" timestamp
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "search_query" text NOT NULL,
+        "advertiser_domain" text,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "results" jsonb,
+        "error" text,
+        "created_at" timestamp DEFAULT now(),
+        "completed_at" timestamp
 );
 --> statement-breakpoint
 CREATE TABLE "audit_logs" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text,
-	"admin_user_id" text,
-	"action" text NOT NULL,
-	"resource_type" text,
-	"resource_id" text,
-	"old_values" jsonb,
-	"new_values" jsonb,
-	"ip_address" "inet",
-	"user_agent" text,
-	"level" text DEFAULT 'info' NOT NULL,
-	"details" jsonb,
-	"created_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text,
+        "admin_user_id" text,
+        "action" text NOT NULL,
+        "resource_type" text,
+        "resource_id" text,
+        "old_values" jsonb,
+        "new_values" jsonb,
+        "ip_address" "inet",
+        "user_agent" text,
+        "level" text DEFAULT 'info' NOT NULL,
+        "details" jsonb,
+        "created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "campaign_history" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text,
-	"workspace_id" uuid,
-	"type" text NOT NULL,
-	"name" text NOT NULL,
-	"data" jsonb NOT NULL,
-	"status" text DEFAULT 'completed' NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text,
+        "workspace_id" uuid,
+        "type" text NOT NULL,
+        "name" text NOT NULL,
+        "data" jsonb NOT NULL,
+        "status" text DEFAULT 'completed' NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "documentation_images" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"article_key" text NOT NULL,
-	"image_data" text NOT NULL,
-	"image_order" integer DEFAULT 0 NOT NULL,
-	"uploaded_by" text NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "article_key" text NOT NULL,
+        "image_data" text NOT NULL,
+        "image_order" integer DEFAULT 0 NOT NULL,
+        "uploaded_by" text NOT NULL,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "email_logs" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"recipient" text NOT NULL,
-	"subject" text NOT NULL,
-	"template_id" text,
-	"sequence_id" text,
-	"status" text DEFAULT 'sent' NOT NULL,
-	"message_id" text,
-	"opens" integer DEFAULT 0,
-	"clicks" integer DEFAULT 0,
-	"sent_at" timestamp DEFAULT now(),
-	"opened_at" timestamp,
-	"clicked_at" timestamp,
-	"bounced_at" timestamp,
-	"error" text,
-	"metadata" jsonb DEFAULT '{}'::jsonb
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "recipient" text NOT NULL,
+        "subject" text NOT NULL,
+        "template_id" text,
+        "sequence_id" text,
+        "status" text DEFAULT 'sent' NOT NULL,
+        "message_id" text,
+        "opens" integer DEFAULT 0,
+        "clicks" integer DEFAULT 0,
+        "sent_at" timestamp DEFAULT now(),
+        "opened_at" timestamp,
+        "clicked_at" timestamp,
+        "bounced_at" timestamp,
+        "error" text,
+        "metadata" jsonb DEFAULT '{}'::jsonb
 );
 --> statement-breakpoint
 CREATE TABLE "email_sequence_progress" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"sequence_id" text NOT NULL,
-	"email_id" text NOT NULL,
-	"status" text DEFAULT 'pending' NOT NULL,
-	"scheduled_at" timestamp,
-	"sent_at" timestamp,
-	"opened_at" timestamp,
-	"clicked_at" timestamp,
-	"error" text,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "sequence_id" text NOT NULL,
+        "email_id" text NOT NULL,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "scheduled_at" timestamp,
+        "sent_at" timestamp,
+        "opened_at" timestamp,
+        "clicked_at" timestamp,
+        "error" text,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "emails" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text,
-	"recipient_email" text NOT NULL,
-	"sender_email" text DEFAULT 'noreply@adiology.com',
-	"subject" text NOT NULL,
-	"template_name" text,
-	"template_data" jsonb,
-	"status" text DEFAULT 'queued' NOT NULL,
-	"provider" text DEFAULT 'aws_ses',
-	"provider_message_id" text,
-	"error_message" text,
-	"sent_at" timestamp,
-	"delivered_at" timestamp,
-	"opened_at" timestamp,
-	"clicked_at" timestamp,
-	"bounced_at" timestamp,
-	"complained_at" timestamp,
-	"created_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text,
+        "recipient_email" text NOT NULL,
+        "sender_email" text DEFAULT 'noreply@adiology.io',
+        "subject" text NOT NULL,
+        "template_name" text,
+        "template_data" jsonb,
+        "status" text DEFAULT 'queued' NOT NULL,
+        "provider" text DEFAULT 'aws_ses',
+        "provider_message_id" text,
+        "error_message" text,
+        "sent_at" timestamp,
+        "delivered_at" timestamp,
+        "opened_at" timestamp,
+        "clicked_at" timestamp,
+        "bounced_at" timestamp,
+        "complained_at" timestamp,
+        "created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "feedback" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text,
-	"user_email" text,
-	"type" text NOT NULL,
-	"rating" integer,
-	"message" text NOT NULL,
-	"status" text DEFAULT 'new' NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text,
+        "user_email" text,
+        "type" text NOT NULL,
+        "rating" integer,
+        "message" text NOT NULL,
+        "status" text DEFAULT 'new' NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "form_submissions" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"form_id" uuid NOT NULL,
-	"workspace_id" uuid,
-	"data" jsonb NOT NULL,
-	"submitted_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "form_id" uuid NOT NULL,
+        "workspace_id" uuid,
+        "data" jsonb NOT NULL,
+        "submitted_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "forms" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"workspace_id" uuid,
-	"name" text NOT NULL,
-	"fields" jsonb DEFAULT '[]'::jsonb,
-	"settings" jsonb DEFAULT '{}'::jsonb,
-	"status" text DEFAULT 'active',
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "workspace_id" uuid,
+        "name" text NOT NULL,
+        "fields" jsonb DEFAULT '[]'::jsonb,
+        "settings" jsonb DEFAULT '{}'::jsonb,
+        "status" text DEFAULT 'active',
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "invoices" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"stripe_invoice_id" text,
-	"amount" numeric(10, 2) NOT NULL,
-	"currency" text DEFAULT 'usd',
-	"status" text DEFAULT 'pending' NOT NULL,
-	"paid_at" timestamp,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "invoices_stripe_invoice_id_unique" UNIQUE("stripe_invoice_id")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "stripe_invoice_id" text,
+        "amount" numeric(10, 2) NOT NULL,
+        "currency" text DEFAULT 'usd',
+        "status" text DEFAULT 'pending' NOT NULL,
+        "paid_at" timestamp,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "invoices_stripe_invoice_id_unique" UNIQUE("stripe_invoice_id")
 );
 --> statement-breakpoint
 CREATE TABLE "kv_store_6757d0ca" (
-	"key" text PRIMARY KEY NOT NULL,
-	"value" jsonb NOT NULL
+        "key" text PRIMARY KEY NOT NULL,
+        "value" jsonb NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "organization_invites" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"organization_id" uuid NOT NULL,
-	"code" text NOT NULL,
-	"email" text,
-	"role" text DEFAULT 'viewer' NOT NULL,
-	"invited_by" text NOT NULL,
-	"status" text DEFAULT 'pending' NOT NULL,
-	"expires_at" timestamp NOT NULL,
-	"used_at" timestamp,
-	"used_by" text,
-	"max_uses" integer DEFAULT 1,
-	"use_count" integer DEFAULT 0,
-	"created_at" timestamp DEFAULT now(),
-	CONSTRAINT "organization_invites_code_unique" UNIQUE("code")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "organization_id" uuid NOT NULL,
+        "code" text NOT NULL,
+        "email" text,
+        "role" text DEFAULT 'viewer' NOT NULL,
+        "invited_by" text NOT NULL,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "expires_at" timestamp NOT NULL,
+        "used_at" timestamp,
+        "used_by" text,
+        "max_uses" integer DEFAULT 1,
+        "use_count" integer DEFAULT 0,
+        "created_at" timestamp DEFAULT now(),
+        CONSTRAINT "organization_invites_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
 CREATE TABLE "organization_members" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"organization_id" uuid NOT NULL,
-	"user_id" text NOT NULL,
-	"email" text NOT NULL,
-	"name" text,
-	"role" text DEFAULT 'viewer' NOT NULL,
-	"status" text DEFAULT 'active' NOT NULL,
-	"joined_at" timestamp DEFAULT now(),
-	"invited_at" timestamp,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "org_user_unique" UNIQUE("organization_id","user_id")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "organization_id" uuid NOT NULL,
+        "user_id" text NOT NULL,
+        "email" text NOT NULL,
+        "name" text,
+        "role" text DEFAULT 'viewer' NOT NULL,
+        "status" text DEFAULT 'active' NOT NULL,
+        "joined_at" timestamp DEFAULT now(),
+        "invited_at" timestamp,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "org_user_unique" UNIQUE("organization_id","user_id")
 );
 --> statement-breakpoint
 CREATE TABLE "organizations" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"name" text NOT NULL,
-	"slug" text,
-	"owner_id" text NOT NULL,
-	"settings" jsonb DEFAULT '{}'::jsonb,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "organizations_slug_unique" UNIQUE("slug")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "name" text NOT NULL,
+        "slug" text,
+        "owner_id" text NOT NULL,
+        "settings" jsonb DEFAULT '{}'::jsonb,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "organizations_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
 CREATE TABLE "payments" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text,
-	"subscription_id" uuid,
-	"stripe_payment_intent_id" text,
-	"stripe_invoice_id" text,
-	"amount_cents" integer NOT NULL,
-	"currency" text DEFAULT 'usd' NOT NULL,
-	"status" text NOT NULL,
-	"payment_method_type" text,
-	"description" text,
-	"receipt_url" text,
-	"created_at" timestamp DEFAULT now(),
-	"paid_at" timestamp,
-	CONSTRAINT "payments_stripe_payment_intent_id_unique" UNIQUE("stripe_payment_intent_id")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text,
+        "subscription_id" uuid,
+        "stripe_payment_intent_id" text,
+        "stripe_invoice_id" text,
+        "amount_cents" integer NOT NULL,
+        "currency" text DEFAULT 'usd' NOT NULL,
+        "status" text NOT NULL,
+        "payment_method_type" text,
+        "description" text,
+        "receipt_url" text,
+        "created_at" timestamp DEFAULT now(),
+        "paid_at" timestamp,
+        CONSTRAINT "payments_stripe_payment_intent_id_unique" UNIQUE("stripe_payment_intent_id")
 );
 --> statement-breakpoint
 CREATE TABLE "project_items" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"project_id" uuid NOT NULL,
-	"item_type" text NOT NULL,
-	"item_id" text NOT NULL,
-	"item_name" text,
-	"item_metadata" jsonb DEFAULT '{}'::jsonb,
-	"created_at" timestamp DEFAULT now(),
-	CONSTRAINT "unique_project_item" UNIQUE("project_id","item_type","item_id")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "project_id" uuid NOT NULL,
+        "item_type" text NOT NULL,
+        "item_id" text NOT NULL,
+        "item_name" text,
+        "item_metadata" jsonb DEFAULT '{}'::jsonb,
+        "created_at" timestamp DEFAULT now(),
+        CONSTRAINT "unique_project_item" UNIQUE("project_id","item_type","item_id")
 );
 --> statement-breakpoint
 CREATE TABLE "promo_trials" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"email" text NOT NULL,
-	"stripe_customer_id" text,
-	"stripe_payment_intent_id" text,
-	"status" text DEFAULT 'pending' NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"converted_at" timestamp
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "email" text NOT NULL,
+        "stripe_customer_id" text,
+        "stripe_payment_intent_id" text,
+        "status" text DEFAULT 'pending' NOT NULL,
+        "created_at" timestamp DEFAULT now(),
+        "converted_at" timestamp
 );
 --> statement-breakpoint
 CREATE TABLE "published_websites" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"name" text NOT NULL,
-	"template_id" text NOT NULL,
-	"template_data" jsonb NOT NULL,
-	"vercel_deployment_id" text NOT NULL,
-	"vercel_url" text NOT NULL,
-	"vercel_project_id" text NOT NULL,
-	"status" text NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "name" text NOT NULL,
+        "template_id" text NOT NULL,
+        "template_data" jsonb NOT NULL,
+        "vercel_deployment_id" text NOT NULL,
+        "vercel_url" text NOT NULL,
+        "vercel_project_id" text NOT NULL,
+        "status" text NOT NULL,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "saved_sites" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"template_id" uuid,
-	"workspace_id" uuid,
-	"slug" text NOT NULL,
-	"title" text NOT NULL,
-	"html" text NOT NULL,
-	"assets" jsonb DEFAULT '[]'::jsonb,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
-	"status" text DEFAULT 'draft' NOT NULL,
-	"vercel" jsonb DEFAULT '{}'::jsonb,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "saved_sites_user_id_slug" UNIQUE("user_id","slug")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "template_id" uuid,
+        "workspace_id" uuid,
+        "slug" text NOT NULL,
+        "title" text NOT NULL,
+        "html" text NOT NULL,
+        "assets" jsonb DEFAULT '[]'::jsonb,
+        "metadata" jsonb DEFAULT '{}'::jsonb,
+        "status" text DEFAULT 'draft' NOT NULL,
+        "vercel" jsonb DEFAULT '{}'::jsonb,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "saved_sites_user_id_slug" UNIQUE("user_id","slug")
 );
 --> statement-breakpoint
 CREATE TABLE "security_rules" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"type" text NOT NULL,
-	"value" text NOT NULL,
-	"reason" text NOT NULL,
-	"active" boolean DEFAULT true,
-	"priority" integer DEFAULT 100,
-	"expires_at" timestamp,
-	"created_by" text,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "type" text NOT NULL,
+        "value" text NOT NULL,
+        "reason" text NOT NULL,
+        "active" boolean DEFAULT true,
+        "priority" integer DEFAULT 100,
+        "expires_at" timestamp,
+        "created_by" text,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "subscriptions" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text,
-	"stripe_customer_id" text,
-	"stripe_subscription_id" text,
-	"stripe_price_id" text,
-	"plan_name" text NOT NULL,
-	"status" text NOT NULL,
-	"current_period_start" timestamp,
-	"current_period_end" timestamp,
-	"cancel_at_period_end" boolean DEFAULT false,
-	"canceled_at" timestamp,
-	"trial_start" timestamp,
-	"trial_end" timestamp,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "subscriptions_stripe_subscription_id_unique" UNIQUE("stripe_subscription_id")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text,
+        "stripe_customer_id" text,
+        "stripe_subscription_id" text,
+        "stripe_price_id" text,
+        "plan_name" text NOT NULL,
+        "status" text NOT NULL,
+        "current_period_start" timestamp,
+        "current_period_end" timestamp,
+        "cancel_at_period_end" boolean DEFAULT false,
+        "canceled_at" timestamp,
+        "trial_start" timestamp,
+        "trial_end" timestamp,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "subscriptions_stripe_subscription_id_unique" UNIQUE("stripe_subscription_id")
 );
 --> statement-breakpoint
 CREATE TABLE "task_projects" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"name" text NOT NULL,
-	"color" text DEFAULT '#6366f1',
-	"order" integer DEFAULT 0,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+        "id" serial PRIMARY KEY NOT NULL,
+        "user_id" text NOT NULL,
+        "name" text NOT NULL,
+        "color" text DEFAULT '#6366f1',
+        "order" integer DEFAULT 0,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "tasks" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"project_id" integer,
-	"title" text NOT NULL,
-	"description" text DEFAULT '',
-	"is_today" boolean DEFAULT false,
-	"is_completed" boolean DEFAULT false,
-	"priority" text DEFAULT 'medium',
-	"due_date" timestamp,
-	"order" integer DEFAULT 0,
-	"completed_at" timestamp,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+        "id" serial PRIMARY KEY NOT NULL,
+        "user_id" text NOT NULL,
+        "project_id" integer,
+        "title" text NOT NULL,
+        "description" text DEFAULT '',
+        "is_today" boolean DEFAULT false,
+        "is_completed" boolean DEFAULT false,
+        "priority" text DEFAULT 'medium',
+        "due_date" timestamp,
+        "order" integer DEFAULT 0,
+        "completed_at" timestamp,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "templates" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"slug" text NOT NULL,
-	"title" text NOT NULL,
-	"html_template" text NOT NULL,
-	"assets" jsonb DEFAULT '[]'::jsonb,
-	"placeholders" jsonb DEFAULT '[]'::jsonb,
-	"category" text,
-	"thumbnail" text,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "templates_slug_unique" UNIQUE("slug")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "slug" text NOT NULL,
+        "title" text NOT NULL,
+        "html_template" text NOT NULL,
+        "assets" jsonb DEFAULT '[]'::jsonb,
+        "placeholders" jsonb DEFAULT '[]'::jsonb,
+        "category" text,
+        "thumbnail" text,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "templates_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
 CREATE TABLE "user_notifications" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"type" text NOT NULL,
-	"title" text NOT NULL,
-	"message" text,
-	"data" jsonb,
-	"read" boolean DEFAULT false,
-	"action_type" text,
-	"action_data" jsonb,
-	"created_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "type" text NOT NULL,
+        "title" text NOT NULL,
+        "message" text,
+        "data" jsonb,
+        "read" boolean DEFAULT false,
+        "action_type" text,
+        "action_data" jsonb,
+        "created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
-	"id" text PRIMARY KEY NOT NULL,
-	"email" text NOT NULL,
-	"full_name" text,
-	"avatar_url" text,
-	"role" text DEFAULT 'user',
-	"subscription_plan" text DEFAULT 'free',
-	"subscription_status" text DEFAULT 'active',
-	"stripe_customer_id" text,
-	"stripe_subscription_id" text,
-	"ai_usage" integer DEFAULT 0,
-	"is_blocked" boolean DEFAULT false,
-	"last_sign_in" timestamp,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "users_email_unique" UNIQUE("email"),
-	CONSTRAINT "users_stripe_customer_id_unique" UNIQUE("stripe_customer_id")
+        "id" text PRIMARY KEY NOT NULL,
+        "email" text NOT NULL,
+        "full_name" text,
+        "avatar_url" text,
+        "role" text DEFAULT 'user',
+        "subscription_plan" text DEFAULT 'free',
+        "subscription_status" text DEFAULT 'active',
+        "stripe_customer_id" text,
+        "stripe_subscription_id" text,
+        "ai_usage" integer DEFAULT 0,
+        "is_blocked" boolean DEFAULT false,
+        "last_sign_in" timestamp,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "users_email_unique" UNIQUE("email"),
+        CONSTRAINT "users_stripe_customer_id_unique" UNIQUE("stripe_customer_id")
 );
 --> statement-breakpoint
 CREATE TABLE "workspace_members" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"workspace_id" uuid,
-	"user_id" text,
-	"role" text DEFAULT 'member',
-	"status" text DEFAULT 'active',
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "workspace_user_unique" UNIQUE("workspace_id","user_id")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "workspace_id" uuid,
+        "user_id" text,
+        "role" text DEFAULT 'member',
+        "status" text DEFAULT 'active',
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "workspace_user_unique" UNIQUE("workspace_id","user_id")
 );
 --> statement-breakpoint
 CREATE TABLE "workspace_projects" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
-	"workspace_id" uuid,
-	"name" text NOT NULL,
-	"description" text,
-	"color" text DEFAULT '#6366f1',
-	"icon" text DEFAULT 'folder',
-	"is_archived" boolean DEFAULT false,
-	"order" integer DEFAULT 0,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" text NOT NULL,
+        "workspace_id" uuid,
+        "name" text NOT NULL,
+        "description" text,
+        "color" text DEFAULT '#6366f1',
+        "icon" text DEFAULT 'folder',
+        "is_archived" boolean DEFAULT false,
+        "order" integer DEFAULT 0,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "workspaces" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"name" text NOT NULL,
-	"slug" text NOT NULL,
-	"owner_id" text,
-	"is_admin_workspace" boolean DEFAULT false,
-	"settings" jsonb DEFAULT '{}'::jsonb,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "workspaces_slug_unique" UNIQUE("slug")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "name" text NOT NULL,
+        "slug" text NOT NULL,
+        "owner_id" text,
+        "is_admin_workspace" boolean DEFAULT false,
+        "settings" jsonb DEFAULT '{}'::jsonb,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now(),
+        CONSTRAINT "workspaces_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
 ALTER TABLE "activity_log" ADD CONSTRAINT "activity_log_saved_site_id_saved_sites_id_fk" FOREIGN KEY ("saved_site_id") REFERENCES "public"."saved_sites"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

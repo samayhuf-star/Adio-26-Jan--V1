@@ -39,8 +39,7 @@ class EmailApiClient {
   private baseUrl: string;
 
   constructor() {
-    // Use environment variable or default to localhost for development
-    this.baseUrl = import.meta.env.VITE_EMAIL_API_URL || 'http://localhost:5001';
+    this.baseUrl = import.meta.env.VITE_EMAIL_API_URL || '/api';
   }
 
   private async makeRequest<T>(endpoint: string, data: any): Promise<T> {
