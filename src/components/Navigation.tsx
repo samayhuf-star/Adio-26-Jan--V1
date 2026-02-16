@@ -51,9 +51,6 @@ export function Navigation({ onGetStarted, onLogin }: NavigationProps) {
                 {item.name}
               </a>
             ))}
-            <button onClick={onLogin} className="px-5 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm">
-              Sign In
-            </button>
             <button onClick={onGetStarted} className="px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm hover:shadow-lg transition-shadow">
               Get Started
             </button>
@@ -90,9 +87,6 @@ export function Navigation({ onGetStarted, onLogin }: NavigationProps) {
                   {item.name}
                 </motion.a>
               ))}
-              <button onClick={onLogin} className="block w-full text-left py-2 text-gray-600 hover:text-gray-900 transition-colors">
-                Sign In
-              </button>
               <button onClick={onGetStarted} className="w-full mt-4 px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm">
                 Get Started
               </button>

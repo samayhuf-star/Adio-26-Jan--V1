@@ -64,10 +64,12 @@ import { ApiStatusIndicator } from './ApiStatusIndicator';
 import { GoogleAdsPushButton } from './GoogleAdsPushButton';
 import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
 import { isSuperAdmin } from '../utils/auth';
+import { generateCampaignAssets, assetsToAdExtensions } from '../utils/campaignAssetGenerator';
 
 // Campaign Structure Types (14 structures)
 const CAMPAIGN_STRUCTURES = [
-  { id: 'skag', name: 'SKAG', description: 'Single Keyword Ad Group', icon: Target },
+  { id: 'skag', name: 'SKAG', description: 'Single Keyword Ad Group - All Match Types', icon: Target },
+  { id: 'skag_split', name: 'SKAG Split', description: 'Single Keyword - One Match Type Per Group', icon: Target },
   { id: 'stag', name: 'STAG', description: 'Single Theme Ad Group', icon: Layers },
   { id: 'mix', name: 'Mix', description: 'Hybrid Structure', icon: TrendingUp },
   { id: 'stag_plus', name: 'STAG+', description: 'Smart Grouping with ML', icon: Brain },
@@ -1594,8 +1596,25 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           keywords: [kw], // Keep full keyword object with matchType
         });
       });
-      // Ensure the counts match
       console.log(`[SKAG] Generated ${groups.length} ad groups for ${keywords.length} keywords`);
+    } else if (structureType === 'skag_split') {
+      const matchTypeLabels: Record<string, string> = { broad: 'Broad', phrase: 'Phrase', exact: 'Exact' };
+      const enabledMatchTypes = Object.entries(campaignData.keywordTypes || { broad: true, phrase: true, exact: true })
+        .filter(([key, val]) => val && key !== 'negative')
+        .map(([key]) => key);
+      let agIdx = 0;
+      keywords.forEach((kw) => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        enabledMatchTypes.forEach(mt => {
+          agIdx++;
+          groups.push({
+            id: `ag-${agIdx}`,
+            name: `${baseText} - ${matchTypeLabels[mt] || mt}`.substring(0, 50),
+            keywords: [{ ...kw, matchType: mt }],
+          });
+        });
+      });
+      console.log(`[SKAG Split] Generated ${groups.length} ad groups for ${keywords.length} keywords x ${enabledMatchTypes.length} match types`);
     } else if (structureType === 'stag') {
       // STAG: Group by theme (first word)
       const themeGroups: { [key: string]: any[] } = {};
@@ -1802,15 +1821,40 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         }
       }
       
-      setCampaignData(prev => ({
-        ...prev,
-        ads: ads,
-        adTypes: adTypesToGenerate, // Update ad types to match generated ads
+      const generatedAssets = generateCampaignAssets({
+        businessName,
+        industry,
+        keywords: keywordTexts,
+        url: campaignData.url || '',
+        uniqueValueProposition: campaignData.cta || undefined,
+        location: campaignData.locations?.cities?.[0] || campaignData.locations?.states?.[0] || undefined,
+        phoneNumber: universalInput.phoneNumber,
+      });
+
+      const adExtensions = assetsToAdExtensions(generatedAssets);
+
+      const adsWithExtensions = ads.map(ad => ({
+        ...ad,
+        extensions: adExtensions,
       }));
 
-      notifications.success(`Generated ${ads.length} ads successfully`, {
-        title: 'Ads Generated',
-        description: 'RSA, DKI, and Call ads have been created for all ad groups.'
+      console.log('Generated campaign assets:', {
+        sitelinks: generatedAssets.sitelinks.length,
+        callouts: generatedAssets.callouts.length,
+        snippets: generatedAssets.snippets.length,
+        callExtensions: generatedAssets.callExtensions.length,
+      });
+
+      setCampaignData(prev => ({
+        ...prev,
+        ads: adsWithExtensions,
+        adTypes: adTypesToGenerate,
+      }));
+
+      const assetCount = generatedAssets.sitelinks.length + generatedAssets.callouts.length + generatedAssets.snippets.length;
+      notifications.success(`Generated ${ads.length} ads with ${assetCount} assets`, {
+        title: 'Ads & Assets Generated',
+        description: `RSA, DKI, Call ads + ${generatedAssets.sitelinks.length} sitelinks, ${generatedAssets.callouts.length} callouts, ${generatedAssets.snippets.length} snippets`
       });
       
       // Auto-save draft
@@ -2472,76 +2516,84 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       const seenSnippets = new Set<string>();
       let hasCallExt = false;
       
-      (campaignData.ads || []).forEach((ad: any) => {
-        if (ad.extensions && Array.isArray(ad.extensions)) {
-          ad.extensions.forEach((ext: any) => {
-            if (ext.type === 'sitelink') {
-              if (ext.sitelinks && Array.isArray(ext.sitelinks)) {
-                ext.sitelinks.forEach((sl: any) => {
-                  const slText = sl.text || sl.linkText || '';
-                  if (slText && !seenSitelinks.has(slText)) {
-                    seenSitelinks.add(slText);
-                    sitelinks.push({
-                      text: slText,
-                      description1: sl.description || sl.description1 || '',
-                      description2: sl.description2 || '',
-                      finalUrl: sl.url || sl.finalUrl || campaignData.url || '',
-                      status: 'Enabled'
-                    });
-                  }
-                });
-              } else {
-                const slText = ext.text || ext.linkText || '';
-                if (slText && !seenSitelinks.has(slText)) {
-                  seenSitelinks.add(slText);
-                  sitelinks.push({
-                    text: slText,
-                    description1: ext.description1 || ext.descriptionLine1 || '',
-                    description2: ext.description2 || ext.descriptionLine2 || '',
-                    finalUrl: ext.finalUrl || ext.url || campaignData.url || '',
-                    status: 'Enabled'
-                  });
-                }
-              }
-            } else if (ext.type === 'callout') {
-              if (ext.callouts && Array.isArray(ext.callouts)) {
-                ext.callouts.forEach((calloutText: string) => {
-                  if (calloutText && !seenCallouts.has(calloutText)) {
-                    seenCallouts.add(calloutText);
-                    callouts.push({
-                      text: calloutText,
-                      status: 'Enabled'
-                    });
-                  }
-                });
-              } else if (ext.text && !seenCallouts.has(ext.text)) {
-                seenCallouts.add(ext.text);
-                callouts.push({
-                  text: ext.text,
+      const processExtension = (ext: any) => {
+        if (ext.type === 'sitelink') {
+          if (ext.sitelinks && Array.isArray(ext.sitelinks)) {
+            ext.sitelinks.forEach((sl: any) => {
+              const slText = sl.text || sl.linkText || '';
+              if (slText && !seenSitelinks.has(slText)) {
+                seenSitelinks.add(slText);
+                sitelinks.push({
+                  text: slText,
+                  description1: sl.description || sl.description1 || '',
+                  description2: sl.description2 || '',
+                  finalUrl: sl.url || sl.finalUrl || campaignData.url || '',
                   status: 'Enabled'
                 });
               }
-            } else if (ext.type === 'snippet') {
-              const snippetKey = `${ext.header || ''}:${Array.isArray(ext.values) ? ext.values.join(',') : ext.values || ''}`;
-              if (!seenSnippets.has(snippetKey)) {
-                seenSnippets.add(snippetKey);
-                snippets.push({
-                  header: ext.header || 'Types',
-                  values: Array.isArray(ext.values) ? ext.values.join(', ') : (ext.values || ''),
-                  status: 'Enabled'
-                });
-              }
-            } else if (ext.type === 'call' && !hasCallExt) {
-              hasCallExt = true;
-              callExtensions.push({
-                phoneNumber: ext.phone || ext.phoneNumber || '',
-                countryCode: ext.countryCode || 'US',
+            });
+          } else {
+            const slText = ext.text || ext.linkText || '';
+            if (slText && !seenSitelinks.has(slText)) {
+              seenSitelinks.add(slText);
+              sitelinks.push({
+                text: slText,
+                description1: ext.description1 || ext.descriptionLine1 || '',
+                description2: ext.description2 || ext.descriptionLine2 || '',
+                finalUrl: ext.finalUrl || ext.url || campaignData.url || '',
                 status: 'Enabled'
               });
             }
+          }
+        } else if (ext.type === 'callout') {
+          if (ext.callouts && Array.isArray(ext.callouts)) {
+            ext.callouts.forEach((calloutText: string) => {
+              if (calloutText && !seenCallouts.has(calloutText)) {
+                seenCallouts.add(calloutText);
+                callouts.push({
+                  text: calloutText,
+                  status: 'Enabled'
+                });
+              }
+            });
+          } else if (ext.text && !seenCallouts.has(ext.text)) {
+            seenCallouts.add(ext.text);
+            callouts.push({
+              text: ext.text,
+              status: 'Enabled'
+            });
+          }
+        } else if (ext.type === 'snippet') {
+          const snippetKey = `${ext.header || ''}:${Array.isArray(ext.values) ? ext.values.join(',') : ext.values || ''}`;
+          if (!seenSnippets.has(snippetKey)) {
+            seenSnippets.add(snippetKey);
+            snippets.push({
+              header: ext.header || 'Types',
+              values: Array.isArray(ext.values) ? ext.values.join(', ') : (ext.values || ''),
+              status: 'Enabled'
+            });
+          }
+        } else if (ext.type === 'call' && !hasCallExt) {
+          hasCallExt = true;
+          callExtensions.push({
+            phoneNumber: ext.phone || ext.phoneNumber || '',
+            countryCode: ext.countryCode || 'US',
+            status: 'Enabled'
           });
         }
+      };
+
+      // Collect extensions from individual ads
+      (campaignData.ads || []).forEach((ad: any) => {
+        if (ad.extensions && Array.isArray(ad.extensions)) {
+          ad.extensions.forEach(processExtension);
+        }
       });
+
+      // Also collect from top-level campaignData.extensions (fallback)
+      if (campaignData.extensions && Array.isArray(campaignData.extensions)) {
+        campaignData.extensions.forEach(processExtension);
+      }
       
       console.log('Extensions collected for CSV:', { 
         sitelinks: sitelinks.length, 
@@ -5047,9 +5099,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   <FileText className="w-4 h-4 text-white" />
                 </div>
                 <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-0.5">
-                  {campaignData.selectedStructure === 'skag' 
-                    ? campaignData.adGroups.length * Math.min(3, campaignData.ads.filter(a => a.type === 'rsa' || a.type === 'dki').length) 
-                    : campaignData.ads.length * Math.max(1, campaignData.adGroups.length)}
+                  {campaignData.ads.length * Math.max(1, campaignData.adGroups.length)}
                 </div>
                 <div className="text-xs font-medium text-slate-700">Ads</div>
               </CardContent>
@@ -5921,6 +5971,7 @@ function rankCampaignStructures(intent: IntentResult, vertical: string): { id: s
     scores['geo'] += 5;            // Local doctors/hospitals matter
     scores['intent'] += 4;         // Specific health issues/services
     scores['skag'] += 3;           // Single keyword groups work well
+    scores['skag_split'] += 2;     // Split match types for medical terms
     scores['stag'] += 3;           // Theme-based (symptoms/services)
   } 
   else if (vertical === 'Real Estate') {
@@ -5935,6 +5986,7 @@ function rankCampaignStructures(intent: IntentResult, vertical: string): { id: s
     scores['geo'] += 4;            // Local laws matter
     scores['intent'] += 4;         // Type of legal service
     scores['skag'] += 3;           // Specific legal terms
+    scores['skag_split'] += 3;     // Granular control for legal terms
     scores['stag'] += 3;           // Service types
   } 
   else if (vertical === 'Finance') {
@@ -5955,6 +6007,7 @@ function rankCampaignStructures(intent: IntentResult, vertical: string): { id: s
     scores['geo'] += 4;            // Local services
     scores['intent'] += 4;         // Type of service
     scores['skag'] += 3;           // Specific services
+    scores['skag_split'] += 2;     // Split match types for service keywords
     scores['stag'] += 3;           // Service categories
   }
 
@@ -5964,6 +6017,7 @@ function rankCampaignStructures(intent: IntentResult, vertical: string): { id: s
     // Phone-based CTAs
     scores['geo'] += 2;            // Local calls matter
     scores['skag'] += 2;           // Specific keyword calls
+    scores['skag_split'] += 3;     // Split by match type ideal for calls
     scores['match_type'] += 1;     // Match type variations help
   } 
   else if (intent.intentId === IntentId.LEAD) {

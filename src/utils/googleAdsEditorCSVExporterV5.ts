@@ -578,6 +578,63 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
     }
   }
   
+  // === ASSET ROWS (separate rows for Google Ads Editor import) ===
+  // Google Ads Editor requires assets as separate rows using specific column names:
+  // Sitelinks use: Campaign + Link Text + Description Line 1 + Description Line 2 + Final URL
+  // Callouts use: Campaign + Callout Text
+  // Structured Snippets use: Campaign + Snippet Header + Snippet Values
+
+  // Sitelink asset rows
+  if (campaign.sitelinks && campaign.sitelinks.length > 0) {
+    campaign.sitelinks.slice(0, 4).forEach((sl) => {
+      const slRow = createEmptyRow();
+      slRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      slRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      slRow[COLUMN_INDEX['Link Text']] = sl.text || '';
+      slRow[COLUMN_INDEX['Description Line 1']] = sl.description1 || '';
+      slRow[COLUMN_INDEX['Description Line 2']] = sl.description2 || '';
+      slRow[COLUMN_INDEX['Final URL']] = sl.finalUrl || campaign.url || '';
+      rows.push(slRow);
+    });
+  }
+
+  // Callout asset rows
+  if (campaign.callouts && campaign.callouts.length > 0) {
+    campaign.callouts.slice(0, 4).forEach((co) => {
+      const coRow = createEmptyRow();
+      coRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      coRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      coRow[COLUMN_INDEX['Callout Text']] = co.text || '';
+      rows.push(coRow);
+    });
+  }
+
+  // Structured Snippet asset rows
+  if (campaign.snippets && campaign.snippets.length > 0) {
+    campaign.snippets.slice(0, 2).forEach((sn) => {
+      const snRow = createEmptyRow();
+      snRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      snRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      snRow[COLUMN_INDEX['Snippet Header']] = sn.header || '';
+      snRow[COLUMN_INDEX['Snippet Values']] = Array.isArray(sn.values) ? sn.values.join(';') : (sn.values || '');
+      rows.push(snRow);
+    });
+  }
+
+  // Call extension asset rows
+  if (campaign.callExtensions && campaign.callExtensions.length > 0) {
+    campaign.callExtensions.forEach((ce) => {
+      const ceRow = createEmptyRow();
+      ceRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      ceRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      ceRow[COLUMN_INDEX['PhoneNumber']] = ce.phoneNumber || '';
+      ceRow[COLUMN_INDEX['VerificationURL']] = ce.verificationUrl || '';
+      ceRow[COLUMN_INDEX['Call Extension Status']] = ce.status || 'Enabled';
+      ceRow[COLUMN_INDEX['Business Name']] = campaign.campaignName || '';
+      rows.push(ceRow);
+    });
+  }
+
   // Convert rows to CSV string with proper escaping
   const csvContent = rows.map(row => row.map(escapeCSV).join(',')).join('\r\n');
   

@@ -244,7 +244,7 @@ function CampaignStructuresSection() {
         >
           <span className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500/10 text-violet-400 rounded-full text-sm font-medium mb-4 border border-violet-500/20">
             <Layers className="w-4 h-4" />
-            12 Campaign Structures
+            13 Campaign Structures
           </span>
           <h2 className="text-3xl md:text-5xl font-black mb-4 text-white">
             Choose Your

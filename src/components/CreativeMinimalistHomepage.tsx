@@ -76,12 +76,6 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
 
           <div className="hidden md:flex items-center gap-4">
             <button 
-              onClick={onLogin}
-              className={`text-sm font-medium transition-colors px-4 py-2 ${isScrolled ? 'text-gray-200 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}
-            >
-              Sign In
-            </button>
-            <button 
               onClick={onGetStarted}
               className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-violet-200/50 hover:shadow-xl hover:shadow-violet-300/50 transition-all hover:scale-105"
             >
@@ -105,7 +99,6 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/proxy-mail'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Proxy Mail</button>
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/domain-monitor'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Domain Monitor</button>
             <a href="#pricing" className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Pricing</a>
-            <button onClick={onLogin} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Sign In</button>
             <button onClick={onGetStarted} className="w-full px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-sm font-semibold">
               Get Started Free
             </button>
@@ -127,7 +120,7 @@ function HeroSection({ onGetStarted }: { onGetStarted?: () => void }) {
     },
     {
       icon: Layers,
-      title: '12 Campaigns Structures',
+      title: '13 Campaigns Structures',
       desc: 'Pro-built, plug & play',
       gradient: 'from-indigo-500 to-blue-600',
       iconColor: 'text-indigo-400',
@@ -440,7 +433,7 @@ function CampaignBuilderSection({ onGetStarted }: { onGetStarted?: () => void })
               Campaign Builder 3.0
             </span>
             <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
-              12 Campaign Structures
+              13 Campaign Structures
               <br />
               <span className="text-indigo-400">for Every Strategy</span>
             </h2>

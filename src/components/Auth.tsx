@@ -152,7 +152,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
 
   const features = [
     { icon: Rocket, label: 'AI Campaign Builder', color: 'from-violet-500 to-indigo-600' },
-    { icon: Layers, label: '12 Campaign Structures', color: 'from-indigo-500 to-blue-600' },
+    { icon: Layers, label: '13 Campaign Structures', color: 'from-indigo-500 to-blue-600' },
     { icon: Search, label: 'Keyword Intelligence', color: 'from-blue-500 to-cyan-500' },
     { icon: ShieldCheck, label: 'Click Fraud Protection', color: 'from-amber-500 to-orange-600' },
     { icon: MailOpen, label: 'Proxy Mail', color: 'from-pink-500 to-rose-600' },

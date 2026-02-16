@@ -142,7 +142,7 @@ export function Features() {
         >
           <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-full shadow-lg">
             <span className="text-xl">🔥</span>
-            <span>All 12 Structures Available Instantly</span>
+            <span>All 13 Structures Available Instantly</span>
             <span className="text-xl">🔥</span>
           </div>
         </motion.div>
