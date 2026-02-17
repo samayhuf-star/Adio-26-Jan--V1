@@ -271,11 +271,12 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
   const [loading, setLoading] = useState(true);
   const [newDomain, setNewDomain] = useState('');
   const [addingDomain, setAddingDomain] = useState(false);
-  const [snippetModal, setSnippetModal] = useState<{ open: boolean; snippet: string; domain: string }>({
+  const [snippetModal, setSnippetModal] = useState<{ open: boolean; snippet: string; wordpressSnippet?: string; wordpressPluginSnippet?: string; domain: string }>({
     open: false,
     snippet: '',
     domain: '',
   });
+  const [modalSnippetType, setModalSnippetType] = useState<'html' | 'wordpress-plugin' | 'wordpress-php'>('html');
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
@@ -285,6 +286,9 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
   const [domainDetailLoading, setDomainDetailLoading] = useState(false);
   const [copiedSiteId, setCopiedSiteId] = useState(false);
   const [copiedDetailSnippet, setCopiedDetailSnippet] = useState(false);
+  const [snippetType, setSnippetType] = useState<'html' | 'wordpress-plugin' | 'wordpress-php'>('html');
+  const [verifyStatus, setVerifyStatus] = useState<any>(null);
+  const [verifyLoading, setVerifyLoading] = useState(false);
 
   useEffect(() => {
     setActiveTab(defaultTab);
@@ -391,14 +395,21 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
       const res = await fetch(`${API_BASE}/domains/${domain.id}/snippet`, { headers });
       if (!res.ok) throw new Error('Failed to get snippet');
       const data = await res.json();
-      setSnippetModal({ open: true, snippet: data.snippet || data.html || '', domain: domain.domain });
+      setSnippetModal({ open: true, snippet: data.snippet || data.html || '', wordpressSnippet: data.wordpressSnippet, wordpressPluginSnippet: data.wordpressPluginSnippet, domain: domain.domain });
+      setModalSnippetType('html');
     } catch (err: any) {
       setError(err.message);
     }
   };
 
+  const getActiveModalSnippet = () => {
+    if (modalSnippetType === 'wordpress-plugin') return snippetModal.wordpressPluginSnippet || snippetModal.snippet;
+    if (modalSnippetType === 'wordpress-php') return snippetModal.wordpressSnippet || '';
+    return snippetModal.snippet;
+  };
+
   const copySnippet = () => {
-    navigator.clipboard.writeText(snippetModal.snippet);
+    navigator.clipboard.writeText(getActiveModalSnippet());
     setCopiedSnippet(true);
     setTimeout(() => setCopiedSnippet(false), 2000);
   };
@@ -1099,39 +1110,194 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                             <Code className="w-5 h-5 text-indigo-500" />
-                            Verification Code
+                            Installation Code
                           </h3>
                         </div>
-                        <p className="text-sm text-slate-500 mb-4">
-                          Add this tracking snippet to your website's <code className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">&lt;head&gt;</code> section to start tracking visitors and enable verification.
-                        </p>
-                        <div className="relative">
-                          <pre className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-green-400 overflow-x-auto whitespace-pre-wrap break-all font-mono">
-                            {domainDetail.snippet}
-                          </pre>
+
+                        <div className="flex gap-1 mb-4 bg-slate-100 rounded-lg p-1">
                           <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(domainDetail.snippet);
-                              setCopiedDetailSnippet(true);
-                              setTimeout(() => setCopiedDetailSnippet(false), 2000);
-                            }}
-                            className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs text-slate-300 transition-colors"
+                            onClick={() => { setSnippetType('html'); setCopiedDetailSnippet(false); }}
+                            className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${snippetType === 'html' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                           >
-                            {copiedDetailSnippet ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                            {copiedDetailSnippet ? 'Copied!' : 'Copy'}
+                            HTML / Static Sites
+                          </button>
+                          <button
+                            onClick={() => { setSnippetType('wordpress-plugin'); setCopiedDetailSnippet(false); }}
+                            className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${snippetType === 'wordpress-plugin' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                            WordPress (Plugin)
+                          </button>
+                          <button
+                            onClick={() => { setSnippetType('wordpress-php'); setCopiedDetailSnippet(false); }}
+                            className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors ${snippetType === 'wordpress-php' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                            WordPress (PHP)
                           </button>
                         </div>
+
+                        {snippetType === 'html' && (
+                          <>
+                            <p className="text-sm text-slate-500 mb-4">
+                              Add this tracking snippet to your website's <code className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">&lt;head&gt;</code> section.
+                            </p>
+                            <div className="relative">
+                              <pre className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-green-400 overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                                {domainDetail.snippet}
+                              </pre>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(domainDetail.snippet);
+                                  setCopiedDetailSnippet(true);
+                                  setTimeout(() => setCopiedDetailSnippet(false), 2000);
+                                }}
+                                className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs text-slate-300 transition-colors"
+                              >
+                                {copiedDetailSnippet ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                {copiedDetailSnippet ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          </>
+                        )}
+
+                        {snippetType === 'wordpress-plugin' && (
+                          <>
+                            <p className="text-sm text-slate-500 mb-4">
+                              Use the <strong>"Insert Headers and Footers"</strong> plugin (or similar) in WordPress. Go to <code className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">Settings &gt; Insert Headers and Footers</code> and paste this in the <strong>Scripts in Header</strong> section.
+                            </p>
+                            <div className="relative">
+                              <pre className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-green-400 overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                                {domainDetail.wordpressPluginSnippet || domainDetail.snippet}
+                              </pre>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(domainDetail.wordpressPluginSnippet || domainDetail.snippet);
+                                  setCopiedDetailSnippet(true);
+                                  setTimeout(() => setCopiedDetailSnippet(false), 2000);
+                                }}
+                                className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs text-slate-300 transition-colors"
+                              >
+                                {copiedDetailSnippet ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                {copiedDetailSnippet ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                              <p className="text-xs text-amber-800">
+                                <strong>Recommended Plugins:</strong> "Insert Headers and Footers" by WPBeginner, "WPCode", or "Header Footer Code Manager". If you use a caching plugin (WP Rocket, W3 Total Cache, etc.), make sure to exclude this script from minification and combining.
+                              </p>
+                            </div>
+                          </>
+                        )}
+
+                        {snippetType === 'wordpress-php' && (
+                          <>
+                            <p className="text-sm text-slate-500 mb-4">
+                              Add this PHP code to your theme's <code className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">functions.php</code> file, or use a <strong>Code Snippets</strong> plugin to add it safely.
+                            </p>
+                            <div className="relative">
+                              <pre className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-green-400 overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs">
+                                {domainDetail.wordpressSnippet || '// WordPress PHP snippet unavailable'}
+                              </pre>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(domainDetail.wordpressSnippet || '');
+                                  setCopiedDetailSnippet(true);
+                                  setTimeout(() => setCopiedDetailSnippet(false), 2000);
+                                }}
+                                className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs text-slate-300 transition-colors"
+                              >
+                                {copiedDetailSnippet ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                {copiedDetailSnippet ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                              <p className="text-xs text-amber-800">
+                                <strong>Important:</strong> If using a child theme, add this to the child theme's functions.php. If your caching plugin minifies or combines JavaScript files, exclude "adiology-clickguard" from optimization.
+                              </p>
+                            </div>
+                          </>
+                        )}
+
                         <div className="mt-4 p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
                           <h4 className="text-sm font-medium text-indigo-800 mb-2 flex items-center gap-2">
                             <Zap className="w-4 h-4" />
                             How to Verify
                           </h4>
                           <ol className="text-sm text-indigo-700 space-y-1.5 list-decimal list-inside">
-                            <li>Copy the snippet above</li>
-                            <li>Paste it in your website's HTML before the closing <code className="text-xs bg-indigo-100 text-indigo-800 px-1 py-0.5 rounded">&lt;/head&gt;</code> tag</li>
+                            <li>Copy the snippet above for your platform</li>
+                            <li>Install it on your website using the method shown</li>
                             <li>Deploy/publish your website changes</li>
                             <li>Click the "Verify Now" button above to confirm installation</li>
                           </ol>
+                        </div>
+
+                        <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                          <h4 className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                            <Search className="w-4 h-4" />
+                            Connection Test
+                          </h4>
+                          <p className="text-xs text-slate-500 mb-3">
+                            Test if your site can communicate with Click Guard servers.
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={async () => {
+                                setVerifyLoading(true);
+                                setVerifyStatus(null);
+                                try {
+                                  const res = await fetch(`${API_BASE}/verify?sid=${domainDetail.siteId}`);
+                                  const data = await res.json();
+                                  setVerifyStatus(data);
+                                } catch (err: any) {
+                                  setVerifyStatus({ success: false, error: err.message || 'Connection failed' });
+                                } finally {
+                                  setVerifyLoading(false);
+                                }
+                              }}
+                              disabled={verifyLoading}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                              {verifyLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
+                              Run Connection Test
+                            </button>
+                            {verifyStatus && (
+                              <div className={`flex items-center gap-2 text-xs font-medium ${verifyStatus.success ? 'text-green-600' : 'text-red-600'}`}>
+                                {verifyStatus.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                                {verifyStatus.message || verifyStatus.error}
+                              </div>
+                            )}
+                          </div>
+                          {verifyStatus?.checks && (
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              {Object.entries(verifyStatus.checks).filter(([k]) => ['cors', 'endpoint', 'siteId', 'verified'].includes(k)).map(([key, val]) => (
+                                <div key={key} className="flex items-center gap-2 text-xs">
+                                  {val ? <CheckCircle className="w-3.5 h-3.5 text-green-500" /> : <XCircle className="w-3.5 h-3.5 text-red-500" />}
+                                  <span className="text-slate-600 capitalize">{key === 'siteId' ? 'Site ID Valid' : key === 'cors' ? 'CORS OK' : key === 'endpoint' ? 'Server Reachable' : key === 'verified' ? 'Receiving Data' : key}</span>
+                                </div>
+                              ))}
+                              {verifyStatus.checks.recentVisitors24h !== undefined && (
+                                <div className="flex items-center gap-2 text-xs col-span-2">
+                                  <Activity className="w-3.5 h-3.5 text-blue-500" />
+                                  <span className="text-slate-600">Visitors (last 24h): {verifyStatus.checks.recentVisitors24h}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                          <h4 className="text-sm font-medium text-amber-800 mb-2 flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4" />
+                            Troubleshooting
+                          </h4>
+                          <p className="text-xs text-amber-700 mb-2">
+                            Not seeing traffic data? Try these steps:
+                          </p>
+                          <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
+                            <li>Add <code className="bg-amber-100 px-1 rounded">?clickguard_debug=1</code> to your site URL and check the browser console for [ClickGuard] messages</li>
+                            <li>If using a caching plugin, clear the cache after installation</li>
+                            <li>WordPress security plugins (Wordfence, Sucuri) may block external scripts - whitelist the tracking URL</li>
+                            <li>Ensure your site isn't blocking external scripts via Content Security Policy headers</li>
+                          </ul>
                         </div>
                       </div>
 
@@ -2897,13 +3063,34 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                   <X className="w-5 h-5" />
                 </button>
               </div>
+              <div className="flex gap-1 mb-3 bg-slate-100 rounded-lg p-1">
+                <button
+                  onClick={() => { setModalSnippetType('html'); setCopiedSnippet(false); }}
+                  className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${modalSnippetType === 'html' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  HTML
+                </button>
+                <button
+                  onClick={() => { setModalSnippetType('wordpress-plugin'); setCopiedSnippet(false); }}
+                  className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${modalSnippetType === 'wordpress-plugin' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  WP Plugin
+                </button>
+                <button
+                  onClick={() => { setModalSnippetType('wordpress-php'); setCopiedSnippet(false); }}
+                  className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${modalSnippetType === 'wordpress-php' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  WP PHP
+                </button>
+              </div>
               <p className="text-sm text-slate-500 mb-3">
-                Add this snippet to <span className="text-indigo-600 font-medium">{snippetModal.domain}</span> before the closing{' '}
-                <code className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">&lt;/head&gt;</code> tag:
+                {modalSnippetType === 'html' && <>Add this snippet to <span className="text-indigo-600 font-medium">{snippetModal.domain}</span> before the closing <code className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">&lt;/head&gt;</code> tag:</>}
+                {modalSnippetType === 'wordpress-plugin' && <>Paste this in your WordPress header using a plugin like "Insert Headers and Footers" or "WPCode":</>}
+                {modalSnippetType === 'wordpress-php' && <>Add this PHP code to your theme's functions.php or use a Code Snippets plugin:</>}
               </p>
               <div className="relative">
-                <pre className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-sm text-green-400 overflow-x-auto whitespace-pre-wrap break-all font-mono">
-                  {snippetModal.snippet}
+                <pre className={`bg-slate-800 border border-slate-700 rounded-lg p-4 text-green-400 overflow-x-auto whitespace-pre-wrap break-all font-mono ${modalSnippetType === 'wordpress-php' ? 'text-xs' : 'text-sm'}`}>
+                  {getActiveModalSnippet()}
                 </pre>
                 <button
                   onClick={copySnippet}
@@ -2913,6 +3100,11 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                   {copiedSnippet ? 'Copied!' : 'Copy'}
                 </button>
               </div>
+              {modalSnippetType !== 'html' && (
+                <p className="mt-2 text-xs text-amber-600">
+                  If using a caching plugin (WP Rocket, W3 Total Cache), exclude this script from minification and combining.
+                </p>
+              )}
             </motion.div>
           </motion.div>
         )}

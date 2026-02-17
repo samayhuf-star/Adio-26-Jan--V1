@@ -95,13 +95,48 @@ async function getGeoData(ip: string) {
   }
 }
 
-function generateSnippet(siteId: string, domain: string): string {
-  const host = process.env.PUBLIC_BASE_URL
+function getPublicHost(): string {
+  return process.env.PUBLIC_BASE_URL
     || (process.env.REPLIT_DEPLOYMENT_URL ? `https://${process.env.REPLIT_DEPLOYMENT_URL}` : '')
     || (process.env.REPLIT_DOMAINS?.split(',')[0]?.trim() ? `https://${process.env.REPLIT_DOMAINS.split(',')[0].trim()}` : '')
     || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '');
+}
+
+function generateSnippet(siteId: string, domain: string): string {
+  const host = getPublicHost();
   return `<!-- Click Guard by Adiology - Fraud Protection -->
-<script src="${host}/t.js?sid=${siteId}" async></script>`;
+<script src="${host}/t.js?sid=${siteId}" data-sid="${siteId}" async></script>`;
+}
+
+function generateWordPressSnippet(siteId: string, domain: string): string {
+  const host = getPublicHost();
+  return `// Add to your theme's functions.php or use a Code Snippets plugin
+function adiology_clickguard_script() {
+    wp_enqueue_script(
+        'adiology-clickguard',
+        '${host}/t.js?sid=${siteId}',
+        array(),
+        null,
+        false
+    );
+}
+add_action('wp_enqueue_scripts', 'adiology_clickguard_script');
+
+// Add data-sid and data-api attributes to the script tag for reliable detection
+function adiology_clickguard_attributes(\$tag, \$handle, \$src) {
+    if ('adiology-clickguard' === \$handle) {
+        \$tag = '<script data-sid="${siteId}" data-api="${host}" src="' . esc_url(\$src) . '" async></script>' . "\\n";
+    }
+    return \$tag;
+}
+add_filter('script_loader_tag', 'adiology_clickguard_attributes', 10, 3);`;
+}
+
+function generateWordPressPluginSnippet(siteId: string, domain: string): string {
+  const host = getPublicHost();
+  return `<!-- Paste this in your WordPress Header using "Insert Headers and Footers" plugin or similar -->
+<!-- Go to: Settings > Insert Headers and Footers > Scripts in Header -->
+<script data-sid="${siteId}" data-api="${host}" src="${host}/t.js?sid=${siteId}" async></script>`;
 }
 
 clickGuardRoutes.get('/domains', async (c) => {
@@ -163,8 +198,10 @@ clickGuardRoutes.post('/domains', async (c) => {
       .returning();
 
     const snippet = generateSnippet(siteId, domain);
+    const wordpressSnippet = generateWordPressSnippet(siteId, domain);
+    const wordpressPluginSnippet = generateWordPressPluginSnippet(siteId, domain);
 
-    return c.json({ ...newDomain, snippet }, 201);
+    return c.json({ ...newDomain, snippet, wordpressSnippet, wordpressPluginSnippet }, 201);
   } catch (error) {
     console.error('Failed to add click guard domain:', error);
     return c.json({ error: 'Failed to add domain' }, 500);
@@ -226,8 +263,10 @@ clickGuardRoutes.get('/domains/:id/snippet', async (c) => {
     }
 
     const snippet = generateSnippet(domain.siteId, domain.domain);
+    const wordpressSnippet = generateWordPressSnippet(domain.siteId, domain.domain);
+    const wordpressPluginSnippet = generateWordPressPluginSnippet(domain.siteId, domain.domain);
 
-    return c.json({ snippet, siteId: domain.siteId });
+    return c.json({ snippet, wordpressSnippet, wordpressPluginSnippet, siteId: domain.siteId });
   } catch (error) {
     console.error('Failed to get snippet:', error);
     return c.json({ error: 'Failed to get snippet' }, 500);
@@ -362,6 +401,8 @@ clickGuardRoutes.get('/domains/:id', async (c) => {
     }
 
     const snippet = generateSnippet(domain.siteId, domain.domain);
+    const wordpressSnippet = generateWordPressSnippet(domain.siteId, domain.domain);
+    const wordpressPluginSnippet = generateWordPressPluginSnippet(domain.siteId, domain.domain);
 
     const [visitorCount] = await db
       .select({ count: count() })
@@ -381,6 +422,8 @@ clickGuardRoutes.get('/domains/:id', async (c) => {
     return c.json({
       ...domain,
       snippet,
+      wordpressSnippet,
+      wordpressPluginSnippet,
       stats: {
         totalVisitors: visitorCount?.count || 0,
         blockedIPs: blockedCount?.count || 0,
@@ -390,6 +433,61 @@ clickGuardRoutes.get('/domains/:id', async (c) => {
   } catch (error) {
     console.error('Failed to get domain details:', error);
     return c.json({ error: 'Failed to get domain details' }, 500);
+  }
+});
+
+clickGuardRoutes.options('/verify', async (c) => {
+  c.header('Access-Control-Allow-Origin', '*');
+  c.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Content-Type');
+  return c.text('', 200);
+});
+
+clickGuardRoutes.get('/verify', async (c) => {
+  c.header('Access-Control-Allow-Origin', '*');
+  c.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Content-Type');
+
+  try {
+    const sid = c.req.query('sid');
+    if (!sid) {
+      return c.json({ success: false, error: 'Missing sid parameter', checks: { cors: true, endpoint: true, siteId: false } }, 400);
+    }
+
+    const [domain] = await db
+      .select()
+      .from(clickGuardDomains)
+      .where(eq(clickGuardDomains.siteId, sid));
+
+    if (!domain) {
+      return c.json({ success: false, error: 'Site ID not found in database', checks: { cors: true, endpoint: true, siteId: false } }, 404);
+    }
+
+    const recentVisitors = await db
+      .select({ count: count() })
+      .from(clickGuardVisitors)
+      .where(and(
+        eq(clickGuardVisitors.siteId, sid),
+        gte(clickGuardVisitors.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000))
+      ));
+
+    return c.json({
+      success: true,
+      checks: {
+        cors: true,
+        endpoint: true,
+        siteId: true,
+        domain: domain.domain,
+        verified: domain.verified,
+        recentVisitors24h: recentVisitors[0]?.count || 0,
+      },
+      message: domain.verified
+        ? 'Your Click Guard installation is working correctly!'
+        : 'Connection verified. Waiting for first tracking data from your site.',
+    });
+  } catch (error) {
+    console.error('Verify endpoint error:', error);
+    return c.json({ success: false, error: 'Server error during verification', checks: { cors: true, endpoint: true, siteId: false } }, 500);
   }
 });
 

@@ -2,63 +2,152 @@
   'use strict';
 
   var _apiBase = '';
+  var _debug = false;
+
+  function log() {
+    if (_debug && window.console) {
+      var args = Array.prototype.slice.call(arguments);
+      args.unshift('[ClickGuard]');
+      console.log.apply(console, args);
+    }
+  }
+
+  function logError() {
+    if (window.console) {
+      var args = Array.prototype.slice.call(arguments);
+      args.unshift('[ClickGuard Error]');
+      console.error.apply(console, args);
+    }
+  }
 
   function getSid() {
-    var scripts = document.getElementsByTagName('script');
-    for (var i = 0; i < scripts.length; i++) {
-      var src = scripts[i].src;
-      if (src && src.indexOf('t.js') !== -1) {
-        var url = new URL(src);
-        _apiBase = url.origin;
-        return url.searchParams.get('sid') || '';
+    var sid = '';
+
+    if (typeof document.currentScript !== 'undefined' && document.currentScript) {
+      var el = document.currentScript;
+      var src = el.src || '';
+
+      sid = el.getAttribute('data-sid') || '';
+
+      if (!sid && src) {
+        try {
+          var url = new URL(src);
+          sid = url.searchParams.get('sid') || '';
+          _apiBase = url.origin;
+        } catch (e) {
+          var match = src.match(/[?&]sid=([^&#]*)/);
+          if (match) sid = match[1];
+          var originMatch = src.match(/^(https?:\/\/[^\/]+)/);
+          if (originMatch) _apiBase = originMatch[1];
+        }
+      }
+
+      if (!_apiBase && src) {
+        try {
+          _apiBase = new URL(src).origin;
+        } catch (e) {
+          var om = src.match(/^(https?:\/\/[^\/]+)/);
+          if (om) _apiBase = om[1];
+        }
+      }
+
+      var apiAttr = el.getAttribute('data-api');
+      if (apiAttr) _apiBase = apiAttr;
+
+      if (sid) {
+        log('Found SID via currentScript:', sid);
+        return sid;
       }
     }
+
+    var scripts = document.getElementsByTagName('script');
+    for (var i = scripts.length - 1; i >= 0; i--) {
+      var s = scripts[i];
+
+      var dataSid = s.getAttribute('data-sid');
+      if (dataSid) {
+        var sSrc = s.src || '';
+        if (sSrc) {
+          try {
+            _apiBase = new URL(sSrc).origin;
+          } catch (e) {
+            var om2 = sSrc.match(/^(https?:\/\/[^\/]+)/);
+            if (om2) _apiBase = om2[1];
+          }
+        }
+        var apiAttr2 = s.getAttribute('data-api');
+        if (apiAttr2) _apiBase = apiAttr2;
+        log('Found SID via data-sid attribute:', dataSid);
+        return dataSid;
+      }
+
+      var scriptSrc = s.src;
+      if (scriptSrc && (scriptSrc.indexOf('/t.js') !== -1 || scriptSrc.indexOf('clickguard') !== -1)) {
+        try {
+          var u = new URL(scriptSrc);
+          _apiBase = u.origin;
+          sid = u.searchParams.get('sid') || '';
+        } catch (e) {
+          var m = scriptSrc.match(/[?&]sid=([^&#]*)/);
+          if (m) sid = m[1];
+          var om3 = scriptSrc.match(/^(https?:\/\/[^\/]+)/);
+          if (om3) _apiBase = om3[1];
+        }
+        if (sid) {
+          log('Found SID via script src scan:', sid);
+          return sid;
+        }
+      }
+    }
+
+    if (window._clickguard_sid) {
+      sid = window._clickguard_sid;
+      if (window._clickguard_api) _apiBase = window._clickguard_api;
+      log('Found SID via window._clickguard_sid:', sid);
+      return sid;
+    }
+
+    logError('Could not find site ID. Make sure the script tag has data-sid attribute or sid query parameter.');
     return '';
   }
 
-  // Create fingerprint hash from browser attributes
   function createFingerprint() {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.textBaseline = 'top';
-    ctx.font = '14px "Arial"';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = '#f60';
-    ctx.fillRect(125, 1, 62, 20);
-    ctx.fillStyle = '#069';
-    ctx.fillText('Browser Fingerprint', 2, 15);
-    
-    const fpString = navigator.userAgent +
-      navigator.language +
-      new Date().getTimezoneOffset() +
-      canvas.toDataURL();
-    
-    let hash = 0;
-    for (let i = 0; i < fpString.length; i++) {
-      const char = fpString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+    try {
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return 'no-canvas';
+      ctx.textBaseline = 'top';
+      ctx.font = '14px "Arial"';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#f60';
+      ctx.fillRect(125, 1, 62, 20);
+      ctx.fillStyle = '#069';
+      ctx.fillText('Browser Fingerprint', 2, 15);
+
+      var fpString = navigator.userAgent +
+        navigator.language +
+        new Date().getTimezoneOffset() +
+        canvas.toDataURL();
+
+      var hash = 0;
+      for (var i = 0; i < fpString.length; i++) {
+        var char = fpString.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(16);
+    } catch (e) {
+      return 'fp-error';
     }
-    return Math.abs(hash).toString(16);
   }
 
-  // Detect headless browser
   function isHeadless() {
-    // Check for webdriver property
     if (navigator.webdriver) return true;
-    
-    // Check for plugins (headless browsers typically have none)
-    if (!navigator.plugins || navigator.plugins.length === 0) {
-      return true;
-    }
-    
-    // Check for chrome remote debugging protocol
-    if (navigator.userAgent.includes('HeadlessChrome')) return true;
-    
+    if (!navigator.plugins || navigator.plugins.length === 0) return true;
+    if (navigator.userAgent.indexOf('HeadlessChrome') !== -1) return true;
     return false;
   }
 
-  // Get timezone
   function getTimezone() {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -67,13 +156,23 @@
     }
   }
 
-  // Initialize tracking state
-  const state = {
+  var checkDebug = (function() {
+    try {
+      if (typeof URLSearchParams !== 'undefined') {
+        var params = new URLSearchParams(window.location.search);
+        return params.get('clickguard_debug') === '1' || params.get('clickguard_debug') === 'true';
+      }
+    } catch (e) {}
+    return false;
+  })();
+  _debug = checkDebug;
+
+  var state = {
     sid: getSid(),
     ua: navigator.userAgent,
     sw: window.innerWidth || screen.width,
     sh: window.innerHeight || screen.height,
-    lang: navigator.language || navigator.userLanguage,
+    lang: navigator.language || (navigator.userLanguage || ''),
     tz: getTimezone(),
     ref: document.referrer,
     url: window.location.href,
@@ -85,22 +184,49 @@
     startTime: Date.now()
   };
 
-  // Track mouse movements
-  let mouseMoveTimeout;
+  if (!state.sid) {
+    logError('No site ID found - tracking disabled. Check your installation snippet.');
+    return;
+  }
+
+  if (!_apiBase && window._clickguard_api) {
+    _apiBase = window._clickguard_api;
+    log('Using window._clickguard_api:', _apiBase);
+  }
+
+  if (!_apiBase) {
+    var allScripts = document.getElementsByTagName('script');
+    for (var j = allScripts.length - 1; j >= 0; j--) {
+      var sSrc = allScripts[j].src || '';
+      if (sSrc && (sSrc.indexOf('/t.js') !== -1 || sSrc.indexOf('clickguard') !== -1)) {
+        try {
+          _apiBase = new URL(sSrc).origin;
+        } catch (e) {
+          var om = sSrc.match(/^(https?:\/\/[^\/]+)/);
+          if (om) _apiBase = om[1];
+        }
+        if (_apiBase) break;
+      }
+    }
+  }
+
+  if (!_apiBase) {
+    logError('No API base URL found - tracking disabled. Set data-api attribute on the script tag or define window._clickguard_api.');
+    return;
+  }
+
+  log('Initialized with SID:', state.sid, 'API:', _apiBase);
+
+  var mouseMoveCount = 0;
   document.addEventListener('mousemove', function() {
-    state.mm++;
-    clearTimeout(mouseMoveTimeout);
-    mouseMoveTimeout = setTimeout(function() {
-      // Reset counter after inactivity
-    }, 1000);
+    mouseMoveCount++;
+    state.mm = mouseMoveCount;
   }, { passive: true });
 
-  // Track clicks
   document.addEventListener('click', function() {
     state.cc++;
   }, { passive: true });
 
-  // Update time on page
   function updateTimeOnPage() {
     state.top = Math.floor((Date.now() - state.startTime) / 1000);
   }
@@ -128,33 +254,55 @@
     var trackUrl = _apiBase + '/api/clickguard/track';
     var body = JSON.stringify(buildPayload());
 
+    log('Sending tracking data to:', trackUrl);
+
+    if (navigator.sendBeacon) {
+      try {
+        var blob = new Blob([body], { type: 'text/plain' });
+        var sent = navigator.sendBeacon(trackUrl, blob);
+        if (sent) {
+          log('Beacon sent successfully');
+          return;
+        }
+      } catch (e) {
+        log('Beacon failed, falling back to fetch');
+      }
+    }
+
     if (typeof fetch !== 'undefined') {
       fetch(trackUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: body,
         mode: 'cors',
-        keepalive: true
-      }).catch(function() {});
-    } else if (navigator.sendBeacon) {
-      var blob = new Blob([body], { type: 'text/plain' });
-      navigator.sendBeacon(trackUrl, blob);
+        keepalive: true,
+        credentials: 'omit'
+      }).then(function(res) {
+        log('Fetch response:', res.status);
+        if (!res.ok) {
+          return res.text().then(function(t) {
+            logError('Server responded with', res.status, t);
+          });
+        }
+      }).catch(function(err) {
+        logError('Fetch failed:', err.message || err);
+      });
     } else {
       var img = new Image();
-      img.src = trackUrl + '?data=' + encodeURIComponent(body);
+      img.src = trackUrl + '?data=' + encodeURIComponent(body) + '&t=' + Date.now();
     }
   }
 
-  // Send initial ping on load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(sendTrackingData, 100);
-    });
-  } else {
-    setTimeout(sendTrackingData, 100);
+  function init() {
+    setTimeout(sendTrackingData, 200);
   }
 
-  // Send periodic updates every 30 seconds
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
   setInterval(function() {
     sendTrackingData();
   }, 30000);
@@ -163,9 +311,20 @@
     updateTimeOnPage();
     var body = JSON.stringify(buildPayload());
     if (navigator.sendBeacon) {
-      var blob = new Blob([body], { type: 'text/plain' });
-      navigator.sendBeacon(_apiBase + '/api/clickguard/track', blob);
+      try {
+        var blob = new Blob([body], { type: 'text/plain' });
+        navigator.sendBeacon(_apiBase + '/api/clickguard/track', blob);
+      } catch (e) {}
     }
   });
+
+  window._clickguard_status = {
+    active: true,
+    sid: state.sid,
+    api: _apiBase,
+    version: '2.0'
+  };
+
+  log('Click Guard v2.0 loaded successfully');
 
 })();
