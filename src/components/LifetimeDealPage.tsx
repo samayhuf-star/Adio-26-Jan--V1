@@ -37,7 +37,11 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
       const response = await fetch('/api/stripe/lifetime-deal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail }),
+        body: JSON.stringify({
+          email: userEmail,
+          successUrl: `${window.location.origin}/lifetime-deal?success=true`,
+          cancelUrl: `${window.location.origin}/lifetime-deal`,
+        }),
       });
 
       const data = await response.json();

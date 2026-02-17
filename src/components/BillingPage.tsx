@@ -133,6 +133,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
           priceId,
           email: userEmail,
           userId: user?.id,
+          successUrl: `${window.location.origin}/billing`,
+          cancelUrl: `${window.location.origin}/billing`,
         }),
       });
 

@@ -25,20 +25,46 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
+const ALLOWED_ORIGINS = [
+  'adiology.io',
+  'adiology.online',
+  'www.adiology.io',
+  'www.adiology.online',
+  'replit.dev',
+  'replit.app',
+];
+
+function isAllowedOrigin(hostname: string): boolean {
+  return ALLOWED_ORIGINS.some(allowed => hostname === allowed || hostname.endsWith('.' + allowed));
+}
+
 function getOrigin(c: { req: { url: string; header: (n: string) => string | undefined } }): string {
   const origin = c.req.header('Origin') || c.req.header('Referer');
   if (origin) {
     try {
       const u = new URL(origin);
-      return u.origin;
+      if (isAllowedOrigin(u.hostname)) {
+        return u.origin;
+      }
     } catch {}
   }
   try {
     const u = new URL(c.req.url);
     return `${u.protocol}//${u.host}`;
   } catch {
-    return 'https://www.adiology.online';
+    return process.env.DOMAIN || 'https://www.adiology.online';
   }
+}
+
+function sanitizeRedirectUrl(url: string | undefined, fallback: string): string {
+  if (!url) return fallback;
+  try {
+    const u = new URL(url);
+    if (isAllowedOrigin(u.hostname)) {
+      return url;
+    }
+  } catch {}
+  return fallback;
 }
 
 /** GET /api/stripe/config – { publishableKey } */
@@ -189,8 +215,8 @@ stripe.post('/lifetime-deal', async (c) => {
           quantity: 1,
         },
       ],
-      success_url: (body.successUrl as string) || `${base}/lifetime-deal?success=true`,
-      cancel_url: (body.cancelUrl as string) || `${base}/lifetime-deal`,
+      success_url: sanitizeRedirectUrl(body.successUrl as string, `${base}/lifetime-deal?success=true`),
+      cancel_url: sanitizeRedirectUrl(body.cancelUrl as string, `${base}/lifetime-deal`),
       metadata: {
         plan: 'lifetime',
         deal: 'lifetime-99',
@@ -220,8 +246,8 @@ stripe.post('/checkout', async (c) => {
     }
 
     const base = getOrigin(c);
-    const successUrl = (body.successUrl as string) || `${base}/billing`;
-    const cancelUrl = (body.cancelUrl as string) || `${base}/billing`;
+    const successUrl = sanitizeRedirectUrl(body.successUrl as string, `${base}/billing`);
+    const cancelUrl = sanitizeRedirectUrl(body.cancelUrl as string, `${base}/billing`);
     const mode = ((body.mode as string) || 'subscription') as 'subscription' | 'payment';
 
     const session = await stripeService.createCheckoutSession(
@@ -254,7 +280,7 @@ stripe.post('/portal', async (c) => {
     }
 
     const base = getOrigin(c);
-    const returnUrl = (body.returnUrl as string) || `${base}/billing`;
+    const returnUrl = sanitizeRedirectUrl(body.returnUrl as string, `${base}/billing`);
 
     const session = await stripeService.createCustomerPortalSession(resolved.customerId, returnUrl);
     return c.json({ url: session.url });
