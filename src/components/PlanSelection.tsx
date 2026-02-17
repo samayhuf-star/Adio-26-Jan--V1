@@ -136,7 +136,7 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
   }
 };
 
-const planOrder = ['Starter', 'Professional', 'Agency', 'Lifetime'];
+const planOrder = ['Starter', 'Professional', 'Agency'];
 
 interface PlanSelectionProps {
   onSelectPlan: (planName: string, priceId: string, amount: number, isSubscription: boolean) => void;

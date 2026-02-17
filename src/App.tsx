@@ -78,6 +78,7 @@ const CookiePolicy = lazy(() => import('./components/CookiePolicy').then(m => ({
 const GDPRCompliance = lazy(() => import('./components/GDPRCompliance').then(m => ({ default: m.GDPRCompliance })));
 const RefundPolicy = lazy(() => import('./components/RefundPolicy').then(m => ({ default: m.RefundPolicy })));
 const PromoLandingPage = lazy(() => import('./components/PromoLandingPage').then(m => ({ default: m.PromoLandingPage })));
+const LifetimeDealPage = lazy(() => import('./components/LifetimeDealPage').then(m => ({ default: m.LifetimeDealPage })));
 const TaskManager = lazy(() => import('./components/TaskManager').then(m => ({ default: m.TaskManager })));
 const CommunityPage = lazy(() => import('./modules/community').then(m => ({ default: m.CommunityPage })));
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then(m => ({ default: m.AcceptInvite })));
@@ -102,7 +103,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -743,6 +744,12 @@ const AppContent = () => {
       // Promo landing page - public access
       if (path.startsWith('/promo')) {
         setView('promo');
+        return;
+      }
+
+      // Lifetime deal landing page - public access
+      if (path === '/lifetime-deal') {
+        setView('lifetime-deal');
         return;
       }
 
@@ -1524,6 +1531,24 @@ const AppContent = () => {
               setActiveTab('blog');
               setAppView('user');
             } else {
+              setAppView(page as AppView);
+            }
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'lifetime-deal') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <LifetimeDealPage
+          onNavigate={(page) => {
+            if (page === 'home') {
+              setAppView('homepage');
+              window.history.pushState(null, '', '/');
+            } else {
+              setPreviousView('lifetime-deal');
               setAppView(page as AppView);
             }
           }}

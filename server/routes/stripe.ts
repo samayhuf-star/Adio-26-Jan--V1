@@ -101,6 +101,55 @@ async function resolveCustomerId(email: string, userId?: string): Promise<{ cust
   }
 }
 
+/** POST /api/stripe/lifetime-deal – { email } → { url } — creates a $99 one-time checkout */
+stripe.post('/lifetime-deal', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const email = (body.email as string)?.trim();
+
+    if (!email) {
+      return c.json({ error: 'Email is required' }, 400);
+    }
+
+    const resolved = await resolveCustomerId(email);
+    if (!resolved) {
+      return c.json({ error: 'Could not resolve or create Stripe customer' }, 500);
+    }
+
+    const stripeClient = getUncachableStripeClient();
+    const base = getOrigin(c);
+
+    const session = await stripeClient.checkout.sessions.create({
+      customer: resolved.customerId,
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            unit_amount: 9900,
+            product_data: {
+              name: 'Adiology Lifetime Deal',
+              description: 'Lifetime access to all Adiology features. Pay once, use forever.',
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: (body.successUrl as string) || `${base}/billing?success=lifetime`,
+      cancel_url: (body.cancelUrl as string) || `${base}/lifetime-deal`,
+      metadata: {
+        plan: 'lifetime',
+        deal: 'lifetime-99',
+      },
+    });
+
+    return c.json({ url: session.url ?? null });
+  } catch (error: any) {
+    console.error('[Stripe] Lifetime deal checkout error:', error);
+    return c.json({ error: error?.message || 'Failed to create checkout session' }, 500);
+  }
+});
+
 /** POST /api/stripe/checkout – { priceId, email, userId?, planName? } → { sessionId, url } */
 stripe.post('/checkout', async (c) => {
   try {

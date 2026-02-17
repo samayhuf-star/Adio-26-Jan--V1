@@ -94,21 +94,6 @@ const plans: PricingPlan[] = [
     limits: { campaigns: '∞', teamMembers: '∞' },
     features: []
   },
-  {
-    name: 'Lifetime',
-    monthlyPrice: 149,
-    yearlyPrice: 149,
-    icon: Infinity,
-    color: 'emerald',
-    gradientFrom: 'from-emerald-500',
-    gradientTo: 'to-teal-500',
-    popular: false,
-    earlyBirdDiscount: 0,
-    tagline: 'Pay once, use forever',
-    isLifetime: true,
-    limits: { campaigns: '∞', teamMembers: '5' },
-    features: []
-  }
 ];
 
 interface PricingProps {
@@ -312,7 +297,6 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                   <th className="text-center py-4 px-6 font-medium text-gray-600">Starter</th>
                   <th className="text-center py-4 px-6 font-medium text-purple-600 bg-purple-50">Professional</th>
                   <th className="text-center py-4 px-6 font-medium text-gray-600">Agency</th>
-                  <th className="text-center py-4 px-6 font-medium text-emerald-600 bg-emerald-50">Lifetime</th>
                 </tr>
               </thead>
               <tbody>
@@ -322,11 +306,10 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                     <td className="py-3 px-6 text-center">{renderFeatureValue(feature.starter)}</td>
                     <td className="py-3 px-6 text-center bg-purple-50/50">{renderFeatureValue(feature.professional)}</td>
                     <td className="py-3 px-6 text-center">{renderFeatureValue(feature.agency)}</td>
-                    <td className="py-3 px-6 text-center bg-emerald-50/50">{renderFeatureValue(feature.professional)}</td>
                   </tr>
                 ))}
                 <tr className="bg-gray-100">
-                  <td colSpan={5} className="py-3 px-6 font-medium text-gray-600">Coming Soon</td>
+                  <td colSpan={4} className="py-3 px-6 font-medium text-gray-600">Coming Soon</td>
                 </tr>
                 {comingSoonFeatures.map((feature, index) => (
                   <tr key={feature.name} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -334,7 +317,6 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                     <td className="py-3 px-6 text-center">{renderFeatureValue(feature.starter)}</td>
                     <td className="py-3 px-6 text-center bg-purple-50/50">{renderFeatureValue(feature.professional)}</td>
                     <td className="py-3 px-6 text-center">{renderFeatureValue(feature.agency)}</td>
-                    <td className="py-3 px-6 text-center bg-emerald-50/50">{renderFeatureValue(feature.professional)}</td>
                   </tr>
                 ))}
               </tbody>
