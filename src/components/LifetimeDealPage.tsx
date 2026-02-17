@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Zap, Check, Sparkles, Target, BarChart3,
   FileText, Globe, Layers, Shield, ArrowRight,
   TrendingUp, Star, CreditCard, Gift, Infinity,
   MousePointer, Clock, Award, Users, Lock,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, CheckCircle, X
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -20,6 +20,15 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      setShowSuccess(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const processCheckout = async (userEmail: string) => {
     setIsLoading(true);
@@ -142,6 +151,40 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
           </Button>
         </div>
       </nav>
+
+      {showSuccess && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-500/20 border-b border-emerald-500/30"
+        >
+          <div className="max-w-5xl mx-auto px-6 py-6 flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/30 flex items-center justify-center flex-shrink-0 mt-1">
+              <CheckCircle className="w-7 h-7 text-emerald-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-emerald-300 mb-1">Payment Successful!</h3>
+              <p className="text-emerald-200/80 text-sm leading-relaxed">
+                Welcome to Adiology Lifetime! Your account has been upgraded. Check your email for a confirmation with login instructions.
+                You now have permanent access to all features — no recurring charges, ever.
+              </p>
+              <Button
+                onClick={() => onNavigate?.('login')}
+                className="mt-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6"
+                size="sm"
+              >
+                Go to Dashboard <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+            <button
+              onClick={() => setShowSuccess(false)}
+              className="text-emerald-400/60 hover:text-emerald-300 transition-colors flex-shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       <section className="relative py-20 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/20 via-transparent to-transparent" />

@@ -925,3 +925,24 @@ export const insertGoogleAdsTokenSchema = createInsertSchema(googleAdsTokens).om
 
 export type GoogleAdsToken = typeof googleAdsTokens.$inferSelect;
 export type InsertGoogleAdsToken = z.infer<typeof insertGoogleAdsTokenSchema>;
+
+export const aiUsageLogs = pgTable("ai_usage_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id"),
+  feature: text("feature").notNull(),
+  model: text("model").notNull().default("gpt-4o-mini"),
+  promptTokens: integer("prompt_tokens").default(0),
+  completionTokens: integer("completion_tokens").default(0),
+  totalTokens: integer("total_tokens").default(0),
+  costCents: decimal("cost_cents", { precision: 10, scale: 4 }).default("0"),
+  durationMs: integer("duration_ms"),
+  status: text("status").default("success"),
+  error: text("error"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_ai_usage_user_id").on(table.userId),
+  featureIdx: index("idx_ai_usage_feature").on(table.feature),
+  modelIdx: index("idx_ai_usage_model").on(table.model),
+  createdAtIdx: index("idx_ai_usage_created_at").on(table.createdAt),
+}));

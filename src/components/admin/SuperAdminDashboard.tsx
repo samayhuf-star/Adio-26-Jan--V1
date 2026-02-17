@@ -3,7 +3,8 @@ import {
   Shield, LogOut, Users, CreditCard, RefreshCw, Search, 
   Ban, CheckCircle, Eye, TrendingUp, DollarSign, Activity,
   UserCheck, AlertTriangle, Calendar, Mail, ChevronRight,
-  Edit, Trash2, X, Save, MoreHorizontal, MessageSquare
+  Edit, Trash2, X, Save, MoreHorizontal, MessageSquare,
+  Server, Tag, Brain, FileText, MessageCircle
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -12,6 +13,13 @@ import { FeedbackManagement } from '../FeedbackManagement';
 import { NotificationProvider } from '../../contexts/NotificationContext';
 import EmailFlows from './EmailFlows';
 import EmailLogs from './EmailLogs';
+import { StripePaymentDashboard } from './StripePaymentDashboard';
+import { SystemHealthDashboard } from './SystemHealthDashboard';
+import { PromoCodeManager } from './PromoCodeManager';
+import { EmailMonitoringDashboard } from './EmailMonitoringDashboard';
+import { AuditLogsDashboard } from './AuditLogsDashboard';
+import { AIUsageDashboard } from './AIUsageDashboard';
+import { WhatsAppConfigPanel } from './WhatsAppConfigPanel';
 import {
   Dialog,
   DialogContent,
@@ -67,7 +75,7 @@ interface SubscriptionRecord {
   createdAt: string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'emails' | 'analytics' | 'feedback';
+type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'emails' | 'email-monitoring' | 'analytics' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -443,12 +451,19 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Navigation Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           {[
             { id: 'overview', label: 'Overview', icon: Activity },
             { id: 'users', label: 'Users', icon: Users },
             { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
-            { id: 'emails', label: 'Email Management', icon: Mail },
+            { id: 'payments', label: 'Payments', icon: DollarSign },
+            { id: 'emails', label: 'Email Flows', icon: Mail },
+            { id: 'email-monitoring', label: 'Email Stats', icon: Mail },
+            { id: 'promo-codes', label: 'Promo Codes', icon: Tag },
+            { id: 'system-health', label: 'System Health', icon: Server },
+            { id: 'audit-logs', label: 'Audit Logs', icon: FileText },
+            { id: 'ai-usage', label: 'AI Usage', icon: Brain },
+            { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
             { id: 'analytics', label: 'Analytics', icon: Activity },
             { id: 'feedback', label: 'Feedback', icon: MessageSquare }
           ].map(tab => (
@@ -587,6 +602,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Plan</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Status</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Joined</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Last Login</th>
                       <th className="text-right px-4 py-3 text-sm font-medium text-slate-300">Actions</th>
                     </tr>
                   </thead>
@@ -609,6 +625,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                         </td>
                         <td className="px-4 py-3 text-slate-400 text-sm">
                           {formatDate(user.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400 text-sm">
+                          {user.lastSignIn ? formatDate(user.lastSignIn) : 'Never'}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -802,6 +821,38 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
         {/* Emails Tab */}
         {activeTab === 'emails' && (
           <EmailManagementSection token={token} />
+        )}
+
+        {/* Payments Tab */}
+        {activeTab === 'payments' && (
+          <StripePaymentDashboard token={token} />
+        )}
+
+        {/* Email Monitoring Tab */}
+        {activeTab === 'email-monitoring' && (
+          <EmailMonitoringDashboard token={token} />
+        )}
+
+        {/* Promo Codes Tab */}
+        {activeTab === 'promo-codes' && (
+          <PromoCodeManager token={token} />
+        )}
+
+        {/* System Health Tab */}
+        {activeTab === 'system-health' && (
+          <SystemHealthDashboard token={token} />
+        )}
+
+        {activeTab === 'audit-logs' && (
+          <AuditLogsDashboard token={token} />
+        )}
+
+        {activeTab === 'ai-usage' && (
+          <AIUsageDashboard token={token} />
+        )}
+
+        {activeTab === 'whatsapp' && (
+          <WhatsAppConfigPanel token={token} />
         )}
 
         {/* Analytics Tab */}

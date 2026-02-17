@@ -2758,12 +2758,15 @@ app.post('/api/keywords/alphabet-soup', async (c) => {
   }
 });
 
+import { startHourlyReporting } from './services/whatsapp';
+
 serve({
   fetch: app.fetch,
   port,
 }, async (info) => {
   console.log(`Admin API Server running on http://localhost:${info.port}`);
   await seedClickGuardDomains();
+  startHourlyReporting();
 });
 
 // Export for Vercel serverless functions

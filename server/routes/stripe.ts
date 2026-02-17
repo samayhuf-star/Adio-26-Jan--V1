@@ -189,7 +189,7 @@ stripe.post('/lifetime-deal', async (c) => {
           quantity: 1,
         },
       ],
-      success_url: (body.successUrl as string) || `${base}/billing?success=lifetime`,
+      success_url: (body.successUrl as string) || `${base}/lifetime-deal?success=true`,
       cancel_url: (body.cancelUrl as string) || `${base}/lifetime-deal`,
       metadata: {
         plan: 'lifetime',

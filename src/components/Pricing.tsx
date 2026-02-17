@@ -118,7 +118,6 @@ export function Pricing({ onSelectPlan }: PricingProps) {
       'Starter': { monthly: 'price_1Sf7Z2AYv17Z995VOMSBG7GX', yearly: 'price_1Sf7Z2AYv17Z995VKDFZ119S' },
       'Professional': { monthly: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN', yearly: 'price_1Sf7Z4AYv17Z995VKY5BkfdB' },
       'Agency': { monthly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI', yearly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI' },
-      'Lifetime': { monthly: 'price_lifetime', yearly: 'price_lifetime' },
     };
     return isYearly ? priceIds[planName]?.yearly : priceIds[planName]?.monthly;
   };
@@ -181,7 +180,7 @@ export function Pricing({ onSelectPlan }: PricingProps) {
         </motion.div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-4 gap-6 lg:gap-8 mb-12">
+        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-12">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             return (

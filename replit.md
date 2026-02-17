@@ -33,6 +33,9 @@ Preferred communication style: Simple, everyday language.
 ## Super Admin Panel
 - **Access & Functionality**: Restricted access for managing users, subscriptions (Stripe sync), and the database. Includes real-time statistics, system logs, and comprehensive email marketing automation with Resend API for managing email sequences and tracking.
 - **Operational Management**: Features for security (IP blocking, rate limiting), documentation management, campaign template management, website tracking, AI usage tracking, and a full CRUD interface for database administration.
+- **Audit Logs**: Tracks all admin actions (user edits, blocks, deletions, subscription changes, promo code operations, login events) with timeline view, filters by action/resource/level, and expandable detail panels. Data stored in `audit_logs` table.
+- **AI Usage Tracking**: Monitors OpenAI API usage with `ai_usage_logs` table tracking model, tokens (prompt/completion), cost, duration, feature, and user. Dashboard shows total/daily stats, breakdowns by model and feature, top users, and recent API calls.
+- **WhatsApp Reporting**: Hourly system reports sent to admin WhatsApp (+919650000412) via Meta WhatsApp Cloud API. Reports include users, subscriptions, revenue/MRR, email stats, AI usage, and system health. Configurable via SuperAdmin panel with toggle on/off, test message, and manual report triggers. Requires `WHATSAPP_PHONE_NUMBER_ID` and `WHATSAPP_ACCESS_TOKEN` environment variables.
 
 # External Dependencies
 

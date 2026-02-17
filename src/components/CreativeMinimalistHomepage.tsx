@@ -1054,35 +1054,6 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
     'Dedicated account manager',
   ];
 
-  const lifetimeFeatures = [
-    'Unlimited campaigns',
-    'All Professional features',
-    'Keyword Planner & Mixer',
-    'Long Tail Generator',
-    'Negative Keywords',
-    '10+ ad extension types',
-    'CSV export to Google Ads Editor',
-    'Click Guard',
-    'Domain Monitor',
-    'Proxy Mail',
-    'Priority support',
-    'No recurring fees ever',
-    'Lifetime updates',
-  ];
-
-  const lifetimePlan = {
-    name: 'Lifetime',
-    price: '$149',
-    period: 'one-time',
-    features: lifetimeFeatures,
-    gradient: 'from-emerald-500 to-teal-500',
-    priceId: 'price_lifetime',
-    amount: 14900,
-    popular: false,
-    isLifetime: true,
-    limitedTime: true,
-  };
-
   const plans = isAnnual ? [
     {
       name: 'Starter',
@@ -1115,7 +1086,6 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
       priceId: 'price_agency_annual',
       amount: 142800,
     },
-    lifetimePlan,
   ] : [
     {
       name: 'Starter',
@@ -1145,7 +1115,6 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
       priceId: 'price_agency_monthly',
       amount: 14900,
     },
-    lifetimePlan,
   ];
 
   return (
@@ -1182,7 +1151,7 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
           </div>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {plans.map((plan, i) => {
             const isLifetime = 'isLifetime' in plan && plan.isLifetime;
             const isLimited = 'limitedTime' in plan && plan.limitedTime;
