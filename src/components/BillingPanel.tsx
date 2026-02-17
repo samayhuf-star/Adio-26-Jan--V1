@@ -27,6 +27,7 @@ export const BillingPanel = () => {
     const pricingSectionRef = useRef<HTMLDivElement>(null);
     const [savedCards, setSavedCards] = useState<any[]>([]);
     const [loadingCards, setLoadingCards] = useState(false);
+    const [showLifetimeSuccess, setShowLifetimeSuccess] = useState(false);
 
     const fetchSavedCards = async () => {
         try {
@@ -137,14 +138,25 @@ export const BillingPanel = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         const canceled = urlParams.get('canceled');
+        const lifetimeSuccess = urlParams.get('success');
         
-        if (sessionId) {
-            // Payment successful - refresh subscription data
+        if (lifetimeSuccess === 'lifetime') {
+            setShowLifetimeSuccess(true);
+            notifications.success('Your Lifetime Access is now active! No more payments, ever.', {
+                title: 'Welcome to the Lifetime Plan!',
+                description: 'You now have permanent access to all Adiology features.',
+            });
+            window.history.replaceState({}, '', window.location.pathname);
+            setTimeout(() => {
+                fetchInfo();
+                checkPaidStatus();
+                fetchSavedCards();
+            }, 1000);
+        } else if (sessionId) {
             notifications.success('Payment successful! Your subscription is now active.', {
                 title: 'Welcome!',
                 description: 'You now have access to all premium features.',
             });
-            // Remove session_id from URL
             window.history.replaceState({}, '', window.location.pathname);
             setTimeout(() => {
                 fetchInfo();
@@ -155,7 +167,6 @@ export const BillingPanel = () => {
             notifications.info('Payment was canceled. You can try again anytime.', {
                 title: 'Payment Canceled',
             });
-            // Remove canceled param from URL
             window.history.replaceState({}, '', window.location.pathname);
         }
     }, []);
@@ -444,6 +455,31 @@ Generated on ${new Date().toLocaleDateString()}`;
 
     return (
         <div className="w-full space-y-10">
+            {showLifetimeSuccess && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-6 shadow-lg">
+                    <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <CheckCircle2 className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-lg font-bold text-emerald-900">Lifetime Access Activated!</h3>
+                            <p className="text-emerald-700 mt-1">
+                                Your one-time payment has been confirmed. You now have permanent access to all Adiology features — no subscriptions, no renewals, ever.
+                            </p>
+                            <p className="text-emerald-600 text-sm mt-2">
+                                A confirmation email has been sent to your inbox with all the details.
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => setShowLifetimeSuccess(false)}
+                            className="text-emerald-400 hover:text-emerald-600 transition-colors flex-shrink-0"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {error && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-center gap-2">

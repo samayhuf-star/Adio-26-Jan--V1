@@ -101,6 +101,56 @@ async function resolveCustomerId(email: string, userId?: string): Promise<{ cust
   }
 }
 
+/** POST /api/stripe/create-promo-code – admin-only: creates a 100% off promo code */
+stripe.post('/create-promo-code', async (c) => {
+  try {
+    const adminKey = c.req.header('x-admin-key');
+    const expectedKey = process.env.ADMIN_API_KEY;
+    if (!expectedKey || adminKey !== expectedKey) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const body = await c.req.json().catch(() => ({}));
+    const code = (body.code as string)?.trim().toUpperCase() || 'ADIOLOGY100';
+    const maxRedemptions = body.maxRedemptions ? Number(body.maxRedemptions) : 5;
+
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ error: 'Payment system is not configured.' }, 503);
+    }
+
+    const coupon = await stripeClient.coupons.create({
+      percent_off: 100,
+      duration: 'forever',
+      name: `100% Off - ${code}`,
+      metadata: { created_by: 'admin', purpose: 'testing' },
+    });
+
+    const promoParams: any = {
+      coupon: coupon.id,
+      code,
+    };
+    if (maxRedemptions) {
+      promoParams.max_redemptions = maxRedemptions;
+    }
+
+    const promoCode = await stripeClient.promotionCodes.create(promoParams);
+
+    return c.json({
+      success: true,
+      couponId: coupon.id,
+      promoCodeId: promoCode.id,
+      code: promoCode.code,
+      percentOff: 100,
+      duration: 'forever',
+      maxRedemptions: maxRedemptions || 'unlimited',
+    });
+  } catch (error: any) {
+    console.error('[Stripe] Create promo code error:', error);
+    return c.json({ error: error?.message || 'Failed to create promo code' }, 500);
+  }
+});
+
 /** POST /api/stripe/lifetime-deal – { email } → { url } — creates a $99 one-time checkout */
 stripe.post('/lifetime-deal', async (c) => {
   try {
@@ -125,6 +175,7 @@ stripe.post('/lifetime-deal', async (c) => {
     const session = await stripeClient.checkout.sessions.create({
       customer: resolved.customerId,
       mode: 'payment',
+      allow_promotion_codes: true,
       line_items: [
         {
           price_data: {
@@ -750,5 +801,171 @@ stripe.post('/send-welcome-email', async (c) => {
     return c.json({ success: false, error: 'Failed to send welcome email' }, 500);
   }
 });
+
+/** POST /api/stripe/webhook – Stripe webhook handler for checkout events */
+stripe.post('/webhook', async (c) => {
+  try {
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ error: 'Stripe not configured' }, 503);
+    }
+
+    const rawBody = await c.req.text();
+    const sig = c.req.header('stripe-signature');
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event: any;
+
+    const isProduction = process.env.REPLIT_DEPLOYMENT === '1' || process.env.NODE_ENV === 'production';
+
+    if (webhookSecret && sig) {
+      try {
+        event = stripeClient.webhooks.constructEvent(rawBody, sig, webhookSecret);
+      } catch (err: any) {
+        console.error('[Stripe Webhook] Signature verification failed:', err.message);
+        return c.json({ error: 'Webhook signature verification failed' }, 400);
+      }
+    } else if (isProduction) {
+      console.error('[Stripe Webhook] STRIPE_WEBHOOK_SECRET is required in production');
+      return c.json({ error: 'Webhook not configured for production' }, 500);
+    } else {
+      event = JSON.parse(rawBody);
+      console.log('[Stripe Webhook] DEV MODE: Processing without signature verification');
+    }
+
+    console.log(`[Stripe Webhook] Received event: ${event.type}`);
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const customerEmail = session.customer_details?.email || session.customer_email;
+      const metadata = session.metadata || {};
+
+      if (metadata.deal === 'lifetime-99' || metadata.plan === 'lifetime') {
+        console.log(`[Stripe Webhook] Lifetime deal purchase by ${customerEmail}`);
+
+        if (customerEmail) {
+          try {
+            await stripePool.query(
+              `UPDATE users 
+               SET subscription_plan = 'Lifetime', 
+                   subscription_status = 'active',
+                   updated_at = NOW()
+               WHERE LOWER(email) = LOWER($1)`,
+              [customerEmail]
+            );
+            console.log(`[Stripe Webhook] Upgraded ${customerEmail} to Lifetime plan`);
+          } catch (dbErr) {
+            console.error('[Stripe Webhook] DB update error:', dbErr);
+          }
+
+          try {
+            const { sendEmail } = await import('../resendClient');
+            await sendEmail({
+              to: customerEmail,
+              subject: 'Your Adiology Lifetime Access is Active!',
+              html: buildLifetimeConfirmationEmail(customerEmail, session.amount_total),
+            });
+            console.log(`[Stripe Webhook] Lifetime confirmation email sent to ${customerEmail}`);
+          } catch (emailErr) {
+            console.error('[Stripe Webhook] Email send error:', emailErr);
+          }
+        }
+      } else {
+        if (customerEmail) {
+          try {
+            const planName = metadata.planName || session.metadata?.planName || 'Professional';
+            await stripePool.query(
+              `UPDATE users 
+               SET subscription_plan = $1, 
+                   subscription_status = 'active',
+                   updated_at = NOW()
+               WHERE LOWER(email) = LOWER($2)`,
+              [planName, customerEmail]
+            );
+            console.log(`[Stripe Webhook] Activated ${planName} plan for ${customerEmail}`);
+          } catch (dbErr) {
+            console.error('[Stripe Webhook] DB update error:', dbErr);
+          }
+        }
+      }
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object;
+      const customerId = subscription.customer;
+      try {
+        await stripePool.query(
+          `UPDATE users 
+           SET subscription_status = 'canceled',
+               updated_at = NOW()
+           WHERE stripe_customer_id = $1`,
+          [customerId]
+        );
+        console.log(`[Stripe Webhook] Subscription canceled for customer ${customerId}`);
+      } catch (dbErr) {
+        console.error('[Stripe Webhook] DB update error:', dbErr);
+      }
+    }
+
+    return c.json({ received: true });
+  } catch (error: any) {
+    console.error('[Stripe Webhook] Error:', error);
+    return c.json({ error: 'Webhook processing failed' }, 500);
+  }
+});
+
+function buildLifetimeConfirmationEmail(email: string, amountTotal?: number): string {
+  const amount = amountTotal ? `$${(amountTotal / 100).toFixed(2)}` : '$99.00';
+  const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0f172a;font-family:'Inter',system-ui,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+<div style="background:linear-gradient(135deg,#064e3b,#065f46);border-radius:16px;padding:40px;text-align:center;">
+  <div style="width:64px;height:64px;background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+    <span style="font-size:32px;">&#127881;</span>
+  </div>
+  <h1 style="color:#ffffff;font-size:28px;margin:0 0 8px;">You're In For Life!</h1>
+  <p style="color:#a7f3d0;font-size:16px;margin:0 0 32px;">Your Adiology Lifetime Access is now active. No subscriptions, no renewals — ever.</p>
+  
+  <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:20px;margin-bottom:24px;text-align:left;">
+    <h3 style="color:#6ee7b7;font-size:14px;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Purchase Summary</h3>
+    <div style="color:#d1fae5;font-size:14px;line-height:2;">
+      <strong>Plan:</strong> Lifetime Access<br>
+      <strong>Amount Paid:</strong> ${amount}<br>
+      <strong>Date:</strong> ${date}<br>
+      <strong>Account:</strong> ${email}
+    </div>
+  </div>
+  
+  <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:20px;margin-bottom:32px;text-align:left;">
+    <h3 style="color:#6ee7b7;font-size:14px;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">What You Get</h3>
+    <div style="color:#d1fae5;font-size:14px;line-height:2;">
+      &#9989; 13 Campaign Structures (SKAG, STAG, Alpha-Beta & more)<br>
+      &#9989; AI Keyword Generation & Ad Creation<br>
+      &#9989; RSA, DKI & Call-Only Ad Builder<br>
+      &#9989; Campaign Assets (Sitelinks, Callouts, Snippets)<br>
+      &#9989; Google Ads Editor CSV Export<br>
+      &#9989; Click Guard Fraud Protection<br>
+      &#9989; Domain Monitoring & Proxy Mail<br>
+      &#9989; All Future Updates Included
+    </div>
+  </div>
+  
+  <a href="https://adiology.io" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:16px;">
+    Go to Your Dashboard
+  </a>
+  
+  <p style="color:#6ee7b7;font-size:12px;margin-top:32px;">Questions? Just reply to this email — we're here to help.</p>
+</div>
+<div style="text-align:center;margin-top:24px;">
+  <p style="color:#4b5563;font-size:11px;">This is a one-time payment confirmation. You will not be charged again.</p>
+  <p style="color:#4b5563;font-size:11px;">&copy; ${new Date().getFullYear()} Adiology. All rights reserved.</p>
+</div>
+</div>
+</body>
+</html>`;
+}
 
 export { stripe as stripeRoutes };
