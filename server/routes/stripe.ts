@@ -116,7 +116,10 @@ stripe.post('/lifetime-deal', async (c) => {
       return c.json({ error: 'Could not resolve or create Stripe customer' }, 500);
     }
 
-    const stripeClient = getUncachableStripeClient();
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ error: 'Payment system is not configured. Please try again later.' }, 503);
+    }
     const base = getOrigin(c);
 
     const session = await stripeClient.checkout.sessions.create({
