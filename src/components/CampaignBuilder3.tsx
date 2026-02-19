@@ -2819,32 +2819,26 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         const locationType = row['Location Type'] || '';
         const headline1 = row['Headline 1'] || '';
         
-        // Count campaigns (rows with budget and no ad group)
         if (row['Campaign Daily Budget'] && !adGroupName) {
           campaigns++;
         }
         
-        // Count unique ad groups (rows with ad group name but no keyword/ad)
-        if (adGroupName && !keyword && !negativeKw && !adType && !locationType) {
+        if (adGroupName) {
           adGroupsSet.add(adGroupName);
         }
         
-        // Count keywords
         if (keyword) {
           keywords++;
         }
         
-        // Count negative keywords
         if (negativeKw) {
           negativeKeywords++;
         }
         
-        // Count ads (rows with Ad Type and headlines)
         if (adType && headline1) {
           ads++;
         }
         
-        // Count locations
         if (locationType) {
           locations++;
         }

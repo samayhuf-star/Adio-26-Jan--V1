@@ -392,11 +392,30 @@ function Step2PaymentForm({
         return;
       }
 
+      let discountLabel: string | undefined;
+      let newAmount: number | undefined;
+
+      if (data.discount && typeof data.discount === 'object') {
+        if (data.discount.type === 'percent') {
+          discountLabel = `${data.discount.value}%`;
+          newAmount = Math.round(selectedPlan.amount * (1 - data.discount.value / 100));
+        } else if (data.discount.type === 'amount') {
+          discountLabel = formatPrice(data.discount.value * 100);
+          newAmount = selectedPlan.amount - data.discount.value * 100;
+        }
+      } else if (data.percentOff) {
+        discountLabel = `${data.percentOff}%`;
+        newAmount = Math.round(selectedPlan.amount * (1 - data.percentOff / 100));
+      } else if (data.amountOff) {
+        discountLabel = formatPrice(data.amountOff);
+        newAmount = selectedPlan.amount - data.amountOff;
+      }
+
       setCouponApplied({
         valid: true,
-        discount: data.discount || data.percentOff ? `${data.percentOff}%` : data.amountOff ? formatPrice(data.amountOff) : undefined,
+        discount: discountLabel,
         discountAmount: data.discountAmount,
-        newAmount: data.newAmount ?? (data.percentOff ? Math.round(selectedPlan.amount * (1 - data.percentOff / 100)) : data.amountOff ? selectedPlan.amount - data.amountOff : undefined),
+        newAmount: data.newAmount ?? newAmount,
       });
     } catch {
       setCouponError('Failed to validate coupon');

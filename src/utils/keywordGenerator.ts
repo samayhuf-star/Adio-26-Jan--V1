@@ -86,8 +86,7 @@ function isValidKeyword(keyword: string, serviceTerms: string[]): boolean {
   const lower = keyword.toLowerCase().trim();
   const words = lower.split(/\s+/).filter(w => w.length > 0);
   
-  // Rule 1: Must be 1-6 words (allow 1-word keywords too)
-  if (words.length < 1 || words.length > 6) return false;
+  if (words.length < 2 || words.length > 6) return false;
   
   // Rule 2: No duplicate consecutive words (e.g., "24/7 24/7 plumber")
   for (let i = 0; i < words.length - 1; i++) {
@@ -315,17 +314,22 @@ export async function generateKeywords(options: KeywordGenerationOptions): Promi
     if (data.success && data.keywords && data.keywords.length > 0) {
       console.log(`[Alphabet Soup] Received ${data.keywords.length} keywords from Google Autocomplete`);
 
+      const serviceTerms = extractServiceTerms(seedList);
+      const seenTexts = new Set<string>();
+
       for (const kw of data.keywords) {
         const keyword = (kw.keyword || '').toLowerCase().trim();
         if (!keyword || keyword.length < 3) continue;
 
-        // Master Rule: Minimum 2 words
         if (keyword.split(/\s+/).filter(Boolean).length < 2) continue;
 
         if (negativeList.some(neg => keyword.includes(neg))) continue;
 
-        if (generatedKeywords.some(k => k.text.toLowerCase() === keyword)) continue;
+        if (seenTexts.has(keyword)) continue;
 
+        if (!isValidKeyword(keyword, serviceTerms)) continue;
+
+        seenTexts.add(keyword);
         generatedKeywords.push({
           id: `kw-${keywordIdCounter++}`,
           text: keyword,
