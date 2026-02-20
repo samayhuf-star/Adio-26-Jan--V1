@@ -946,3 +946,24 @@ export const aiUsageLogs = pgTable("ai_usage_logs", {
   modelIdx: index("idx_ai_usage_model").on(table.model),
   createdAtIdx: index("idx_ai_usage_created_at").on(table.createdAt),
 }));
+
+export const pageViews = pgTable("page_views", {
+  id: serial("id").primaryKey(),
+  path: text("path").notNull(),
+  referrer: text("referrer"),
+  userAgent: text("user_agent"),
+  ip: text("ip"),
+  sessionId: text("session_id"),
+  country: text("country"),
+  deviceType: text("device_type"),
+  browser: text("browser"),
+  os: text("os"),
+  screenWidth: integer("screen_width"),
+  screenHeight: integer("screen_height"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  pathIdx: index("idx_page_views_path").on(table.path),
+  sessionIdx: index("idx_page_views_session").on(table.sessionId),
+  createdAtIdx: index("idx_page_views_created_at").on(table.createdAt),
+  deviceTypeIdx: index("idx_page_views_device_type").on(table.deviceType),
+}));

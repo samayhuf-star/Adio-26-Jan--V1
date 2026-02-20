@@ -24,6 +24,7 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { validateEnvironment } from "./utils/envCheck";
 import { loggingService } from "./utils/loggingService";
 import { initVersionCheck, handleChunkLoadError } from "./utils/versionCheck";
+import { initPageTracking } from "./utils/pageTracker";
 
 // Initialize notification service
 notifications.setToastInstance(toast);
@@ -139,6 +140,9 @@ initializeUserPreferences();
 
 // Initialize version checking for cache busting
 initVersionCheck();
+
+// Initialize page view tracking
+initPageTracking();
 
 // Initialize logging service to start capturing logs
 loggingService.logSystemEvent('Application starting', { timestamp: new Date().toISOString() });

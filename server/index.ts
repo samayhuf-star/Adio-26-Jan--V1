@@ -18,6 +18,7 @@ import { accountRoutes } from './routes/account';
 import { tempMailRoutes } from './routes/tempmail';
 import { clickGuardRoutes } from './routes/clickguard';
 import { googleAdsRoutes } from './routes/googleads';
+import { analyticsRoutes } from './routes/analytics';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -120,6 +121,7 @@ app.route('/api/domains', domainsRoutes);
 app.route('/api/account', accountRoutes);
 app.route('/api/tempmail', tempMailRoutes);
 app.route('/api/clickguard', clickGuardRoutes);
+app.route('/api/analytics', analyticsRoutes);
 app.route('/api/google-ads', googleAdsRoutes);
 
 app.get('/googlebc7aae8bc89f46c1.html', async (c) => {

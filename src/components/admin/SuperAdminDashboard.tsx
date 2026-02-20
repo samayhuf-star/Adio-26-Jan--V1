@@ -20,6 +20,7 @@ import { EmailMonitoringDashboard } from './EmailMonitoringDashboard';
 import { AuditLogsDashboard } from './AuditLogsDashboard';
 import { AIUsageDashboard } from './AIUsageDashboard';
 import { WhatsAppConfigPanel } from './WhatsAppConfigPanel';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import {
   Dialog,
   DialogContent,
@@ -857,23 +858,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
 
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 min-h-[600px] flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <Activity className="w-6 h-6 text-blue-400" />
-                Live Traffic Analytics
-              </h3>
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Live Data
-              </div>
-            </div>
-            <iframe 
-              src={`https://analytics.google.com/analytics/web/?authuser=0#/p/451310650/reports/intelligenthome?params=_u..nav%3Ddefault`}
-              className="w-full flex-grow border-0 rounded-lg bg-white"
-              title="Google Analytics"
-            />
-          </div>
+          <AnalyticsDashboard token={token} />
         )}
 
         {/* Feedback Tab */}

@@ -23,6 +23,12 @@ Preferred communication style: Simple, everyday language.
 - **Sitemap & Robots**: `public/sitemap.xml` lists all 15 crawlable path URLs. `public/robots.txt` allows feature pages, blocks dashboard/admin paths.
 - **Internal Navigation**: Dashboard pages (behind auth) use custom event-based navigation (`navigateTo` events) which is intentional since they shouldn't be indexed.
 
+## Site Analytics
+- **Built-in Analytics**: Self-hosted page view tracking stored in `page_views` table. Replaces broken Google Analytics iframe embed in SuperAdmin.
+- **Tracking**: Lightweight client-side tracker (`src/utils/pageTracker.ts`) using `navigator.sendBeacon` for non-blocking page view collection. Tracks path, referrer, session, screen size, browser, OS, and device type.
+- **Dashboard**: Native analytics dashboard in SuperAdmin (`src/components/admin/AnalyticsDashboard.tsx`) with traffic trend chart, top pages, referrers, browser/OS/device breakdowns, and live feed. Supports 7/30/90 day filters.
+- **API**: `POST /api/analytics/track` (public, for collecting views) and `GET /api/analytics/stats?days=N` (for dashboard data).
+
 ## Backend
 - **Core API**: Hono (Node.js/TypeScript) for primary API endpoints, with optional FastAPI (Python) for legacy ad generation.
 - **Intelligence**: Cheerio-based URL Analyzer for website analysis and OpenAI integration for marketing insights.
