@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import {
   ArrowRight, ArrowLeft, Globe, Shield, Lock, Mail, Bell,
   Search, Activity, Clock, AlertTriangle, CheckCircle2,
@@ -14,16 +15,27 @@ interface DomainMonitorPageProps {
 
 export default function DomainMonitorPage({ onGetStarted, onBack }: DomainMonitorPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
-      <Navigation onGetStarted={onGetStarted} onBack={onBack} />
-      <HeroSection onGetStarted={onGetStarted} />
-      <MonitoringCapabilities />
-      <DNSRecordTypes />
-      <HowItWorks />
-      <AlertSystem />
-      <CTASection onGetStarted={onGetStarted} />
-      <Footer />
-    </div>
+    <>
+      <Helmet>
+        <title>Domain Monitor - Track Domain Expiry, SSL & DNS | Adiology</title>
+        <meta name="description" content="Monitor your domains with Adiology's Domain Monitor. Track domain expiry, SSL certificates, DNS records, and get email alerts before issues affect your Google Ads campaigns." />
+        <link rel="canonical" href="https://adiology.io/features/domain-monitor" />
+        <meta property="og:title" content="Domain Monitor - Track Domain Expiry, SSL & DNS | Adiology" />
+        <meta property="og:description" content="Monitor your domains with expiry tracking, SSL certificates, and DNS record alerts." />
+        <meta property="og:url" content="https://adiology.io/features/domain-monitor" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
+        <Navigation onGetStarted={onGetStarted} onBack={onBack} />
+        <HeroSection onGetStarted={onGetStarted} />
+        <MonitoringCapabilities />
+        <DNSRecordTypes />
+        <HowItWorks />
+        <AlertSystem />
+        <CTASection onGetStarted={onGetStarted} />
+        <Footer />
+      </div>
+    </>
   );
 }
 

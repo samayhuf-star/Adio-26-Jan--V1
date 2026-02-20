@@ -65,25 +65,11 @@ accountRoutes.post('/register', async (c) => {
       throw dbError;
     }
 
-    const token = crypto.randomUUID();
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24);
-    
-    await pool.query(
-      `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
-      [userId, token, expiresAt]
-    );
-
-    const emailBase = getEmailBaseUrl(c);
-    const verificationUrl = `${emailBase}/verify-email?token=${token}&email=${encodeURIComponent(email.toLowerCase().trim())}`;
-    await EmailService.sendRaw(email.toLowerCase().trim(), 'emailVerification', { verification_url: verificationUrl });
-
-    console.log(`[Auth] User registered: ${email} (verification link base: ${emailBase})`);
+    console.log(`[Auth] User registered: ${email} (verification email deferred until after payment)`);
     return c.json({
       success: true,
-      message: 'Please check your email to verify your account',
-      needsEmailVerification: true
+      message: 'Account created. Proceed to payment.',
+      userId,
     });
   } catch (error: any) {
     console.error('[Auth] Registration error:', error);

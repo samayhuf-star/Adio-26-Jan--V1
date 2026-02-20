@@ -57,7 +57,7 @@ class AIChatService {
         The 1-Click Builder can create campaigns automatically based on your business goals.`,
         category: 'campaigns',
         tags: ['campaign', 'create', 'builder', 'setup'],
-        url: '#campaign-builder',
+        url: '/features/campaign-builder',
         lastUpdated: new Date().toISOString()
       },
       {
@@ -73,7 +73,7 @@ class AIChatService {
         Access it from the Keywords menu > Planner.`,
         category: 'keywords',
         tags: ['keywords', 'research', 'planner', 'seo'],
-        url: '#keyword-planner',
+        url: '/features/keyword-planner',
         lastUpdated: new Date().toISOString()
       },
       {
@@ -355,24 +355,21 @@ Respond in a conversational tone as if you're a knowledgeable support agent.`;
     if (messageLower.includes('campaign')) {
       actions.push({
         label: 'Create New Campaign',
-        action: 'create_campaign',
-        url: '#campaign-builder'
+        action: 'create_campaign'
       });
     }
     
     if (messageLower.includes('keyword')) {
       actions.push({
         label: 'Open Keyword Planner',
-        action: 'keyword_planner',
-        url: '#keyword-planner'
+        action: 'keyword_planner'
       });
     }
     
     if (messageLower.includes('billing')) {
       actions.push({
         label: 'View Billing Settings',
-        action: 'billing',
-        url: '#billing'
+        action: 'billing'
       });
     }
 

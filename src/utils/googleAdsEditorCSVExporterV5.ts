@@ -7,6 +7,66 @@
  * Based on the master CSV template: Campaign_Enhanced_Full_Assets.csv
  */
 
+function sanitizeAdText(text: string): string {
+  if (!text) return '';
+  let cleaned = text;
+  cleaned = cleaned.replace(/"(\{KeyWord:[^}]+\})"/g, '$1');
+  cleaned = cleaned.replace(/'(\{KeyWord:[^}]+\})'/g, '$1');
+  const dkiPlaceholders: string[] = [];
+  cleaned = cleaned.replace(/\{KeyWord:[^}]*\}/gi, (match) => {
+    dkiPlaceholders.push(match);
+    return `__DKI_${dkiPlaceholders.length - 1}__`;
+  });
+  cleaned = cleaned.replace(/[{}\[\]]/g, '');
+  dkiPlaceholders.forEach((dki, i) => {
+    cleaned = cleaned.replace(`__DKI_${i}__`, dki);
+  });
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  return cleaned;
+}
+
+function truncateHeadline(text: string, maxLen: number): string {
+  if (!text || text.length <= maxLen) return text;
+  const dkiMatch = text.match(/\{KeyWord:[^}]*\}/i);
+  if (dkiMatch) {
+    const dkiTag = dkiMatch[0];
+    const dkiStart = text.indexOf(dkiTag);
+    const dkiEnd = dkiStart + dkiTag.length;
+    if (dkiEnd <= maxLen) {
+      return text.substring(0, maxLen);
+    }
+    const defaultText = dkiTag.match(/\{KeyWord:([^}]*)\}/i)?.[1] || '';
+    if (defaultText.length > maxLen - 11) {
+      const trimmedDefault = defaultText.substring(0, maxLen - 11);
+      return `{KeyWord:${trimmedDefault}}`;
+    }
+    return `{KeyWord:${defaultText}}`;
+  }
+  return text.substring(0, maxLen);
+}
+
+function truncateDescription(text: string, maxLen: number): string {
+  if (!text || text.length <= maxLen) return text;
+  const dkiMatch = text.match(/\{KeyWord:[^}]*\}/i);
+  if (dkiMatch) {
+    const dkiTag = dkiMatch[0];
+    const dkiStart = text.indexOf(dkiTag);
+    const dkiEnd = dkiStart + dkiTag.length;
+    if (dkiEnd <= maxLen) {
+      return text.substring(0, maxLen);
+    }
+    const defaultText = dkiTag.match(/\{KeyWord:([^}]*)\}/i)?.[1] || '';
+    const prefix = text.substring(0, dkiStart);
+    const available = maxLen - prefix.length - 11;
+    if (available > 0) {
+      const trimmedDefault = defaultText.length > available ? defaultText.substring(0, available) : defaultText;
+      return `${prefix}{KeyWord:${trimmedDefault}}`;
+    }
+    return prefix.trimEnd().substring(0, maxLen);
+  }
+  return text.substring(0, maxLen);
+}
+
 // Complete 183-column header array matching Google Ads Editor format
 export const MASTER_CSV_HEADERS = [
   'Campaign',
@@ -342,18 +402,6 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
   rows.push(campaignRow);
 
   
-  // Ad Group rows (one per ad group) - REQUIRED for Google Ads Editor
-  campaign.adGroups.forEach(adGroup => {
-    const agRow = createEmptyRow();
-    agRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
-    agRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-    agRow[COLUMN_INDEX['Ad Group']] = adGroup.name;
-    agRow[COLUMN_INDEX['Max CPC']] = String(adGroup.maxCpc || 2.00);
-    agRow[COLUMN_INDEX['Ad Group Status']] = adGroup.status || 'Enabled';
-    agRow[COLUMN_INDEX['Ad Group Labels']] = adGroup.labels || '';
-    rows.push(agRow);
-  });
-  
   // Keyword rows - REQUIRED for Google Ads Editor
   campaign.adGroups.forEach(adGroup => {
     adGroup.keywords.forEach(keyword => {
@@ -373,15 +421,15 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
     });
   });
   
-  // Ad rows (RSA, DKI, Call-Only) - REQUIRED for Google Ads Editor
+  // Ad rows - only RSA ads for Search campaigns (DKI merged into RSA, Call-Only needs separate campaign)
   campaign.adGroups.forEach(adGroup => {
     adGroup.ads.forEach(ad => {
-      // Skip ads with no headlines or descriptions (invalid ads)
+      if (ad.type === 'DKI') return;
+      if (ad.type === 'CallOnly' && (campaign.campaignType || 'Search') === 'Search') return;
+
       const validHeadlines = (ad.headlines || []).filter((h: string) => h && h.trim());
       const validDescriptions = (ad.descriptions || []).filter((d: string) => d && d.trim());
       
-      // RSA requires at least 3 headlines and 2 descriptions for Google Ads
-      // SKAG campaigns often have many ad groups, so we ensure each gets its ads
       if (validHeadlines.length < 1 || validDescriptions.length < 1) {
         console.warn(`Skipping invalid ad in group "${adGroup.name}": insufficient headlines (${validHeadlines.length}) or descriptions (${validDescriptions.length})`);
         return;
@@ -464,30 +512,28 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
       adRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
       adRow[COLUMN_INDEX['Ad Group']] = adGroup.name;
       adRow[COLUMN_INDEX['Ad Group Status']] = 'Enabled';
-      adRow[COLUMN_INDEX['Ad Type']] = ad.type === 'RSA' ? 'Responsive search ad' : 
-                                       ad.type === 'CallOnly' ? 'Call-only ad' : 
-                                       'Responsive search ad';
+      adRow[COLUMN_INDEX['Ad Type']] = ad.type === 'CallOnly' ? 'Call-only ad' : 'Responsive search ad';
       adRow[COLUMN_INDEX['Final URL']] = ad.finalUrl;
       adRow[COLUMN_INDEX['Mobile Final URL']] = ad.mobileUrl || '';
       
-      // Headlines (up to 15) - use deduplicated unique headlines
+      // Headlines (up to 15) - sanitize and truncate with DKI-safe logic
       for (let i = 0; i < Math.min(15, finalHeadlines.length); i++) {
         const headlineCol = `Headline ${i + 1}`;
         if (COLUMN_INDEX[headlineCol] !== undefined) {
-          adRow[COLUMN_INDEX[headlineCol]] = finalHeadlines[i].substring(0, 30);
+          adRow[COLUMN_INDEX[headlineCol]] = truncateHeadline(sanitizeAdText(finalHeadlines[i]), 30);
         }
       }
       
-      // Descriptions (up to 4) - use deduplicated unique descriptions
+      // Descriptions (up to 4) - sanitize and truncate with DKI-safe logic
       for (let i = 0; i < Math.min(4, finalDescriptions.length); i++) {
         const descCol = `Description ${i + 1}`;
         if (COLUMN_INDEX[descCol] !== undefined) {
-          adRow[COLUMN_INDEX[descCol]] = finalDescriptions[i].substring(0, 90);
+          adRow[COLUMN_INDEX[descCol]] = truncateDescription(sanitizeAdText(finalDescriptions[i]), 90);
         }
       }
       
-      adRow[COLUMN_INDEX['Path 1']] = (ad.path1 || '').substring(0, 15);
-      adRow[COLUMN_INDEX['Path 2']] = (ad.path2 || '').substring(0, 15);
+      adRow[COLUMN_INDEX['Path 1']] = sanitizeAdText(ad.path1 || '').substring(0, 15);
+      adRow[COLUMN_INDEX['Path 2']] = sanitizeAdText(ad.path2 || '').substring(0, 15);
       
       // Call-only specific fields
       if (ad.type === 'CallOnly') {
@@ -578,68 +624,76 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
     }
   }
   
-  // === ASSET ROWS (separate rows for Google Ads Editor import) ===
-  // Google Ads Editor requires assets as separate rows using specific column names:
-  // Sitelinks use: Campaign + Link Text + Description Line 1 + Description Line 2 + Final URL
-  // Callouts use: Campaign + Callout Text
-  // Structured Snippets use: Campaign + Snippet Header + Snippet Values
-
-  // Sitelink asset rows
-  if (campaign.sitelinks && campaign.sitelinks.length > 0) {
-    campaign.sitelinks.slice(0, 4).forEach((sl) => {
-      const slRow = createEmptyRow();
-      slRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
-      slRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      slRow[COLUMN_INDEX['Link Text']] = sl.text || '';
-      slRow[COLUMN_INDEX['Description Line 1']] = sl.description1 || '';
-      slRow[COLUMN_INDEX['Description Line 2']] = sl.description2 || '';
-      slRow[COLUMN_INDEX['Final URL']] = sl.finalUrl || campaign.url || '';
-      rows.push(slRow);
-    });
-  }
-
-  // Callout asset rows
-  if (campaign.callouts && campaign.callouts.length > 0) {
-    campaign.callouts.slice(0, 4).forEach((co) => {
-      const coRow = createEmptyRow();
-      coRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
-      coRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      coRow[COLUMN_INDEX['Callout Text']] = co.text || '';
-      rows.push(coRow);
-    });
-  }
-
-  // Structured Snippet asset rows
-  if (campaign.snippets && campaign.snippets.length > 0) {
-    campaign.snippets.slice(0, 2).forEach((sn) => {
-      const snRow = createEmptyRow();
-      snRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
-      snRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      snRow[COLUMN_INDEX['Snippet Header']] = sn.header || '';
-      snRow[COLUMN_INDEX['Snippet Values']] = Array.isArray(sn.values) ? sn.values.join(';') : (sn.values || '');
-      rows.push(snRow);
-    });
-  }
-
-  // Call extension asset rows
-  if (campaign.callExtensions && campaign.callExtensions.length > 0) {
-    campaign.callExtensions.forEach((ce) => {
-      const ceRow = createEmptyRow();
-      ceRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
-      ceRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      ceRow[COLUMN_INDEX['PhoneNumber']] = ce.phoneNumber || '';
-      ceRow[COLUMN_INDEX['VerificationURL']] = ce.verificationUrl || '';
-      ceRow[COLUMN_INDEX['Call Extension Status']] = ce.status || 'Enabled';
-      ceRow[COLUMN_INDEX['Business Name']] = campaign.campaignName || '';
-      rows.push(ceRow);
-    });
-  }
-
   // Convert rows to CSV string with proper escaping
   const csvContent = rows.map(row => row.map(escapeCSV).join(',')).join('\r\n');
   
   // Add UTF-8 BOM for Excel compatibility
   return '\ufeff' + csvContent;
+}
+
+export function generateCallOnlyCampaignRows(callAd: any, baseCampaign: CampaignDataV5): string {
+  const rows: string[][] = [];
+  const campaignName = baseCampaign.campaignName + ' - Call Only';
+
+  const campRow = createEmptyRow();
+  campRow[COLUMN_INDEX['Campaign']] = campaignName;
+  campRow[COLUMN_INDEX['Campaign Daily Budget']] = String(baseCampaign.dailyBudget || 100);
+  campRow[COLUMN_INDEX['Campaign Type']] = 'Call-only';
+  campRow[COLUMN_INDEX['Bid Strategy Type']] = baseCampaign.bidStrategy || 'Maximize Conversions';
+  campRow[COLUMN_INDEX['Networks']] = baseCampaign.networks || 'Google search';
+  campRow[COLUMN_INDEX['EU political ads']] = 'No';
+  campRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+  rows.push(campRow);
+
+  const adGroupName = campaignName + ' - Ads';
+  const adRow = createEmptyRow();
+  adRow[COLUMN_INDEX['Campaign']] = campaignName;
+  adRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+  adRow[COLUMN_INDEX['Ad Group']] = adGroupName;
+  adRow[COLUMN_INDEX['Ad Group Status']] = 'Enabled';
+  adRow[COLUMN_INDEX['Ad Type']] = 'Call-only ad';
+  adRow[COLUMN_INDEX['Final URL']] = callAd.finalUrl || baseCampaign.url || '';
+
+  const headlines = (callAd.headlines || []).filter((h: string) => h && h.trim());
+  const descriptions = (callAd.descriptions || []).filter((d: string) => d && d.trim());
+  headlines.slice(0, 2).forEach((h: string, i: number) => {
+    const key = `Headline ${i + 1}` as keyof typeof COLUMN_INDEX;
+    if (COLUMN_INDEX[key] !== undefined) adRow[COLUMN_INDEX[key]] = truncateHeadline(sanitizeAdText(h), 30);
+  });
+  descriptions.slice(0, 2).forEach((d: string, i: number) => {
+    const key = `Description ${i + 1}` as keyof typeof COLUMN_INDEX;
+    if (COLUMN_INDEX[key] !== undefined) adRow[COLUMN_INDEX[key]] = truncateDescription(sanitizeAdText(d), 90);
+  });
+
+  if (callAd.phoneNumber) adRow[COLUMN_INDEX['PhoneNumber']] = callAd.phoneNumber;
+  if (callAd.businessName) adRow[COLUMN_INDEX['Business Name']] = callAd.businessName;
+  adRow[COLUMN_INDEX['Ad Status']] = 'Enabled';
+  rows.push(adRow);
+
+  if (baseCampaign.locations) {
+    const countryCode = baseCampaign.locations.countryCode || 'US';
+    const addLoc = (name: string, type: string, extras: Record<string, string> = {}) => {
+      const locRow = createEmptyRow();
+      locRow[COLUMN_INDEX['Campaign']] = campaignName;
+      locRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      locRow[COLUMN_INDEX['Location']] = name;
+      locRow[COLUMN_INDEX['Location Type']] = type;
+      locRow[COLUMN_INDEX['Location Status']] = 'Enabled';
+      locRow[COLUMN_INDEX['Country Code']] = countryCode;
+      for (const [k, v] of Object.entries(extras)) {
+        if (COLUMN_INDEX[k as keyof typeof COLUMN_INDEX] !== undefined) {
+          locRow[COLUMN_INDEX[k as keyof typeof COLUMN_INDEX]] = v;
+        }
+      }
+      rows.push(locRow);
+    };
+    (baseCampaign.locations.countries || []).forEach((c: string) => addLoc(c, 'Country'));
+    (baseCampaign.locations.states || []).forEach((s: string) => addLoc(s, 'Region', { 'State/Region': s }));
+    (baseCampaign.locations.cities || []).forEach((c: string) => addLoc(c, 'City', { 'City': c }));
+    (baseCampaign.locations.zipCodes || []).forEach((z: string) => addLoc(z, 'Postal Code', { 'Postal Code': z }));
+  }
+
+  return rows.map(row => row.map(escapeCSV).join(',')).join('\r\n');
 }
 
 /**

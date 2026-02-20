@@ -188,7 +188,7 @@ function Step1CreateAccount({
         throw new Error(result.error.message || 'Signup failed');
       }
 
-      onNext(email.trim().toLowerCase(), name);
+      onNext(email.trim().toLowerCase(), name.trim());
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred');
     } finally {

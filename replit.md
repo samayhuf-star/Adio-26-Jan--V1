@@ -16,6 +16,13 @@ Preferred communication style: Simple, everyday language.
 - **Monitoring & Utility**: Community Integration via Discourse with SSO for community forums. Domain Monitoring tracks domain expiry, SSL certificates, and DNS records with email alerts. Proxy Mail offers anonymous email generation for competitive intelligence.
 - **Click Guard**: Provides click fraud protection with a lightweight tracking script (v2.0 with WordPress compatibility), bot detection engine, live traffic monitor, and analytics dashboard, including IP blocking capabilities. The tracking script (`public/t.js`) supports multiple detection methods: `document.currentScript`, `data-sid` attribute, URL query parameter, and `window._clickguard_sid` global. Debug mode available via `?clickguard_debug=1`. Installation snippets provided for HTML, WordPress Plugin (Insert Headers and Footers), and WordPress PHP (`functions.php`). Verify endpoint at `/api/clickguard/verify?sid=xxx`.
 
+## SEO & Routing
+- **Path-Based Routing**: All public pages use clean path URLs (not hash fragments) for proper Google indexing. Routes handled in App.tsx with `handleRoute()` + `popstate` listener.
+- **Public Feature Pages**: Dedicated landing pages at `/features/keyword-planner`, `/features/ads-search`, `/features/blog-generator`, `/features/campaign-builder`, `/features/click-guard`, `/features/domain-monitor`, `/features/instant-mail`, and `/pricing`. Located in `src/components/feature-pages/`.
+- **SEO Meta Tags**: react-helmet-async provides per-page title, description, canonical URL, and OpenGraph tags on all public pages.
+- **Sitemap & Robots**: `public/sitemap.xml` lists all 15 crawlable path URLs. `public/robots.txt` allows feature pages, blocks dashboard/admin paths.
+- **Internal Navigation**: Dashboard pages (behind auth) use custom event-based navigation (`navigateTo` events) which is intentional since they shouldn't be indexed.
+
 ## Backend
 - **Core API**: Hono (Node.js/TypeScript) for primary API endpoints, with optional FastAPI (Python) for legacy ad generation.
 - **Intelligence**: Cheerio-based URL Analyzer for website analysis and OpenAI integration for marketing insights.

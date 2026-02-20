@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import {
   ArrowLeft, ArrowRight, Shield, Bot, Users, Globe, Fingerprint,
   RefreshCw, Code, Activity, Search, Ban, BarChart3, MapPin,
@@ -14,16 +15,27 @@ interface ClickGuardPageProps {
 
 export default function ClickGuardPage({ onGetStarted, onBack }: ClickGuardPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
-      <Navigation onGetStarted={onGetStarted} onBack={onBack} />
-      <HeroSection onGetStarted={onGetStarted} />
-      <ThreatDetectionSection />
-      <HowItWorksSection />
-      <DashboardFeaturesSection />
-      <ProtectionStatsSection onGetStarted={onGetStarted} />
-      <CTASection onGetStarted={onGetStarted} />
-      <Footer />
-    </div>
+    <>
+      <Helmet>
+        <title>Click Guard - Google Ads Click Fraud Protection | Adiology</title>
+        <meta name="description" content="Protect your Google Ads budget from click fraud with Adiology's Click Guard. Bot detection, IP blocking, real-time traffic monitoring, and analytics dashboard." />
+        <link rel="canonical" href="https://adiology.io/features/click-guard" />
+        <meta property="og:title" content="Click Guard - Google Ads Click Fraud Protection | Adiology" />
+        <meta property="og:description" content="Protect your Google Ads budget from click fraud with bot detection and IP blocking." />
+        <meta property="og:url" content="https://adiology.io/features/click-guard" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
+        <Navigation onGetStarted={onGetStarted} onBack={onBack} />
+        <HeroSection onGetStarted={onGetStarted} />
+        <ThreatDetectionSection />
+        <HowItWorksSection />
+        <DashboardFeaturesSection />
+        <ProtectionStatsSection onGetStarted={onGetStarted} />
+        <CTASection onGetStarted={onGetStarted} />
+        <Footer />
+      </div>
+    </>
   );
 }
 

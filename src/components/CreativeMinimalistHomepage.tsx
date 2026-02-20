@@ -71,7 +71,7 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
             <button onClick={() => onNavigateToPage?.('/features/click-guard')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Click Guard</button>
             <button onClick={() => onNavigateToPage?.('/features/proxy-mail')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Proxy Mail</button>
             <button onClick={() => onNavigateToPage?.('/features/domain-monitor')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Domain Monitor</button>
-            <a href="#pricing" className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Pricing</a>
+            <button onClick={() => onNavigateToPage?.('/pricing')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Pricing</button>
           </div>
 
           <div className="hidden md:flex items-center gap-4">
@@ -98,7 +98,7 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/click-guard'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Click Guard</button>
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/proxy-mail'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Proxy Mail</button>
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/domain-monitor'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Domain Monitor</button>
-            <a href="#pricing" className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Pricing</a>
+            <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/pricing'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Pricing</button>
             <button onClick={onGetStarted} className="w-full px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-sm font-semibold">
               Get Started Free
             </button>

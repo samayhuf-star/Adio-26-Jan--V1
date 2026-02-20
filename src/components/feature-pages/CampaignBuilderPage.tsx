@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import {
   ArrowLeft, ArrowRight, Globe, Zap, Layers, Search,
   Brain, FileText, MapPin, Sparkles, Settings, Download,
@@ -12,15 +13,26 @@ interface CampaignBuilderPageProps {
 
 export default function CampaignBuilderPage({ onGetStarted, onBack }: CampaignBuilderPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
-      <Navigation onGetStarted={onGetStarted} onBack={onBack} />
-      <HeroSection onGetStarted={onGetStarted} />
-      <HowItWorksSection />
-      <CampaignStructuresSection />
-      <KeyFeaturesSection />
-      <CTASection onGetStarted={onGetStarted} />
-      <Footer />
-    </div>
+    <>
+      <Helmet>
+        <title>Google Ads Campaign Builder - AI-Powered Campaign Creation | Adiology</title>
+        <meta name="description" content="Build Google Ads campaigns in minutes with 13 campaign structures including SKAG, STAG, Alpha-Beta, and Intent-Based. AI-powered ad generation with CSV export for Google Ads Editor." />
+        <link rel="canonical" href="https://adiology.io/features/campaign-builder" />
+        <meta property="og:title" content="Google Ads Campaign Builder - AI-Powered Campaign Creation | Adiology" />
+        <meta property="og:description" content="Build Google Ads campaigns in minutes with 13 campaign structures including SKAG, STAG, Alpha-Beta." />
+        <meta property="og:url" content="https://adiology.io/features/campaign-builder" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
+        <Navigation onGetStarted={onGetStarted} onBack={onBack} />
+        <HeroSection onGetStarted={onGetStarted} />
+        <HowItWorksSection />
+        <CampaignStructuresSection />
+        <KeyFeaturesSection />
+        <CTASection onGetStarted={onGetStarted} />
+        <Footer />
+      </div>
+    </>
   );
 }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthCompat } from '../utils/authCompat';
 import { 
   ArrowRight, ArrowLeft, Check, Globe, Link2, Sparkles, Brain, 
-  Hash, MapPin, FileText, Download, AlertCircle, CheckCircle2,
+  Hash, MapPin, FileText, Download, AlertCircle, AlertTriangle, CheckCircle2,
   Loader2, Search, Filter, X, Plus, Edit3, Trash2, Save,
   Target, Zap, Layers, TrendingUp, Building, ShoppingBag,
   Phone, Mail, Calendar, Clock, Eye, FileSpreadsheet, Copy,
@@ -1587,16 +1587,28 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
     const groups: AdGroup[] = [];
     
     if (structureType === 'skag') {
-      // SKAG: One ad group per keyword - no limit, each keyword gets its own ad group
-      keywords.forEach((kw, idx) => {
+      const enabledMatchTypes = Object.entries(campaignData.keywordTypes || { broad: true, phrase: true, exact: true })
+        .filter(([key, val]) => val && key !== 'negative')
+        .map(([key]) => key);
+      const uniqueTexts = new Map<string, any>();
+      keywords.forEach((kw) => {
         const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        if (baseText && !uniqueTexts.has(baseText.toLowerCase())) {
+          uniqueTexts.set(baseText.toLowerCase(), kw);
+        }
+      });
+      let agIdx = 0;
+      uniqueTexts.forEach((kw, _key) => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        agIdx++;
+        const kwVariants = enabledMatchTypes.map(mt => ({ ...kw, matchType: mt }));
         groups.push({
-          id: `ag-${idx + 1}`,
-          name: baseText.substring(0, 50) || `Ad Group ${idx + 1}`,
-          keywords: [kw], // Keep full keyword object with matchType
+          id: `ag-${agIdx}`,
+          name: baseText.substring(0, 50) || `Ad Group ${agIdx}`,
+          keywords: kwVariants,
         });
       });
-      console.log(`[SKAG] Generated ${groups.length} ad groups for ${keywords.length} keywords`);
+      console.log(`[SKAG] Generated ${groups.length} ad groups for ${uniqueTexts.size} unique keywords x ${enabledMatchTypes.length} match types`);
     } else if (structureType === 'skag_split') {
       const matchTypeLabels: Record<string, string> = { broad: 'Broad', phrase: 'Phrase', exact: 'Exact' };
       const enabledMatchTypes = Object.entries(campaignData.keywordTypes || { broad: true, phrase: true, exact: true })
@@ -2504,7 +2516,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       const campaignNameValue = campaignData.campaignName || 'Campaign 1';
       
       // Import the new V5 Master CSV exporter with all 183 columns
-      const { generateMasterCSV, convertToV5Format } = await import('../utils/googleAdsEditorCSVExporterV5');
+      const { generateMasterCSV, convertToV5Format, generateCallOnlyCampaignRows } = await import('../utils/googleAdsEditorCSVExporterV5');
       
       // Collect all extensions from ads - properly handle nested structures
       const sitelinks: any[] = [];
@@ -2621,7 +2633,8 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             const kwText = typeof kw === 'string' ? kw : (kw.text || kw.keyword || '');
             let matchType: 'Broad' | 'Phrase' | 'Exact' = 'Broad';
             if (typeof kw === 'object' && kw.matchType) {
-              matchType = kw.matchType;
+              const mt = String(kw.matchType).toLowerCase();
+              matchType = mt === 'exact' ? 'Exact' : mt === 'phrase' ? 'Phrase' : 'Broad';
             } else if (typeof kw === 'string') {
               if (kw.startsWith('[') && kw.endsWith(']')) matchType = 'Exact';
               else if (kw.startsWith('"') && kw.endsWith('"')) matchType = 'Phrase';
@@ -2652,110 +2665,120 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         callExtensions: callExtensions.length > 0 ? callExtensions : undefined,
       };
       
-      // Add ads to ALL ad groups - each ad group should have the same ads
-      // This ensures every ad group has RSAs for proper campaign structure
-      const adsToDistribute = (campaignData.ads || []).map((ad: any) => {
-        // Handle both structures: headlines array OR headline1/headline2/etc properties
-        let headlines: string[] = [];
+      const extractHeadlines = (ad: any): string[] => {
         if (ad.headlines && Array.isArray(ad.headlines)) {
-          // RSA ads with headlines array
-          headlines = ad.headlines.map((h: any) => typeof h === 'string' ? h : (h.text || '')).filter((h: string) => h);
-        } else {
-          // DKI/Call ads with headline1, headline2, etc.
-          headlines = [
-            ad.headline1 || '',
-            ad.headline2 || '',
-            ad.headline3 || '',
-            ad.headline4 || '',
-            ad.headline5 || '',
-            ad.headline6 || '',
-            ad.headline7 || '',
-            ad.headline8 || '',
-            ad.headline9 || '',
-            ad.headline10 || '',
-            ad.headline11 || '',
-            ad.headline12 || '',
-            ad.headline13 || '',
-            ad.headline14 || '',
-            ad.headline15 || ''
-          ].filter((h: string) => h);
+          return ad.headlines.map((h: any) => typeof h === 'string' ? h : (h.text || '')).filter((h: string) => h);
         }
-        
-        // Handle both structures: descriptions array OR description1/description2/etc properties
-        let descriptions: string[] = [];
+        return [
+          ad.headline1 || '', ad.headline2 || '', ad.headline3 || '',
+          ad.headline4 || '', ad.headline5 || '', ad.headline6 || '',
+          ad.headline7 || '', ad.headline8 || '', ad.headline9 || '',
+          ad.headline10 || '', ad.headline11 || '', ad.headline12 || '',
+          ad.headline13 || '', ad.headline14 || '', ad.headline15 || ''
+        ].filter((h: string) => h);
+      };
+
+      const extractDescriptions = (ad: any): string[] => {
         if (ad.descriptions && Array.isArray(ad.descriptions)) {
-          descriptions = ad.descriptions.map((d: any) => typeof d === 'string' ? d : (d.text || '')).filter((d: string) => d);
-        } else {
-          descriptions = [
-            ad.description1 || '',
-            ad.description2 || '',
-            ad.description3 || '',
-            ad.description4 || ''
-          ].filter((d: string) => d);
+          return ad.descriptions.map((d: any) => typeof d === 'string' ? d : (d.text || '')).filter((d: string) => d);
         }
-        
-        return {
-          type: ad.type === 'call_only' ? 'CallOnly' : 
-                ad.type === 'dki' ? 'DKI' : 'RSA',
-          headlines,
-          descriptions,
-          finalUrl: ad.finalUrl || campaignData.url || '',
-          path1: ad.path1 || '',
-          path2: ad.path2 || '',
-          status: 'Enabled'
-        };
-      });
-      
-      // Distribute ads to ALL ad groups
+        return [
+          ad.description1 || '', ad.description2 || '',
+          ad.description3 || '', ad.description4 || ''
+        ].filter((d: string) => d);
+      };
+
+      const allAds = campaignData.ads || [];
+      const rsaAd = allAds.find((ad: any) => ad.type === 'rsa' || ad.adType === 'RSA' || ad.type === 'Responsive search ad');
+      const dkiAd = allAds.find((ad: any) => ad.type === 'dki' || ad.adType === 'DKI' || ad.type === 'Dynamic keyword insertion');
+      const callAd = allAds.find((ad: any) => ad.type === 'call' || ad.type === 'call_only' || ad.adType === 'CallOnly');
+
+      let mergedHeadlines: string[] = rsaAd ? extractHeadlines(rsaAd) : [];
+      let mergedDescriptions: string[] = rsaAd ? extractDescriptions(rsaAd) : [];
+
+      if (mergedHeadlines.length === 0 && !rsaAd) {
+        const anyAdWithHeadlines = allAds.find((ad: any) => {
+          const h = extractHeadlines(ad);
+          return h.length > 0;
+        });
+        if (anyAdWithHeadlines) {
+          mergedHeadlines = extractHeadlines(anyAdWithHeadlines);
+          mergedDescriptions = extractDescriptions(anyAdWithHeadlines);
+        }
+      }
+      let mergedPath1 = rsaAd?.path1 || rsaAd?.displayPath?.[0] || '';
+      let mergedPath2 = rsaAd?.path2 || rsaAd?.displayPath?.[1] || '';
+      let mergedFinalUrl = rsaAd?.finalUrl || rsaAd?.final_url || campaignData.url || '';
+      if (!mergedFinalUrl) {
+        const anyAdWithUrl = allAds.find((ad: any) => ad.finalUrl || ad.final_url);
+        if (anyAdWithUrl) mergedFinalUrl = anyAdWithUrl.finalUrl || anyAdWithUrl.final_url;
+      }
+
+      if (dkiAd) {
+        const dkiHeadlines = extractHeadlines(dkiAd);
+        const dkiDescriptions = extractDescriptions(dkiAd);
+        const seenH = new Set(mergedHeadlines.map((h: string) => h.toLowerCase().trim()));
+        for (const dh of dkiHeadlines) {
+          if (mergedHeadlines.length >= 15) break;
+          if (!seenH.has(dh.toLowerCase().trim())) {
+            seenH.add(dh.toLowerCase().trim());
+            mergedHeadlines.push(dh);
+          }
+        }
+        const seenD = new Set(mergedDescriptions.map((d: string) => d.toLowerCase().trim()));
+        for (const dd of dkiDescriptions) {
+          if (mergedDescriptions.length >= 4) break;
+          if (!seenD.has(dd.toLowerCase().trim())) {
+            seenD.add(dd.toLowerCase().trim());
+            mergedDescriptions.push(dd);
+          }
+        }
+        if (!mergedPath1 && dkiAd.path1) mergedPath1 = dkiAd.path1;
+        if (!mergedPath2 && dkiAd.path2) mergedPath2 = dkiAd.path2;
+        if (!mergedFinalUrl && dkiAd.finalUrl) mergedFinalUrl = dkiAd.finalUrl;
+      }
+
+      const fallbackHeadlines = [
+        'Professional Service Near You',
+        'Get a Free Quote Today',
+        'Trusted Local Experts'
+      ];
+      const fallbackDescs = [
+        'Contact us today for professional service. Fast, reliable, and affordable.',
+        'Get expert help from our experienced team. Call now for a free quote.'
+      ];
+      if (mergedHeadlines.length < 3) {
+        for (const fh of fallbackHeadlines) {
+          if (mergedHeadlines.length >= 3) break;
+          if (!mergedHeadlines.some(h => h.toLowerCase() === fh.toLowerCase())) {
+            mergedHeadlines.push(fh);
+          }
+        }
+      }
+      if (mergedDescriptions.length < 2) {
+        for (const fd of fallbackDescs) {
+          if (mergedDescriptions.length >= 2) break;
+          if (!mergedDescriptions.some(d => d.toLowerCase() === fd.toLowerCase())) {
+            mergedDescriptions.push(fd);
+          }
+        }
+      }
+
+      const mergedRSA = {
+        type: 'RSA' as const,
+        headlines: mergedHeadlines,
+        descriptions: mergedDescriptions,
+        finalUrl: mergedFinalUrl || campaignData.url || '',
+        path1: mergedPath1,
+        path2: mergedPath2,
+        status: 'Enabled'
+      };
+
       v5CampaignData.adGroups.forEach((group: any) => {
-        group.ads = [...adsToDistribute];
+        group.ads = [mergedRSA];
       });
-      
-      // Legacy code kept for backwards compatibility - adds any ads with specific ad group assignments
-      (campaignData.ads || []).forEach((ad: any) => {
-        const adGroupName = ad.adGroup || '';
-        if (!adGroupName) return; // Skip if no specific ad group assigned
-        
-        let targetGroup = v5CampaignData.adGroups.find((ag: any) => ag.name === adGroupName);
-        
-        if (!targetGroup) return; // Skip if ad group not found
-        
-        // Check if this ad is already added (avoid duplicates)
-        const adKey = `${ad.headline1}::${ad.headline2}::${ad.description1}`;
-        const existingAd = targetGroup.ads.find((existing: any) => 
-          `${existing.headlines[0]}::${existing.headlines[1]}::${existing.descriptions[0]}` === adKey
-        );
-        
-        if (existingAd) return; // Already added
-        
-        // Handle both structures for legacy code
-        let legacyHeadlines: string[] = [];
-        if (ad.headlines && Array.isArray(ad.headlines)) {
-          legacyHeadlines = ad.headlines.map((h: any) => typeof h === 'string' ? h : (h.text || '')).filter((h: string) => h);
-        } else {
-          legacyHeadlines = [ad.headline1, ad.headline2, ad.headline3, ad.headline4, ad.headline5].filter((h: string) => h);
-        }
-        
-        let legacyDescriptions: string[] = [];
-        if (ad.descriptions && Array.isArray(ad.descriptions)) {
-          legacyDescriptions = ad.descriptions.map((d: any) => typeof d === 'string' ? d : (d.text || '')).filter((d: string) => d);
-        } else {
-          legacyDescriptions = [ad.description1, ad.description2].filter((d: string) => d);
-        }
-        
-        targetGroup.ads.push({
-            type: ad.type === 'call_only' ? 'CallOnly' : 
-                  ad.type === 'dki' ? 'DKI' : 'RSA',
-            headlines: legacyHeadlines,
-            descriptions: legacyDescriptions,
-            path1: ad.path1 || '',
-            path2: ad.path2 || '',
-            finalUrl: ad.finalUrl || campaignData.url || '',
-            phoneNumber: ad.phoneNumber || '',
-            verificationUrl: ad.verificationUrl || '',
-            businessName: ad.businessName || ''
-          });
-      });
+
+      console.log(`[CSV] Merged RSA: ${mergedHeadlines.length} headlines, ${mergedDescriptions.length} descriptions. DKI headlines folded in. Call-Only ad handled via call extension on campaign row.`);
       
       // If no specific locations, add the target country
       if (!v5CampaignData.locations?.countries?.length && 
@@ -2768,10 +2791,21 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         };
       }
       
-      // Generate the master CSV with all 183 columns
-      const csvContent = generateMasterCSV(v5CampaignData);
-      
-      // Store CSV data in state (already includes BOM)
+      let csvContent = generateMasterCSV(v5CampaignData);
+
+      if (callAd) {
+        const callAdData = {
+          headlines: extractHeadlines(callAd),
+          descriptions: extractDescriptions(callAd),
+          finalUrl: callAd.finalUrl || campaignData.url || '',
+          phoneNumber: callAd.phoneNumber || '',
+          businessName: callAd.businessName || '',
+        };
+        const callRows = generateCallOnlyCampaignRows(callAdData, v5CampaignData);
+        csvContent = csvContent + '\r\n' + callRows;
+        console.log(`[CSV] Appended Call-Only campaign "${v5CampaignData.campaignName} - Call Only" with phone: ${callAdData.phoneNumber}`);
+      }
+
       setCampaignData(prev => ({
         ...prev,
         csvData: csvContent,
@@ -5359,6 +5393,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       </Card>
 
       {campaignData.csvData && (
+        <>
         <Card className="border-indigo-200 bg-indigo-50">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -5384,6 +5419,25 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             </div>
           </CardContent>
         </Card>
+
+        {(campaignData.selectedStructure === 'skag' || campaignData.selectedStructure === 'skag_split') && (
+          <Card className="border-amber-200 bg-amber-50 mt-4">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Google Ads Editor Import Note</p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    {campaignData.selectedStructure === 'skag_split'
+                      ? 'SKAG Split creates 3 ad groups per keyword (one per match type) with identical ad copy. Google Ads Editor will show some ads and keywords as "skipped" during import — this is normal deduplication behavior and your campaign will work correctly.'
+                      : 'SKAG creates one ad group per keyword with all match types. If identical ads appear across ad groups, Google Ads Editor may show some as "skipped" during import — this is expected behavior.'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        </>
       )}
 
     </div>

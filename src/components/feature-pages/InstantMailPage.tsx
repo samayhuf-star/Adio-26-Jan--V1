@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import {
   ArrowLeft, ArrowRight, Mail, EyeOff, Zap,
   Shield, Lock, Eye, RefreshCw,
@@ -14,17 +15,28 @@ interface InstantMailPageProps {
 
 export default function InstantMailPage({ onGetStarted, onBack }: InstantMailPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
-      <Navigation onGetStarted={onGetStarted} onBack={onBack} />
-      <HeroSection onGetStarted={onGetStarted} />
-      <OldWayNewWaySection />
-      <CompetitiveIntelSection />
-      <RiskMitigationSection />
-      <KeyFeaturesSection />
-      <HowItWorksSection />
-      <CTASection onGetStarted={onGetStarted} />
-      <Footer />
-    </div>
+    <>
+      <Helmet>
+        <title>Proxy Mail - Anonymous Email for Competitive Intelligence | Adiology</title>
+        <meta name="description" content="Generate anonymous email addresses for competitive intelligence research. Sign up for competitor newsletters and trials without revealing your identity." />
+        <link rel="canonical" href="https://adiology.io/features/proxy-mail" />
+        <meta property="og:title" content="Proxy Mail - Anonymous Email for Competitive Intelligence | Adiology" />
+        <meta property="og:description" content="Generate anonymous email addresses for competitive intelligence research." />
+        <meta property="og:url" content="https://adiology.io/features/proxy-mail" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
+        <Navigation onGetStarted={onGetStarted} onBack={onBack} />
+        <HeroSection onGetStarted={onGetStarted} />
+        <OldWayNewWaySection />
+        <CompetitiveIntelSection />
+        <RiskMitigationSection />
+        <KeyFeaturesSection />
+        <HowItWorksSection />
+        <CTASection onGetStarted={onGetStarted} />
+        <Footer />
+      </div>
+    </>
   );
 }
 

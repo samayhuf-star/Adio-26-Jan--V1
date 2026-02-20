@@ -169,19 +169,19 @@ export const AIChatWidget: React.FC = () => {
       // Handle internal actions
       switch (action.action) {
         case 'create_campaign':
-          window.location.hash = '#campaign-builder';
+          window.dispatchEvent(new CustomEvent('navigate', { detail: { tab: 'builder-3' } }));
           setIsOpen(false);
           break;
         case 'keyword_planner':
-          window.location.hash = '#keyword-planner';
+          window.dispatchEvent(new CustomEvent('navigate', { detail: { tab: 'keyword-planner' } }));
           setIsOpen(false);
           break;
         case 'billing':
-          window.location.hash = '#billing';
+          window.dispatchEvent(new CustomEvent('navigate', { detail: { tab: 'settings' } }));
           setIsOpen(false);
           break;
         case 'support':
-          window.location.hash = '#support-help';
+          window.dispatchEvent(new CustomEvent('navigate', { detail: { tab: 'support-help' } }));
           setIsOpen(false);
           break;
         default:

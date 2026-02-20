@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { Suspense } from "react";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import "./styles/themes.css";
@@ -164,12 +165,14 @@ if (!validateEnvironment()) {
 } else {
   createRoot(rootElement).render(
     <ErrorBoundary>
-      <ThemeProvider>
-        <Suspense fallback={<LoadingScreen />}>
-          <App />
-        </Suspense>
-        <Toaster position="top-right" richColors closeButton visibleToasts={1} />
-      </ThemeProvider>
+      <HelmetProvider>
+        <ThemeProvider>
+          <Suspense fallback={<LoadingScreen />}>
+            <App />
+          </Suspense>
+          <Toaster position="top-right" richColors closeButton visibleToasts={1} />
+        </ThemeProvider>
+      </HelmetProvider>
     </ErrorBoundary>
   );
 }

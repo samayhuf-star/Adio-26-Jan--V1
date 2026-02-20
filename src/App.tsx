@@ -87,6 +87,10 @@ const CampaignBuilderPage = lazy(() => import('./components/feature-pages/Campai
 const ClickGuardPage = lazy(() => import('./components/feature-pages/ClickGuardPage'));
 const ProxyMailPage = lazy(() => import('./components/feature-pages/InstantMailPage'));
 const DomainMonitorPage = lazy(() => import('./components/feature-pages/DomainMonitorPage'));
+const KeywordPlannerPage = lazy(() => import('./components/feature-pages/KeywordPlannerPage'));
+const AdsSearchPage = lazy(() => import('./components/feature-pages/AdsSearchPage'));
+const BlogGeneratorPage = lazy(() => import('./components/feature-pages/BlogGeneratorPage'));
+const PricingPage = lazy(() => import('./components/feature-pages/PricingPage'));
 const TempMail = lazy(() => import('./components/TempMail').then(m => ({ default: m.default })));
 const ClickGuard = lazy(() => import('./components/ClickGuard').then(m => ({ default: m.default })));
 const ContactPage = lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));
@@ -103,7 +107,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -804,6 +808,22 @@ const AppContent = () => {
         setView('feature-domain-monitor');
         return;
       }
+      if (path === '/features/keyword-planner') {
+        setView('feature-keyword-planner');
+        return;
+      }
+      if (path === '/features/ads-search') {
+        setView('feature-ads-search');
+        return;
+      }
+      if (path === '/features/blog-generator') {
+        setView('feature-blog-generator');
+        return;
+      }
+      if (path === '/pricing') {
+        setView('pricing');
+        return;
+      }
 
       // Admin panel - detect subdomain or /admin path
       // Super admin has its own authentication system (username/password)
@@ -860,7 +880,7 @@ const AppContent = () => {
   useEffect(() => {
     if (!loading && !user && (window.location.pathname === '/' || window.location.pathname === '')) {
       // Only set to homepage if we're not already on a specific route
-      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'signup-wizard' && appView !== 'promo' && appView !== 'accept-invite' && appView !== 'privacy-policy' && appView !== 'terms-of-service' && appView !== 'cookie-policy' && appView !== 'gdpr-compliance' && appView !== 'refund-policy' && appView !== 'contact' && appView !== 'help-center' && appView !== 'community-page' && appView !== 'feature-campaign-builder' && appView !== 'feature-click-guard' && appView !== 'feature-proxy-mail' && appView !== 'feature-domain-monitor') {
+      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'signup-wizard' && appView !== 'promo' && appView !== 'accept-invite' && appView !== 'privacy-policy' && appView !== 'terms-of-service' && appView !== 'cookie-policy' && appView !== 'gdpr-compliance' && appView !== 'refund-policy' && appView !== 'contact' && appView !== 'help-center' && appView !== 'community-page' && appView !== 'feature-campaign-builder' && appView !== 'feature-click-guard' && appView !== 'feature-proxy-mail' && appView !== 'feature-domain-monitor' && appView !== 'feature-keyword-planner' && appView !== 'feature-ads-search' && appView !== 'feature-blog-generator' && appView !== 'pricing') {
         setAppView('homepage');
       }
     }
@@ -913,6 +933,22 @@ const AppContent = () => {
       }
       if (path === '/features/domain-monitor') {
         setAppView('feature-domain-monitor');
+        return;
+      }
+      if (path === '/features/keyword-planner') {
+        setAppView('feature-keyword-planner');
+        return;
+      }
+      if (path === '/features/ads-search') {
+        setAppView('feature-ads-search');
+        return;
+      }
+      if (path === '/features/blog-generator') {
+        setAppView('feature-blog-generator');
+        return;
+      }
+      if (path === '/pricing') {
+        setAppView('pricing');
         return;
       }
       
@@ -1420,6 +1456,91 @@ const AppContent = () => {
     );
   }
 
+  if (appView === 'feature-keyword-planner') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <KeywordPlannerPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-ads-search') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <AdsSearchPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-blog-generator') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <BlogGeneratorPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'pricing') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <PricingPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+          onSelectPlan={handleSelectPlan}
+        />
+      </Suspense>
+    );
+  }
+
   if (appView === 'plan-selection') {
     return (
       <PlanSelection
@@ -1469,8 +1590,20 @@ const AppContent = () => {
         }}
         onSuccess={async () => {
           sessionStorage.removeItem('selectedPlan');
+          const fetchProfile = async (retries = 3): Promise<any> => {
+            for (let i = 0; i < retries; i++) {
+              try {
+                const profile = await getCurrentUserProfile();
+                if (profile) return profile;
+              } catch (err) {
+                console.error(`Profile fetch attempt ${i + 1} failed:`, err);
+              }
+              if (i < retries - 1) await new Promise(r => setTimeout(r, 1500));
+            }
+            return null;
+          };
           try {
-            const profile = await getCurrentUserProfile();
+            const profile = await fetchProfile();
             if (profile) {
               setUser(profile);
               setCurrentUserId(profile.id);
@@ -1646,6 +1779,10 @@ const AppContent = () => {
             '/features/click-guard': { path: '/features/click-guard', view: 'feature-click-guard' },
             '/features/proxy-mail': { path: '/features/proxy-mail', view: 'feature-proxy-mail' },
             '/features/domain-monitor': { path: '/features/domain-monitor', view: 'feature-domain-monitor' },
+            '/features/keyword-planner': { path: '/features/keyword-planner', view: 'feature-keyword-planner' },
+            '/features/ads-search': { path: '/features/ads-search', view: 'feature-ads-search' },
+            '/features/blog-generator': { path: '/features/blog-generator', view: 'feature-blog-generator' },
+            '/pricing': { path: '/pricing', view: 'pricing' },
           };
           const target = pageMap[page];
           if (target) {

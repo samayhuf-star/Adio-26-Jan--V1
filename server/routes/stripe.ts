@@ -4,9 +4,11 @@
  */
 
 import { Hono } from 'hono';
+import crypto from 'crypto';
 import { getStripePublishableKey, getUncachableStripeClient } from '../stripeClient';
 import { stripeService } from '../stripeService';
 import { getDatabaseUrl } from '../dbConfig';
+import { EmailService } from '../emailService';
 import pg from 'pg';
 
 const { Pool: StripePool } = pg;
@@ -198,10 +200,25 @@ stripe.post('/lifetime-deal', async (c) => {
     }
     const base = getOrigin(c);
 
-    const session = await stripeClient.checkout.sessions.create({
+    const promoCode = (body.promoCode as string)?.trim();
+    let discounts: any[] | undefined;
+    let allowPromoCodes = true;
+
+    if (promoCode) {
+      try {
+        const promos = await stripeClient.promotionCodes.list({ code: promoCode, active: true, limit: 1 });
+        if (promos.data.length > 0) {
+          discounts = [{ promotion_code: promos.data[0].id }];
+          allowPromoCodes = false;
+        }
+      } catch (promoErr: any) {
+        console.error('[Stripe] Promo code lookup failed (non-fatal):', promoErr?.message);
+      }
+    }
+
+    const sessionParams: any = {
       customer: resolved.customerId,
       mode: 'payment',
-      allow_promotion_codes: true,
       line_items: [
         {
           price_data: {
@@ -221,7 +238,15 @@ stripe.post('/lifetime-deal', async (c) => {
         plan: 'lifetime',
         deal: 'lifetime-99',
       },
-    });
+    };
+
+    if (discounts) {
+      sessionParams.discounts = discounts;
+    } else {
+      sessionParams.allow_promotion_codes = allowPromoCodes;
+    }
+
+    const session = await stripeClient.checkout.sessions.create(sessionParams);
 
     return c.json({ url: session.url ?? null });
   } catch (error: any) {
@@ -650,6 +675,25 @@ stripe.post('/create-trial', async (c) => {
     }
 
     console.log(`[Stripe] Trial subscription created for ${email}, plan: ${planName}, sub: ${subscription.id}`);
+
+    try {
+      const verifyToken = crypto.randomUUID();
+      const verifyExpires = new Date();
+      verifyExpires.setHours(verifyExpires.getHours() + 24);
+      await stripePool.query(
+        `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
+        [userId, verifyToken, verifyExpires]
+      );
+      const origin = c.req.header('origin') || c.req.header('x-forwarded-host') || 'https://adiology.io';
+      const emailBase = origin.startsWith('http') ? origin : `https://${origin}`;
+      const verificationUrl = `${emailBase}/verify-email?token=${verifyToken}&email=${encodeURIComponent(email.toLowerCase().trim())}`;
+      await EmailService.sendRaw(email.toLowerCase().trim(), 'emailVerification', { verification_url: verificationUrl });
+      console.log(`[Stripe] Verification email sent to ${email} after successful payment`);
+    } catch (emailErr: any) {
+      console.error(`[Stripe] Failed to send verification email (non-fatal):`, emailErr?.message);
+    }
+
     return c.json({
       success: true,
       subscriptionId: subscription.id,
@@ -894,6 +938,30 @@ stripe.post('/webhook', async (c) => {
             console.log(`[Stripe Webhook] Lifetime confirmation email sent to ${customerEmail}`);
           } catch (emailErr) {
             console.error('[Stripe Webhook] Email send error:', emailErr);
+          }
+
+          try {
+            const userResult = await stripePool.query(
+              `SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND (email_verified IS NULL OR email_verified = false) LIMIT 1`,
+              [customerEmail]
+            );
+            if (userResult.rows.length > 0) {
+              const userId = userResult.rows[0].id;
+              const verifyToken = crypto.randomUUID();
+              const verifyExpires = new Date();
+              verifyExpires.setHours(verifyExpires.getHours() + 24);
+              await stripePool.query(
+                `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
+                 VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
+                [userId, verifyToken, verifyExpires]
+              );
+              const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
+              const verificationUrl = `${PROD_URL}/verify-email?token=${verifyToken}&email=${encodeURIComponent(customerEmail.toLowerCase())}`;
+              await EmailService.sendRaw(customerEmail.toLowerCase(), 'emailVerification', { verification_url: verificationUrl });
+              console.log(`[Stripe Webhook] Verification email sent to ${customerEmail} after lifetime deal`);
+            }
+          } catch (verifyErr: any) {
+            console.error('[Stripe Webhook] Verification email error (non-fatal):', verifyErr?.message);
           }
         }
       } else {

@@ -249,6 +249,38 @@
     };
   }
 
+  var _blocked = false;
+
+  function handleBlockedResponse(data) {
+    if (data && data.blocked === true && !_blocked) {
+      _blocked = true;
+      log('Visitor is BLOCKED. Enforcing block action.');
+
+      try {
+        document.documentElement.style.display = 'none';
+      } catch (e) {}
+
+      var overlay = document.createElement('div');
+      overlay.id = 'clickguard-block';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;';
+      overlay.innerHTML = '<div style="text-align:center;padding:40px;"><h1 style="font-size:24px;color:#333;margin-bottom:12px;">Access Denied</h1><p style="color:#666;font-size:16px;">Your access to this page has been restricted.</p></div>';
+
+      if (document.body) {
+        document.body.innerHTML = '';
+        document.body.appendChild(overlay);
+        document.documentElement.style.display = '';
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.body.innerHTML = '';
+          document.body.appendChild(overlay);
+          document.documentElement.style.display = '';
+        });
+      }
+
+      window._clickguard_status.blocked = true;
+    }
+  }
+
   function sendTrackingData() {
     updateTimeOnPage();
     var trackUrl = _apiBase + '/api/clickguard/track';
@@ -256,17 +288,9 @@
 
     log('Sending tracking data to:', trackUrl);
 
-    if (navigator.sendBeacon) {
-      try {
-        var blob = new Blob([body], { type: 'text/plain' });
-        var sent = navigator.sendBeacon(trackUrl, blob);
-        if (sent) {
-          log('Beacon sent successfully');
-          return;
-        }
-      } catch (e) {
-        log('Beacon failed, falling back to fetch');
-      }
+    if (_blocked) {
+      log('Already blocked, skipping tracking');
+      return;
     }
 
     if (typeof fetch !== 'undefined') {
@@ -284,9 +308,24 @@
             logError('Server responded with', res.status, t);
           });
         }
+        return res.text().then(function(text) {
+          try { return JSON.parse(text); } catch (e) { return null; }
+        });
+      }).then(function(data) {
+        if (data) {
+          handleBlockedResponse(data);
+        }
       }).catch(function(err) {
         logError('Fetch failed:', err.message || err);
       });
+    } else if (navigator.sendBeacon) {
+      try {
+        var blob = new Blob([body], { type: 'text/plain' });
+        navigator.sendBeacon(trackUrl, blob);
+        log('Beacon sent (no block check available)');
+      } catch (e) {
+        log('Beacon failed');
+      }
     } else {
       var img = new Image();
       img.src = trackUrl + '?data=' + encodeURIComponent(body) + '&t=' + Date.now();
@@ -322,9 +361,10 @@
     active: true,
     sid: state.sid,
     api: _apiBase,
-    version: '2.0'
+    blocked: false,
+    version: '2.1'
   };
 
-  log('Click Guard v2.0 loaded successfully');
+  log('Click Guard v2.1 loaded successfully');
 
 })();

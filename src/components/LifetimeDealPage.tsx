@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { getCurrentUser } from '../utils/auth';
 
 interface LifetimeDealPageProps {
   onNavigate?: (page: string) => void;
@@ -18,9 +19,14 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [email, setEmail] = useState('');
+  const currentUser = getCurrentUser();
+  const [email, setEmail] = useState(currentUser?.email || '');
   const [emailError, setEmailError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoApplied, setPromoApplied] = useState<{ valid: boolean; discount?: string; newAmount?: number } | null>(null);
+  const [promoError, setPromoError] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -41,6 +47,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
           email: userEmail,
           successUrl: `${window.location.origin}/lifetime-deal?success=true`,
           cancelUrl: `${window.location.origin}/lifetime-deal`,
+          ...(promoApplied?.valid && promoCode.trim() ? { promoCode: promoCode.trim() } : {}),
         }),
       });
 
@@ -55,6 +62,39 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
       setEmailError('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoError('');
+    setPromoApplied(null);
+    try {
+      const response = await fetch('/api/stripe/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.valid) {
+        setPromoError(data.error || 'Invalid promo code');
+        return;
+      }
+      let discountLabel: string | undefined;
+      let newAmount: number | undefined;
+      if (data.discount?.type === 'percent') {
+        discountLabel = `${data.discount.value}% off`;
+        newAmount = Math.round(9900 * (1 - data.discount.value / 100));
+      } else if (data.discount?.type === 'amount') {
+        discountLabel = `$${data.discount.value} off`;
+        newAmount = Math.max(0, 9900 - data.discount.value * 100);
+      }
+      setPromoApplied({ valid: true, discount: discountLabel, newAmount });
+    } catch {
+      setPromoError('Failed to validate promo code');
+    } finally {
+      setPromoLoading(false);
     }
   };
 
@@ -444,7 +484,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
             <form onSubmit={handleEmailSubmit}>
               <input
                 type="email"
-                placeholder="you@example.com"
+                placeholder={currentUser?.email || "your@email.com"}
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
                 className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent mb-3"
@@ -453,12 +493,41 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
               {emailError && (
                 <p className="text-red-400 text-sm mb-3">{emailError}</p>
               )}
+              <div className="mb-3">
+                <label className="text-gray-400 text-xs mb-1 block">Have a promo code?</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter promo code"
+                    value={promoCode}
+                    onChange={(e) => { setPromoCode(e.target.value); setPromoError(''); setPromoApplied(null); }}
+                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    disabled={promoLoading || !promoCode.trim()}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg border border-slate-600 disabled:opacity-50 transition-colors"
+                  >
+                    {promoLoading ? '...' : 'Apply'}
+                  </button>
+                </div>
+                {promoError && <p className="text-red-400 text-xs mt-1">{promoError}</p>}
+                {promoApplied?.valid && (
+                  <p className="text-emerald-400 text-xs mt-1">
+                    {promoApplied.discount} applied!{' '}
+                    {promoApplied.newAmount !== undefined && (
+                      <span>New price: ${(promoApplied.newAmount / 100).toFixed(2)}</span>
+                    )}
+                  </p>
+                )}
+              </div>
               <Button
                 type="submit"
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 rounded-lg"
               >
-                {isLoading ? 'Processing...' : 'Continue to Checkout — $99'}
+                {isLoading ? 'Processing...' : promoApplied?.newAmount !== undefined ? `Continue to Checkout — $${(promoApplied.newAmount / 100).toFixed(2)}` : 'Continue to Checkout — $99'}
               </Button>
               <button
                 type="button"
