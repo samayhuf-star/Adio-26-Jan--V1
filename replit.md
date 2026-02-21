@@ -55,7 +55,7 @@ Preferred communication style: Simple, everyday language.
 ## Third-Party Services
 - **Clerk**: Authentication provider.
 - **Supabase**: PostgreSQL database and Edge Functions.
-- **Stripe**: Payment processing for subscriptions with four pricing tiers (Starter, Professional, Agency, Lifetime), supporting a 7-day free trial and 14-day money-back guarantee. The Lifetime plan ($149 one-time payment) uses Stripe's `mode: 'payment'` instead of subscriptions.
+- **Stripe**: Payment processing for subscriptions with four pricing tiers (Starter, Professional, Agency, Lifetime), supporting a 7-day free trial and 14-day money-back guarantee. The Lifetime plan ($99 one-time payment) uses Stripe's `mode: 'payment'` instead of subscriptions.
 - **Redis**: Message broker and result backend for Celery.
 - **OpenAI**: Natural language processing for AI features like the AI Blog Generator.
 - **ResellerClub**: Email/webmail management API.

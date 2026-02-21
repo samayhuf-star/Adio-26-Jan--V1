@@ -808,7 +808,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                                     <div className="text-center">
                                         <Badge className="mb-2 bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">One-Time</Badge>
                                         <CardTitle className="text-lg mb-2">Lifetime</CardTitle>
-                                        <div className="text-2xl font-bold text-slate-800 mb-1">$149</div>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$99</div>
                                         <div className="text-xs text-slate-600">one-time payment</div>
                                     </div>
                                 </CardHeader>

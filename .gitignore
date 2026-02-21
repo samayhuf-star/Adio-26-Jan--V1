@@ -78,3 +78,4 @@ NHOST_DATABASE_SETUP.md
 *_DATABASE_SETUP.md
 *_PASSWORD*.md
 *_SECRET*.md
+.local/

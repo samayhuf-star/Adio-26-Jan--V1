@@ -90,7 +90,6 @@ const DomainMonitorPage = lazy(() => import('./components/feature-pages/DomainMo
 const KeywordPlannerPage = lazy(() => import('./components/feature-pages/KeywordPlannerPage'));
 const AdsSearchPage = lazy(() => import('./components/feature-pages/AdsSearchPage'));
 const BlogGeneratorPage = lazy(() => import('./components/feature-pages/BlogGeneratorPage'));
-const PricingPage = lazy(() => import('./components/feature-pages/PricingPage'));
 const TempMail = lazy(() => import('./components/TempMail').then(m => ({ default: m.default })));
 const ClickGuard = lazy(() => import('./components/ClickGuard').then(m => ({ default: m.default })));
 const ContactPage = lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));
@@ -820,11 +819,6 @@ const AppContent = () => {
         setView('feature-blog-generator');
         return;
       }
-      if (path === '/pricing') {
-        setView('pricing');
-        return;
-      }
-
       // Admin panel - detect subdomain or /admin path
       // Super admin has its own authentication system (username/password)
       const hostname = window.location.hostname;
@@ -947,11 +941,6 @@ const AppContent = () => {
         setAppView('feature-blog-generator');
         return;
       }
-      if (path === '/pricing') {
-        setAppView('pricing');
-        return;
-      }
-      
       if (user) {
         const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
         const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
@@ -1519,28 +1508,6 @@ const AppContent = () => {
     );
   }
 
-  if (appView === 'pricing') {
-    return (
-      <Suspense fallback={<ComponentLoader />}>
-        <PricingPage
-          onBack={() => {
-            window.history.pushState({}, '', '/');
-            setAppView('homepage');
-          }}
-          onGetStarted={() => {
-            if (!selectedPlan) {
-              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
-              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
-            }
-            window.history.pushState({}, '', '/signup');
-            setAppView('signup-wizard');
-          }}
-          onSelectPlan={handleSelectPlan}
-        />
-      </Suspense>
-    );
-  }
-
   if (appView === 'plan-selection') {
     return (
       <PlanSelection
@@ -1782,7 +1749,6 @@ const AppContent = () => {
             '/features/keyword-planner': { path: '/features/keyword-planner', view: 'feature-keyword-planner' },
             '/features/ads-search': { path: '/features/ads-search', view: 'feature-ads-search' },
             '/features/blog-generator': { path: '/features/blog-generator', view: 'feature-blog-generator' },
-            '/pricing': { path: '/pricing', view: 'pricing' },
           };
           const target = pageMap[page];
           if (target) {

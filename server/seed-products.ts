@@ -121,13 +121,13 @@ async function seedProducts() {
 
   const lifetimePrice = await stripe.prices.create({
     product: lifetimeProduct.id,
-    unit_amount: 14900,
+    unit_amount: 9900,
     currency: 'usd',
     metadata: { billing: 'lifetime' }
   });
 
   console.log(`Created Lifetime: ${lifetimeProduct.id}`);
-  console.log(`  One-time: ${lifetimePrice.id} ($149)`);
+  console.log(`  One-time: ${lifetimePrice.id} ($99)`);
 
   console.log('\nDone! Products and prices created successfully.');
 }

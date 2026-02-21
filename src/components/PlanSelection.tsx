@@ -210,9 +210,9 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
           },
           {
             ...planConfig['Lifetime'],
-            price: '$149.00',
+            price: '$99.00',
             priceId: 'price_lifetime',
-            amount: 14900
+            amount: 9900
           }
         ];
         setPlans(fallbackPlans);

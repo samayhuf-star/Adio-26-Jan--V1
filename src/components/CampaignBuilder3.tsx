@@ -2794,16 +2794,23 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       let csvContent = generateMasterCSV(v5CampaignData);
 
       if (callAd) {
+        const countryCode = v5CampaignData.locations?.countryCode || 
+          (campaignData.targetCountry === 'United States' ? 'US' :
+           campaignData.targetCountry === 'Canada' ? 'CA' :
+           campaignData.targetCountry === 'United Kingdom' ? 'GB' :
+           campaignData.targetCountry === 'Australia' ? 'AU' :
+           campaignData.targetCountry === 'India' ? 'IN' : 'US');
         const callAdData = {
           headlines: extractHeadlines(callAd),
           descriptions: extractDescriptions(callAd),
           finalUrl: callAd.finalUrl || campaignData.url || '',
           phoneNumber: callAd.phoneNumber || '',
           businessName: callAd.businessName || '',
+          countryCode: countryCode,
         };
         const callRows = generateCallOnlyCampaignRows(callAdData, v5CampaignData);
         csvContent = csvContent + '\r\n' + callRows;
-        console.log(`[CSV] Appended Call-Only campaign "${v5CampaignData.campaignName} - Call Only" with phone: ${callAdData.phoneNumber}`);
+        console.log(`[CSV] Appended Call-Only campaign "${v5CampaignData.campaignName} - Call Only" with phone: ${callAdData.phoneNumber}, country: ${countryCode}`);
       }
 
       setCampaignData(prev => ({
@@ -2831,46 +2838,55 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
     if (!campaignData.csvData) return null;
     
     try {
-      // Parse the CSV to count actual rows by type
-      const csvText = campaignData.csvData.replace(/^\uFEFF/, ''); // Remove BOM
+      const csvText = campaignData.csvData.replace(/^\uFEFF/, '');
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
       const rows = parsed.data as Record<string, string>[];
       const totalRows = rows.length || 0;
       
-      // Count entities from actual CSV data (matches what Google Ads Editor will import)
-      let campaigns = 0;
-      let adGroupsSet = new Set<string>();
+      const campaignSet = new Set<string>();
+      const adGroupsSet = new Set<string>();
+      const uniqueKeywordsSet = new Set<string>();
       let keywords = 0;
       let negativeKeywords = 0;
-      let ads = 0;
+      let rsaAds = 0;
+      let callAds = 0;
       let locations = 0;
       
       rows.forEach(row => {
+        const campaignName = row['Campaign'] || '';
         const adGroupName = row['Ad Group'] || '';
         const keyword = row['Keyword'] || '';
+        const criterionType = row['Criterion Type'] || '';
         const negativeKw = row['Keyword (Negative)'] || '';
         const adType = row['Ad Type'] || '';
         const locationType = row['Location Type'] || '';
-        const headline1 = row['Headline 1'] || '';
         
-        if (row['Campaign Daily Budget'] && !adGroupName) {
-          campaigns++;
+        if (row['Campaign Daily Budget'] && campaignName && !adGroupName) {
+          campaignSet.add(campaignName);
         }
         
-        if (adGroupName) {
-          adGroupsSet.add(adGroupName);
+        if (adGroupName && !adType && !keyword && !negativeKw && !locationType) {
+          adGroupsSet.add(campaignName + '|||' + adGroupName);
+        }
+        
+        if (adGroupName && keyword) {
+          adGroupsSet.add(campaignName + '|||' + adGroupName);
         }
         
         if (keyword) {
           keywords++;
+          const cleanKeyword = keyword.replace(/^\[|\]$|^"|"$/g, '').toLowerCase().trim();
+          uniqueKeywordsSet.add(campaignName + '|||' + adGroupName + '|||' + cleanKeyword);
         }
         
         if (negativeKw) {
           negativeKeywords++;
         }
         
-        if (adType && headline1) {
-          ads++;
+        if (adType === 'Responsive search ad') {
+          rsaAds++;
+        } else if (adType === 'Call-only ad') {
+          callAds++;
         }
         
         if (locationType) {
@@ -2878,7 +2894,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         }
       });
       
-      // Count extensions from campaignData.ads (stored as ad.extensions arrays)
       let extensions = 0;
       (campaignData.ads || []).forEach((ad: any) => {
         if (ad.extensions && Array.isArray(ad.extensions)) {
@@ -2886,12 +2901,17 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         }
       });
       
+      const totalAds = rsaAds + callAds;
+      
       const stats = {
-        campaigns: Math.max(campaigns, 1),
+        campaigns: Math.max(campaignSet.size, 1),
         adGroups: adGroupsSet.size || campaignData.adGroups.length,
         keywords: keywords,
+        uniqueKeywords: uniqueKeywordsSet.size,
         negativeKeywords: negativeKeywords,
-        ads: ads,
+        ads: totalAds,
+        rsaAds: rsaAds,
+        callAds: callAds,
         extensions: extensions,
         locations: locations || 1,
         totalRows: totalRows,
@@ -5733,11 +5753,11 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-indigo-600">{stats.keywords}</div>
-                    <div className="text-sm text-slate-600">Keywords</div>
+                    <div className="text-sm text-slate-600">Keywords{stats.uniqueKeywords !== stats.keywords ? ` (${stats.uniqueKeywords} unique)` : ''}</div>
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-indigo-600">{stats.ads}</div>
-                    <div className="text-sm text-slate-600">Ads</div>
+                    <div className="text-sm text-slate-600">Ads{stats.callAds > 0 ? ` (${stats.rsaAds} RSA + ${stats.callAds} Call)` : ''}</div>
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-indigo-600">{stats.negativeKeywords}</div>

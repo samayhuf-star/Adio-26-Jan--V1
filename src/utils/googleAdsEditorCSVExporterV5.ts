@@ -633,26 +633,29 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
 
 export function generateCallOnlyCampaignRows(callAd: any, baseCampaign: CampaignDataV5): string {
   const rows: string[][] = [];
-  const campaignName = baseCampaign.campaignName + ' - Call Only';
+  const campaignName = baseCampaign.campaignName;
+  const callCampaignName = campaignName + ' - Call Only';
 
   const campRow = createEmptyRow();
-  campRow[COLUMN_INDEX['Campaign']] = campaignName;
+  campRow[COLUMN_INDEX['Campaign']] = callCampaignName;
   campRow[COLUMN_INDEX['Campaign Daily Budget']] = String(baseCampaign.dailyBudget || 100);
-  campRow[COLUMN_INDEX['Campaign Type']] = 'Call-only';
+  campRow[COLUMN_INDEX['Campaign Type']] = 'Search';
   campRow[COLUMN_INDEX['Bid Strategy Type']] = baseCampaign.bidStrategy || 'Maximize Conversions';
   campRow[COLUMN_INDEX['Networks']] = baseCampaign.networks || 'Google search';
   campRow[COLUMN_INDEX['EU political ads']] = 'No';
   campRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
   rows.push(campRow);
 
-  const adGroupName = campaignName + ' - Ads';
+  const adGroupName = callCampaignName + ' - Ads';
+  const countryCode = baseCampaign.locations?.countryCode || callAd.countryCode || 'US';
   const adRow = createEmptyRow();
-  adRow[COLUMN_INDEX['Campaign']] = campaignName;
+  adRow[COLUMN_INDEX['Campaign']] = callCampaignName;
   adRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
   adRow[COLUMN_INDEX['Ad Group']] = adGroupName;
   adRow[COLUMN_INDEX['Ad Group Status']] = 'Enabled';
   adRow[COLUMN_INDEX['Ad Type']] = 'Call-only ad';
   adRow[COLUMN_INDEX['Final URL']] = callAd.finalUrl || baseCampaign.url || '';
+  adRow[COLUMN_INDEX['Country Code']] = countryCode;
 
   const headlines = (callAd.headlines || []).filter((h: string) => h && h.trim());
   const descriptions = (callAd.descriptions || []).filter((d: string) => d && d.trim());
@@ -671,10 +674,9 @@ export function generateCallOnlyCampaignRows(callAd: any, baseCampaign: Campaign
   rows.push(adRow);
 
   if (baseCampaign.locations) {
-    const countryCode = baseCampaign.locations.countryCode || 'US';
     const addLoc = (name: string, type: string, extras: Record<string, string> = {}) => {
       const locRow = createEmptyRow();
-      locRow[COLUMN_INDEX['Campaign']] = campaignName;
+      locRow[COLUMN_INDEX['Campaign']] = callCampaignName;
       locRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
       locRow[COLUMN_INDEX['Location']] = name;
       locRow[COLUMN_INDEX['Location Type']] = type;
