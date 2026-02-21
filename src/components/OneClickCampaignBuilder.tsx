@@ -9,6 +9,9 @@ import { ScrollArea } from './ui/scroll-area';
 import { notifications } from '../utils/notifications';
 import { generateMasterCSV, CampaignDataV5, AdGroupV5, KeywordV5, AdV5 } from '../utils/googleAdsEditorCSVExporterV5';
 import { historyService } from '../utils/historyService';
+import { GoogleAdsPushButton } from './GoogleAdsPushButton';
+import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
+import { isSuperAdmin } from '../utils/auth';
 
 interface GeneratedCampaign {
   id: string;
@@ -68,6 +71,7 @@ export function OneClickCampaignBuilder() {
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [resultsTimestamp, setResultsTimestamp] = useState<string>('');
+  const [savedCampaignId, setSavedCampaignId] = useState<string | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   const addLogEntry = (message: string, type: LogEntry['type'] = 'info') => {
@@ -100,6 +104,7 @@ export function OneClickCampaignBuilder() {
     setIsGenerating(true);
     setLogEntries([]);
     setAnalysisComplete(false);
+    setSavedCampaignId(null);
     
     const simulatedLogs = [
       { delay: 0, message: 'Initializing campaign builder...', type: 'info' as const },
@@ -117,9 +122,7 @@ export function OneClickCampaignBuilder() {
       { delay: 5000, message: 'Creating headline variations...', type: 'info' as const },
       { delay: 5500, message: 'Writing ad descriptions...', type: 'progress' as const },
       { delay: 6000, message: 'Optimizing ad copy...', type: 'info' as const },
-      { delay: 6500, message: 'Generating callout extensions...', type: 'progress' as const },
-      { delay: 7000, message: 'Building sitelink extensions...', type: 'info' as const },
-      { delay: 7500, message: 'Organizing campaign hierarchy...', type: 'progress' as const },
+      { delay: 6500, message: 'Organizing campaign hierarchy...', type: 'progress' as const },
       { delay: 8000, message: 'Validating keyword match types...', type: 'info' as const },
       { delay: 8500, message: 'Optimizing bid strategies...', type: 'progress' as const },
       { delay: 9000, message: 'Generating Google Ads CSV...', type: 'info' as const },
@@ -213,7 +216,14 @@ export function OneClickCampaignBuilder() {
       setResultsTimestamp(new Date().toLocaleTimeString('en-US', { hour12: false }));
       setCurrentStep('results');
       
-      // Auto-save campaign with authentication
+      if (savedCampaignId) {
+        notifications.success('Campaign generated and saved!', {
+          title: 'Success',
+          description: `Generated ${generatedCampaign.campaign_data?.adGroups?.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0) || generatedCampaign.campaign_data?.keywords?.length || 100}+ keywords`
+        });
+        return;
+      }
+      
       let savedToDatabase = false;
       try {
         const token = await getToken();
@@ -235,16 +245,18 @@ export function OneClickCampaignBuilder() {
           if (response.ok) {
             const result = await response.json();
             savedToDatabase = result.saved === true;
+            if (result.id) {
+              setSavedCampaignId(result.id);
+            }
           }
         }
       } catch (err) {
         console.error('API save error:', err);
       }
       
-      // Fallback to historyService if API save failed
       if (!savedToDatabase) {
         try {
-          await historyService.save('one-click-campaign', generatedCampaign.campaign_name || 'One-Click Campaign', {
+          const localId = await historyService.save('one-click-campaign', generatedCampaign.campaign_name || 'One-Click Campaign', {
             ...generatedCampaign.campaign_data,
             business_name: generatedCampaign.business_name,
             website_url: generatedCampaign.website_url,
@@ -252,6 +264,9 @@ export function OneClickCampaignBuilder() {
             source: 'one-click-builder',
             builderType: '1-click'
           });
+          if (localId) {
+            setSavedCampaignId(localId);
+          }
           console.log('Campaign saved to historyService');
         } catch (err) {
           console.error('Local save error:', err);
@@ -260,7 +275,7 @@ export function OneClickCampaignBuilder() {
       
       notifications.success('Campaign generated and saved!', {
         title: 'Success',
-        description: `Generated ${generatedCampaign.campaign_data?.keywords?.length || 100}+ keywords`
+        description: `Generated ${generatedCampaign.campaign_data?.adGroups?.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0) || generatedCampaign.campaign_data?.keywords?.length || 100}+ keywords`
       });
     }
   };
@@ -301,6 +316,36 @@ export function OneClickCampaignBuilder() {
         };
       });
       
+      const calloutItems = (adCopy.callouts || [])
+        .filter((c: string) => c && c.trim())
+        .slice(0, 4)
+        .map((c: string) => ({ text: c.substring(0, 25), status: 'Enabled' as const }));
+
+      const sitelinkItems = ((campaignData as any).sitelinks || [])
+        .slice(0, 4)
+        .map((sl: any) => ({
+          text: (sl.text || sl.linkText || '').substring(0, 25),
+          description1: sl.description1 || sl.description || '',
+          description2: sl.description2 || '',
+          finalUrl: sl.finalUrl || sl.url || generatedCampaign.website_url,
+          status: 'Enabled' as const
+        }));
+
+      const snippetItems = ((campaignData as any).structured_snippets || (campaignData as any).snippets || [])
+        .slice(0, 2)
+        .map((sn: any) => ({
+          header: sn.header || 'Types',
+          values: Array.isArray(sn.values) ? sn.values.join('; ') : (sn.values || ''),
+          status: 'Enabled' as const
+        }));
+
+      const callExtItems = ((campaignData as any).callExtensions || [])
+        .map((ce: any) => ({
+          phoneNumber: ce.phoneNumber || ce.phone || '',
+          countryCode: ce.countryCode || 'US',
+          status: 'Enabled' as const
+        }));
+
       const campaignV5: CampaignDataV5 = {
         campaignName: generatedCampaign.campaign_name,
         dailyBudget: campaignData.structure.dailyBudget || 100,
@@ -310,8 +355,11 @@ export function OneClickCampaignBuilder() {
         status: 'Enabled',
         url: generatedCampaign.website_url,
         adGroups: adGroupsV5,
-        callouts: adCopy.callouts?.slice(0, 4).map(text => ({ text, status: 'Enabled' })) || [],
-        locations: { countries: ['United States'], countryCode: 'US' }
+        locations: { countries: ['United States'], countryCode: 'US' },
+        callouts: calloutItems.length > 0 ? calloutItems : undefined,
+        sitelinks: sitelinkItems.length > 0 ? sitelinkItems : undefined,
+        snippets: snippetItems.length > 0 ? snippetItems : undefined,
+        callExtensions: callExtItems.length > 0 ? callExtItems : undefined,
       };
       
       const csvContent = generateMasterCSV(campaignV5);
@@ -340,6 +388,14 @@ export function OneClickCampaignBuilder() {
   const saveCampaign = async () => {
     if (!generatedCampaign) return;
 
+    if (savedCampaignId) {
+      notifications.success('Campaign already saved!', {
+        title: 'Saved',
+        description: 'View it in "Draft Campaigns"'
+      });
+      return;
+    }
+
     let saved = false;
     try {
       const token = await getToken();
@@ -356,15 +412,20 @@ export function OneClickCampaignBuilder() {
         })
       });
 
-      saved = response.ok;
+      if (response.ok) {
+        saved = true;
+        const result = await response.json();
+        if (result.id) {
+          setSavedCampaignId(result.id);
+        }
+      }
     } catch (err) {
       console.error('API save error:', err);
     }
     
-    // Fallback to historyService
     if (!saved) {
       try {
-        await historyService.save('one-click-campaign', generatedCampaign.campaign_name || 'One-Click Campaign', {
+        const localId = await historyService.save('one-click-campaign', generatedCampaign.campaign_name || 'One-Click Campaign', {
           ...generatedCampaign.campaign_data,
           business_name: generatedCampaign.business_name,
           website_url: generatedCampaign.website_url,
@@ -373,6 +434,9 @@ export function OneClickCampaignBuilder() {
           builderType: '1-click'
         });
         saved = true;
+        if (localId) {
+          setSavedCampaignId(localId);
+        }
       } catch (err) {
         console.error('Local save error:', err);
       }
@@ -616,7 +680,7 @@ export function OneClickCampaignBuilder() {
                 <span className="text-slate-500 shrink-0">[{resultsTimestamp}]</span>
                 <span className="text-cyan-400">
                   <span className="mr-1">{'\u2192'}</span>
-                  Keywords: <span className="text-yellow-300">{generatedCampaign.campaign_data?.keywords?.length || '100+'}</span>
+                  Keywords: <span className="text-yellow-300">{generatedCampaign.campaign_data?.adGroups?.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0) || generatedCampaign.campaign_data?.keywords?.length || '100+'}</span>
                 </span>
               </div>
               <div className="flex gap-2 py-0.5">
@@ -649,7 +713,12 @@ export function OneClickCampaignBuilder() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-700 flex gap-3 flex-wrap">
+            {isSuperAdmin() && (
+            <div className="px-4 pt-3 border-t border-slate-700">
+              <GoogleAdsConnectionStatus variant="compact" className="text-slate-300 [&_button]:text-slate-400 [&_button:hover]:text-red-400" />
+            </div>
+            )}
+            <div className="p-4 flex gap-3 flex-wrap">
               <Button
                 onClick={downloadCSV}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -657,6 +726,22 @@ export function OneClickCampaignBuilder() {
                 <Download className="w-5 h-5 mr-2" />
                 Download CSV for Google Ads
               </Button>
+
+              {isSuperAdmin() && (
+              <GoogleAdsPushButton
+                campaignData={{
+                  campaignName: generatedCampaign.campaign_name,
+                  dailyBudget: generatedCampaign.campaign_data?.structure?.dailyBudget || Math.round((generatedCampaign.monthly_budget || 1500) / 30),
+                  monthlyBudget: generatedCampaign.monthly_budget,
+                  adGroups: generatedCampaign.campaign_data?.adGroups || [],
+                  adCopy: generatedCampaign.campaign_data?.adCopy,
+                  url: generatedCampaign.website_url,
+                }}
+                campaignHistoryId={savedCampaignId || undefined}
+                variant="primary"
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              />
+              )}
 
               <Button
                 onClick={resetBuilder}
@@ -709,7 +794,7 @@ export function OneClickCampaignBuilder() {
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
                   <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                 </div>
-                <span className="text-slate-300 text-sm font-medium">Sample Keywords ({generatedCampaign.campaign_data?.keywords?.length || 0} total)</span>
+                <span className="text-slate-300 text-sm font-medium">Sample Keywords ({generatedCampaign.campaign_data?.adGroups?.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0) || generatedCampaign.campaign_data?.keywords?.length || 0} total)</span>
               </div>
               <ScrollArea className="h-48 p-4">
                 <div className="space-y-1 font-mono text-xs">

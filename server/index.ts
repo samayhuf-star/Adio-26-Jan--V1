@@ -12,10 +12,17 @@ import { adminRoutes } from './routes/admin';
 import { userRoutes } from './routes/user';
 import { tasksRoutes } from './routes/tasks';
 import { promoRoutes } from './routes/promo';
+import { superadminRoutes } from './routes/superadmin';
+import { domainsRoutes } from './routes/domains';
+import { accountRoutes } from './routes/account';
+import { tempMailRoutes } from './routes/tempmail';
+import { clickGuardRoutes } from './routes/clickguard';
+import { googleAdsRoutes } from './routes/googleads';
+import { analyticsRoutes } from './routes/analytics';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
-import { campaignHistory, auditLogs, workspaceProjects, projectItems } from '../shared/schema';
+import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains, feedback } from '../shared/schema';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
 import { eq, desc, asc, and } from 'drizzle-orm';
@@ -36,9 +43,36 @@ app.use('/*', cors({
   maxAge: 600,
 }));
 
+app.use('/assets/*', async (c, next) => {
+  await next();
+  c.header('Cache-Control', 'public, max-age=31536000, immutable');
+});
+
 app.onError((err, c) => {
   console.error('Server Error:', err);
   return c.json({ error: err.message || 'Internal Server Error' }, 500);
+});
+
+app.get('/sitemap.xml', (c) => {
+  const currentDir = path.dirname(new URL(import.meta.url).pathname);
+  const sitemapPath = path.resolve(currentDir, '../public/sitemap.xml');
+  try {
+    const content = fs.readFileSync(sitemapPath, 'utf-8');
+    return c.text(content, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
+  } catch {
+    return c.text('Not found', 404);
+  }
+});
+
+app.get('/robots.txt', (c) => {
+  const currentDir = path.dirname(new URL(import.meta.url).pathname);
+  const robotsPath = path.resolve(currentDir, '../public/robots.txt');
+  try {
+    const content = fs.readFileSync(robotsPath, 'utf-8');
+    return c.text(content, 200, { 'Content-Type': 'text/plain; charset=utf-8' });
+  } catch {
+    return c.text('Not found', 404);
+  }
 });
 
 app.get('/api/health', (c) => {
@@ -80,46 +114,61 @@ app.route('/api/organization', seatsRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/user', userRoutes);
 app.route('/api/tasks', tasksRoutes);
-app.route('/api/projects', tasksRoutes); // Projects are handled in tasks routes
+app.route('/api/projects', tasksRoutes);
 app.route('/api/promo', promoRoutes);
-app.route('/api/organizations', organizationsRoutes);
-app.route('/api/invites', invitesRoutes);
-app.route('/api/organization', seatsRoutes);
-app.route('/api/admin', adminRoutes);
-app.route('/api/user', userRoutes);
-app.route('/api/tasks', tasksRoutes);
-app.route('/api/projects', tasksRoutes); // Projects are handled in tasks routes
-app.route('/api/promo', promoRoutes);
+app.route('/api/superadmin', superadminRoutes);
+app.route('/api/domains', domainsRoutes);
+app.route('/api/account', accountRoutes);
+app.route('/api/tempmail', tempMailRoutes);
+app.route('/api/clickguard', clickGuardRoutes);
+app.route('/api/analytics', analyticsRoutes);
+app.route('/api/google-ads', googleAdsRoutes);
+
+app.get('/googlebc7aae8bc89f46c1.html', async (c) => {
+  try {
+    const filePath = path.resolve(process.cwd(), 'public/googlebc7aae8bc89f46c1.html');
+    const content = fs.readFileSync(filePath, 'utf-8');
+    c.header('Content-Type', 'text/html');
+    return c.body(content);
+  } catch (e) {
+    return c.text('Not found', 404);
+  }
+});
+
+app.get('/t.js', async (c) => {
+  try {
+    const scriptPath = path.resolve(process.cwd(), 'public/t.js');
+    const script = fs.readFileSync(scriptPath, 'utf-8');
+    c.header('Content-Type', 'application/javascript');
+    c.header('Cache-Control', 'public, max-age=300');
+    c.header('Access-Control-Allow-Origin', '*');
+    return c.body(script);
+  } catch (e) {
+    return c.text('// tracking script unavailable', 500);
+  }
+});
 
 app.get('/api/products', async (c) => {
   try {
     const products = await stripeService.listProductsWithPrices(true, 50, 0);
     
-    const productMap = new Map();
-    for (const row of products) {
-      if (!productMap.has(row.product_id)) {
-        productMap.set(row.product_id, {
-          id: row.product_id,
-          name: row.product_name,
-          description: row.product_description,
-          active: row.product_active,
-          metadata: row.product_metadata,
-          prices: []
-        });
-      }
-      if (row.price_id) {
-        productMap.get(row.product_id).prices.push({
-          id: row.price_id,
-          unitAmount: row.unit_amount,
-          currency: row.currency,
-          recurring: row.recurring,
-          active: row.price_active,
-          metadata: row.price_metadata
-        });
-      }
-    }
+    const formattedProducts = products.map((product: any) => ({
+      id: product.product_id,
+      name: product.product_name,
+      description: product.product_description,
+      active: product.product_active,
+      metadata: product.product_metadata,
+      prices: product.prices?.map((price: any) => ({
+        id: price.price_id,
+        unitAmount: price.unit_amount,
+        currency: price.currency,
+        recurring: price.recurring,
+        active: price.price_active,
+        metadata: price.price_metadata
+      })) || []
+    }));
     
-    return c.json({ products: Array.from(productMap.values()) });
+    return c.json({ products: formattedProducts });
   } catch (error) {
     console.error('Error fetching products:', error);
     return c.json({ error: 'Failed to fetch products' }, 500);
@@ -809,17 +858,65 @@ app.delete('/api/workspace-projects/:id/items/:itemId', async (c) => {
 app.get('/api/dashboard/all/:userId', async (c) => {
   try {
     const userId = c.req.param('userId');
-    // Return default dashboard data
-    // Can be implemented with Nhost GraphQL later
+    const database = getDb();
+
+    let totalCampaigns = 0;
+    let recentCampaigns: any[] = [];
+    let totalDomains = 0;
+    let totalClickGuardDomains = 0;
+
+    if (database) {
+      try {
+        const campaigns = await database
+          .select()
+          .from(campaignHistory)
+          .where(eq(campaignHistory.userId, userId))
+          .orderBy(desc(campaignHistory.createdAt));
+        totalCampaigns = campaigns.length;
+        recentCampaigns = campaigns.slice(0, 5).map((c: any) => ({
+          id: c.id,
+          campaign_name: c.name,
+          structure_type: c.data?.structureType || 'standard',
+          step: c.status === 'completed' ? 7 : (c.data?.step || 1),
+          created_at: c.createdAt,
+          updated_at: c.updatedAt || c.createdAt,
+        }));
+      } catch (e) {
+        console.warn('Dashboard: campaign_history query failed:', e);
+      }
+
+      try {
+        const domains = await database
+          .select()
+          .from(monitoredDomains)
+          .where(eq(monitoredDomains.userId, userId));
+        totalDomains = domains.length;
+      } catch (e) {
+        console.warn('Dashboard: monitored_domains query failed:', e);
+      }
+
+      try {
+        const cgDomains = await database
+          .select()
+          .from(clickGuardDomains)
+          .where(eq(clickGuardDomains.userId, userId));
+        totalClickGuardDomains = cgDomains.length;
+      } catch (e) {
+        console.warn('Dashboard: click_guard_domains query failed:', e);
+      }
+    }
+
     return c.json({
       success: true,
       data: {
         stats: {
-          totalCampaigns: 0,
+          totalCampaigns,
           totalSearches: 0,
-          unreadNotifications: 0
+          unreadNotifications: 0,
+          totalDomains,
+          totalClickGuardDomains,
         },
-        recentCampaigns: [],
+        recentCampaigns,
         workspaces: []
       }
     });
@@ -1032,10 +1129,13 @@ app.post('/api/analyze-url', async (c) => {
 });
 
 // AI Endpoints
-const AI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBYyBnc99JTLGvUY3qdGFksUlf7roGUdao';
+const AI_API_KEY = process.env.GEMINI_API_KEY || '';
 const AI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 async function callGeminiAPI(prompt: string): Promise<string> {
+  if (!AI_API_KEY) {
+    throw new Error('Gemini API key is not configured. Set the GEMINI_API_KEY environment variable.');
+  }
   try {
     const response = await fetch(`${AI_API_BASE}?key=${AI_API_KEY}`, {
       method: 'POST',
@@ -1218,9 +1318,64 @@ app.post('/api/campaigns/one-click', async (c) => {
     const campaignName = `Campaign-${analysisResult.url.replace(/^https?:\/\//, '').split('/')[0]}-${new Date().toISOString().split('T')[0]}`;
     
     // Extract services/keywords from analysis - get more seed terms
-    const seedServices = analysisResult.services.slice(0, 15).map((s: string) => s.toLowerCase().trim()).filter(Boolean);
+    const seedServices = analysisResult.services
+      .slice(0, 15)
+      .map((s: string) => s.toLowerCase().trim())
+      .filter((s: string) => {
+        if (!s || s.length < 3) return false;
+        const junkTerms = ['www', 'http', 'https', 'com', 'org', 'net', 'home', 'menu', 'click here', 'read more', 'learn more', 'submit', 'search', 'login', 'sign up', 'subscribe', 'close', 'open', 'back', 'next', 'previous', 'loading', 'copyright', 'all rights reserved', 'privacy policy', 'terms of service', 'cookie'];
+        return !junkTerms.includes(s) && !/^https?:\/\//.test(s) && !/^www\./.test(s);
+      });
+
     if (seedServices.length === 0) {
-      seedServices.push(analysisResult.url.split('/')[2]?.split('.')[0] || 'service');
+      // Try to extract meaningful keywords from page title, meta description, and headings
+      const fallbackSources = [
+        analysisResult.seoSignals?.title,
+        analysisResult.seoSignals?.metaDescription,
+        analysisResult.seoSignals?.ogTitle,
+        analysisResult.seoSignals?.ogDescription,
+        ...analysisResult.headings.filter(h => h.level === 'h1' || h.level === 'h2').map(h => h.text)
+      ].filter(Boolean);
+
+      const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'it', 'its', 'we', 'our', 'your', 'their', 'this', 'that', 'these', 'those', 'i', 'me', 'my', 'he', 'she', 'his', 'her', 'they', 'them', 'you', 'us', 'who', 'what', 'which', 'when', 'where', 'how', 'why', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'about', 'above', 'after', 'again', 'also', 'am', 'as', 'because', 'before', 'below', 'between', 'from', 'get', 'here', 'if', 'into', 'like', 'make', 'much', 'new', 'now', 'over', 'out', 'then', 'up', 'www', 'com', 'http', 'https', 'org', 'net', 'home', 'welcome']);
+
+      for (const source of fallbackSources) {
+        if (source && seedServices.length < 5) {
+          const words = source.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+          // Extract meaningful 2-3 word phrases from the source
+          const cleanSource = source.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+          const sourceWords = cleanSource.split(' ').filter(w => w.length > 2 && !stopWords.has(w));
+          // Add individual meaningful words
+          for (const word of sourceWords) {
+            if (word.length >= 4 && seedServices.length < 10 && !seedServices.includes(word)) {
+              seedServices.push(word);
+            }
+          }
+          // Add 2-word phrases
+          for (let i = 0; i < sourceWords.length - 1; i++) {
+            const phrase = `${sourceWords[i]} ${sourceWords[i + 1]}`;
+            if (seedServices.length < 10 && !seedServices.includes(phrase)) {
+              seedServices.push(phrase);
+            }
+          }
+        }
+      }
+
+      // Last resort: extract the actual brand/domain name (not "www")
+      if (seedServices.length === 0) {
+        try {
+          const parsedUrl = new URL(websiteUrl);
+          const hostname = parsedUrl.hostname.replace(/^www\./, '');
+          const domainName = hostname.split('.')[0];
+          if (domainName && domainName.length >= 3 && domainName !== 'www') {
+            seedServices.push(domainName);
+          } else {
+            seedServices.push('service');
+          }
+        } catch {
+          seedServices.push('service');
+        }
+      }
     }
 
     // Generate comprehensive keyword variations (200-300 keywords)
@@ -1522,95 +1677,7 @@ app.delete('/api/docs/images/:imageId', async (c) => {
   }
 });
 
-// Domains Endpoints
-// GET /api/domains
-app.get('/api/domains', async (c) => {
-  try {
-    const userId = await getUserIdFromToken(c);
-    
-    // Return empty domains array for now - can be implemented with database later
-    return c.json({ domains: [] });
-  } catch (error) {
-    console.error('Domains GET error:', error);
-    return c.json({ error: 'Failed to fetch domains' }, 500);
-  }
-});
-
-// POST /api/domains
-app.post('/api/domains', async (c) => {
-  try {
-    const userId = await getUserIdFromToken(c);
-    
-    if (!userId) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    const { domain } = await c.req.json();
-    
-    if (!domain || typeof domain !== 'string') {
-      return c.json({ error: 'Domain is required' }, 400);
-    }
-
-    // Add domain - can be implemented with database later
-    return c.json({ 
-      success: true,
-      message: 'Domain added',
-      domain: { id: Date.now(), domain, userId }
-    });
-  } catch (error) {
-    console.error('Domains POST error:', error);
-    return c.json({ error: 'Failed to add domain' }, 500);
-  }
-});
-
-// GET /api/domains/:id
-app.get('/api/domains/:id', async (c) => {
-  try {
-    const userId = await getUserIdFromToken(c);
-    const id = c.req.param('id');
-    
-    // Return domain - can be implemented with database later
-    return c.json({ 
-      domain: { id, domain: '', userId: userId || null }
-    });
-  } catch (error) {
-    console.error('Domains GET by ID error:', error);
-    return c.json({ error: 'Failed to fetch domain' }, 500);
-  }
-});
-
-// POST /api/domains/:id/refresh
-app.post('/api/domains/:id/refresh', async (c) => {
-  try {
-    const userId = await getUserIdFromToken(c);
-    const id = c.req.param('id');
-    
-    // Refresh domain - can be implemented with DNS check later
-    return c.json({ success: true, message: 'Domain refreshed' });
-  } catch (error) {
-    console.error('Domains refresh error:', error);
-    return c.json({ error: 'Failed to refresh domain' }, 500);
-  }
-});
-
-// DELETE /api/domains/:id
-app.delete('/api/domains/:id', async (c) => {
-  try {
-    const userId = await getUserIdFromToken(c);
-    
-    if (!userId) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    const id = c.req.param('id');
-    
-    // Delete domain - can be implemented with database later
-    return c.json({ success: true, message: 'Domain deleted' });
-  } catch (error) {
-    console.error('Domains DELETE error:', error);
-    return c.json({ error: 'Failed to delete domain' }, 500);
-  }
-});
+// Note: Domain monitoring routes are handled by domainsRoutes mounted at /api/domains (line 88)
 
 // POST /api/verify-domain
 app.post('/api/verify-domain', async (c) => {
@@ -2138,10 +2205,96 @@ app.get('/api/analyses', async (c) => {
 });
 
 // ============================================
+// Feedback Endpoints
+// ============================================
+app.post('/api/feedback', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, userEmail, type, rating, message, pageUrl, pageName, browserInfo, screenSize, screenshots } = body;
+
+    if (!message || !type) {
+      return c.json({ error: 'Message and type are required' }, 400);
+    }
+
+    const database = getDb();
+    await database.insert(feedback).values({
+      userId: userId || null,
+      userEmail: userEmail || null,
+      type,
+      rating: rating || null,
+      message,
+      status: 'new',
+    });
+
+    // Send email notification
+    try {
+      const { EmailService } = await import('./emailService');
+      const typeLabel = type === 'bug_report' ? 'Bug Report' : type === 'feature_request' ? 'Feature Request' : 'Feedback';
+      const subject = `${typeLabel} from ${userEmail || 'Anonymous User'}`;
+
+      await EmailService.sendRaw('samayhuf@gmail.com', 'feedbackNotification' as any, {
+        type: typeLabel,
+        rating: rating ? `${rating}/5` : 'N/A',
+        user: userEmail || 'Anonymous',
+        page: pageName || 'Unknown',
+        url: pageUrl || 'Unknown',
+        message: message,
+        screenshots: screenshots?.length ? `${screenshots.length} attached` : 'None',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (emailError) {
+      console.error('Feedback email notification error:', emailError);
+    }
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('Submit feedback error:', error);
+    return c.json({ error: 'Failed to submit feedback' }, 500);
+  }
+});
+
+app.get('/api/feedback', async (c) => {
+  try {
+    const database = getDb();
+    const results = await database
+      .select()
+      .from(feedback)
+      .orderBy(desc(feedback.createdAt))
+      .limit(100);
+
+    return c.json({ success: true, feedback: results });
+  } catch (error: any) {
+    console.error('Get feedback error:', error);
+    return c.json({ error: 'Failed to get feedback' }, 500);
+  }
+});
+
+app.patch('/api/feedback/:id/status', async (c) => {
+  try {
+    const feedbackId = c.req.param('id');
+    const { status } = await c.req.json();
+
+    if (!status) {
+      return c.json({ error: 'Status is required' }, 400);
+    }
+
+    const database = getDb();
+    await database
+      .update(feedback)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(feedback.id, feedbackId));
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('Update feedback status error:', error);
+    return c.json({ error: 'Failed to update feedback status' }, 500);
+  }
+});
+
+// ============================================
 // Long-tail Keywords Endpoints
 // ============================================
 app.post('/api/long-tail-keywords/generate', async (c) => {
-  // Parse request body outside try block so it's accessible in catch
   let seedKeywords: string[] = [];
   let country = 'US';
   let device = 'all';
@@ -2156,67 +2309,12 @@ app.post('/api/long-tail-keywords/generate', async (c) => {
       return c.json({ error: 'Seed keywords array is required' }, 400);
     }
 
-    // Use OpenAI to generate long-tail keywords (prefers AI Integrations if available)
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({ 
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
-    });
-    
-    const prompt = `Generate comprehensive long-tail keyword variations for the following seed keywords:
-
-Seed Keywords: ${seedKeywords.join(', ')}
-Target Country: ${country || 'US'}
-Device: ${device || 'all'}
-
-Generate 100-150 unique long-tail keywords (4+ words each) that would be good for Google Ads.
-For each seed keyword, create variations using ALL of these patterns:
-- Question phrases: "how to find X", "what is the best X", "where to get X", "how much does X cost", "when to hire X", "why choose X"
-- Location modifiers: "X near me", "X in my area", "local X services", "X nearby today"
-- Intent modifiers: "buy X", "hire X", "get X quote", "find affordable X", "best X services", "cheap X near me", "professional X"
-- Comparison phrases: "X vs Y", "X compared to Y", "X or Y which is better", "X alternative"
-- Benefit phrases: "fast X services", "reliable X company", "trusted X provider", "quality X near me"
-- Cost phrases: "X prices", "X cost estimate", "affordable X rates", "cheap X services"
-- Review phrases: "best rated X", "top X reviews", "X recommendations"
-- Emergency phrases: "emergency X", "24 hour X", "same day X", "urgent X services"
-- Business phrases: "X for small business", "commercial X services", "residential X"
-
-For each keyword, estimate:
-- searchVolume: a number between 100-50000
-- cpc: a number between 0.50-10.00
-- difficulty: "easy", "medium", or "hard"
-
-Return ONLY valid JSON array with 100+ keywords:
-[
-  {"keyword": "string", "source": "ai", "searchVolume": number, "cpc": number, "difficulty": "easy|medium|hard"},
-  ...
-]`;
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 8000,
-    });
-
-    const content = completion.choices[0]?.message?.content || '';
-    
-    // Parse JSON from response
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      const keywords = JSON.parse(jsonMatch[0]);
-      return c.json({ success: true, keywords });
-    }
-    
-    // Fallback with generated keywords
-    const fallbackKeywords = generateComprehensiveFallbackKeywords(seedKeywords);
-    return c.json({ success: true, keywords: fallbackKeywords });
+    const keywords = generateComprehensiveFallbackKeywords(seedKeywords);
+    return c.json({ success: true, keywords });
   } catch (error: any) {
     console.error('Generate long-tail keywords error:', error);
-    
-    // Return fallback keywords when OpenAI is unavailable
-    const fallbackKeywords = generateComprehensiveFallbackKeywords(seedKeywords);
-    return c.json({ success: true, keywords: fallbackKeywords, fallback: true });
+    const keywords = generateComprehensiveFallbackKeywords(seedKeywords);
+    return c.json({ success: true, keywords });
   }
 });
 
@@ -2519,11 +2617,158 @@ const port = parseInt(process.env.PORT || (isProduction ? '5000' : '3001'), 10);
 console.log(`Starting Admin API Server on port ${port}...`);
 console.log(`Environment: ${isProduction ? 'production' : 'development'}`);
 
+async function seedClickGuardDomains() {
+  try {
+    const database = getDb();
+    if (!database) return;
+
+    const requiredDomains = [
+      {
+        userId: '80f89e58-674d-49ef-a0e3-ac996a37b380',
+        domain: 'www.clickblock.co',
+        siteId: 'b9c309afd23cb9d3ff7d78dd958d7c36',
+        verified: true,
+      },
+      {
+        userId: '80f89e58-674d-49ef-a0e3-ac996a37b380',
+        domain: 'trackabletravel.com',
+        siteId: 'ef6e06adc7f2faed812405426cc45013',
+        verified: true,
+      },
+    ];
+
+    for (const d of requiredDomains) {
+      const [existing] = await database
+        .select()
+        .from(clickGuardDomains)
+        .where(eq(clickGuardDomains.siteId, d.siteId));
+
+      if (!existing) {
+        await database.insert(clickGuardDomains).values(d);
+        console.log(`[ClickGuard Seed] Added domain ${d.domain} with siteId ${d.siteId}`);
+      }
+    }
+  } catch (error) {
+    console.error('[ClickGuard Seed] Error seeding domains:', error);
+  }
+}
+
+// ============================================
+// Alphabet Soup Keyword Generation (Google Autocomplete)
+// ============================================
+
+async function fetchGoogleAutocomplete(query: string): Promise<string[]> {
+  try {
+    const url = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data[1] || []).filter((s: string) => typeof s === 'string' && s.trim().length > 0);
+  } catch (err) {
+    return [];
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+app.post('/api/keywords/alphabet-soup', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { seedKeywords, maxKeywordsPerSeed = 300 } = body;
+
+    if (!seedKeywords || !Array.isArray(seedKeywords) || seedKeywords.length === 0) {
+      return c.json({ error: 'seedKeywords array is required' }, 400);
+    }
+
+    const allKeywords = new Set<string>();
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+    const digits = '0123456789'.split('');
+    const DELAY_MS = 80;
+
+    for (const seed of seedKeywords.slice(0, 5)) {
+      const trimmedSeed = seed.trim().toLowerCase();
+      if (!trimmedSeed || trimmedSeed.length < 2) continue;
+
+      const words = trimmedSeed.split(/\s+/);
+      const queries: string[] = [];
+
+      for (const letter of alphabet) {
+        queries.push(`${trimmedSeed} ${letter}`);
+      }
+
+      for (const letter of alphabet) {
+        queries.push(`${letter} ${trimmedSeed}`);
+      }
+
+      for (const digit of digits) {
+        queries.push(`${trimmedSeed} ${digit}`);
+      }
+
+      if (words.length > 1) {
+        for (const letter of alphabet) {
+          queries.push(`${words[0]} ${letter} ${words.slice(1).join(' ')}`);
+        }
+      }
+
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < queries.length; i += BATCH_SIZE) {
+        const batch = queries.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(batch.map(q => fetchGoogleAutocomplete(q)));
+        for (const suggestions of results) {
+          for (const suggestion of suggestions) {
+            const cleaned = suggestion.toLowerCase().trim();
+            if (cleaned.length >= 3 && cleaned.length <= 80) {
+              allKeywords.add(cleaned);
+            }
+          }
+        }
+        if (i + BATCH_SIZE < queries.length) {
+          await sleep(DELAY_MS);
+        }
+
+        if (allKeywords.size >= maxKeywordsPerSeed * seedKeywords.length) {
+          break;
+        }
+      }
+    }
+
+    const keywordsArray = Array.from(allKeywords).map((kw, index) => ({
+      keyword: kw,
+      source: 'google_autocomplete',
+      matchType: 'broad' as const,
+    }));
+
+    console.log(`[Alphabet Soup] Generated ${keywordsArray.length} unique keywords from ${seedKeywords.length} seeds`);
+
+    return c.json({
+      success: true,
+      keywords: keywordsArray,
+      total: keywordsArray.length,
+      method: 'alphabet_soup',
+      seedCount: seedKeywords.length,
+    });
+  } catch (error: any) {
+    console.error('[Alphabet Soup] Error:', error);
+    return c.json({ error: 'Failed to generate keywords', message: error.message }, 500);
+  }
+});
+
+import { startHourlyReporting } from './services/whatsapp';
+
 serve({
   fetch: app.fetch,
   port,
-}, (info) => {
+}, async (info) => {
   console.log(`Admin API Server running on http://localhost:${info.port}`);
+  await seedClickGuardDomains();
+  startHourlyReporting();
 });
 
 // Export for Vercel serverless functions

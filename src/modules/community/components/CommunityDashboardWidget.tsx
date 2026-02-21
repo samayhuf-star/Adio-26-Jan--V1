@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, ArrowRight, Plus, Loader2, Users } from 'lucide-react';
 import { useDiscourseTopics } from '../hooks/useDiscourse';
 import { CommunityTopicCard } from './CommunityTopicCard';
@@ -9,12 +9,38 @@ interface CommunityDashboardWidgetProps {
 }
 
 export function CommunityDashboardWidget({ onViewAll }: CommunityDashboardWidgetProps) {
-  const { topics, loading, error, refetch } = useDiscourseTopics(3);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { topics, loading, error, refetch } = useDiscourseTopics(3, { enabled: isVisible });
   const [showAskModal, setShowAskModal] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !isVisible) {
+            setIsVisible(true);
+          }
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '100px',
+      }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isVisible]);
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div ref={containerRef} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -35,7 +61,7 @@ export function CommunityDashboardWidget({ onViewAll }: CommunityDashboardWidget
         </div>
 
         <div className="p-4">
-          {loading ? (
+          {!isVisible || loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
             </div>

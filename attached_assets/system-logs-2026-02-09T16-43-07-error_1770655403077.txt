@@ -1,0 +1,231 @@
+System Logs Export
+Generated: 2026-02-09T16:43:07.187Z
+Filter: ERROR
+Total Logs: 8
+
+================================================================================
+
+[1] ERROR - API
+Timestamp: 2026-02-09T15:43:20.103Z
+Message: POST /api/account/login → 403 (566ms)
+Details:
+{
+  "method": "POST",
+  "url": "/api/account/login",
+  "status": 403,
+  "duration": 566,
+  "requestBody": "{\"email\":\"adiologyads@gmail.com\",\"password\":\"adiologyads@gmail.com\"}",
+  "responseData": "{\"success\":false,\"error\":\"Please verify your email before signing in\",\"needsEmailVerification\":true}",
+  "isExpected": false
+}
+
+--------------------------------------------------------------------------------
+
+[2] ERROR - API
+Timestamp: 2026-02-09T15:43:34.215Z
+Message: POST /api/account/register → 409 (610ms)
+Details:
+{
+  "method": "POST",
+  "url": "/api/account/register",
+  "status": 409,
+  "duration": 610,
+  "requestBody": "{\"email\":\"adiologyads@gmail.com\",\"password\":\"adiologyads@gmail.com\",\"name\":\"adssss\"}",
+  "responseData": "{\"success\":false,\"error\":\"An account with this email already exists\"}",
+  "isExpected": false
+}
+
+--------------------------------------------------------------------------------
+
+[3] ERROR - Console
+Timestamp: 2026-02-09T15:55:39.683Z
+Message: Minified React error #31; visit https://reactjs.org/docs/error-decoder.html?invariant=31&args[]=object%20with%20keys%20%7BbotScore%2C%20headless%2C%20userAgent%2C%20timeOnPage%2C%20mouseMovements%7D for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+Details:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+Stack Trace:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+
+--------------------------------------------------------------------------------
+
+[4] ERROR - Console
+Timestamp: 2026-02-09T15:55:39.684Z
+Message: Minified React error #31; visit https://reactjs.org/docs/error-decoder.html?invariant=31&args[]=object%20with%20keys%20%7BbotScore%2C%20headless%2C%20userAgent%2C%20timeOnPage%2C%20mouseMovements%7D for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+Details:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+Stack Trace:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+
+--------------------------------------------------------------------------------
+
+[5] ERROR - Console
+Timestamp: 2026-02-09T16:23:27.346Z
+Message: Minified React error #31; visit https://reactjs.org/docs/error-decoder.html?invariant=31&args[]=object%20with%20keys%20%7BbotScore%2C%20headless%2C%20userAgent%2C%20timeOnPage%2C%20mouseMovements%7D for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+Details:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+Stack Trace:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+
+--------------------------------------------------------------------------------
+
+[6] ERROR - Console
+Timestamp: 2026-02-09T16:23:27.348Z
+Message: Minified React error #31; visit https://reactjs.org/docs/error-decoder.html?invariant=31&args[]=object%20with%20keys%20%7BbotScore%2C%20headless%2C%20userAgent%2C%20timeOnPage%2C%20mouseMovements%7D for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+Details:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+Stack Trace:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+
+--------------------------------------------------------------------------------
+
+[7] ERROR - Console
+Timestamp: 2026-02-09T16:42:41.648Z
+Message: Minified React error #31; visit https://reactjs.org/docs/error-decoder.html?invariant=31&args[]=object%20with%20keys%20%7BbotScore%2C%20headless%2C%20userAgent%2C%20timeOnPage%2C%20mouseMovements%7D for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+Details:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+Stack Trace:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+
+--------------------------------------------------------------------------------
+
+[8] ERROR - Console
+Timestamp: 2026-02-09T16:42:41.649Z
+Message: Minified React error #31; visit https://reactjs.org/docs/error-decoder.html?invariant=31&args[]=object%20with%20keys%20%7BbotScore%2C%20headless%2C%20userAgent%2C%20timeOnPage%2C%20mouseMovements%7D for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+Details:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+Stack Trace:
+Gr@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:6298
+le@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:38:11376
+Ee@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:1494
+pa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:45877
+aa@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39858
+cc@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39786
+gl@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:39638
+si@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:35987
+ua@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:40:34935
+qe@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:1634
+st@https://adiology.io/assets/react-vendor-C0Ko5GRz.js:25:2010
+
+
+--------------------------------------------------------------------------------
+

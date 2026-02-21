@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthCompat } from '../utils/authCompat';
-import { Sparkles, Download, Globe, Type, ShieldAlert, Save, Filter, BarChart3, FileText, RefreshCw, Trash2, Clock, Zap, Brain, ChevronDown, ChevronUp, X, FolderOpen } from 'lucide-react';
+import { Sparkles, Download, Globe, Type, ShieldAlert, Save, Filter, BarChart3, RefreshCw, Trash2, Clock, Zap, Brain, ChevronDown, ChevronUp, X, FolderOpen } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -124,7 +124,45 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
     'Negative Outcomes / Complaints': { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
     'Unqualified Leads': { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' },
     'Wrong Location': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    'Intent Mismatch': { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+    'Low Value': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+    'Irrelevant Product': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+    'Competitor': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+    'Location Irrelevant': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+    'Service Mismatch': { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+    'Job/DIY': { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' },
+    'Support/Help': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+    'Educational': { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
+    'Price Comparison': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+    'Other': { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
 };
+
+const INTENT_TO_NEGATIVE_CATEGORY_MAP: Record<string, string> = {
+    'DIY / Self-Help': 'Job/DIY',
+    'Budget / Price Sensitive': 'Low-Value',
+    'Job / Career Seekers': 'Job/DIY',
+    'Competitor Searches': 'Competitor',
+    'Educational / Academic': 'Educational',
+    'Information Seekers': 'Intent-Mismatch',
+    'Negative Outcomes / Complaints': 'Other',
+    'Unqualified Leads': 'Other',
+    'Wrong Location': 'Location-Irrelevant',
+};
+
+function resolveNegativeCategoryKey(categoryName: string): string {
+    if (categoryName in NEGATIVE_KEYWORD_CATEGORIES) return categoryName;
+    
+    const mappedKey = INTENT_TO_NEGATIVE_CATEGORY_MAP[categoryName];
+    if (mappedKey) return mappedKey;
+    
+    const foundKey = Object.keys(NEGATIVE_KEYWORD_CATEGORIES).find(key => {
+        const label = NEGATIVE_KEYWORD_CATEGORIES[key as NegativeKeywordCategory].label;
+        return label === categoryName || label.trim().toLowerCase() === categoryName.trim().toLowerCase();
+    });
+    if (foundKey) return foundKey;
+    
+    return 'Other';
+}
 
 export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) => {
     const { getToken } = useAuthCompat();
@@ -136,7 +174,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
     const [competitorBrands, setCompetitorBrands] = useState('');
     const [excludeCompetitors, setExcludeCompetitors] = useState(false);
     const [keywordCount, setKeywordCount] = useState(1000);
-    const [generationMode, setGenerationMode] = useState<'smart' | 'ai'>('smart');
+    const generationMode = 'smart' as const;
     const [selectedVertical, setSelectedVertical] = useState('');
     
     const [isGenerating, setIsGenerating] = useState(false);
@@ -365,14 +403,29 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
 
                 negativeKeywords = addMisspellings(negativeKeywords);
 
-                const formattedKeywords: GeneratedKeyword[] = negativeKeywords.map((item, index) => ({
-                    id: index + 1,
-                    keyword: `[${item.keyword}]`,
-                    reason: item.reason,
-                    category: NEGATIVE_KEYWORD_CATEGORIES[item.category]?.label || item.category,
-                    subcategory: item.subcategory,
-                    matchType: item.matchType
-                }));
+                const formattedKeywords: GeneratedKeyword[] = negativeKeywords.map((item, index) => {
+                    let formattedKeyword: string;
+                    switch (item.matchType) {
+                        case 'phrase':
+                            formattedKeyword = `"${item.keyword}"`;
+                            break;
+                        case 'broad':
+                            formattedKeyword = item.keyword;
+                            break;
+                        case 'exact':
+                        default:
+                            formattedKeyword = `[${item.keyword}]`;
+                            break;
+                    }
+                    return {
+                        id: index + 1,
+                        keyword: formattedKeyword,
+                        reason: item.reason,
+                        category: NEGATIVE_KEYWORD_CATEGORIES[item.category]?.label || item.category,
+                        subcategory: item.subcategory,
+                        matchType: item.matchType
+                    };
+                });
 
                 setGeneratedKeywords(formattedKeywords);
                 notifications.success(`Generated ${formattedKeywords.length} contextual negative keywords`, {
@@ -413,14 +466,29 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                 competitors: competitors.length > 0 ? competitors : undefined
             });
 
-            const formattedKeywords: GeneratedKeyword[] = result.negatives.map((neg, index) => ({
-                id: index + 1,
-                keyword: `[${neg.keyword}]`,
-                reason: neg.source,
-                category: neg.category,
-                subcategory: undefined,
-                matchType: neg.matchType
-            }));
+            const formattedKeywords: GeneratedKeyword[] = result.negatives.map((neg, index) => {
+                let formattedKeyword: string;
+                switch (neg.matchType) {
+                    case 'phrase':
+                        formattedKeyword = `"${neg.keyword}"`;
+                        break;
+                    case 'broad':
+                        formattedKeyword = neg.keyword;
+                        break;
+                    case 'exact':
+                    default:
+                        formattedKeyword = `[${neg.keyword}]`;
+                        break;
+                }
+                return {
+                    id: index + 1,
+                    keyword: formattedKeyword,
+                    reason: neg.source,
+                    category: neg.category,
+                    subcategory: undefined,
+                    matchType: neg.matchType
+                };
+            });
 
             setGeneratedKeywords(formattedKeywords);
             
@@ -447,20 +515,8 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
         if (selectedCategories.size === 0) return generatedKeywords;
         
         return generatedKeywords.filter(kw => {
-            const categoryKey = Object.keys(NEGATIVE_KEYWORD_CATEGORIES).find(
-                key => {
-                    const categoryLabel = NEGATIVE_KEYWORD_CATEGORIES[key as NegativeKeywordCategory].label;
-                    if (categoryLabel === kw.category) return true;
-                    if (categoryLabel.trim().toLowerCase() === kw.category.trim().toLowerCase()) return true;
-                    return false;
-                }
-            ) as NegativeKeywordCategory | undefined;
-            
-            if (categoryKey && selectedCategories.has(categoryKey)) {
-                return true;
-            }
-            
-            return false;
+            const resolvedKey = resolveNegativeCategoryKey(kw.category);
+            return selectedCategories.has(resolvedKey as NegativeKeywordCategory);
         });
     }, [generatedKeywords, selectedCategories]);
 
@@ -474,6 +530,38 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
         return stats;
     }, [generatedKeywords]);
 
+    const displayKeywords = useMemo(() => {
+        if (exportFormat === 'all') return filteredKeywords;
+        
+        return filteredKeywords.map(kw => {
+            const cleanKeyword = kw.keyword.replace(/[\[\]"]/g, '');
+            let formattedKeyword: string;
+            let displayMatchType: 'exact' | 'phrase' | 'broad';
+            
+            switch (exportFormat) {
+                case 'phrase':
+                    formattedKeyword = `"${cleanKeyword}"`;
+                    displayMatchType = 'phrase';
+                    break;
+                case 'broad':
+                    formattedKeyword = cleanKeyword;
+                    displayMatchType = 'broad';
+                    break;
+                case 'exact':
+                default:
+                    formattedKeyword = `[${cleanKeyword}]`;
+                    displayMatchType = 'exact';
+                    break;
+            }
+            
+            return {
+                ...kw,
+                keyword: formattedKeyword,
+                matchType: displayMatchType
+            };
+        });
+    }, [filteredKeywords, exportFormat]);
+
     const handleDownload = async (format: 'standard' | 'google-ads-editor' = 'standard') => {
         if (filteredKeywords.length === 0) {
             notifications.warning('No keywords to export', {
@@ -484,13 +572,11 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
 
         const negativeKeywords: NegativeKeyword[] = filteredKeywords.map(kw => {
             const cleanKeyword = kw.keyword.replace(/[\[\]"]/g, '');
-            const categoryKey = Object.keys(NEGATIVE_KEYWORD_CATEGORIES).find(
-                key => NEGATIVE_KEYWORD_CATEGORIES[key as NegativeKeywordCategory].label === kw.category
-            ) as NegativeKeywordCategory;
+            const resolvedKey = resolveNegativeCategoryKey(kw.category);
             
             return {
                 keyword: cleanKeyword,
-                category: categoryKey || 'Other',
+                category: resolvedKey as NegativeKeywordCategory || 'Other',
                 subcategory: kw.subcategory,
                 reason: kw.reason,
                 matchType: kw.matchType || 'exact'
@@ -667,54 +753,17 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                     {/* Generation Mode Card */}
                                     <Card className="border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-sm overflow-hidden">
                                         <CardContent className="p-4 space-y-3">
-                                            <label className="text-sm font-medium text-slate-700">Generation Mode</label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setGenerationMode('smart')}
-                                                    className={`relative p-3 rounded-xl border-2 transition-all text-left ${
-                                                        generationMode === 'smart'
-                                                            ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-200'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-white'
-                                                    }`}
-                                                >
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${
-                                                        generationMode === 'smart' ? 'bg-violet-500' : 'bg-slate-100'
-                                                    }`}>
-                                                        <Zap className={`h-4 w-4 ${generationMode === 'smart' ? 'text-white' : 'text-slate-500'}`} />
-                                                    </div>
-                                                    <div className={`text-sm font-semibold ${generationMode === 'smart' ? 'text-violet-700' : 'text-slate-700'}`}>
-                                                        Smart Engine
-                                                    </div>
-                                                    <div className={`text-xs ${generationMode === 'smart' ? 'text-violet-500' : 'text-slate-400'}`}>
-                                                        Instant · 1,000+ negatives
-                                                    </div>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setGenerationMode('ai')}
-                                                    className={`relative p-3 rounded-xl border-2 transition-all text-left ${
-                                                        generationMode === 'ai'
-                                                            ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-white'
-                                                    }`}
-                                                >
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${
-                                                        generationMode === 'ai' ? 'bg-indigo-500' : 'bg-slate-100'
-                                                    }`}>
-                                                        <Brain className={`h-4 w-4 ${generationMode === 'ai' ? 'text-white' : 'text-slate-500'}`} />
-                                                    </div>
-                                                    <div className={`text-sm font-semibold ${generationMode === 'ai' ? 'text-indigo-700' : 'text-slate-700'}`}>
-                                                        AI Contextual
-                                                    </div>
-                                                    <div className={`text-xs ${generationMode === 'ai' ? 'text-indigo-500' : 'text-slate-400'}`}>
-                                                        ~10s · URL analysis
-                                                    </div>
-                                                </button>
+                                            <div className="flex items-center gap-2 p-3 rounded-xl border-2 border-violet-500 bg-violet-50">
+                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-500">
+                                                    <Zap className="h-4 w-4 text-white" />
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-semibold text-violet-700">Smart Engine</div>
+                                                    <div className="text-xs text-violet-500">Instant · 1,000+ negatives</div>
+                                                </div>
                                             </div>
 
-                                            {generationMode === 'smart' && (
-                                                <div className="space-y-2 pt-2">
+                                            <div className="space-y-2 pt-2">
                                                     <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
                                                         <Filter className="h-3.5 w-3.5 text-slate-400" />
                                                         Business Vertical
@@ -739,39 +788,13 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                         </p>
                                                     )}
                                                 </div>
-                                            )}
-
-                                            {generationMode === 'ai' && (
-                                                <div className="space-y-2 pt-2">
-                                                    <label className="text-sm font-medium text-slate-600">
-                                                        User Goal <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Select value={userGoal} onValueChange={setUserGoal}>
-                                                        <SelectTrigger className="bg-white text-sm">
-                                                            <SelectValue placeholder="Select goal..." />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="leads">Leads (High-Intent)</SelectItem>
-                                                            <SelectItem value="calls">Calls / Appointments</SelectItem>
-                                                            <SelectItem value="signups">Signups / Trials</SelectItem>
-                                                            <SelectItem value="branding">Branding / Awareness</SelectItem>
-                                                            <SelectItem value="ecommerce">E-commerce</SelectItem>
-                                                            <SelectItem value="other">Other</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            )}
 
                                             {/* Generate Button */}
                                             <Button 
-                                                className={`w-full mt-2 shadow-lg transition-all ${
-                                                    generationMode === 'smart' 
-                                                        ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-violet-200' 
-                                                        : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-indigo-200'
-                                                }`}
+                                                className="w-full mt-2 shadow-lg transition-all bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-violet-200 text-white"
                                                 size="lg"
-                                                onClick={generationMode === 'smart' ? handleSmartGenerate : handleGenerate}
-                                                disabled={isGenerating || !coreKeywords || (generationMode === 'ai' && (!url || !userGoal))}
+                                                onClick={handleSmartGenerate}
+                                                disabled={isGenerating || !coreKeywords}
                                             >
                                                 {isGenerating ? (
                                                     <>
@@ -780,8 +803,8 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                     </>
                                                 ) : (
                                                     <>
-                                                        {generationMode === 'smart' ? <Zap className="h-4 w-4 mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                                                        Generate {generationMode === 'smart' ? 'Smart' : 'AI'} Negatives
+                                                        <Zap className="h-4 w-4 mr-2" />
+                                                        Generate Smart Negatives
                                                     </>
                                                 )}
                                             </Button>
@@ -845,14 +868,6 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                         <Download className="h-3.5 w-3.5" />
                                                         <span className="hidden sm:inline">CSV</span>
                                                     </Button>
-                                                    <Button 
-                                                        size="sm"
-                                                        onClick={() => handleDownload('google-ads-editor')} 
-                                                        className="gap-1.5 text-xs h-8 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0"
-                                                    >
-                                                        <FileText className="h-3.5 w-3.5" />
-                                                        <span className="hidden sm:inline">Google Ads</span>
-                                                    </Button>
                                                 </div>
                                             )}
                                         </div>
@@ -886,11 +901,11 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                     )}
 
                                     <CardContent className="p-0">
-                                        {filteredKeywords.length > 0 ? (
+                                        {displayKeywords.length > 0 ? (
                                             <div className="max-h-[500px] overflow-auto">
                                                 {/* Mobile Card View */}
                                                 <div className="sm:hidden divide-y divide-slate-100">
-                                                    {filteredKeywords.slice(0, 50).map((item) => {
+                                                    {displayKeywords.slice(0, 50).map((item) => {
                                                         const colors = CATEGORY_COLORS[item.category] || { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' };
                                                         return (
                                                             <div key={item.id} className="p-3 hover:bg-slate-50/50">
@@ -898,9 +913,6 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                                     <div className="flex-1 min-w-0">
                                                                         <div className="font-mono text-sm font-medium text-slate-800 truncate">
                                                                             {item.keyword}
-                                                                        </div>
-                                                                        <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">
-                                                                            {item.reason}
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex flex-col items-end gap-1 shrink-0">
@@ -915,9 +927,9 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                             </div>
                                                         );
                                                     })}
-                                                    {filteredKeywords.length > 50 && (
+                                                    {displayKeywords.length > 50 && (
                                                         <div className="p-3 text-center text-xs text-slate-500">
-                                                            Showing 50 of {filteredKeywords.length} keywords. Export to see all.
+                                                            Showing 50 of {displayKeywords.length} keywords. Export to see all.
                                                         </div>
                                                     )}
                                                 </div>
@@ -927,12 +939,12 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                     <TableHeader className="bg-slate-50/80 sticky top-0 z-10">
                                                         <TableRow>
                                                             <TableHead className="w-[15%] text-xs font-semibold text-slate-600">Match Type</TableHead>
-                                                            <TableHead className="w-[45%] text-xs font-semibold text-slate-600">Reason</TableHead>
+                                                            <TableHead className="w-[55%] text-xs font-semibold text-slate-600">Keyword</TableHead>
                                                             <TableHead className="w-[20%] text-xs font-semibold text-slate-600">Category</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
-                                                        {filteredKeywords.map((item) => {
+                                                        {displayKeywords.map((item) => {
                                                             const colors = CATEGORY_COLORS[item.category] || { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' };
                                                             return (
                                                                 <TableRow key={item.id} className="hover:bg-indigo-50/30 transition-colors">
@@ -942,8 +954,7 @@ export const NegativeKeywordsBuilder = ({ initialData }: { initialData?: any }) 
                                                                         </Badge>
                                                                     </TableCell>
                                                                     <TableCell className="text-slate-600 text-sm">
-                                                                        <span className="font-mono text-indigo-600 mr-2">{item.keyword}</span>
-                                                                        {item.reason}
+                                                                        <span className="font-mono text-indigo-600">{item.keyword}</span>
                                                                     </TableCell>
                                                                     <TableCell>
                                                                         <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${colors.bg} ${colors.text} ${colors.border} border`}>

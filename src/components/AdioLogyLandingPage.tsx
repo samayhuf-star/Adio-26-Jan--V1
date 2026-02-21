@@ -42,7 +42,6 @@ function Navigation({ onGetStarted, onLogin }: { onGetStarted?: () => void; onLo
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors text-sm">Features</a>
             <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors text-sm">Pricing</a>
-            <button onClick={onLogin} className="px-5 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm">Sign In</button>
             <button onClick={onGetStarted} className="px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm hover:shadow-lg transition-shadow">Get Started</button>
           </div>
 
@@ -56,7 +55,6 @@ function Navigation({ onGetStarted, onLogin }: { onGetStarted?: () => void; onLo
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="md:hidden mt-4 pb-4 space-y-2">
               <a href="#features" className="block py-2 text-gray-600 hover:text-gray-900">Features</a>
               <a href="#pricing" className="block py-2 text-gray-600 hover:text-gray-900">Pricing</a>
-              <button onClick={onLogin} className="block w-full text-left py-2 text-gray-600 hover:text-gray-900">Sign In</button>
               <button onClick={onGetStarted} className="w-full mt-4 px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm">Get Started</button>
             </motion.div>
           )}
@@ -115,7 +113,7 @@ function Hero({ onGetStarted }: { onGetStarted?: () => void }) {
 // Features Section
 function Features() {
   const features = [
-    { icon: '🎯', title: '12 Campaign Structures', description: 'Choose from battle-tested frameworks' },
+    { icon: '🎯', title: '13 Campaign Structures', description: 'Choose from battle-tested frameworks' },
     { icon: '🎨', title: '30+ Website Templates', description: 'Edit and go live in 30 seconds' },
     { icon: '🚀', title: '30+ Preset Campaigns', description: 'Ready for all verticals' },
     { icon: '🤖', title: 'AI Ad Builder', description: 'Automatically creates high-quality ads' },

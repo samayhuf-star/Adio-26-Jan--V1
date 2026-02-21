@@ -60,8 +60,8 @@ NHOST_DB_PASSWORD=YOUR_PASSWORD
 ## Verification
 
 After deployment, test these endpoints:
-- `https://www.adiology.online/api/health` - Should return `{ status: 'ok' }`
-- `https://www.adiology.online/api/workspace-projects` - Should connect to database (requires auth token)
+- `https://www.adiology.io/api/health` - Should return `{ status: 'ok' }`
+- `https://www.adiology.io/api/workspace-projects` - Should connect to database (requires auth token)
 
 ## Troubleshooting
 

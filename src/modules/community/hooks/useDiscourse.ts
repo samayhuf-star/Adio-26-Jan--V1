@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useAuthCompat, useUserCompat } from '../../../utils/authCompat';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getSessionTokenSync, getCurrentUser } from '../../../utils/auth';
+import { apiCache, createCacheKey } from '../../../utils/apiCache';
 
 export interface DiscourseTopic {
   id: number;
@@ -31,78 +32,165 @@ export interface DiscourseCategory {
   topicCount: number;
 }
 
-export function useDiscourseTopics(limit: number = 10) {
+const CACHE_TTL = 5 * 60 * 1000;
+const STALE_TIME = 60 * 1000;
+
+export function useDiscourseTopics(limit: number = 10, options?: { enabled?: boolean }) {
   const [topics, setTopics] = useState<DiscourseTopic[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { getToken } = useAuthCompat();
+  const hasFetched = useRef(false);
+  const enabled = options?.enabled ?? true;
 
-  const fetchTopics = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const getToken = useCallback(async () => {
+    return getSessionTokenSync();
+  }, []);
 
-      const token = await getToken();
-      const response = await fetch(`/api/community/topics?limit=${limit}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+  const fetchTopics = useCallback(async (forceRefresh = false) => {
+    const cacheKey = createCacheKey('discourse', 'topics', limit);
 
-      // Handle rate limiting gracefully - don't retry or show error
-      if (response.status === 429) {
-        console.warn('Community topics rate limited');
-        setTopics([]);
+    const cachedTopics = apiCache.get<{ topics: DiscourseTopic[] }>(cacheKey);
+    const hasCache = cachedTopics !== null;
+    const isStale = apiCache.isStale(cacheKey, STALE_TIME);
+
+    if (hasCache && !forceRefresh) {
+      setTopics(cachedTopics.topics || []);
+      if (!isStale) {
+        setLoading(false);
         return;
       }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch topics');
-      }
-
-      const data = await response.json();
-      setTopics(data.topics || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
     }
-  }, [limit, getToken]);
 
-  useEffect(() => {
-    fetchTopics();
-  }, [fetchTopics]);
+    try {
+      if (!hasCache) {
+        setLoading(true);
+      }
+      setError(null);
 
-  return { topics, loading, error, refetch: fetchTopics };
-}
-
-export function useDiscourseCategories() {
-  const [categories, setCategories] = useState<DiscourseCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { getToken } = useAuthCompat();
-
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
+      const fetcher = async () => {
         const token = await getToken();
-        const response = await fetch('/api/community/categories', {
+        const response = await fetch(`/api/community/topics?limit=${limit}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
 
-        // Handle rate limiting gracefully
         if (response.status === 429) {
-          console.warn('Community categories rate limited');
-          return;
+          console.warn('Community topics rate limited');
+          return { topics: [] };
         }
 
-        if (response.ok) {
-          const data = await response.json();
-          setCategories(data.categories || []);
+        if (!response.ok) {
+          throw new Error('Failed to fetch topics');
         }
+
+        return response.json();
+      };
+
+      const data = await apiCache.dedupe<{ topics: DiscourseTopic[] }>(
+        cacheKey,
+        fetcher,
+        { ttl: CACHE_TTL, staleWhileRevalidate: true, staleTime: STALE_TIME }
+      );
+
+      setTopics(data.topics || []);
+    } catch (err) {
+      if (!hasCache) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [limit, getToken]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      fetchTopics();
+    }
+  }, [enabled, fetchTopics]);
+
+  const refetch = useCallback(() => {
+    hasFetched.current = true;
+    return fetchTopics(true);
+  }, [fetchTopics]);
+
+  return { topics, loading, error, refetch };
+}
+
+export function useDiscourseCategories(options?: { enabled?: boolean }) {
+  const [categories, setCategories] = useState<DiscourseCategory[]>([]);
+  const [loading, setLoading] = useState(false);
+  const hasFetched = useRef(false);
+  const enabled = options?.enabled ?? true;
+
+  const getToken = useCallback(async () => {
+    return getSessionTokenSync();
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
+    if (hasFetched.current) {
+      return;
+    }
+
+    const cacheKey = createCacheKey('discourse', 'categories');
+    const cached = apiCache.get<{ categories: DiscourseCategory[] }>(cacheKey);
+    const hasCache = cached !== null;
+    const isStale = apiCache.isStale(cacheKey, STALE_TIME);
+
+    if (hasCache) {
+      setCategories(cached.categories || []);
+      if (!isStale) {
+        setLoading(false);
+        return;
+      }
+    }
+
+    async function fetchCategories() {
+      hasFetched.current = true;
+      if (!hasCache) {
+        setLoading(true);
+      }
+
+      try {
+        const fetcher = async () => {
+          const token = await getToken();
+          const response = await fetch('/api/community/categories', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.status === 429) {
+            console.warn('Community categories rate limited');
+            return { categories: [] };
+          }
+
+          if (response.ok) {
+            return response.json();
+          }
+          return { categories: [] };
+        };
+
+        const data = await apiCache.dedupe<{ categories: DiscourseCategory[] }>(
+          cacheKey,
+          fetcher,
+          { ttl: CACHE_TTL, staleWhileRevalidate: true, staleTime: STALE_TIME }
+        );
+
+        setCategories(data.categories || []);
       } catch (err) {
         console.error('Failed to fetch categories:', err);
       } finally {
@@ -111,22 +199,30 @@ export function useDiscourseCategories() {
     }
 
     fetchCategories();
-  }, [getToken]);
+  }, [getToken, enabled]);
 
   return { categories, loading };
 }
 
 export function useDiscourseSSO() {
-  const { getToken } = useAuthCompat();
-  const { user } = useUserCompat();
   const [loading, setLoading] = useState(false);
 
+  const getToken = useCallback(async () => {
+    return getSessionTokenSync();
+  }, []);
+
   const loginToDiscourse = useCallback(async () => {
+    const user = getCurrentUser();
     if (!user) return null;
 
     try {
       setLoading(true);
       const token = await getToken();
+
+      const userEmail = user.email || '';
+      const userName = user.name || user.full_name || 'User';
+      const userUsername = userEmail.split('@')[0];
+      const userAvatar = user.avatar || '';
 
       const response = await fetch('/api/community/sso/initiate', {
         method: 'POST',
@@ -137,10 +233,10 @@ export function useDiscourseSSO() {
         body: JSON.stringify({
           user: {
             id: user.id,
-            email: user.primaryEmailAddress?.emailAddress,
-            name: user.fullName || user.firstName || 'User',
-            username: user.username,
-            avatarUrl: user.imageUrl,
+            email: userEmail,
+            name: userName,
+            username: userUsername,
+            avatarUrl: userAvatar,
           },
           returnPath: '/',
         }),
@@ -155,10 +251,10 @@ export function useDiscourseSSO() {
       const userData = encodeURIComponent(
         JSON.stringify({
           id: user.id,
-          email: user.primaryEmailAddress?.emailAddress,
-          name: user.fullName || user.firstName || 'User',
-          username: user.username,
-          avatarUrl: user.imageUrl,
+          email: userEmail,
+          name: userName,
+          username: userUsername,
+          avatarUrl: userAvatar,
         })
       );
 
@@ -174,7 +270,7 @@ export function useDiscourseSSO() {
     } finally {
       setLoading(false);
     }
-  }, [user, getToken]);
+  }, [getToken]);
 
   const openForum = useCallback(() => {
     window.open('https://community.adiology.io/', '_blank');
@@ -184,16 +280,21 @@ export function useDiscourseSSO() {
 }
 
 export function useCreatePost() {
-  const { getToken } = useAuthCompat();
-  const { user } = useUserCompat();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const getToken = useCallback(async () => {
+    return getSessionTokenSync();
+  }, []);
 
   const createPost = useCallback(
     async (title: string, content: string, categoryId?: number) => {
       try {
         setLoading(true);
         setError(null);
+
+        const user = getCurrentUser();
+        const userEmail = user?.email || '';
 
         const token = await getToken();
         const response = await fetch('/api/community/posts', {
@@ -207,13 +308,15 @@ export function useCreatePost() {
             content,
             categoryId,
             userId: user?.id,
-            userEmail: user?.primaryEmailAddress?.emailAddress,
+            userEmail: userEmail,
           }),
         });
 
         if (!response.ok) {
           throw new Error('Failed to create post');
         }
+
+        apiCache.invalidatePattern('discourse:topics');
 
         const data = await response.json();
         return data;
@@ -225,7 +328,7 @@ export function useCreatePost() {
         setLoading(false);
       }
     },
-    [getToken, user]
+    [getToken]
   );
 
   return { createPost, loading, error };

@@ -10,7 +10,7 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   role: text("role").default("user"),
   subscriptionPlan: text("subscription_plan").default("free"),
-  subscriptionStatus: text("subscription_status").default("active"),
+  subscriptionStatus: text("subscription_status").default("inactive"),
   stripeCustomerId: text("stripe_customer_id").unique(),
   stripeSubscriptionId: text("stripe_subscription_id"),
   aiUsage: integer("ai_usage").default(0),
@@ -18,6 +18,10 @@ export const users = pgTable("users", {
   lastSignIn: timestamp("last_sign_in"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  passwordHash: text("password_hash"),
+  emailVerified: boolean("email_verified").default(false),
+  cardValidated: boolean("card_validated").default(false),
+  selectedPlan: text("selected_plan"),
 }, (table) => ({
   emailIdx: index("idx_users_email").on(table.email),
   roleIdx: index("idx_users_role").on(table.role),
@@ -116,7 +120,7 @@ export const emails = pgTable("emails", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: text("user_id"),
   recipientEmail: text("recipient_email").notNull(),
-  senderEmail: text("sender_email").default("noreply@adiology.com"),
+  senderEmail: text("sender_email").default("noreply@adiology.io"),
   subject: text("subject").notNull(),
   templateName: text("template_name"),
   templateData: jsonb("template_data"),
@@ -192,6 +196,9 @@ export const campaignHistory = pgTable("campaign_history", {
   status: text("status").notNull().default("completed"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  googleAdsId: text("google_ads_id"),
+  googleAdsPushStatus: text("google_ads_push_status"),
+  googleAdsPushedAt: timestamp("google_ads_pushed_at"),
 }, (table) => ({
   userIdIdx: index("idx_campaign_history_user_id").on(table.userId),
   typeIdx: index("idx_campaign_history_type").on(table.type),
@@ -624,6 +631,82 @@ export const messages = pgTable("messages", {
   conversationIdx: index("idx_messages_conversation_id").on(table.conversationId),
 }));
 
+// Domain Monitoring tables
+export const monitoredDomains = pgTable("monitored_domains", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  domain: text("domain").notNull(),
+  registrar: text("registrar"),
+  expiryDate: timestamp("expiry_date"),
+  createdDate: timestamp("created_date"),
+  updatedDate: timestamp("updated_date"),
+  nameServers: jsonb("name_servers").default([]),
+  whoisData: jsonb("whois_data").default({}),
+  sslIssuer: text("ssl_issuer"),
+  sslExpiryDate: timestamp("ssl_expiry_date"),
+  sslValidFrom: timestamp("ssl_valid_from"),
+  sslData: jsonb("ssl_data").default({}),
+  dnsRecords: jsonb("dns_records").default({}),
+  lastCheckedAt: timestamp("last_checked_at"),
+  alertDays: jsonb("alert_days").default([30, 15, 7, 1]),
+  alertsEnabled: boolean("alerts_enabled").default(true),
+  alertEmail: text("alert_email"),
+  notes: text("notes"),
+  status: text("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_monitored_domains_user_id").on(table.userId),
+  domainIdx: index("idx_monitored_domains_domain").on(table.domain),
+  expiryDateIdx: index("idx_monitored_domains_expiry_date").on(table.expiryDate),
+  sslExpiryIdx: index("idx_monitored_domains_ssl_expiry").on(table.sslExpiryDate),
+  userDomainUnique: unique("user_domain_unique").on(table.userId, table.domain),
+}));
+
+export const domainSnapshots = pgTable("domain_snapshots", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  domainId: uuid("domain_id").references(() => monitoredDomains.id, { onDelete: 'cascade' }).notNull(),
+  snapshotType: text("snapshot_type").notNull(),
+  data: jsonb("data").default({}),
+  changes: jsonb("changes").default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  domainIdIdx: index("idx_domain_snapshots_domain_id").on(table.domainId),
+  typeIdx: index("idx_domain_snapshots_type").on(table.snapshotType),
+  createdAtIdx: index("idx_domain_snapshots_created_at").on(table.createdAt),
+}));
+
+export const domainAlerts = pgTable("domain_alerts", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  domainId: uuid("domain_id").references(() => monitoredDomains.id, { onDelete: 'cascade' }).notNull(),
+  alertType: text("alert_type").notNull(),
+  message: text("message").notNull(),
+  daysUntilExpiry: integer("days_until_expiry"),
+  sentAt: timestamp("sent_at"),
+  acknowledged: boolean("acknowledged").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  domainIdIdx: index("idx_domain_alerts_domain_id").on(table.domainId),
+  alertTypeIdx: index("idx_domain_alerts_type").on(table.alertType),
+  sentAtIdx: index("idx_domain_alerts_sent_at").on(table.sentAt),
+}));
+
+export const insertMonitoredDomainSchema = createInsertSchema(monitoredDomains).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDomainSnapshotSchema = createInsertSchema(domainSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDomainAlertSchema = createInsertSchema(domainAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
@@ -642,3 +725,245 @@ export type OrganizationMember = typeof organizationMembers.$inferSelect;
 export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
 export type OrganizationInvite = typeof organizationInvites.$inferSelect;
 export type InsertOrganizationInvite = z.infer<typeof insertOrganizationInviteSchema>;
+export type MonitoredDomain = typeof monitoredDomains.$inferSelect;
+export type InsertMonitoredDomain = z.infer<typeof insertMonitoredDomainSchema>;
+export type DomainSnapshot = typeof domainSnapshots.$inferSelect;
+export type InsertDomainSnapshot = z.infer<typeof insertDomainSnapshotSchema>;
+export type DomainAlert = typeof domainAlerts.$inferSelect;
+export type InsertDomainAlert = z.infer<typeof insertDomainAlertSchema>;
+
+// Click Guard - Tracked Domains
+export const clickGuardDomains = pgTable("click_guard_domains", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  domain: text("domain").notNull(),
+  siteId: text("site_id").unique().notNull(),
+  verified: boolean("verified").default(false),
+  verifiedAt: timestamp("verified_at"),
+  settings: jsonb("settings").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_cg_domains_user_id").on(table.userId),
+  siteIdIdx: index("idx_cg_domains_site_id").on(table.siteId),
+  domainIdx: index("idx_cg_domains_domain").on(table.domain),
+}));
+
+// Click Guard - Visitor Logs
+export const clickGuardVisitors = pgTable("click_guard_visitors", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: text("site_id").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  fingerprint: text("fingerprint"),
+  country: text("country"),
+  city: text("city"),
+  region: text("region"),
+  isp: text("isp"),
+  org: text("org"),
+  asNumber: text("as_number"),
+  timezone: text("timezone"),
+  deviceType: text("device_type"),
+  browser: text("browser"),
+  browserVersion: text("browser_version"),
+  os: text("os"),
+  osVersion: text("os_version"),
+  screenWidth: integer("screen_width"),
+  screenHeight: integer("screen_height"),
+  language: text("language"),
+  referrer: text("referrer"),
+  pageUrl: text("page_url"),
+  isProxy: boolean("is_proxy").default(false),
+  isVpn: boolean("is_vpn").default(false),
+  isBot: boolean("is_bot").default(false),
+  isTor: boolean("is_tor").default(false),
+  botScore: integer("bot_score").default(0),
+  threatLevel: text("threat_level").default("low"),
+  clickCount: integer("click_count").default(1),
+  mouseMovements: integer("mouse_movements").default(0),
+  timeOnPage: integer("time_on_page").default(0),
+  blocked: boolean("blocked").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  siteIdIdx: index("idx_cg_visitors_site_id").on(table.siteId),
+  ipIdx: index("idx_cg_visitors_ip").on(table.ipAddress),
+  createdAtIdx: index("idx_cg_visitors_created_at").on(table.createdAt),
+  threatIdx: index("idx_cg_visitors_threat").on(table.threatLevel),
+  fingerprintIdx: index("idx_cg_visitors_fingerprint").on(table.fingerprint),
+}));
+
+// Click Guard - Blocked IPs
+export const clickGuardBlockedIps = pgTable("click_guard_blocked_ips", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: text("site_id").notNull(),
+  ipAddress: text("ip_address").notNull(),
+  reason: text("reason"),
+  autoBlocked: boolean("auto_blocked").default(false),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  siteIdIdx: index("idx_cg_blocked_site_id").on(table.siteId),
+  ipIdx: index("idx_cg_blocked_ip").on(table.ipAddress),
+}));
+
+// Click Guard - Fraud Events
+export const clickGuardFraudEvents = pgTable("click_guard_fraud_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: text("site_id").notNull(),
+  visitorId: uuid("visitor_id"),
+  eventType: text("event_type").notNull(),
+  severity: text("severity").default("medium"),
+  ipAddress: text("ip_address"),
+  details: jsonb("details").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  siteIdIdx: index("idx_cg_fraud_site_id").on(table.siteId),
+  eventTypeIdx: index("idx_cg_fraud_event_type").on(table.eventType),
+  createdAtIdx: index("idx_cg_fraud_created_at").on(table.createdAt),
+}));
+
+export const clickGuardIpPushLog = pgTable("click_guard_ip_push_log", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  siteId: text("site_id").notNull(),
+  userId: text("user_id").notNull(),
+  googleAdsCustomerId: text("google_ads_customer_id").notNull(),
+  campaignIds: jsonb("campaign_ids").default([]),
+  ipsCount: integer("ips_count").default(0),
+  ipsPushed: jsonb("ips_pushed").default([]),
+  status: text("status").default("success"),
+  errorMessage: text("error_message"),
+  pushedAt: timestamp("pushed_at").defaultNow(),
+}, (table) => ({
+  siteIdIdx: index("idx_cg_ip_push_site_id").on(table.siteId),
+  userIdIdx: index("idx_cg_ip_push_user_id").on(table.userId),
+  pushedAtIdx: index("idx_cg_ip_push_pushed_at").on(table.pushedAt),
+}));
+
+export type ClickGuardIpPushLog = typeof clickGuardIpPushLog.$inferSelect;
+
+export const insertClickGuardDomainSchema = createInsertSchema(clickGuardDomains).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClickGuardVisitorSchema = createInsertSchema(clickGuardVisitors).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClickGuardBlockedIpSchema = createInsertSchema(clickGuardBlockedIps).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClickGuardFraudEventSchema = createInsertSchema(clickGuardFraudEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ClickGuardDomain = typeof clickGuardDomains.$inferSelect;
+export type InsertClickGuardDomain = z.infer<typeof insertClickGuardDomainSchema>;
+export type ClickGuardVisitor = typeof clickGuardVisitors.$inferSelect;
+export type InsertClickGuardVisitor = z.infer<typeof insertClickGuardVisitorSchema>;
+export type ClickGuardBlockedIp = typeof clickGuardBlockedIps.$inferSelect;
+export type InsertClickGuardBlockedIp = z.infer<typeof insertClickGuardBlockedIpSchema>;
+export type ClickGuardFraudEvent = typeof clickGuardFraudEvents.$inferSelect;
+export type InsertClickGuardFraudEvent = z.infer<typeof insertClickGuardFraudEventSchema>;
+
+export const supportTickets = pgTable("support_tickets", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  userEmail: text("user_email"),
+  userName: text("user_name"),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  priority: text("priority").default("Medium"),
+  status: text("status").default("Open"),
+  adminReply: text("admin_reply"),
+  adminRepliedAt: timestamp("admin_replied_at"),
+  adminRepliedBy: text("admin_replied_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_support_tickets_user_id").on(table.userId),
+  statusIdx: index("idx_support_tickets_status").on(table.status),
+}));
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  adminReply: true,
+  adminRepliedAt: true,
+  adminRepliedBy: true,
+});
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+
+export const googleAdsTokens = pgTable("google_ads_tokens", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  accessToken: text("access_token"),
+  accessTokenExpiry: timestamp("access_token_expiry"),
+  customerId: text("customer_id"),
+  loginCustomerId: text("login_customer_id"),
+  connectedAt: timestamp("connected_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_google_ads_tokens_user_id").on(table.userId),
+  customerIdIdx: index("idx_google_ads_tokens_customer_id").on(table.customerId),
+}));
+
+export const insertGoogleAdsTokenSchema = createInsertSchema(googleAdsTokens).omit({
+  id: true,
+  connectedAt: true,
+  updatedAt: true,
+});
+
+export type GoogleAdsToken = typeof googleAdsTokens.$inferSelect;
+export type InsertGoogleAdsToken = z.infer<typeof insertGoogleAdsTokenSchema>;
+
+export const aiUsageLogs = pgTable("ai_usage_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id"),
+  feature: text("feature").notNull(),
+  model: text("model").notNull().default("gpt-4o-mini"),
+  promptTokens: integer("prompt_tokens").default(0),
+  completionTokens: integer("completion_tokens").default(0),
+  totalTokens: integer("total_tokens").default(0),
+  costCents: decimal("cost_cents", { precision: 10, scale: 4 }).default("0"),
+  durationMs: integer("duration_ms"),
+  status: text("status").default("success"),
+  error: text("error"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_ai_usage_user_id").on(table.userId),
+  featureIdx: index("idx_ai_usage_feature").on(table.feature),
+  modelIdx: index("idx_ai_usage_model").on(table.model),
+  createdAtIdx: index("idx_ai_usage_created_at").on(table.createdAt),
+}));
+
+export const pageViews = pgTable("page_views", {
+  id: serial("id").primaryKey(),
+  path: text("path").notNull(),
+  referrer: text("referrer"),
+  userAgent: text("user_agent"),
+  ip: text("ip"),
+  sessionId: text("session_id"),
+  country: text("country"),
+  deviceType: text("device_type"),
+  browser: text("browser"),
+  os: text("os"),
+  screenWidth: integer("screen_width"),
+  screenHeight: integer("screen_height"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  pathIdx: index("idx_page_views_path").on(table.path),
+  sessionIdx: index("idx_page_views_session").on(table.sessionId),
+  createdAtIdx: index("idx_page_views_created_at").on(table.createdAt),
+  deviceTypeIdx: index("idx_page_views_device_type").on(table.deviceType),
+}));

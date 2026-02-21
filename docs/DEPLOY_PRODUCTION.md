@@ -146,8 +146,8 @@ Test these critical flows:
 
 ## Support
 
-- Email: support@adiology.com
-- Contact: contact@adiology.com
+- Email: support@adiology.io
+- Contact: contact@adiology.io
 - Address: Sheridan, Wyoming USA 82801
 
 ## Monitoring

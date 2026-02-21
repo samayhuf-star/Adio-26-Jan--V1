@@ -78,7 +78,7 @@ function getExtensionSchema(type: string): string {
     case 'callout':
       return `{"callouts": ["item1", "item2", "item3"]}`;
     case 'sitelink':
-      return `{"sitelinks": [{"text": "link text", "description": "description"}, ...]}`;
+      return `{"sitelinks": [{"text": "link text (max 25 chars)", "description": "description (max 35 chars)", "url": "destination URL"}, ...]}`;
     case 'call':
       return `{"phone": "phone number (e.g., +1-555-123-4567)"}`;
     case 'message':
@@ -114,8 +114,8 @@ function getDefaultExtension(type: string, context: ExtensionGenerationContext):
     case 'sitelink':
       return {
         sitelinks: [
-          { text: context.cta || 'Contact Us', description: 'Get in touch today' },
-          { text: 'Our Services', description: `Learn about our ${keyword} services` }
+          { text: context.cta || 'Contact Us', description: 'Get in touch today', url: context.url || '' },
+          { text: 'Our Services', description: `Learn about our ${keyword} services`, url: context.url || '' }
         ]
       };
     case 'call':

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuthCompat } from '../utils/authCompat';
 import { 
   ArrowRight, ArrowLeft, Check, Globe, Link2, Sparkles, Brain, 
-  Hash, MapPin, FileText, Download, AlertCircle, CheckCircle2,
+  Hash, MapPin, FileText, Download, AlertCircle, AlertTriangle, CheckCircle2,
   Loader2, Search, Filter, X, Plus, Edit3, Trash2, Save,
   Target, Zap, Layers, TrendingUp, Building, ShoppingBag,
   Phone, Mail, Calendar, Clock, Eye, FileSpreadsheet, Copy,
   MessageSquare, Gift, Image as ImageIcon, DollarSign, MapPin as MapPinIcon,
-  Star, RefreshCw, Smartphone, Megaphone, FolderOpen,
+  Star, RefreshCw, Smartphone, Megaphone, FolderOpen, Film,
   Type, ChevronUp, ChevronDown, ChevronRight, MousePointerClick, Briefcase, Info
 } from 'lucide-react';
 import JSZip from 'jszip';
@@ -61,10 +61,15 @@ import { generateDKIAdWithAI } from '../utils/dkiAdGeneratorAI';
 import { CampaignFlowDiagram } from './CampaignFlowDiagram';
 import { TerminalCard, TerminalLine } from './ui/terminal-card';
 import { ApiStatusIndicator } from './ApiStatusIndicator';
+import { GoogleAdsPushButton } from './GoogleAdsPushButton';
+import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
+import { isSuperAdmin } from '../utils/auth';
+import { generateCampaignAssets, assetsToAdExtensions } from '../utils/campaignAssetGenerator';
 
 // Campaign Structure Types (14 structures)
 const CAMPAIGN_STRUCTURES = [
-  { id: 'skag', name: 'SKAG', description: 'Single Keyword Ad Group', icon: Target },
+  { id: 'skag', name: 'SKAG', description: 'Single Keyword Ad Group - All Match Types', icon: Target },
+  { id: 'skag_split', name: 'SKAG Split', description: 'Single Keyword - One Match Type Per Group', icon: Target },
   { id: 'stag', name: 'STAG', description: 'Single Theme Ad Group', icon: Layers },
   { id: 'mix', name: 'Mix', description: 'Hybrid Structure', icon: TrendingUp },
   { id: 'stag_plus', name: 'STAG+', description: 'Smart Grouping with ML', icon: Brain },
@@ -303,6 +308,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [campaignSaved, setCampaignSaved] = useState(false);
+  const [draftCampaignId, setDraftCampaignId] = useState<string | null>(null);
   const [showAnalysisResults, setShowAnalysisResults] = useState(false);
   const [locationSearchTerm, setLocationSearchTerm] = useState({ countries: '', states: '', cities: '', zipCodes: '' });
   const [editingAdId, setEditingAdId] = useState<string | null>(null);
@@ -361,6 +367,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   // Handle initial data from Keyword Planner or saved campaigns
   useEffect(() => {
     if (!initialData) return;
+
+    if (initialData._savedCampaignId) {
+      setDraftCampaignId(initialData._savedCampaignId);
+    }
 
     try {
       // Handle saved campaign data (from CampaignHistoryView)
@@ -551,14 +561,12 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
 
   // Auto-save campaign progress when step changes or key data updates
   useEffect(() => {
-    // Don't save if on step 1 with no data, or if already on success step
     if (currentStep === 1 && !campaignData.url) return;
-    if (currentStep === 7) return; // Don't auto-save after completion
+    if (currentStep === 7) return;
     
-    // Debounce auto-save to avoid too many saves
     const saveTimeout = setTimeout(async () => {
       try {
-        await historyService.save('campaign', campaignData.campaignName || 'Untitled Campaign', {
+        const draftData = {
           name: campaignData.campaignName,
           url: campaignData.url,
           structure: campaignData.selectedStructure || 'stag',
@@ -577,12 +585,22 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           selectedGeoCountries: campaignData.selectedGeoCountries,
           currentStep: currentStep,
           lastSavedAt: new Date().toISOString(),
-        }, 'draft');
-        console.log('📝 Campaign auto-saved at step', currentStep);
+        };
+
+        if (draftCampaignId) {
+          await historyService.update(draftCampaignId, draftData, campaignData.campaignName || 'Untitled Campaign');
+          console.log('📝 Campaign auto-updated at step', currentStep);
+        } else {
+          const savedId = await historyService.save('campaign', campaignData.campaignName || 'Untitled Campaign', draftData, 'draft');
+          if (savedId) {
+            setDraftCampaignId(savedId);
+          }
+          console.log('📝 Campaign auto-saved (new) at step', currentStep);
+        }
       } catch (error) {
         console.error('Auto-save failed:', error);
       }
-    }, 2000); // 2 second debounce
+    }, 2000);
     
     return () => clearTimeout(saveTimeout);
   }, [currentStep, campaignData.url, campaignData.selectedStructure, campaignData.selectedKeywords.length, campaignData.ads.length, campaignData.adGroups.length]);
@@ -954,7 +972,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         minKeywords: 410
       });
       
-      const localKeywords = generateKeywordsUtil({
+      const localKeywords = await generateKeywordsUtil({
         seedKeywords: seedKeywordsString,
         negativeKeywords: negativeKeywordsString,
         vertical: campaignData.vertical || 'Services',
@@ -1527,11 +1545,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   const autoSaveDraft = async () => {
     try {
       if (campaignData.campaignName || campaignData.url) {
-        // Map step number to step name for display
         const stepNames = ['', 'Setup', 'Structure', 'Keywords', 'Ads', 'Locations', 'Extensions', 'Validate', 'Export'];
         const stepName = stepNames[currentStep] || 'Setup';
         
-        await historyService.save('campaign', campaignData.campaignName || 'Draft Campaign', {
+        const draftData = {
           name: campaignData.campaignName || 'Draft Campaign',
           url: campaignData.url,
           structure: campaignData.selectedStructure || 'skag',
@@ -1545,16 +1562,23 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           adGroups: campaignData.adGroups,
           step: currentStep,
           stepName: stepName,
-          createdAt: new Date().toISOString(),
-        }, 'draft');
+          lastSavedAt: new Date().toISOString(),
+        };
+
+        if (draftCampaignId) {
+          await historyService.update(draftCampaignId, draftData, campaignData.campaignName || 'Draft Campaign');
+        } else {
+          const savedId = await historyService.save('campaign', campaignData.campaignName || 'Draft Campaign', draftData, 'draft');
+          if (savedId) {
+            setDraftCampaignId(savedId);
+          }
+        }
       }
     } catch (error) {
-      // Only log unexpected errors - "Item not found" is now handled gracefully
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (!errorMessage.includes('Item not found') && !errorMessage.includes('not found')) {
         console.error('Auto-save failed:', error);
       }
-      // Don't show error to user for auto-save failures
     }
   };
 
@@ -1563,15 +1587,46 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
     const groups: AdGroup[] = [];
     
     if (structureType === 'skag') {
-      // SKAG: One ad group per keyword - no limit, each keyword gets its own ad group
-      keywords.forEach((kw, idx) => {
+      const enabledMatchTypes = Object.entries(campaignData.keywordTypes || { broad: true, phrase: true, exact: true })
+        .filter(([key, val]) => val && key !== 'negative')
+        .map(([key]) => key);
+      const uniqueTexts = new Map<string, any>();
+      keywords.forEach((kw) => {
         const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        if (baseText && !uniqueTexts.has(baseText.toLowerCase())) {
+          uniqueTexts.set(baseText.toLowerCase(), kw);
+        }
+      });
+      let agIdx = 0;
+      uniqueTexts.forEach((kw, _key) => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        agIdx++;
+        const kwVariants = enabledMatchTypes.map(mt => ({ ...kw, matchType: mt }));
         groups.push({
-          id: `ag-${idx + 1}`,
-          name: baseText.substring(0, 50) || `Ad Group ${idx + 1}`,
-          keywords: [kw], // Keep full keyword object with matchType
+          id: `ag-${agIdx}`,
+          name: baseText.substring(0, 50) || `Ad Group ${agIdx}`,
+          keywords: kwVariants,
         });
       });
+      console.log(`[SKAG] Generated ${groups.length} ad groups for ${uniqueTexts.size} unique keywords x ${enabledMatchTypes.length} match types`);
+    } else if (structureType === 'skag_split') {
+      const matchTypeLabels: Record<string, string> = { broad: 'Broad', phrase: 'Phrase', exact: 'Exact' };
+      const enabledMatchTypes = Object.entries(campaignData.keywordTypes || { broad: true, phrase: true, exact: true })
+        .filter(([key, val]) => val && key !== 'negative')
+        .map(([key]) => key);
+      let agIdx = 0;
+      keywords.forEach((kw) => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        enabledMatchTypes.forEach(mt => {
+          agIdx++;
+          groups.push({
+            id: `ag-${agIdx}`,
+            name: `${baseText} - ${matchTypeLabels[mt] || mt}`.substring(0, 50),
+            keywords: [{ ...kw, matchType: mt }],
+          });
+        });
+      });
+      console.log(`[SKAG Split] Generated ${groups.length} ad groups for ${keywords.length} keywords x ${enabledMatchTypes.length} match types`);
     } else if (structureType === 'stag') {
       // STAG: Group by theme (first word)
       const themeGroups: { [key: string]: any[] } = {};
@@ -1591,7 +1646,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         groups.push({
           id: `ag-${idx + 1}`,
           name: `Ad Group ${idx + 1} - ${theme.charAt(0).toUpperCase() + theme.slice(1)}`,
-          keywords: kwList.slice(0, 20), // Keep full keyword objects
+          keywords: kwList,
         });
       });
     } else {
@@ -1778,15 +1833,40 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         }
       }
       
-      setCampaignData(prev => ({
-        ...prev,
-        ads: ads,
-        adTypes: adTypesToGenerate, // Update ad types to match generated ads
+      const generatedAssets = generateCampaignAssets({
+        businessName,
+        industry,
+        keywords: keywordTexts,
+        url: campaignData.url || '',
+        uniqueValueProposition: campaignData.cta || undefined,
+        location: campaignData.locations?.cities?.[0] || campaignData.locations?.states?.[0] || undefined,
+        phoneNumber: universalInput.phoneNumber,
+      });
+
+      const adExtensions = assetsToAdExtensions(generatedAssets);
+
+      const adsWithExtensions = ads.map(ad => ({
+        ...ad,
+        extensions: adExtensions,
       }));
 
-      notifications.success(`Generated ${ads.length} ads successfully`, {
-        title: 'Ads Generated',
-        description: 'RSA, DKI, and Call ads have been created for all ad groups.'
+      console.log('Generated campaign assets:', {
+        sitelinks: generatedAssets.sitelinks.length,
+        callouts: generatedAssets.callouts.length,
+        snippets: generatedAssets.snippets.length,
+        callExtensions: generatedAssets.callExtensions.length,
+      });
+
+      setCampaignData(prev => ({
+        ...prev,
+        ads: adsWithExtensions,
+        adTypes: adTypesToGenerate,
+      }));
+
+      const assetCount = generatedAssets.sitelinks.length + generatedAssets.callouts.length + generatedAssets.snippets.length;
+      notifications.success(`Generated ${ads.length} ads with ${assetCount} assets`, {
+        title: 'Ads & Assets Generated',
+        description: `RSA, DKI, Call ads + ${generatedAssets.sitelinks.length} sitelinks, ${generatedAssets.callouts.length} callouts, ${generatedAssets.snippets.length} snippets`
       });
       
       // Auto-save draft
@@ -2301,7 +2381,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
               newExtension.sitelinks = extensionData.sitelinks.map((sl: any) => ({
                 text: sl.text || sl.linkText || 'Link',
                 description: sl.description || '',
-                url: campaignData.url || ''
+                description1: sl.description || '',
+                description2: sl.description2 || '',
+                url: sl.url || campaignData.url || '',
+                finalUrl: sl.url || campaignData.url || ''
               }));
               newExtension.text = newExtension.sitelinks.map((sl: any) => sl.text).join(', ');
             } else if (extensionType === 'call' && extensionData.phone) {
@@ -2309,12 +2392,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
               newExtension.phoneNumber = extensionData.phone;
               newExtension.countryCode = 'US';
               newExtension.text = newExtension.phone;
-            } else if (extensionType === 'message' && extensionData.message) {
-              newExtension.message = extensionData.message;
-              newExtension.text = newExtension.message;
-            } else if (extensionType === 'promotion' && extensionData.promotionText) {
-              newExtension.promotionText = extensionData.promotionText;
-              newExtension.text = newExtension.promotionText;
             } else {
               newExtension.text = extensionData.text || 'Extension';
             }
@@ -2408,13 +2485,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             newExtension.countryCode = 'US';
             newExtension.text = newExtension.phone;
             break;
-          case 'price':
-            newExtension.priceQualifier = 'From';
-            newExtension.price = '$99';
-            newExtension.currency = 'USD';
-            newExtension.unit = 'per service';
-            newExtension.text = `${newExtension.priceQualifier} ${newExtension.price} ${newExtension.unit}`;
-            break;
           default:
             newExtension.text = newExtension.label;
         }
@@ -2446,125 +2516,102 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       const campaignNameValue = campaignData.campaignName || 'Campaign 1';
       
       // Import the new V5 Master CSV exporter with all 183 columns
-      const { generateMasterCSV, convertToV5Format } = await import('../utils/googleAdsEditorCSVExporterV5');
+      const { generateMasterCSV, convertToV5Format, generateCallOnlyCampaignRows } = await import('../utils/googleAdsEditorCSVExporterV5');
       
       // Collect all extensions from ads - properly handle nested structures
       const sitelinks: any[] = [];
       const callouts: any[] = [];
       const snippets: any[] = [];
+      const callExtensions: any[] = [];
       const seenSitelinks = new Set<string>();
       const seenCallouts = new Set<string>();
       const seenSnippets = new Set<string>();
+      let hasCallExt = false;
       
-      (campaignData.ads || []).forEach((ad: any) => {
-        if (ad.extensions && Array.isArray(ad.extensions)) {
-          ad.extensions.forEach((ext: any) => {
-            if (ext.type === 'sitelink') {
-              // Handle nested sitelinks array structure from ADD ALL button
-              if (ext.sitelinks && Array.isArray(ext.sitelinks)) {
-                ext.sitelinks.forEach((sl: any) => {
-                  const slText = sl.text || sl.linkText || '';
-                  if (slText && !seenSitelinks.has(slText)) {
-                    seenSitelinks.add(slText);
-                    sitelinks.push({
-                      text: slText,
-                      description1: sl.description || sl.description1 || '',
-                      description2: sl.description2 || '',
-                      finalUrl: sl.url || sl.finalUrl || campaignData.url || '',
-                      status: 'Enabled'
-                    });
-                  }
-                });
-              } else {
-                // Handle flat structure
-                const slText = ext.text || ext.linkText || '';
-                if (slText && !seenSitelinks.has(slText)) {
-                  seenSitelinks.add(slText);
-                  sitelinks.push({
-                    text: slText,
-                    description1: ext.description1 || ext.descriptionLine1 || '',
-                    description2: ext.description2 || ext.descriptionLine2 || '',
-                    finalUrl: ext.finalUrl || ext.url || campaignData.url || '',
-                    status: 'Enabled'
-                  });
-                }
-              }
-            } else if (ext.type === 'callout') {
-              // Handle nested callouts array structure from ADD ALL button
-              if (ext.callouts && Array.isArray(ext.callouts)) {
-                ext.callouts.forEach((calloutText: string) => {
-                  if (calloutText && !seenCallouts.has(calloutText)) {
-                    seenCallouts.add(calloutText);
-                    callouts.push({
-                      text: calloutText,
-                      status: 'Enabled'
-                    });
-                  }
-                });
-              } else if (ext.text && !seenCallouts.has(ext.text)) {
-                // Handle flat structure
-                seenCallouts.add(ext.text);
-                callouts.push({
-                  text: ext.text,
+      const processExtension = (ext: any) => {
+        if (ext.type === 'sitelink') {
+          if (ext.sitelinks && Array.isArray(ext.sitelinks)) {
+            ext.sitelinks.forEach((sl: any) => {
+              const slText = sl.text || sl.linkText || '';
+              if (slText && !seenSitelinks.has(slText)) {
+                seenSitelinks.add(slText);
+                sitelinks.push({
+                  text: slText,
+                  description1: sl.description || sl.description1 || '',
+                  description2: sl.description2 || '',
+                  finalUrl: sl.url || sl.finalUrl || campaignData.url || '',
                   status: 'Enabled'
                 });
               }
-            } else if (ext.type === 'snippet') {
-              // Handle snippet with header and values
-              const snippetKey = `${ext.header || ''}:${Array.isArray(ext.values) ? ext.values.join(',') : ext.values || ''}`;
-              if (!seenSnippets.has(snippetKey)) {
-                seenSnippets.add(snippetKey);
-                snippets.push({
-                  header: ext.header || 'Types',
-                  values: Array.isArray(ext.values) ? ext.values.join(', ') : (ext.values || ''),
-                  status: 'Enabled'
-                });
-              }
+            });
+          } else {
+            const slText = ext.text || ext.linkText || '';
+            if (slText && !seenSitelinks.has(slText)) {
+              seenSitelinks.add(slText);
+              sitelinks.push({
+                text: slText,
+                description1: ext.description1 || ext.descriptionLine1 || '',
+                description2: ext.description2 || ext.descriptionLine2 || '',
+                finalUrl: ext.finalUrl || ext.url || campaignData.url || '',
+                status: 'Enabled'
+              });
             }
+          }
+        } else if (ext.type === 'callout') {
+          if (ext.callouts && Array.isArray(ext.callouts)) {
+            ext.callouts.forEach((calloutText: string) => {
+              if (calloutText && !seenCallouts.has(calloutText)) {
+                seenCallouts.add(calloutText);
+                callouts.push({
+                  text: calloutText,
+                  status: 'Enabled'
+                });
+              }
+            });
+          } else if (ext.text && !seenCallouts.has(ext.text)) {
+            seenCallouts.add(ext.text);
+            callouts.push({
+              text: ext.text,
+              status: 'Enabled'
+            });
+          }
+        } else if (ext.type === 'snippet') {
+          const snippetKey = `${ext.header || ''}:${Array.isArray(ext.values) ? ext.values.join(',') : ext.values || ''}`;
+          if (!seenSnippets.has(snippetKey)) {
+            seenSnippets.add(snippetKey);
+            snippets.push({
+              header: ext.header || 'Types',
+              values: Array.isArray(ext.values) ? ext.values.join(', ') : (ext.values || ''),
+              status: 'Enabled'
+            });
+          }
+        } else if (ext.type === 'call' && !hasCallExt) {
+          hasCallExt = true;
+          callExtensions.push({
+            phoneNumber: ext.phone || ext.phoneNumber || '',
+            countryCode: ext.countryCode || 'US',
+            status: 'Enabled'
           });
         }
+      };
+
+      // Collect extensions from individual ads
+      (campaignData.ads || []).forEach((ad: any) => {
+        if (ad.extensions && Array.isArray(ad.extensions)) {
+          ad.extensions.forEach(processExtension);
+        }
       });
-      
-      // Add default extensions if none found to ensure CSV always has extensions
-      if (sitelinks.length === 0) {
-        sitelinks.push(
-          {
-            text: 'Contact Us',
-            description1: 'Get in touch today',
-            description2: 'Free consultation',
-            finalUrl: campaignData.url || '',
-            status: 'Enabled'
-          },
-          {
-            text: 'Our Services',
-            description1: 'View all services',
-            description2: 'Professional solutions',
-            finalUrl: campaignData.url || '',
-            status: 'Enabled'
-          }
-        );
+
+      // Also collect from top-level campaignData.extensions (fallback)
+      if (campaignData.extensions && Array.isArray(campaignData.extensions)) {
+        campaignData.extensions.forEach(processExtension);
       }
       
-      if (callouts.length === 0) {
-        callouts.push(
-          { text: '24/7 Support', status: 'Enabled' },
-          { text: 'Free Consultation', status: 'Enabled' },
-          { text: 'Expert Service', status: 'Enabled' }
-        );
-      }
-      
-      if (snippets.length === 0) {
-        snippets.push({
-          header: 'Services',
-          values: 'Professional Service, Expert Solutions, Quality Work',
-          status: 'Enabled'
-        });
-      }
-      
-      console.log('📦 Extensions collected for CSV:', { 
+      console.log('Extensions collected for CSV:', { 
         sitelinks: sitelinks.length, 
         callouts: callouts.length, 
-        snippets: snippets.length 
+        snippets: snippets.length,
+        callExtensions: callExtensions.length,
       });
       
       // Build the V5 campaign data structure with all 183 columns
@@ -2586,7 +2633,8 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             const kwText = typeof kw === 'string' ? kw : (kw.text || kw.keyword || '');
             let matchType: 'Broad' | 'Phrase' | 'Exact' = 'Broad';
             if (typeof kw === 'object' && kw.matchType) {
-              matchType = kw.matchType;
+              const mt = String(kw.matchType).toLowerCase();
+              matchType = mt === 'exact' ? 'Exact' : mt === 'phrase' ? 'Phrase' : 'Broad';
             } else if (typeof kw === 'string') {
               if (kw.startsWith('[') && kw.endsWith(']')) matchType = 'Exact';
               else if (kw.startsWith('"') && kw.endsWith('"')) matchType = 'Phrase';
@@ -2613,113 +2661,124 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         },
         sitelinks: sitelinks.slice(0, 4),
         callouts: callouts.slice(0, 4),
-        snippets: snippets.slice(0, 2)
+        snippets: snippets.slice(0, 2),
+        callExtensions: callExtensions.length > 0 ? callExtensions : undefined,
       };
       
-      // Add ads to ALL ad groups - each ad group should have the same ads
-      // This ensures every ad group has RSAs for proper campaign structure
-      const adsToDistribute = (campaignData.ads || []).map((ad: any) => {
-        // Handle both structures: headlines array OR headline1/headline2/etc properties
-        let headlines: string[] = [];
+      const extractHeadlines = (ad: any): string[] => {
         if (ad.headlines && Array.isArray(ad.headlines)) {
-          // RSA ads with headlines array
-          headlines = ad.headlines.map((h: any) => typeof h === 'string' ? h : (h.text || '')).filter((h: string) => h);
-        } else {
-          // DKI/Call ads with headline1, headline2, etc.
-          headlines = [
-            ad.headline1 || '',
-            ad.headline2 || '',
-            ad.headline3 || '',
-            ad.headline4 || '',
-            ad.headline5 || '',
-            ad.headline6 || '',
-            ad.headline7 || '',
-            ad.headline8 || '',
-            ad.headline9 || '',
-            ad.headline10 || '',
-            ad.headline11 || '',
-            ad.headline12 || '',
-            ad.headline13 || '',
-            ad.headline14 || '',
-            ad.headline15 || ''
-          ].filter((h: string) => h);
+          return ad.headlines.map((h: any) => typeof h === 'string' ? h : (h.text || '')).filter((h: string) => h);
         }
-        
-        // Handle both structures: descriptions array OR description1/description2/etc properties
-        let descriptions: string[] = [];
+        return [
+          ad.headline1 || '', ad.headline2 || '', ad.headline3 || '',
+          ad.headline4 || '', ad.headline5 || '', ad.headline6 || '',
+          ad.headline7 || '', ad.headline8 || '', ad.headline9 || '',
+          ad.headline10 || '', ad.headline11 || '', ad.headline12 || '',
+          ad.headline13 || '', ad.headline14 || '', ad.headline15 || ''
+        ].filter((h: string) => h);
+      };
+
+      const extractDescriptions = (ad: any): string[] => {
         if (ad.descriptions && Array.isArray(ad.descriptions)) {
-          descriptions = ad.descriptions.map((d: any) => typeof d === 'string' ? d : (d.text || '')).filter((d: string) => d);
-        } else {
-          descriptions = [
-            ad.description1 || '',
-            ad.description2 || '',
-            ad.description3 || '',
-            ad.description4 || ''
-          ].filter((d: string) => d);
+          return ad.descriptions.map((d: any) => typeof d === 'string' ? d : (d.text || '')).filter((d: string) => d);
         }
-        
-        return {
-          type: ad.type === 'call_only' ? 'CallOnly' : 
-                ad.type === 'dki' ? 'DKI' : 'RSA',
-          headlines,
-          descriptions,
-          finalUrl: ad.finalUrl || campaignData.url || '',
-          path1: ad.path1 || '',
-          path2: ad.path2 || '',
-          status: 'Enabled'
-        };
-      });
-      
-      // Distribute ads to ALL ad groups
+        return [
+          ad.description1 || '', ad.description2 || '',
+          ad.description3 || '', ad.description4 || ''
+        ].filter((d: string) => d);
+      };
+
+      const allAds = campaignData.ads || [];
+      const rsaAd = allAds.find((ad: any) => ad.type === 'rsa' || ad.adType === 'RSA' || ad.type === 'Responsive search ad');
+      const dkiAd = allAds.find((ad: any) => ad.type === 'dki' || ad.adType === 'DKI' || ad.type === 'Dynamic keyword insertion');
+      const callAd = allAds.find((ad: any) => ad.type === 'call' || ad.type === 'call_only' || ad.adType === 'CallOnly');
+
+      let mergedHeadlines: string[] = rsaAd ? extractHeadlines(rsaAd) : [];
+      let mergedDescriptions: string[] = rsaAd ? extractDescriptions(rsaAd) : [];
+
+      if (mergedHeadlines.length === 0 && !rsaAd) {
+        const anyAdWithHeadlines = allAds.find((ad: any) => {
+          const h = extractHeadlines(ad);
+          return h.length > 0;
+        });
+        if (anyAdWithHeadlines) {
+          mergedHeadlines = extractHeadlines(anyAdWithHeadlines);
+          mergedDescriptions = extractDescriptions(anyAdWithHeadlines);
+        }
+      }
+      let mergedPath1 = rsaAd?.path1 || rsaAd?.displayPath?.[0] || '';
+      let mergedPath2 = rsaAd?.path2 || rsaAd?.displayPath?.[1] || '';
+      let mergedFinalUrl = rsaAd?.finalUrl || rsaAd?.final_url || campaignData.url || '';
+      if (!mergedFinalUrl) {
+        const anyAdWithUrl = allAds.find((ad: any) => ad.finalUrl || ad.final_url);
+        if (anyAdWithUrl) mergedFinalUrl = anyAdWithUrl.finalUrl || anyAdWithUrl.final_url;
+      }
+
+      if (dkiAd) {
+        const dkiHeadlines = extractHeadlines(dkiAd);
+        const dkiDescriptions = extractDescriptions(dkiAd);
+        const seenH = new Set(mergedHeadlines.map((h: string) => h.toLowerCase().trim()));
+        for (const dh of dkiHeadlines) {
+          if (mergedHeadlines.length >= 15) break;
+          if (!seenH.has(dh.toLowerCase().trim())) {
+            seenH.add(dh.toLowerCase().trim());
+            mergedHeadlines.push(dh);
+          }
+        }
+        const seenD = new Set(mergedDescriptions.map((d: string) => d.toLowerCase().trim()));
+        for (const dd of dkiDescriptions) {
+          if (mergedDescriptions.length >= 4) break;
+          if (!seenD.has(dd.toLowerCase().trim())) {
+            seenD.add(dd.toLowerCase().trim());
+            mergedDescriptions.push(dd);
+          }
+        }
+        if (!mergedPath1 && dkiAd.path1) mergedPath1 = dkiAd.path1;
+        if (!mergedPath2 && dkiAd.path2) mergedPath2 = dkiAd.path2;
+        if (!mergedFinalUrl && dkiAd.finalUrl) mergedFinalUrl = dkiAd.finalUrl;
+      }
+
+      const fallbackHeadlines = [
+        'Professional Service Near You',
+        'Get a Free Quote Today',
+        'Trusted Local Experts'
+      ];
+      const fallbackDescs = [
+        'Contact us today for professional service. Fast, reliable, and affordable.',
+        'Get expert help from our experienced team. Call now for a free quote.'
+      ];
+      if (mergedHeadlines.length < 3) {
+        for (const fh of fallbackHeadlines) {
+          if (mergedHeadlines.length >= 3) break;
+          if (!mergedHeadlines.some(h => h.toLowerCase() === fh.toLowerCase())) {
+            mergedHeadlines.push(fh);
+          }
+        }
+      }
+      if (mergedDescriptions.length < 2) {
+        for (const fd of fallbackDescs) {
+          if (mergedDescriptions.length >= 2) break;
+          if (!mergedDescriptions.some(d => d.toLowerCase() === fd.toLowerCase())) {
+            mergedDescriptions.push(fd);
+          }
+        }
+      }
+
+      const mergedRSA = {
+        type: 'RSA' as const,
+        headlines: mergedHeadlines,
+        descriptions: mergedDescriptions,
+        finalUrl: mergedFinalUrl || campaignData.url || '',
+        path1: mergedPath1,
+        path2: mergedPath2,
+        status: 'Enabled'
+      };
+
       v5CampaignData.adGroups.forEach((group: any) => {
-        group.ads = [...adsToDistribute];
+        group.ads = [mergedRSA];
       });
-      
-      // Legacy code kept for backwards compatibility - adds any ads with specific ad group assignments
-      (campaignData.ads || []).forEach((ad: any) => {
-        const adGroupName = ad.adGroup || '';
-        if (!adGroupName) return; // Skip if no specific ad group assigned
-        
-        let targetGroup = v5CampaignData.adGroups.find((ag: any) => ag.name === adGroupName);
-        
-        if (!targetGroup) return; // Skip if ad group not found
-        
-        // Check if this ad is already added (avoid duplicates)
-        const adKey = `${ad.headline1}::${ad.headline2}::${ad.description1}`;
-        const existingAd = targetGroup.ads.find((existing: any) => 
-          `${existing.headlines[0]}::${existing.headlines[1]}::${existing.descriptions[0]}` === adKey
-        );
-        
-        if (existingAd) return; // Already added
-        
-        // Handle both structures for legacy code
-        let legacyHeadlines: string[] = [];
-        if (ad.headlines && Array.isArray(ad.headlines)) {
-          legacyHeadlines = ad.headlines.map((h: any) => typeof h === 'string' ? h : (h.text || '')).filter((h: string) => h);
-        } else {
-          legacyHeadlines = [ad.headline1, ad.headline2, ad.headline3, ad.headline4, ad.headline5].filter((h: string) => h);
-        }
-        
-        let legacyDescriptions: string[] = [];
-        if (ad.descriptions && Array.isArray(ad.descriptions)) {
-          legacyDescriptions = ad.descriptions.map((d: any) => typeof d === 'string' ? d : (d.text || '')).filter((d: string) => d);
-        } else {
-          legacyDescriptions = [ad.description1, ad.description2].filter((d: string) => d);
-        }
-        
-        targetGroup.ads.push({
-            type: ad.type === 'call_only' ? 'CallOnly' : 
-                  ad.type === 'dki' ? 'DKI' : 'RSA',
-            headlines: legacyHeadlines,
-            descriptions: legacyDescriptions,
-            path1: ad.path1 || '',
-            path2: ad.path2 || '',
-            finalUrl: ad.finalUrl || campaignData.url || '',
-            phoneNumber: ad.phoneNumber || '',
-            verificationUrl: ad.verificationUrl || '',
-            businessName: ad.businessName || ''
-          });
-      });
+
+      console.log(`[CSV] Merged RSA: ${mergedHeadlines.length} headlines, ${mergedDescriptions.length} descriptions. DKI headlines folded in. Call-Only ad handled via call extension on campaign row.`);
       
       // If no specific locations, add the target country
       if (!v5CampaignData.locations?.countries?.length && 
@@ -2732,10 +2791,28 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         };
       }
       
-      // Generate the master CSV with all 183 columns
-      const csvContent = generateMasterCSV(v5CampaignData);
-      
-      // Store CSV data in state (already includes BOM)
+      let csvContent = generateMasterCSV(v5CampaignData);
+
+      if (callAd) {
+        const countryCode = v5CampaignData.locations?.countryCode || 
+          (campaignData.targetCountry === 'United States' ? 'US' :
+           campaignData.targetCountry === 'Canada' ? 'CA' :
+           campaignData.targetCountry === 'United Kingdom' ? 'GB' :
+           campaignData.targetCountry === 'Australia' ? 'AU' :
+           campaignData.targetCountry === 'India' ? 'IN' : 'US');
+        const callAdData = {
+          headlines: extractHeadlines(callAd),
+          descriptions: extractDescriptions(callAd),
+          finalUrl: callAd.finalUrl || campaignData.url || '',
+          phoneNumber: callAd.phoneNumber || '',
+          businessName: callAd.businessName || '',
+          countryCode: countryCode,
+        };
+        const callRows = generateCallOnlyCampaignRows(callAdData, v5CampaignData);
+        csvContent = csvContent + '\r\n' + callRows;
+        console.log(`[CSV] Appended Call-Only campaign "${v5CampaignData.campaignName} - Call Only" with phone: ${callAdData.phoneNumber}, country: ${countryCode}`);
+      }
+
       setCampaignData(prev => ({
         ...prev,
         csvData: csvContent,
@@ -2761,60 +2838,62 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
     if (!campaignData.csvData) return null;
     
     try {
-      // Parse the CSV to count actual rows by type
-      const csvText = campaignData.csvData.replace(/^\uFEFF/, ''); // Remove BOM
+      const csvText = campaignData.csvData.replace(/^\uFEFF/, '');
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
       const rows = parsed.data as Record<string, string>[];
       const totalRows = rows.length || 0;
       
-      // Count entities from actual CSV data (matches what Google Ads Editor will import)
-      let campaigns = 0;
-      let adGroupsSet = new Set<string>();
+      const campaignSet = new Set<string>();
+      const adGroupsSet = new Set<string>();
+      const uniqueKeywordsSet = new Set<string>();
       let keywords = 0;
       let negativeKeywords = 0;
-      let ads = 0;
+      let rsaAds = 0;
+      let callAds = 0;
       let locations = 0;
       
       rows.forEach(row => {
+        const campaignName = row['Campaign'] || '';
         const adGroupName = row['Ad Group'] || '';
         const keyword = row['Keyword'] || '';
+        const criterionType = row['Criterion Type'] || '';
         const negativeKw = row['Keyword (Negative)'] || '';
         const adType = row['Ad Type'] || '';
         const locationType = row['Location Type'] || '';
-        const headline1 = row['Headline 1'] || '';
         
-        // Count campaigns (rows with budget and no ad group)
-        if (row['Campaign Daily Budget'] && !adGroupName) {
-          campaigns++;
+        if (row['Campaign Daily Budget'] && campaignName && !adGroupName) {
+          campaignSet.add(campaignName);
         }
         
-        // Count unique ad groups (rows with ad group name but no keyword/ad)
-        if (adGroupName && !keyword && !negativeKw && !adType && !locationType) {
-          adGroupsSet.add(adGroupName);
+        if (adGroupName && !adType && !keyword && !negativeKw && !locationType) {
+          adGroupsSet.add(campaignName + '|||' + adGroupName);
         }
         
-        // Count keywords
+        if (adGroupName && keyword) {
+          adGroupsSet.add(campaignName + '|||' + adGroupName);
+        }
+        
         if (keyword) {
           keywords++;
+          const cleanKeyword = keyword.replace(/^\[|\]$|^"|"$/g, '').toLowerCase().trim();
+          uniqueKeywordsSet.add(campaignName + '|||' + adGroupName + '|||' + cleanKeyword);
         }
         
-        // Count negative keywords
         if (negativeKw) {
           negativeKeywords++;
         }
         
-        // Count ads (rows with Ad Type and headlines)
-        if (adType && headline1) {
-          ads++;
+        if (adType === 'Responsive search ad') {
+          rsaAds++;
+        } else if (adType === 'Call-only ad') {
+          callAds++;
         }
         
-        // Count locations
         if (locationType) {
           locations++;
         }
       });
       
-      // Count extensions from campaignData.ads (stored as ad.extensions arrays)
       let extensions = 0;
       (campaignData.ads || []).forEach((ad: any) => {
         if (ad.extensions && Array.isArray(ad.extensions)) {
@@ -2822,12 +2901,17 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         }
       });
       
+      const totalAds = rsaAds + callAds;
+      
       const stats = {
-        campaigns: Math.max(campaigns, 1),
+        campaigns: Math.max(campaignSet.size, 1),
         adGroups: adGroupsSet.size || campaignData.adGroups.length,
         keywords: keywords,
+        uniqueKeywords: uniqueKeywordsSet.size,
         negativeKeywords: negativeKeywords,
-        ads: ads,
+        ads: totalAds,
+        rsaAds: rsaAds,
+        callAds: callAds,
         extensions: extensions,
         locations: locations || 1,
         totalRows: totalRows,
@@ -2969,7 +3053,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       // Generate CSV first
       await handleGenerateCSV();
 
-      await historyService.save('campaign', campaignData.campaignName, {
+      const completedData = {
         name: campaignData.campaignName,
         url: campaignData.url,
         structure: campaignData.selectedStructure || 'stag',
@@ -2982,8 +3066,18 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         negativeKeywords: campaignData.negativeKeywords,
         adGroups: campaignData.adGroups,
         csvData: campaignData.csvData,
-        createdAt: new Date().toISOString(),
-      }, 'completed');
+        completedAt: new Date().toISOString(),
+      };
+
+      if (draftCampaignId) {
+        await historyService.update(draftCampaignId, completedData, campaignData.campaignName);
+        await historyService.markAsCompleted(draftCampaignId);
+      } else {
+        const savedId = await historyService.save('campaign', campaignData.campaignName, completedData, 'completed');
+        if (savedId) {
+          setDraftCampaignId(savedId);
+        }
+      }
 
       setCampaignSaved(true);
       setCurrentStep(7); // Show success screen
@@ -3967,17 +4061,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
     const allAdGroups = ['ALL_AD_GROUPS', ...campaignData.adGroups.map(ag => ag.name)];
     const displayAds = campaignData.ads.length > 0 ? campaignData.ads : [];
     const extensionTypes = [
-      { id: 'snippet', label: 'SNIPPET EXTENSION', icon: FileText },
-      { id: 'callout', label: 'CALLOUT EXTENSION', icon: MessageSquare },
-      { id: 'sitelink', label: 'SITELINK EXTENSION', icon: Link2 },
-      { id: 'call', label: 'CALL EXTENSION', icon: Phone },
-      { id: 'price', label: 'PRICE EXTENSION', icon: DollarSign },
-      { id: 'app', label: 'APP EXTENSION', icon: Smartphone },
-      { id: 'location', label: 'LOCATION EXTENSION', icon: MapPinIcon },
-      { id: 'message', label: 'MESSAGE EXTENSION', icon: MessageSquare },
-      { id: 'leadform', label: 'LEAD FORM EXTENSION', icon: FileText },
-      { id: 'promotion', label: 'PROMOTION EXTENSION', icon: Gift },
-      { id: 'image', label: 'IMAGE EXTENSION', icon: ImageIcon },
+      { id: 'snippet', label: 'SNIPPET', icon: FileText },
+      { id: 'callout', label: 'CALLOUT', icon: MessageSquare },
+      { id: 'sitelink', label: 'SITELINK', icon: Link2 },
+      { id: 'call', label: 'CALL', icon: Phone },
     ];
 
     return (
@@ -4237,6 +4324,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                                     {ext.type === 'leadform' && <FileText className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />}
                                     {ext.type === 'promotion' && <Gift className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />}
                                     {ext.type === 'image' && <ImageIcon className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />}
+                                    {ext.type === 'video' && <Film className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />}
                                     <div className="flex-1 min-w-0">
                                       <span className="text-xs text-slate-500 uppercase font-semibold block mb-1">
                                         {ext.label || ext.type.charAt(0).toUpperCase() + ext.type.slice(1).replace(/([A-Z])/g, ' $1')}
@@ -5058,7 +5146,9 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center mx-auto mb-2 shadow-lg">
                   <FileText className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-0.5">{campaignData.ads.length * Math.max(1, campaignData.adGroups.length)}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-0.5">
+                  {campaignData.ads.length * Math.max(1, campaignData.adGroups.length)}
+                </div>
                 <div className="text-xs font-medium text-slate-700">Ads</div>
               </CardContent>
             </Card>
@@ -5068,7 +5158,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-2 shadow-lg">
                   <Hash className="w-4 h-4 text-white" />
                 </div>
-                <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-0.5">{campaignData.selectedKeywords.length}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-0.5">{campaignData.adGroups.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0)}</div>
                 <div className="text-xs font-medium text-slate-700">Keywords</div>
               </CardContent>
             </Card>
@@ -5150,7 +5240,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   <span className="text-emerald-400">&#10003;</span>
                   <span className="text-slate-400">[{new Date().toLocaleTimeString('en-US', { hour12: false })}]</span>
                   <span className="text-slate-300">Keywords Selected:</span>
-                  <span className="text-pink-400 font-semibold">{campaignData.selectedKeywords.length}</span>
+                  <span className="text-pink-400 font-semibold">{campaignData.adGroups.reduce((sum: number, ag: any) => sum + (ag.keywords?.length || 0), 0)}</span>
                 </div>
                 
                 <div className="flex items-start gap-2">
@@ -5199,8 +5289,14 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             </div>
           </div>
 
+          {isSuperAdmin() && (
+          <div className="mb-4">
+            <GoogleAdsConnectionStatus variant="full" />
+          </div>
+          )}
+
           {/* Primary Action Section */}
-          <div className="mb-6">
+          <div className="mb-6 space-y-3">
           <Button
             onClick={handleDownloadCSV}
             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-purple-700 text-white shadow-lg shadow-green-200/50 h-14 text-lg font-semibold"
@@ -5208,6 +5304,26 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             <Download className="w-5 h-5 mr-2" />
             Download CSV for Google Ads Editor
           </Button>
+          {isSuperAdmin() && (
+          <GoogleAdsPushButton
+            campaignData={{
+              campaignName: campaignData.campaignName,
+              dailyBudget: 50,
+              adGroups: campaignData.adGroups.map(ag => ({
+                name: ag.name || 'Ad Group',
+                keywords: ag.keywords?.map((kw: any) => typeof kw === 'string' ? kw : kw?.text || kw?.keyword || '') || [],
+              })),
+              ads: campaignData.ads,
+              url: campaignData.url,
+              locations: campaignData.locations,
+              targetCountry: campaignData.targetCountry,
+            }}
+            campaignHistoryId={draftCampaignId || undefined}
+            variant="primary"
+            size="lg"
+            className="w-full h-14 text-lg font-semibold"
+          />
+          )}
           </div>
 
 
@@ -5297,6 +5413,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       </Card>
 
       {campaignData.csvData && (
+        <>
         <Card className="border-indigo-200 bg-indigo-50">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -5322,6 +5439,25 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             </div>
           </CardContent>
         </Card>
+
+        {(campaignData.selectedStructure === 'skag' || campaignData.selectedStructure === 'skag_split') && (
+          <Card className="border-amber-200 bg-amber-50 mt-4">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Google Ads Editor Import Note</p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    {campaignData.selectedStructure === 'skag_split'
+                      ? 'SKAG Split creates 3 ad groups per keyword (one per match type) with identical ad copy. Google Ads Editor will show some ads and keywords as "skipped" during import — this is normal deduplication behavior and your campaign will work correctly.'
+                      : 'SKAG creates one ad group per keyword with all match types. If identical ads appear across ad groups, Google Ads Editor may show some as "skipped" during import — this is expected behavior.'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        </>
       )}
 
     </div>
@@ -5617,11 +5753,11 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-indigo-600">{stats.keywords}</div>
-                    <div className="text-sm text-slate-600">Keywords</div>
+                    <div className="text-sm text-slate-600">Keywords{stats.uniqueKeywords !== stats.keywords ? ` (${stats.uniqueKeywords} unique)` : ''}</div>
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-indigo-600">{stats.ads}</div>
-                    <div className="text-sm text-slate-600">Ads</div>
+                    <div className="text-sm text-slate-600">Ads{stats.callAds > 0 ? ` (${stats.rsaAds} RSA + ${stats.callAds} Call)` : ''}</div>
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-indigo-600">{stats.negativeKeywords}</div>
@@ -5903,6 +6039,7 @@ function rankCampaignStructures(intent: IntentResult, vertical: string): { id: s
     scores['geo'] += 5;            // Local doctors/hospitals matter
     scores['intent'] += 4;         // Specific health issues/services
     scores['skag'] += 3;           // Single keyword groups work well
+    scores['skag_split'] += 2;     // Split match types for medical terms
     scores['stag'] += 3;           // Theme-based (symptoms/services)
   } 
   else if (vertical === 'Real Estate') {
@@ -5917,6 +6054,7 @@ function rankCampaignStructures(intent: IntentResult, vertical: string): { id: s
     scores['geo'] += 4;            // Local laws matter
     scores['intent'] += 4;         // Type of legal service
     scores['skag'] += 3;           // Specific legal terms
+    scores['skag_split'] += 3;     // Granular control for legal terms
     scores['stag'] += 3;           // Service types
   } 
   else if (vertical === 'Finance') {
@@ -5937,6 +6075,7 @@ function rankCampaignStructures(intent: IntentResult, vertical: string): { id: s
     scores['geo'] += 4;            // Local services
     scores['intent'] += 4;         // Type of service
     scores['skag'] += 3;           // Specific services
+    scores['skag_split'] += 2;     // Split match types for service keywords
     scores['stag'] += 3;           // Service categories
   }
 
@@ -5946,6 +6085,7 @@ function rankCampaignStructures(intent: IntentResult, vertical: string): { id: s
     // Phone-based CTAs
     scores['geo'] += 2;            // Local calls matter
     scores['skag'] += 2;           // Specific keyword calls
+    scores['skag_split'] += 3;     // Split by match type ideal for calls
     scores['match_type'] += 1;     // Match type variations help
   } 
   else if (intent.intentId === IntentId.LEAD) {

@@ -121,10 +121,6 @@ export const WelcomeStep: React.FC = () => {
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500">
           <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-green-500" />
-            <span>No credit card required</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-500" />
             <span>Free 14-day trial</span>
           </div>
           <div className="flex items-center gap-2">

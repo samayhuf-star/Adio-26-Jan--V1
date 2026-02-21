@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Save, X, FileText, ImageIcon, Film, Loader } from 'lucide-react';
 import { notifications } from '../utils/notifications';
-import { nhost } from '../lib/nhost';
+import { getSessionTokenSync } from '../utils/auth';
 
 interface DocumentationItem {
   id: string;
@@ -27,6 +27,23 @@ const DEFAULT_CATEGORIES = [
   'FAQ'
 ];
 
+async function apiRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const token = getSessionTokenSync();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(endpoint, { ...options, headers });
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
 export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
   const [docs, setDocs] = useState<DocumentationItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -43,7 +60,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
     status: 'draft'
   });
 
-  // Load docs from Nhost
   useEffect(() => {
     loadDocumentation();
   }, []);
@@ -51,30 +67,10 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
   const loadDocumentation = async () => {
     setLoading(true);
     try {
-      // Load from Nhost support_tickets collection
       try {
-        const { data, error } = await nhost.graphql.request(`
-          query GetSupportTickets {
-            support_tickets(order_by: {created_at: desc}, limit: 100) {
-              id
-              subject
-              category
-              message
-              images
-              videos
-              status
-              created_at
-              updated_at
-            }
-          }
-        `);
+        const data = await apiRequest('/api/support-tickets');
         
-        if (error) {
-          throw error;
-        }
-        
-        // Transform support_tickets to documentation format
-        const formattedDocs: DocumentationItem[] = data?.support_tickets?.map((ticket: any) => ({
+        const formattedDocs: DocumentationItem[] = (data?.support_tickets || []).map((ticket: any) => ({
           id: ticket.id,
           title: ticket.subject || 'Untitled',
           category: ticket.category || 'Getting Started',
@@ -84,13 +80,12 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
           status: ticket.status === 'published' ? 'published' : 'draft',
           created_at: ticket.created_at || new Date().toISOString(),
           updated_at: ticket.updated_at || new Date().toISOString(),
-        })) || [];
+        }));
         
         setDocs(formattedDocs);
         console.log(`📚 Loaded ${formattedDocs.length} documentation items`);
-      } catch (nhostError) {
-        console.error('Error loading from Nhost:', nhostError);
-        // Fallback to localStorage
+      } catch (apiError) {
+        console.error('Error loading from API:', apiError);
         const stored = localStorage.getItem('admin_docs');
         if (stored) {
           try {
@@ -115,7 +110,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
     }
   };
 
-  // Save docs to localStorage and Nhost
   const saveDocs = async (newDoc?: Partial<DocumentationItem>, docId?: string) => {
     if (!newDoc) return;
 
@@ -124,7 +118,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
       let updatedDocs = [...docs];
       
       if (docId) {
-        // Update existing
         updatedDocs = updatedDocs.map(d => d.id === docId ? {
           ...d,
           ...newDoc,
@@ -132,29 +125,21 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
         } as DocumentationItem : d);
         notifications.success('Documentation updated');
         
-        // Update in Nhost
         try {
-          await nhost.graphql.request(`
-            mutation UpdateSupportTicket($id: uuid!, $updates: support_tickets_set_input!) {
-              update_support_tickets_by_pk(pk_columns: {id: $id}, _set: $updates) {
-                id
-              }
-            }
-          `, {
-            id: docId,
-            updates: {
+          await apiRequest(`/api/support-tickets/${docId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
               subject: newDoc.title,
               message: newDoc.content,
               status: newDoc.status === 'published' ? 'published' : 'draft',
               category: newDoc.category,
               updated_at: new Date().toISOString()
-            }
+            }),
           });
-        } catch (nhostError) {
-          console.error('Error updating in Nhost:', nhostError);
+        } catch (apiError) {
+          console.error('Error updating via API:', apiError);
         }
       } else {
-        // Create new
         const newDocItem: DocumentationItem = {
           id: `doc-${Date.now()}`,
           title: newDoc.title!,
@@ -169,29 +154,22 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
         updatedDocs = [newDocItem, ...updatedDocs];
         notifications.success('Documentation created');
         
-        // Save to Nhost
         try {
-          await nhost.graphql.request(`
-            mutation InsertSupportTicket($object: support_tickets_insert_input!) {
-              insert_support_tickets_one(object: $object) {
-                id
-              }
-            }
-          `, {
-            object: {
+          await apiRequest('/api/support-tickets', {
+            method: 'POST',
+            body: JSON.stringify({
               subject: newDoc.title,
               message: newDoc.content,
               status: newDoc.status === 'published' ? 'published' : 'draft',
               category: newDoc.category,
               priority: 'medium'
-            }
+            }),
           });
-        } catch (nhostError) {
-          console.error('Error creating in Nhost:', nhostError);
+        } catch (apiError) {
+          console.error('Error creating via API:', apiError);
         }
       }
       
-      // Save to localStorage
       localStorage.setItem('admin_docs', JSON.stringify(updatedDocs));
       setDocs(updatedDocs);
     } catch (error) {
@@ -222,17 +200,13 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
   const handleDeleteDoc = async (id: string) => {
     if (confirm('Are you sure you want to delete this documentation?')) {
       try {
-        await nhost.graphql.request(`
-          mutation DeleteSupportTicket($id: uuid!) {
-            delete_support_tickets_by_pk(id: $id) {
-              id
-            }
-          }
-        `, { id });
+        await apiRequest(`/api/support-tickets/${id}`, {
+          method: 'DELETE',
+        });
         notifications.success('Documentation deleted');
         await loadDocumentation();
       } catch (error) {
-        console.error('Error deleting from Nhost:', error);
+        console.error('Error deleting documentation:', error);
         notifications.error('Failed to delete documentation');
       }
     }
@@ -325,7 +299,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
         </div>
 
         <div className="bg-white rounded-lg p-6 space-y-4 border border-gray-200">
-          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
             <input
@@ -337,7 +310,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
             />
           </div>
 
-          {/* Category */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
             <select
@@ -351,7 +323,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
             </select>
           </div>
 
-          {/* Content Editor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Content *</label>
             <textarea
@@ -363,7 +334,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
             />
           </div>
 
-          {/* Images */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
             <div className="flex gap-2 mb-3">
@@ -400,7 +370,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
             )}
           </div>
 
-          {/* Videos */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Videos</label>
             <div className="flex gap-2 mb-3">
@@ -441,7 +410,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
             )}
           </div>
 
-          {/* Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
             <select
@@ -454,7 +422,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
             </select>
           </div>
 
-          {/* Buttons */}
           <div className="flex gap-3 pt-4">
             <button
               onClick={handleSave}
@@ -493,7 +460,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-3">
         <input
           type="text"
@@ -514,7 +480,6 @@ export const DocumentationManager: React.FC<DocumentationManagerProps> = () => {
         </select>
       </div>
 
-      {/* Documentation List */}
       <div className="space-y-3">
         {filteredDocs.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">

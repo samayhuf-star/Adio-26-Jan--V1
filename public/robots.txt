@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /features/
+Allow: /contact
+Allow: /help-center
+Allow: /lifetime-deal
+Disallow: /api/
+Disallow: /admin/
+Disallow: /superadmin
+Disallow: /payment
+Disallow: /signup
+Disallow: /verify-email
+Disallow: /reset-password
+
+Sitemap: https://adiology.io/sitemap.xml

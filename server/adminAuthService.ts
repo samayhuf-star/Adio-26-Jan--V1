@@ -195,7 +195,7 @@ export async function adminAuthMiddleware(c: any): Promise<AdminContext | Respon
       };
     }
     // Check email-based auth (for development)
-    else if (adminEmail && (adminEmail === 'd@d.com' || adminEmail === 'oadiology@gmail.com' || adminEmail === 'admin@admin.com')) {
+    else if (adminEmail && (adminEmail === 'd@d.com' || adminEmail === 'oadiology@gmail.com' || adminEmail === 'admin@admin.com' || adminEmail === 'adiologyads@gmail.com' || adminEmail === 'samayhuf@gmail.com')) {
       adminUser = await adminAuthService.verifyAdminUser(adminEmail);
     }
     // Check Bearer token (Nhost JWT)

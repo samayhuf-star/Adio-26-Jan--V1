@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-    CreditCard, CheckCircle, Shield, Download, 
+    CreditCard, CheckCircle, Download, 
     Calendar, FileText, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -8,14 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { api } from '../utils/api';
 import { createCheckoutSession, createCustomerPortalSession } from '../utils/stripe';
 import { notifications } from '../utils/notifications';
 import { isPaidUser } from '../utils/userPlan';
 
-import { getCurrentUserProfile } from '../utils/auth';
+import { getCurrentUserProfile, getCurrentAuthUser } from '../utils/auth';
 
 export const BillingPanel = () => {
     const [info, setInfo] = useState<any>(null);
@@ -26,20 +24,31 @@ export const BillingPanel = () => {
     const [isPaid, setIsPaid] = useState(false);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-    const [showAddCardDialog, setShowAddCardDialog] = useState(false);
-    
-    // Card form state
-    const [cardNumber, setCardNumber] = useState('');
-    const [cardName, setCardName] = useState('');
-    const [cardExpiry, setCardExpiry] = useState('');
-    const [cardCVV, setCardCVV] = useState('');
-    const [cardErrors, setCardErrors] = useState<{
-        number?: string;
-        name?: string;
-        expiry?: string;
-        cvv?: string;
-    }>({});
+    const pricingSectionRef = useRef<HTMLDivElement>(null);
     const [savedCards, setSavedCards] = useState<any[]>([]);
+    const [loadingCards, setLoadingCards] = useState(false);
+    const [showLifetimeSuccess, setShowLifetimeSuccess] = useState(false);
+
+    const fetchSavedCards = async () => {
+        try {
+            setLoadingCards(true);
+            const user = await getCurrentAuthUser();
+            if (!user?.email) return;
+            const { getSessionToken } = await import('../utils/auth');
+            const token = await getSessionToken();
+            const response = await fetch(`/api/stripe/payment-methods/${encodeURIComponent(user.email)}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setSavedCards(data.paymentMethods || []);
+            }
+        } catch (err) {
+            console.error('Error fetching saved cards:', err);
+        } finally {
+            setLoadingCards(false);
+        }
+    };
 
     useEffect(() => {
         const fetchInfo = async () => {
@@ -68,7 +77,8 @@ export const BillingPanel = () => {
                                 'free': 'Free',
                                 'starter': 'Monthly Limited',
                                 'professional': 'Monthly Unlimited',
-                                'enterprise': 'Lifetime Unlimited'
+                                'enterprise': 'Lifetime Unlimited',
+                                'lifetime': 'Lifetime'
                             };
                             
                             userPlan = planMap[userProfile.subscription_plan || 'free'] || userProfile.subscription_plan || "Free";
@@ -110,6 +120,7 @@ export const BillingPanel = () => {
             }
         };
         fetchInfo();
+        fetchSavedCards();
         
         // Check if user is paid
         const checkPaidStatus = async () => {
@@ -127,50 +138,59 @@ export const BillingPanel = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         const canceled = urlParams.get('canceled');
+        const lifetimeSuccess = urlParams.get('success');
         
-        if (sessionId) {
-            // Payment successful - refresh subscription data
+        if (lifetimeSuccess === 'lifetime') {
+            setShowLifetimeSuccess(true);
+            notifications.success('Your Lifetime Access is now active! No more payments, ever.', {
+                title: 'Welcome to the Lifetime Plan!',
+                description: 'You now have permanent access to all Adiology features.',
+            });
+            window.history.replaceState({}, '', window.location.pathname);
+            setTimeout(() => {
+                fetchInfo();
+                checkPaidStatus();
+                fetchSavedCards();
+            }, 1000);
+        } else if (sessionId) {
             notifications.success('Payment successful! Your subscription is now active.', {
                 title: 'Welcome!',
                 description: 'You now have access to all premium features.',
             });
-            // Remove session_id from URL
             window.history.replaceState({}, '', window.location.pathname);
-            // Refresh subscription data
             setTimeout(() => {
                 fetchInfo();
                 checkPaidStatus();
+                fetchSavedCards();
             }, 1000);
         } else if (canceled) {
             notifications.info('Payment was canceled. You can try again anytime.', {
                 title: 'Payment Canceled',
             });
-            // Remove canceled param from URL
             window.history.replaceState({}, '', window.location.pathname);
         }
     }, []);
 
     const handleSubscribe = async (planName?: string, priceId?: string) => {
         const selectedPlan = planName || 'Lifetime Unlimited';
-        setProcessingPlan(selectedPlan);
+        await proceedWithSubscription(selectedPlan, priceId);
+    };
+
+    const proceedWithSubscription = async (planName: string, priceId?: string) => {
+        setProcessingPlan(planName);
         setProcessing(true);
         try {
-            // Try to get the real price ID from Stripe
-            let selectedPriceId = priceId;
+            let selectedPriceId = priceId || null;
             
-            // If using placeholder price IDs, try to fetch the real ones
-            if (!selectedPriceId || selectedPriceId.startsWith('price_basic') || selectedPriceId.startsWith('price_pro') || selectedPriceId === 'price_lifetime') {
+            if (!selectedPriceId) {
                 const { getPriceIdForPlan } = await import('../utils/stripe');
-                const fetchedPriceId = await getPriceIdForPlan(selectedPlan, 'month');
-                if (fetchedPriceId) {
-                    selectedPriceId = fetchedPriceId;
-                } else {
-                    // Don't fallback to a different plan - show error instead
-                    throw new Error(`The ${selectedPlan} plan is not yet configured. Please contact support or try a different plan.`);
-                }
+                selectedPriceId = await getPriceIdForPlan(planName, 'month');
             }
             
-            // Get current user for checkout
+            if (!selectedPriceId) {
+                throw new Error(`The ${planName} plan is not yet configured in Stripe. Please contact support or try a different plan.`);
+            }
+            
             const { getCurrentAuthUser } = await import('../utils/auth');
             const user = await getCurrentAuthUser();
             
@@ -178,16 +198,11 @@ export const BillingPanel = () => {
                 throw new Error('You must be logged in to subscribe');
             }
             
-            // Create Stripe checkout session
-            await createCheckoutSession(selectedPriceId, selectedPlan, user.id, user.email);
-            
-            // Note: User will be redirected to Stripe, so we don't need to setProcessing(false)
-            // The redirect happens in createCheckoutSession
+            await createCheckoutSession(selectedPriceId, planName, user.id, user.email);
         } catch (error) {
             console.error("Subscription error", error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
             
-            // Provide more helpful error messages
             if (errorMessage.includes('not yet configured') || errorMessage.includes('price') || errorMessage.includes('Price')) {
                 notifications.error(errorMessage, {
                     title: 'Plan Unavailable',
@@ -198,6 +213,110 @@ export const BillingPanel = () => {
                     description: errorMessage,
                 });
             }
+            setProcessing(false);
+            setProcessingPlan(null);
+        }
+    };
+
+    const PLAN_TIERS = ['free', 'starter', 'professional', 'agency'];
+
+    const getCurrentPlanTier = (): string => {
+        const currentInfo = info || { plan: 'Free' };
+        const plan = (currentInfo?.plan || 'Free').toLowerCase();
+        const planMap: Record<string, string> = {
+            'free': 'free',
+            'monthly limited': 'starter',
+            'starter': 'starter',
+            'monthly unlimited': 'professional',
+            'professional': 'professional',
+            'pro': 'professional',
+            'agency': 'agency',
+            'enterprise': 'agency',
+            'lifetime unlimited': 'lifetime',
+            'lifetime': 'lifetime',
+        };
+        return planMap[plan] || 'free';
+    };
+
+    const getNextTier = (currentTier: string): string | null => {
+        if (currentTier === 'lifetime') return null;
+        const idx = PLAN_TIERS.indexOf(currentTier);
+        if (idx === -1 || idx >= PLAN_TIERS.length - 1) return null;
+        return PLAN_TIERS[idx + 1];
+    };
+
+    const getUpgradeButtonLabel = (): string => {
+        const tier = getCurrentPlanTier();
+        if (tier === 'lifetime' || tier === 'agency') return 'Top Plan';
+        const next = getNextTier(tier);
+        if (!next) return 'Upgrade Plan';
+        const nameMap: Record<string, string> = { starter: 'Starter', professional: 'Professional', agency: 'Agency' };
+        return `Upgrade to ${nameMap[next] || next}`;
+    };
+
+    const handleUpgradePlan = async () => {
+        const currentTier = getCurrentPlanTier();
+
+        if (currentTier === 'lifetime' || currentTier === 'agency') {
+            notifications.info('You are already on the highest plan.', { title: 'Top Plan' });
+            return;
+        }
+
+        if (currentTier === 'free') {
+            pricingSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        const nextTier = getNextTier(currentTier);
+        if (!nextTier) return;
+
+        const nameMap: Record<string, string> = { starter: 'Starter', professional: 'Professional', agency: 'Agency' };
+        const nextPlanName = nameMap[nextTier] || nextTier;
+
+        setProcessingPlan('upgrade');
+        setProcessing(true);
+        try {
+            const { getPriceIdForPlan } = await import('../utils/stripe');
+            const newPriceId = await getPriceIdForPlan(nextPlanName, 'month');
+            if (!newPriceId) {
+                throw new Error(`The ${nextPlanName} plan is not configured in Stripe.`);
+            }
+
+            const { getCurrentAuthUser, getSessionToken } = await import('../utils/auth');
+            const user = await getCurrentAuthUser();
+            if (!user?.email) throw new Error('You must be logged in.');
+
+            const token = await getSessionToken();
+            const response = await fetch('/api/stripe/upgrade-subscription', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ email: user.email, newPriceId, newPlanName: nextPlanName }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.error === 'NO_ACTIVE_SUBSCRIPTION') {
+                    await handleSubscribe(nextPlanName, newPriceId);
+                    return;
+                }
+                throw new Error(data.error || 'Upgrade failed');
+            }
+
+            notifications.success(`Successfully upgraded to ${nextPlanName}! Prorated charges have been applied.`, {
+                title: 'Plan Upgraded',
+            });
+
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (error) {
+            console.error('Upgrade error:', error);
+            notifications.error(error instanceof Error ? error.message : 'Upgrade failed. Please try again.', {
+                title: 'Upgrade Error',
+            });
+        } finally {
             setProcessing(false);
             setProcessingPlan(null);
         }
@@ -227,7 +346,6 @@ export const BillingPanel = () => {
     const handleUpdatePaymentMethod = async () => {
         setProcessing(true);
         try {
-            // Open Stripe Customer Portal for payment method management
             await createCustomerPortalSession();
             setShowPaymentDialog(false);
         } catch (error) {
@@ -242,117 +360,13 @@ export const BillingPanel = () => {
         }
     };
 
-
-    // Card validation functions
-    const validateCardNumber = (value: string) => {
-        const cleanValue = value.replace(/\s/g, '');
-        if (!cleanValue) {
-            setCardErrors(prev => ({ ...prev, number: undefined }));
-            return;
-        }
-        if (cleanValue.length < 13 || cleanValue.length > 19) {
-            setCardErrors(prev => ({ ...prev, number: 'Card number must be between 13 and 19 digits' }));
-        } else if (!/^\d+$/.test(cleanValue)) {
-            setCardErrors(prev => ({ ...prev, number: 'Card number must contain only digits' }));
-        } else {
-            setCardErrors(prev => ({ ...prev, number: undefined }));
-        }
-    };
-
-    const validateCardName = (value: string) => {
-        if (!value.trim()) {
-            setCardErrors(prev => ({ ...prev, name: 'Cardholder name is required' }));
-        } else if (value.trim().length < 2) {
-            setCardErrors(prev => ({ ...prev, name: 'Cardholder name must be at least 2 characters' }));
-        } else {
-            setCardErrors(prev => ({ ...prev, name: undefined }));
-        }
-    };
-
-    const validateCardExpiry = (value: string) => {
-        if (!value) {
-            setCardErrors(prev => ({ ...prev, expiry: undefined }));
-            return;
-        }
-        const expiryMatch = value.match(/^(\d{2})\/(\d{2})$/);
-        if (!expiryMatch) {
-            setCardErrors(prev => ({ ...prev, expiry: 'Please enter a valid expiry date (MM/YY)' }));
-        } else {
-            const month = parseInt(expiryMatch[1], 10);
-            const year = parseInt(expiryMatch[2], 10);
-            const currentYear = new Date().getFullYear() % 100;
-            const currentMonth = new Date().getMonth() + 1;
-            
-            if (month < 1 || month > 12) {
-                setCardErrors(prev => ({ ...prev, expiry: 'Month must be between 01 and 12' }));
-            } else if (year < currentYear || (year === currentYear && month < currentMonth)) {
-                setCardErrors(prev => ({ ...prev, expiry: 'Card has expired' }));
-            } else {
-                setCardErrors(prev => ({ ...prev, expiry: undefined }));
-            }
-        }
-    };
-
-    const validateCardCVV = (value: string) => {
-        if (!value) {
-            setCardErrors(prev => ({ ...prev, cvv: undefined }));
-            return;
-        }
-        if (value.length < 3 || value.length > 4) {
-            setCardErrors(prev => ({ ...prev, cvv: 'CVV must be 3 or 4 digits' }));
-        } else if (!/^\d+$/.test(value)) {
-            setCardErrors(prev => ({ ...prev, cvv: 'CVV must contain only digits' }));
-        } else {
-            setCardErrors(prev => ({ ...prev, cvv: undefined }));
-        }
-    };
-
-    const resetCardForm = () => {
-        setCardNumber('');
-        setCardName('');
-        setCardExpiry('');
-        setCardCVV('');
-        setCardErrors({});
-    };
-
     const handleAddCard = async () => {
-        if (!isCardFormValid()) {
-            notifications.error('Please fix all errors before adding the card', {
-                title: 'Validation Error',
-                description: 'All card fields must be valid.',
-            });
-            return;
-        }
-
         setProcessing(true);
         try {
-            // In a real implementation, you would call Stripe API here to add the payment method
-            // For now, we'll just simulate adding the card
-            const cardNumberClean = cardNumber.replace(/\s/g, '');
-            const last4 = cardNumberClean.slice(-4);
-            const expiryParts = cardExpiry.split('/');
-            
-            // Simulate adding card to saved cards
-            const newCard = {
-                id: Date.now().toString(),
-                brand: cardNumberClean.startsWith('4') ? 'visa' : cardNumberClean.startsWith('5') ? 'mastercard' : 'amex',
-                last4: last4,
-                expMonth: expiryParts[0] || '',
-                expYear: expiryParts[1] || '',
-                isDefault: savedCards.length === 0
-            };
-            
-            setSavedCards(prev => [...prev, newCard]);
-            setShowAddCardDialog(false);
-            resetCardForm();
-            
-            notifications.success('Card added successfully', {
-                title: 'Payment Method Added',
-                description: `Your card ending in ${last4} has been added.`,
-            });
+            await createCustomerPortalSession();
         } catch (error) {
             console.error("Add card error", error);
-            notifications.error('Failed to add card. Please try again.', {
+            notifications.error('Failed to open payment portal. Please try again.', {
                 title: 'Error',
                 description: error instanceof Error ? error.message : 'Unknown error occurred',
             });
@@ -361,52 +375,16 @@ export const BillingPanel = () => {
         }
     };
 
-    // Validate card form
-    const isCardFormValid = (): boolean => {
-        // Check if all fields are filled
-        if (!cardNumber.trim() || !cardName.trim() || !cardExpiry.trim() || !cardCVV.trim()) {
-            return false;
-        }
-
-        // Check if there are any errors
-        if (Object.keys(cardErrors).length > 0 && Object.values(cardErrors).some(err => err !== undefined && err !== '')) {
-            return false;
-        }
-
-        // Basic validation
-        const cardNumberClean = cardNumber.replace(/\s/g, '');
-        if (cardNumberClean.length < 13 || cardNumberClean.length > 19) {
-            return false;
-        }
-
-        // Validate expiry date format (MM/YY)
-        const expiryMatch = cardExpiry.match(/^(\d{2})\/(\d{2})$/);
-        if (!expiryMatch) {
-            return false;
-        }
-
-        const month = parseInt(expiryMatch[1], 10);
-        const year = parseInt(expiryMatch[2], 10);
-        if (month < 1 || month > 12) {
-            return false;
-        }
-
-        // Validate CVV (3-4 digits)
-        if (cardCVV.length < 3 || cardCVV.length > 4) {
-            return false;
-        }
-
-        return true;
-    };
-
     const handleDownloadInvoice = async (invoiceId: string, invoiceDate: string, invoiceAmount: string) => {
         try {
             // Try to fetch invoice PDF from API using fetch directly for blob response
             try {
                 // Use API endpoint instead of Supabase
+                const { getSessionTokenSync } = await import('../utils/auth');
+                const token = getSessionTokenSync();
                 const response = await fetch(`/api/billing/invoices/${invoiceId}/download`, {
                     headers: {
-                        'Authorization': `Bearer ${publicAnonKey}`
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     }
                 });
                 
@@ -477,6 +455,31 @@ Generated on ${new Date().toLocaleDateString()}`;
 
     return (
         <div className="w-full space-y-10">
+            {showLifetimeSuccess && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-6 shadow-lg">
+                    <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <CheckCircle2 className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-lg font-bold text-emerald-900">Lifetime Access Activated!</h3>
+                            <p className="text-emerald-700 mt-1">
+                                Your one-time payment has been confirmed. You now have permanent access to all Adiology features — no subscriptions, no renewals, ever.
+                            </p>
+                            <p className="text-emerald-600 text-sm mt-2">
+                                A confirmation email has been sent to your inbox with all the details.
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => setShowLifetimeSuccess(false)}
+                            className="text-emerald-400 hover:text-emerald-600 transition-colors flex-shrink-0"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {error && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-center gap-2">
@@ -542,36 +545,11 @@ Generated on ${new Date().toLocaleDateString()}`;
                     <CardFooter className="bg-slate-50/50 border-t border-slate-100 p-4 sm:p-6 flex flex-col gap-3">
                         <div className="flex flex-col sm:flex-row gap-3 w-full">
                             <Button 
-                                onClick={async () => {
-                                    setProcessing(true);
-                                    try {
-                                        await createCustomerPortalSession();
-                                        notifications.info('Redirecting to subscription management...', {
-                                            title: 'Manage Subscription',
-                                            description: 'You can view your plan, update payment methods, and manage your subscription.',
-                                        });
-                                    } catch (error) {
-                                        console.error("Manage subscription error", error);
-                                        notifications.error('Failed to open subscription portal. Please contact support.', {
-                                            title: 'Error',
-                                            description: error instanceof Error ? error.message : 'Unknown error occurred',
-                                        });
-                                    } finally {
-                                        setProcessing(false);
-                                    }
-                                }}
-                                disabled={processing || billingInfo.plan === 'Free'}
+                                onClick={handleUpgradePlan}
+                                disabled={processing || getCurrentPlanTier() === 'agency' || getCurrentPlanTier() === 'lifetime'} 
                                 className="bg-indigo-600 text-white hover:bg-indigo-700 flex-1 min-w-0"
                             >
-                                {processing ? "Processing..." : "Manage Subscription"}
-                            </Button>
-                            <Button 
-                                onClick={() => handleSubscribe()} 
-                                disabled={processing} 
-                                variant="outline" 
-                                className="flex-1 min-w-0"
-                            >
-                                {processing ? "Processing..." : "Upgrade Plan"}
+                                {processingPlan === 'upgrade' ? "Upgrading..." : getUpgradeButtonLabel()}
                             </Button>
                         </div>
                         {billingInfo.plan !== 'Free' && !billingInfo.plan.includes('Lifetime') && (
@@ -628,21 +606,21 @@ Generated on ${new Date().toLocaleDateString()}`;
                             <div className="flex flex-col sm:flex-row gap-2">
                                 <Button 
                                     variant="outline" 
-                                    className="flex-1 min-w-0"
-                                    onClick={() => setShowAddCardDialog(true)}
+                                    className="flex-1 min-w-0 px-2 sm:px-4"
+                                    onClick={handleAddCard}
                                     disabled={processing}
                                 >
-                                    <CreditCard className="w-4 h-4 mr-2 flex-shrink-0" />
-                                    <span className="truncate">{savedCards.length > 0 ? 'Add New Card' : 'Add Payment Card'}</span>
+                                    <CreditCard className="w-4 h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                                    <span className="truncate text-xs sm:text-sm">{savedCards.length > 0 ? 'Manage Cards' : 'Add Card'}</span>
                                 </Button>
                                 {savedCards.length > 0 && (
                                     <Button 
                                         variant="outline" 
-                                        className="flex-1 min-w-0"
+                                        className="flex-1 min-w-0 px-2 sm:px-4"
                                         onClick={() => setShowPaymentDialog(true)}
                                         disabled={processing}
                                     >
-                                        <span className="truncate">Update Payment</span>
+                                        <span className="truncate text-xs sm:text-sm">Update</span>
                                     </Button>
                                 )}
                             </div>
@@ -653,7 +631,7 @@ Generated on ${new Date().toLocaleDateString()}`;
             </div>
 
             {/* Upgrade Plan Section - Inline Pricing */}
-            {!isPaid && (
+            <div ref={pricingSectionRef}>
                 <Card className="border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-xl">
                     <CardHeader>
                         <CardTitle className="text-xl sm:text-2xl">Choose Your Plan</CardTitle>
@@ -662,14 +640,14 @@ Generated on ${new Date().toLocaleDateString()}`;
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {/* Basic Plan */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                            {/* Starter Plan */}
                             <Card className="border-2 border-blue-200 hover:border-blue-300 transition-all hover:shadow-lg relative flex flex-col h-full bg-blue-50/30">
                                 <CardHeader className="flex-shrink-0 pb-3">
                                     <div className="text-center">
                                         <Badge className="mb-2 bg-blue-100 text-blue-700 border-blue-200 text-xs">Monthly</Badge>
-                                        <CardTitle className="text-lg mb-2">Basic</CardTitle>
-                                        <div className="text-2xl font-bold text-slate-800 mb-1">$69.99</div>
+                                        <CardTitle className="text-lg mb-2">Starter</CardTitle>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$49</div>
                                         <div className="text-xs text-slate-600">per month</div>
                                     </div>
                                 </CardHeader>
@@ -677,59 +655,51 @@ Generated on ${new Date().toLocaleDateString()}`;
                                     <ul className="space-y-2">
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">10 Active Campaigns</span>
+                                            <span className="text-xs text-slate-700">15 Active Campaigns</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">5 Draft Campaigns</span>
+                                            <span className="text-xs text-slate-700">1 Team Member</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">50 Campaign Exports/Month</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">500 Keyword Credits/Month</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">10 Landing Page Templates</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">3 Connected Domains</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">2 User Seats</span>
+                                            <span className="text-xs text-slate-700">Basic Analytics</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                                             <span className="text-xs text-slate-700">Email Support</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">Keyword Planner & Mixer</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">CSV Export</span>
                                         </li>
                                     </ul>
                                 </CardContent>
                                 <CardFooter className="flex-shrink-0 pt-3 pb-4">
                                     <Button 
                                         className="w-full bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-300 text-sm"
-                                        onClick={() => handleSubscribe("Basic", "price_basic_monthly")}
-                                        disabled={processing || billingInfo.plan === "Basic"}
+                                        onClick={() => handleSubscribe("Starter")}
+                                        disabled={processing || billingInfo.plan?.toLowerCase() === "starter"}
                                     >
-                                        {billingInfo.plan === "Basic" ? "Current Plan" : processingPlan === "Basic" ? "Processing..." : "Get Started"}
+                                        {billingInfo.plan?.toLowerCase() === "starter" ? "Current Plan" : processingPlan === "Starter" ? "Processing..." : "Get Started"}
                                     </Button>
                                 </CardFooter>
                             </Card>
 
-                            {/* Pro Plan - Popular */}
+                            {/* Professional Plan - Most Popular */}
                             <Card className="border-2 border-purple-400 hover:border-purple-500 transition-all hover:shadow-xl relative bg-gradient-to-br from-purple-50 to-indigo-50 flex flex-col h-full">
                                 <div className="absolute top-2 right-2 z-10">
-                                    <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-0 text-xs">Popular</Badge>
+                                    <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-0 text-xs">Most Popular</Badge>
                                 </div>
                                 <CardHeader className="flex-shrink-0 pb-3">
                                     <div className="text-center">
                                         <Badge className="mb-2 bg-purple-100 text-purple-700 border-purple-200 text-xs">Monthly</Badge>
-                                        <CardTitle className="text-lg mb-2">Pro</CardTitle>
-                                        <div className="text-2xl font-bold text-slate-800 mb-1">$129.99</div>
+                                        <CardTitle className="text-lg mb-2">Professional</CardTitle>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$99</div>
                                         <div className="text-xs text-slate-600">per month</div>
                                     </div>
                                 </CardHeader>
@@ -741,52 +711,104 @@ Generated on ${new Date().toLocaleDateString()}`;
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Draft Campaigns</span>
+                                            <span className="text-xs text-slate-700 font-semibold">3 Team Members</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Campaign Exports</span>
+                                            <span className="text-xs text-slate-700 font-semibold">Advanced Analytics</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">2,500 Keyword Credits/Month</span>
+                                            <span className="text-xs text-slate-700">Priority Support</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">50+ Landing Page Templates</span>
+                                            <span className="text-xs text-slate-700">Click Guard Protection</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">15 Connected Domains</span>
+                                            <span className="text-xs text-slate-700">Domain Monitoring</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">5 User Seats</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">Email Support & Tickets</span>
+                                            <span className="text-xs text-slate-700">All Keyword Tools</span>
                                         </li>
                                     </ul>
                                 </CardContent>
                                 <CardFooter className="flex-shrink-0 pt-3 pb-4">
                                     <Button 
                                         className="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white shadow-lg hover:shadow-xl text-sm"
-                                        onClick={() => handleSubscribe("Pro", "price_pro_monthly")}
-                                        disabled={processing || billingInfo.plan === "Pro"}
+                                        onClick={() => handleSubscribe("Professional")}
+                                        disabled={processing || billingInfo.plan?.toLowerCase() === "professional"}
                                     >
-                                        {billingInfo.plan === "Pro" ? "Current Plan" : processingPlan === "Pro" ? "Processing..." : "Get Started"}
+                                        {billingInfo.plan?.toLowerCase() === "professional" ? "Current Plan" : processingPlan === "Professional" ? "Processing..." : "Get Started"}
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+
+                            {/* Agency Plan */}
+                            <Card className="border-2 border-amber-300 hover:border-amber-400 transition-all hover:shadow-lg relative flex flex-col h-full bg-gradient-to-br from-amber-50 to-orange-50">
+                                <CardHeader className="flex-shrink-0 pb-3">
+                                    <div className="text-center">
+                                        <Badge className="mb-2 bg-amber-100 text-amber-700 border-amber-200 text-xs">Monthly</Badge>
+                                        <CardTitle className="text-lg mb-2">Agency</CardTitle>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$149</div>
+                                        <div className="text-xs text-slate-600">per month</div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="flex-1 pb-3">
+                                    <ul className="space-y-2">
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Campaigns</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Team Members</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700 font-semibold">Full Analytics Suite</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">Dedicated Support</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">All Features Included</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">White Label Reports</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">API Access</span>
+                                        </li>
+                                    </ul>
+                                </CardContent>
+                                <CardFooter className="flex-shrink-0 pt-3 pb-4">
+                                    <Button 
+                                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:shadow-xl text-sm"
+                                        onClick={() => handleSubscribe("Agency")}
+                                        disabled={processing || billingInfo.plan?.toLowerCase() === "agency"}
+                                    >
+                                        {billingInfo.plan?.toLowerCase() === "agency" ? "Current Plan" : processingPlan === "Agency" ? "Processing..." : "Get Started"}
                                     </Button>
                                 </CardFooter>
                             </Card>
 
                             {/* Lifetime Plan */}
-                            <Card className="border-2 border-pink-200 hover:border-pink-300 transition-all hover:shadow-lg relative flex flex-col h-full bg-pink-50/30">
+                            <Card className="border-2 border-emerald-400 hover:border-emerald-500 transition-all hover:shadow-xl relative bg-gradient-to-br from-emerald-50 to-teal-50 flex flex-col h-full">
+                                <div className="absolute top-2 right-2 z-10">
+                                    <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0 text-xs">Limited Time</Badge>
+                                </div>
                                 <CardHeader className="flex-shrink-0 pb-3">
                                     <div className="text-center">
-                                        <Badge className="mb-2 bg-pink-100 text-pink-700 border-pink-200 text-xs">One-Time</Badge>
+                                        <Badge className="mb-2 bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">One-Time</Badge>
                                         <CardTitle className="text-lg mb-2">Lifetime</CardTitle>
-                                        <div className="text-2xl font-bold text-slate-800 mb-1">$49.99</div>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$99</div>
                                         <div className="text-xs text-slate-600">one-time payment</div>
                                     </div>
                                 </CardHeader>
@@ -794,44 +816,45 @@ Generated on ${new Date().toLocaleDateString()}`;
                                     <ul className="space-y-2">
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">10 Campaigns per Month</span>
+                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Campaigns</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">1 Team Member</span>
+                                            <span className="text-xs text-slate-700 font-semibold">All Pro Features</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">20+ Campaign Presets</span>
+                                            <span className="text-xs text-slate-700">Priority Support</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">Keywords Mixer & Planner</span>
+                                            <span className="text-xs text-slate-700">All Keyword Tools</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">CSV Export to Google Ads</span>
+                                            <span className="text-xs text-slate-700">No Recurring Fees</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">Email & Chat Support</span>
+                                            <span className="text-xs text-slate-700">Lifetime Updates</span>
                                         </li>
                                     </ul>
                                 </CardContent>
                                 <CardFooter className="flex-shrink-0 pt-3 pb-4">
                                     <Button 
-                                        className="w-full bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-300 text-sm"
-                                        onClick={() => handleSubscribe("Lifetime", "price_lifetime")}
-                                        disabled={processing || billingInfo.plan === "Lifetime"}
+                                        className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg hover:shadow-xl text-sm"
+                                        onClick={() => handleSubscribe("Lifetime")}
+                                        disabled={processing || billingInfo.plan?.toLowerCase()?.includes("lifetime")}
                                     >
-                                        {billingInfo.plan === "Lifetime" ? "Current Plan" : processingPlan === "Lifetime" ? "Processing..." : "Get Started"}
+                                        {billingInfo.plan?.toLowerCase()?.includes("lifetime") ? "Current Plan" : processingPlan === "Lifetime" ? "Processing..." : "Get Lifetime Access"}
                                     </Button>
                                 </CardFooter>
                             </Card>
+
                         </div>
                     </CardContent>
                 </Card>
-            )}
+            </div>
 
             {/* Invoices */}
             <Card className="border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-xl">
@@ -901,152 +924,6 @@ Generated on ${new Date().toLocaleDateString()}`;
                             {processing ? "Cancelling..." : "Yes, Cancel Subscription"}
                         </Button>
                     </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Add Payment Card Dialog */}
-            <Dialog open={showAddCardDialog} onOpenChange={setShowAddCardDialog}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Add Payment Card</DialogTitle>
-                        <DialogDescription>
-                            Add a payment card to enable plan upgrades. Your card will be securely stored for future transactions.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        handleAddCard();
-                    }} className="space-y-4">
-                        {/* Card Number */}
-                        <div className="space-y-2">
-                            <Label htmlFor="cardNumber">Card Number</Label>
-                            <Input
-                                id="cardNumber"
-                                type="text"
-                                placeholder="1234 5678 9012 3456"
-                                value={cardNumber}
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-                                    if (value.length <= 16) {
-                                        const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
-                                        setCardNumber(formatted);
-                                        validateCardNumber(value);
-                                    }
-                                }}
-                                className={cardErrors.number ? 'border-red-500' : ''}
-                            />
-                            {cardErrors.number && (
-                                <p className="text-xs text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3" />
-                                    {cardErrors.number}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Cardholder Name */}
-                        <div className="space-y-2">
-                            <Label htmlFor="cardName">Cardholder Name</Label>
-                            <Input
-                                id="cardName"
-                                type="text"
-                                placeholder="John Doe"
-                                value={cardName}
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                                    setCardName(value);
-                                    validateCardName(value);
-                                }}
-                                className={cardErrors.name ? 'border-red-500' : ''}
-                            />
-                            {cardErrors.name && (
-                                <p className="text-xs text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3" />
-                                    {cardErrors.name}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Expiry and CVV */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="cardExpiry">Expiry Date</Label>
-                                <Input
-                                    id="cardExpiry"
-                                    type="text"
-                                    placeholder="MM/YY"
-                                    value={cardExpiry}
-                                    onChange={(e) => {
-                                        let value = e.target.value.replace(/\D/g, '');
-                                        if (value.length >= 2) {
-                                            value = value.slice(0, 2) + '/' + value.slice(2, 4);
-                                        }
-                                        if (value.length <= 5) {
-                                            setCardExpiry(value);
-                                            validateCardExpiry(value);
-                                        }
-                                    }}
-                                    className={cardErrors.expiry ? 'border-red-500' : ''}
-                                />
-                                {cardErrors.expiry && (
-                                    <p className="text-xs text-red-600 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {cardErrors.expiry}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="cardCVV">CVV</Label>
-                                <Input
-                                    id="cardCVV"
-                                    type="text"
-                                    placeholder="123"
-                                    value={cardCVV}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                                        setCardCVV(value);
-                                        validateCardCVV(value);
-                                    }}
-                                    className={cardErrors.cvv ? 'border-red-500' : ''}
-                                />
-                                {cardErrors.cvv && (
-                                    <p className="text-xs text-red-600 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {cardErrors.cvv}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Security Notice */}
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                            <div className="flex items-start gap-2">
-                                <Shield className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-slate-600">
-                                    Your card details are encrypted and securely stored. We use industry-standard security measures to protect your information.
-                                </p>
-                            </div>
-                        </div>
-
-                        <DialogFooter>
-                            <Button 
-                                type="button"
-                                variant="outline" 
-                                onClick={() => {
-                                    setShowAddCardDialog(false);
-                                    resetCardForm();
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button 
-                                type="submit"
-                                disabled={processing || !isCardFormValid()}
-                                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
-                            >
-                                {processing ? "Processing..." : "Add Card"}
-                            </Button>
-                        </DialogFooter>
-                    </form>
                 </DialogContent>
             </Dialog>
 

@@ -1,0 +1,267 @@
+System Logs Export
+Generated: 2026-02-02T08:02:33.435Z
+Filter: ERROR
+Total Logs: 10
+
+================================================================================
+
+[1] ERROR - Console
+Timestamp: 2026-02-02T08:02:27.964Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[2] ERROR - Console
+Timestamp: 2026-02-02T08:02:28.935Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[3] ERROR - Console
+Timestamp: 2026-02-02T08:02:29.398Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[4] ERROR - Console
+Timestamp: 2026-02-02T08:02:29.978Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[5] ERROR - Console
+Timestamp: 2026-02-02T08:02:30.491Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[6] ERROR - Console
+Timestamp: 2026-02-02T08:02:31.072Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[7] ERROR - Console
+Timestamp: 2026-02-02T08:02:31.617Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[8] ERROR - Console
+Timestamp: 2026-02-02T08:02:32.058Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[9] ERROR - Console
+Timestamp: 2026-02-02T08:02:32.859Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[10] ERROR - Console
+Timestamp: 2026-02-02T08:02:33.342Z
+Message: Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s 
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.%s",
+    "\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:38:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=afde4d22:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+

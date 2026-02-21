@@ -1,38 +1,37 @@
-
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-      <title>Adiology - Google Campaign Builder</title>
-    </head>
-
-    <body>
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-      <script>
-        window.chatwootSettings = {
-          position: 'right',
-          type: 'standard',
-          launcherSpacer: 20
-        };
-        (function(d,t) {
-          var BASE_URL="https://app.chatwoot.com";
-          var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-          g.src=BASE_URL+"/packs/js/sdk.js";
-          g.async = true;
-          s.parentNode.insertBefore(g,s);
-          g.onload=function(){
-            window.chatwootSDK.run({
-              websiteToken: 'QqUfgZwaKqdmkuwhbDkcFJEG',
-              baseUrl: BASE_URL
-            })
-          }
-        })(document,"script");
-      </script>
-    </body>
-  </html>
-  
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Adiology - AI-Powered Google Ads Campaign Builder</title>
+    <meta name="description" content="Build high-performing Google Ads campaigns in minutes. AI-powered keyword generation, ad creation, click fraud protection, and direct Google Ads integration." />
+    <meta name="keywords" content="Google Ads, campaign builder, keyword planner, PPC, click fraud protection, ad generator" />
+    <meta name="author" content="Adiology" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://adiology.io/" />
+    <meta property="og:title" content="Adiology - AI-Powered Google Ads Campaign Builder" />
+    <meta property="og:description" content="Build high-performing Google Ads campaigns in minutes with AI-powered tools." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://adiology.io/" />
+    <meta property="og:site_name" content="Adiology" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Adiology - AI-Powered Google Ads Campaign Builder" />
+    <meta name="twitter:description" content="Build high-performing Google Ads campaigns in minutes with AI-powered tools." />
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <style>
+      #root-loader{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);color:#fff;font-family:system-ui,-apple-system,sans-serif}
+      #root-loader .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:#818cf8;border-radius:50%;animation:spin .8s linear infinite}
+      @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
+  </head>
+  <body>
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Skip to main content</a>
+    <div id="root" role="application" aria-label="Adiology Campaign Builder">
+      <div id="root-loader" role="status" aria-label="Loading application"><div class="spinner" aria-hidden="true"></div></div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

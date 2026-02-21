@@ -36,6 +36,9 @@ import {
 } from './ui/alert-dialog';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
+import { GoogleAdsPushButton } from './GoogleAdsPushButton';
+import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
+import { isSuperAdmin } from '../utils/auth';
 
 interface DraftCampaignsProps {
   onLoadCampaign: (data: any, mode: 'resume' | 'edit') => void;
@@ -88,7 +91,24 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
         }))
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       
-      setCampaigns(campaignItems);
+      const deduped = new Map<string, CampaignItem>();
+      for (const item of campaignItems) {
+        const url = item.data?.url || item.data?.website_url || item.data?.websiteUrl || '';
+        const dedupeKey = `${item.name}||${url}||${item.type}`;
+        
+        if (!deduped.has(dedupeKey)) {
+          deduped.set(dedupeKey, item);
+        } else {
+          const existing = deduped.get(dedupeKey)!;
+          const existingTime = new Date(existing.lastModified || existing.timestamp).getTime();
+          const itemTime = new Date(item.lastModified || item.timestamp).getTime();
+          if (itemTime > existingTime) {
+            deduped.set(dedupeKey, item);
+          }
+        }
+      }
+      
+      setCampaigns(Array.from(deduped.values()));
     } catch (error) {
       console.error('Failed to load campaigns:', error);
       notifications.error('Failed to load campaigns');
@@ -146,12 +166,12 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
   };
 
   const handleResume = (campaign: CampaignItem) => {
-    onLoadCampaign(campaign.data, 'resume');
+    onLoadCampaign({ ...campaign.data, _savedCampaignId: campaign.id }, 'resume');
     notifications.success(`Resuming "${campaign.name}"`);
   };
 
   const handleEdit = (campaign: CampaignItem) => {
-    onLoadCampaign(campaign.data, 'edit');
+    onLoadCampaign({ ...campaign.data, _savedCampaignId: campaign.id }, 'edit');
     notifications.success(`Editing "${campaign.name}"`);
   };
 
@@ -234,6 +254,8 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
           Refresh
         </Button>
       </div>
+
+      {isSuperAdmin() && <GoogleAdsConnectionStatus variant="full" />}
 
       {/* Shell View - Two Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -432,6 +454,25 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
                             >
                               <Download className="w-4 h-4" />
                             </Button>
+                            {isSuperAdmin() && (
+                            <GoogleAdsPushButton
+                              campaignData={{
+                                campaignName: campaign.name,
+                                adGroups: campaign.data?.adGroups || campaign.data?.campaign_data?.adGroups || [],
+                                ads: campaign.data?.ads,
+                                adCopy: campaign.data?.campaign_data?.adCopy || campaign.data?.adCopy,
+                                url: campaign.data?.url || campaign.data?.website_url || '',
+                                dailyBudget: campaign.data?.dailyBudget || campaign.data?.campaign_data?.structure?.dailyBudget,
+                                monthlyBudget: campaign.data?.monthly_budget,
+                                locations: campaign.data?.locations,
+                                targetCountry: campaign.data?.targetCountry,
+                              }}
+                              campaignHistoryId={campaign.id}
+                              googleAdsId={campaign.data?.googleAdsId}
+                              googleAdsPushStatus={campaign.data?.googleAdsPushStatus}
+                              variant="icon"
+                            />
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"

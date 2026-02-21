@@ -7,7 +7,7 @@ const pool = new Pool({ connectionString: getDatabaseUrl() });
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const FROM_EMAIL = 'Adiology <noreply@adiology.io>';
-const BASE_URL = process.env.DOMAIN || 'https://adiology.io';
+const BASE_URL = process.env.APP_URL || process.env.DOMAIN || 'https://adiology.io';
 
 interface EmailOptions {
   to: string | string[];

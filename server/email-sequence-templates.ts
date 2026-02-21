@@ -771,9 +771,9 @@ export const sequenceEmails: SequenceEmail[] = [
         <p class="body-text" style="font-size: 15px; color: #e0e0e0; line-height: 1.7; margin: 15px 0;">I noticed you haven't upgraded yet. If price is the concern, let me break down the math:</p>
         
         <div class="highlight-box" style="background-color: #2d2854; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #a78bfa; color: #e0e0e0;">
-          <strong>The Starter Plan ($29/month):</strong><br />
+          <strong>The Starter Plan ($49/month):</strong><br />
           <ul style="margin: 10px 0; padding-left: 20px; color: #e0e0e0;">
-            <li>5 campaigns/month = <strong>$5.80/campaign</strong></li>
+            <li>5 campaigns/month = <strong>$9.80/campaign</strong></li>
             <li>Save 3+ hours per campaign</li>
             <li>At $50/hour, that's <strong>$150 saved per campaign</strong></li>
             <li><strong>ROI: 26x your investment</strong></li>

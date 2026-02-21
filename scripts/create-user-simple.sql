@@ -81,7 +81,7 @@ BEGIN
   RAISE NOTICE '✅ Superadmin user setup complete!';
   RAISE NOTICE '   Email: %', user_email;
   RAISE NOTICE '   Password: YourPassword';
-  RAISE NOTICE '   Login at: https://www.adiology.online/superadmin';
+  RAISE NOTICE '   Login at: https://www.adiology.io/superadmin';
 END $$;
 
 -- Step 3: Verify (run this after Step 2)

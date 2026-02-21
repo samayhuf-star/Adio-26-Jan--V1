@@ -6,6 +6,10 @@
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    // Build date (ISO date string) — set at Vercel build time
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+  },
   optimizeDeps: {
     include: [
       // React core - MUST be pre-bundled first
@@ -207,6 +211,18 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/t.js': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/sitemap.xml': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/robots.txt': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },

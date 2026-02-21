@@ -490,6 +490,26 @@
   color: #065f46 !important;
 }
 
+/* Collapsed Sidebar - Purple gradient must override ALL themes */
+aside[data-collapsed="true"],
+[data-color-theme] aside[data-collapsed="true"],
+[data-color-theme="default"] aside[data-collapsed="true"],
+[data-color-theme="blue"] aside[data-collapsed="true"],
+[data-color-theme="green"] aside[data-collapsed="true"],
+[data-color-theme="custom"] aside[data-collapsed="true"],
+[data-color-theme="purple"] aside[data-collapsed="true"],
+[data-color-theme="ocean-breeze"] aside[data-collapsed="true"],
+[data-color-theme="sunset-glow"] aside[data-collapsed="true"],
+[data-color-theme="forest-canopy"] aside[data-collapsed="true"],
+[data-color-theme="royal-purple"] aside[data-collapsed="true"],
+[data-color-theme="rose-gold"] aside[data-collapsed="true"],
+[data-color-theme="midnight-blue"] aside[data-collapsed="true"],
+[data-color-theme="tropical-paradise"] aside[data-collapsed="true"] {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  border-right: none !important;
+  border-color: transparent !important;
+}
+
 /* Default Theme - Ensure it stays indigo/purple */
 [data-color-theme="default"] aside {
   background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(238, 242, 255, 0.95) 100%) !important;

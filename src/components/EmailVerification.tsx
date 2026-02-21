@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle, AlertCircle, ArrowRight, Sparkle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { notifications } from '../utils/notifications';
-import { useUserData, useAuthenticationStatus } from '@nhost/react';
-import { nhost } from '../lib/nhost';
+import { resendVerificationEmail } from '../utils/auth';
 
 interface EmailVerificationProps {
   onVerificationSuccess: () => void;
@@ -20,65 +19,85 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
+  const hasProcessedRef = useRef(false);
+  const MAX_RESENDS = 3;
+  const COOLDOWN_SECONDS = 60;
 
   useEffect(() => {
-    // Check URL for email parameter
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  useEffect(() => {
+    if (hasProcessedRef.current) return;
+
     const urlParams = new URLSearchParams(window.location.search);
     const emailParam = urlParams.get('email');
+    const tokenParam = urlParams.get('token');
 
     if (emailParam) {
       setEmail(emailParam);
     }
 
-    // Check if user is already verified and handle Supabase email verification
-    const checkVerification = async () => {
-      try {
-        // Check for Supabase email verification hash in URL
-        if (supabase) {
-          const { data, error } = await supabase.auth.getSession();
-          
-          if (data?.session?.user) {
-            const user = await getCurrentUserAsync();
-            if (user) {
-              // Check if email is confirmed
-              if (user.email_confirmed_at || data.session.user.email_confirmed_at) {
-                setIsVerified(true);
-                if (user.email) setEmail(user.email);
-                
-                // Trigger success callback after a short delay
-                setTimeout(() => {
-                  onVerificationSuccess();
-                }, 2000);
-                return;
-              }
-              
-              // If user exists but not verified, show email
-              if (user.email) setEmail(user.email);
-            }
+    if (tokenParam) {
+      hasProcessedRef.current = true;
+      setIsVerifying(true);
+
+      const verifyEmail = async () => {
+        try {
+          const response = await fetch('/api/account/verify-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: tokenParam }),
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            setError(result.error || 'Verification failed. Please request a new verification link.');
+            setIsVerifying(false);
+            return;
           }
-        }
 
-        // Fallback to localStorage user
-        const localUser = getCurrentUser();
-        if (localUser) {
-          if (localUser.email) setEmail(localUser.email);
-        }
-      } catch (err) {
-        console.error('Error checking verification status:', err);
-        // Fallback to localStorage user
-        const localUser = getCurrentUser();
-        if (localUser && localUser.email) {
-          setEmail(localUser.email);
-        }
-      }
-    };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('auth_token', result.token);
+            localStorage.setItem('user', JSON.stringify({
+              id: result.user.id,
+              email: result.user.email,
+              name: result.user.full_name || '',
+              full_name: result.user.full_name || '',
+              role: result.user.role || 'user',
+              subscription_plan: result.user.subscription_plan || 'free',
+              subscription_status: result.user.subscription_status || 'inactive',
+              email_confirmed_at: new Date().toISOString(),
+            }));
+          }
 
-    checkVerification();
+          setIsVerified(true);
+          notifications.success('Email verified successfully!');
+          window.history.replaceState({}, '', '/verify-email');
+          setTimeout(() => {
+            onVerificationSuccess();
+          }, 2000);
+        } catch (err) {
+          console.error('[EmailVerification] Error:', err);
+          setError('Something went wrong during verification. Please try again.');
+          setIsVerifying(false);
+        }
+      };
+
+      verifyEmail();
+      return;
+    }
   }, [onVerificationSuccess]);
 
   const handleResendEmail = async () => {
-    if (!email) {
-      setError('Email address is required');
+    if (!email || resendCount >= MAX_RESENDS || resendCooldown > 0) {
+      if (!email) setError('Email address is required');
       return;
     }
 
@@ -92,22 +111,39 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
         throw new Error(result.error.message);
       }
 
+      setResendCount(prev => prev + 1);
+      setResendCooldown(COOLDOWN_SECONDS);
       notifications.success('Verification email sent!', {
         title: 'Email Sent',
         description: 'Please check your email inbox (and spam folder) for the verification link.',
       });
-    } catch (err: any) {
-      let errorMessage = 'Failed to resend verification email. Please try again.';
-      
-      if (err.message) {
-        errorMessage = err.message;
-      }
-
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to resend verification email. Please try again.';
       setError(errorMessage);
     } finally {
       setIsVerifying(false);
     }
   };
+
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
+        <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-900">
+              Verifying Email...
+            </CardTitle>
+            <CardDescription className="text-slate-600 mt-2">
+              Please wait while we verify your email address.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   if (isVerified) {
     return (
@@ -115,7 +151,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl max-w-md w-full">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
                 <CheckCircle className="w-10 h-10 text-green-600" />
               </div>
             </div>
@@ -123,7 +159,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
               Email Verified!
             </CardTitle>
             <CardDescription className="text-slate-600 mt-2">
-              Email verified successfully. Redirecting to login screen...
+              Email verified successfully. Redirecting to login...
             </CardDescription>
           </CardHeader>
         </Card>
@@ -135,7 +171,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -146,7 +182,6 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
                 <Mail className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
-              <p className="text-xs text-slate-500 -mt-0.5">~ Samay</p>
             </div>
             <CardTitle className="text-xl font-bold text-center text-slate-900">
               Verify Your Email
@@ -176,29 +211,30 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
               </div>
             )}
 
-              <div className="space-y-4">
-                <p className="text-sm text-slate-600 text-center">
-                  Didn't receive the email? Check your spam folder or resend.
-                </p>
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600 text-center">
+                Didn't receive the email? Check your spam folder or resend.
+              </p>
+              
+              {resendCount < MAX_RESENDS ? (
                 <Button
                   onClick={handleResendEmail}
-                  disabled={isVerifying || !email}
+                  disabled={isVerifying || !email || resendCooldown > 0}
                   variant="outline"
                   className="w-full"
                 >
-                {isVerifying ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Sending...
-                  </span>
-                ) : (
-                  'Resend Verification Email'
-                )}
+                  {resendCooldown > 0 ? (
+                    `Resend in ${resendCooldown}s`
+                  ) : (
+                    `Resend Verification Email (${MAX_RESENDS - resendCount} left)`
+                  )}
                 </Button>
-              </div>
+              ) : (
+                <p className="text-sm text-slate-500 text-center py-2">
+                  Maximum resend attempts reached. Please check your spam folder.
+                </p>
+              )}
+            </div>
 
             <div className="pt-4 border-t border-slate-200">
               <Button
@@ -206,7 +242,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
                 variant="ghost"
                 className="w-full text-slate-600"
               >
-                Back to Home
+                Back to Login
               </Button>
             </div>
           </CardContent>
@@ -215,4 +251,3 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
     </div>
   );
 };
-

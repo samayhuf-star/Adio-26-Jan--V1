@@ -74,19 +74,37 @@ async function fetchWithRetry(
   throw lastError || new Error('Request failed after retries');
 }
 
-let nhostGetToken: (() => Promise<string | null>) | null = null;
+let authGetToken: (() => Promise<string | null>) | null = null;
 
-export function setNhostGetToken(getToken: () => Promise<string | null>) {
-  nhostGetToken = getToken;
+export function setAuthGetToken(getToken: () => Promise<string | null>) {
+  authGetToken = getToken;
 }
+
+
 
 async function getAuthToken(): Promise<string | null> {
   try {
-    if (nhostGetToken) {
-      return await nhostGetToken();
+    if (authGetToken) {
+      const token = await authGetToken();
+      if (token) {
+        console.log('[historyService] Got auth token from provider');
+        return token;
+      }
     }
+    
+    // Fallback: try to get token from localStorage
+    if (typeof window !== 'undefined') {
+      const localToken = localStorage.getItem('auth_token');
+      if (localToken && localToken.length > 10) {
+        console.log('[historyService] Got auth token from localStorage');
+        return localToken;
+      }
+    }
+    
+    console.warn('[historyService] No auth token available');
     return null;
-  } catch {
+  } catch (error) {
+    console.warn('[historyService] Error getting auth token:', error);
     return null;
   }
 }
@@ -231,6 +249,9 @@ export const historyService = {
         }
 
         if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Unauthorized');
+          }
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           console.warn('Failed to load from database:', errorData);
           throw new Error(errorData.error || 'Failed to load');
@@ -249,17 +270,33 @@ export const historyService = {
           lastModified: record.updated_at,
         }));
 
-        console.log(`Loaded ${items.length} items from database`);
+        console.log(`[historyService] Loaded ${items.length} items from database for current user`);
         setDataSource('live');
         
-        // If no items from database, try localStorage for legacy data
-        if (items.length === 0) {
+        // If database has items, use them; otherwise fall back to localStorage
+        if (items.length > 0) {
+          return items;
+        }
+        
+        // Database is empty - try to get items from localStorage as fallback
+        // This helps when user had campaigns saved locally before authentication
+        console.log('[historyService] Database empty, checking localStorage for fallback data');
+        try {
           const localItems = localStorageHistory.getAll();
           if (localItems.length > 0) {
-            console.log(`Found ${localItems.length} legacy items in localStorage`);
-            setDataSource('cached');
-            return localItems;
+            console.log(`[historyService] Found ${localItems.length} items in localStorage`);
+            return localItems.map((item: any) => ({
+              id: item.id || crypto.randomUUID(),
+              type: item.type || 'unknown',
+              name: item.name || 'Unnamed',
+              data: item.data || {},
+              timestamp: item.timestamp || new Date().toISOString(),
+              status: item.status || 'completed',
+              lastModified: item.lastModified,
+            }));
           }
+        } catch (localErr) {
+          console.warn('[historyService] Error reading localStorage:', localErr);
         }
         
         return items;

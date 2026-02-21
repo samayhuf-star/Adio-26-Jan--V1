@@ -1,9 +1,6 @@
 /**
- * Auth utilities - Nhost Authentication Implementation
+ * Auth utilities - Custom Authentication Implementation
  */
-
-import { nhost } from '../lib/nhost';
-import type { User as NhostUser } from '@nhost/nhost-js';
 
 export interface User {
   id: string;
@@ -27,19 +24,41 @@ export interface User {
   created?: string;
   updated?: string;
   email_confirmed_at?: string | null;
+  card_validated?: boolean;
+  selected_plan?: string | null;
 }
 
-// Initialize Nhost client
-const nhostClient = nhost;
+const API_BASE = '/api/account';
 
-// Get the correct redirect URL for email verification
-function getRedirectUrl(): string {
-  // Use current origin for redirect - user must add this to Nhost allowed URLs
-  if (typeof window !== 'undefined') {
-    return `${window.location.origin}/verify-email`;
+async function apiRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const token = getSessionTokenSync();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  // Fallback to production domain
-  return 'https://adiology.io/verify-email';
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { success: false, error: `Request failed: ${response.statusText}` };
+    }
+    if (!errorData.success && errorData.success !== undefined) {
+      return errorData;
+    }
+    return { success: false, error: errorData.error || errorData.message || `Request failed with status ${response.status}` };
+  }
+
+  return response.json();
 }
 
 export async function signUpWithEmail(
@@ -47,92 +66,32 @@ export async function signUpWithEmail(
   password: string,
   passwordConfirm?: string,
   name?: string
-): Promise<{ data: User | null; error: { message: string } | null }> {
+): Promise<{ data: User | null; error: { message: string } | null; needsEmailVerification?: boolean; message?: string }> {
   try {
-    // Sign up with Nhost Auth
-    // Use production domain for email verification redirect
-    const redirectUrl = getRedirectUrl();
-    
-    const { session, error: authError } = await nhostClient.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password: password,
-      options: {
-        displayName: name || '',
-        metadata: {
-          full_name: name || '',
-          name: name || '',
-        },
-        redirectTo: redirectUrl,
-      },
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+    }
+
+    const result = await apiRequest('/register', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password, name: name || '' }),
     });
 
-    if (authError) {
-      return { data: null, error: { message: authError.message } };
+    if (!result.success) {
+      return { data: null, error: { message: result.error || 'Registration failed' } };
     }
 
-    if (!session?.user) {
-      return { data: null, error: { message: 'Failed to create user account' } };
-    }
-
-    // Create user profile using GraphQL
-    try {
-      const profileData = {
-        id: session.user.id,
-        email: session.user.email!,
-        full_name: name || '',
-        name: name || '',
-        role: 'user',
-        subscription_plan: 'free',
-        subscription_status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+    if (result.needsEmailVerification) {
+      return {
+        data: null,
+        error: null,
+        needsEmailVerification: true,
+        message: result.message || 'Please check your email to verify your account',
       };
-
-      // Insert user profile via GraphQL
-      const { error: profileError } = await nhostClient.graphql.request(`
-        mutation InsertUser($user: users_insert_input!) {
-          insert_users_one(object: $user, on_conflict: {constraint: users_pkey, update_columns: [updated_at]}) {
-            id
-            email
-            full_name
-            name
-            role
-            subscription_plan
-            subscription_status
-          }
-        }
-      `, { user: profileData });
-
-      if (profileError) {
-        console.warn('Failed to create user profile:', profileError);
-        // Don't fail signup if profile creation fails
-      }
-    } catch (profileErr) {
-      console.warn('Error creating user profile:', profileErr);
-      // Continue even if profile creation fails
     }
 
-    // Map Nhost user to our User interface
-    const user: User = {
-      id: session.user.id,
-      email: session.user.email!,
-      name: name || session.user.displayName || '',
-      full_name: name || session.user.displayName || '',
-      role: 'user',
-      subscription_plan: 'free',
-      subscription_status: 'active',
-      email_confirmed_at: session.user.emailVerified ? new Date().toISOString() : null,
-    };
-
-    // Store user in localStorage for compatibility
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(user));
-      if (session.accessToken) {
-        localStorage.setItem('auth_token', session.accessToken);
-      }
-    }
-
-    return { data: user, error: null };
+    return { data: null, error: null };
   } catch (err: any) {
     console.error('Signup error:', err);
     return { data: null, error: { message: err.message || 'Failed to create account' } };
@@ -142,101 +101,49 @@ export async function signUpWithEmail(
 export async function signInWithEmail(
   email: string,
   password: string
-): Promise<{ data: { user: User; session: any } | null; error: { message: string } | null }> {
+): Promise<{ data: { user: User; session: any } | null; error: { message: string } | null; needsEmailVerification?: boolean }> {
   try {
-    const { session, error: authError } = await nhostClient.auth.signIn({
-      email: email.trim().toLowerCase(),
-      password: password,
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+    }
+
+    const result = await apiRequest('/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
     });
 
-    if (authError) {
-      return { data: null, error: { message: authError.message } };
-    }
-
-    if (!session?.user) {
-      return { data: null, error: { message: 'Invalid credentials' } };
-    }
-
-    // Fetch user profile from database using GraphQL
-    let userProfile: User | null = null;
-    try {
-      const { data: profileData, error: profileError } = await nhostClient.graphql.request(`
-        query GetUserProfile($id: uuid!) {
-          users_by_pk(id: $id) {
-            id
-            email
-            name
-            full_name
-            role
-            subscription_plan
-            subscription_status
-            google_ads_default_account
-            company_name
-            job_title
-            industry
-            company_size
-            phone
-            website
-            country
-            bio
-            created_at
-            updated_at
-          }
-        }
-      `, { id: session.user.id });
-
-      if (profileData?.users_by_pk && !profileError) {
-        const profile = profileData.users_by_pk;
-        userProfile = {
-          id: profile.id,
-          email: profile.email || session.user.email!,
-          name: profile.name || profile.full_name || session.user.displayName || '',
-          full_name: profile.full_name || profile.name || session.user.displayName || '',
-          role: profile.role || 'user',
-          subscription_plan: profile.subscription_plan || 'free',
-          subscription_status: profile.subscription_status || 'active',
-          google_ads_default_account: profile.google_ads_default_account,
-          company_name: profile.company_name,
-          job_title: profile.job_title,
-          industry: profile.industry,
-          company_size: profile.company_size,
-          phone: profile.phone,
-          website: profile.website,
-          country: profile.country,
-          bio: profile.bio,
-          created: profile.created_at,
-          updated: profile.updated_at,
-          email_confirmed_at: session.user.emailVerified ? new Date().toISOString() : null,
-        };
+    if (!result.success) {
+      if (result.needsEmailVerification) {
+        return { data: null, error: { message: result.error }, needsEmailVerification: true };
       }
-    } catch (profileErr) {
-      console.warn('Error fetching user profile:', profileErr);
+      return { data: null, error: { message: result.error || 'Invalid email or password' } };
     }
 
-    // If no profile found, create a basic one
-    if (!userProfile) {
-      userProfile = {
-        id: session.user.id,
-        email: session.user.email!,
-        name: session.user.displayName || '',
-        full_name: session.user.displayName || '',
-        role: 'user',
-        subscription_plan: 'free',
-        subscription_status: 'active',
-        email_confirmed_at: session.user.emailVerified ? new Date().toISOString() : null,
-      };
-    }
+    const user: User = {
+      id: result.user.id,
+      email: result.user.email,
+      name: result.user.full_name || '',
+      full_name: result.user.full_name || '',
+      avatar: result.user.avatar_url,
+      role: result.user.role || 'user',
+      subscription_plan: result.user.subscription_plan || 'free',
+      subscription_status: result.user.subscription_status || 'inactive',
+      card_validated: result.user.card_validated || false,
+      selected_plan: result.user.selected_plan || null,
+      email_confirmed_at: new Date().toISOString(),
+      created: result.user.created_at,
+    };
 
-    // Store user and session in localStorage for compatibility
     if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(userProfile));
-      localStorage.setItem('auth_token', session.accessToken);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('auth_token', result.token);
     }
 
     return {
       data: {
-        user: userProfile,
-        session: session,
+        user,
+        session: { accessToken: result.token },
       },
       error: null,
     };
@@ -248,24 +155,15 @@ export async function signInWithEmail(
 
 export async function signOut(): Promise<{ error: { message: string } | null }> {
   try {
-    const { error } = await nhostClient.auth.signOut();
-
-    // Clear localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user');
       localStorage.removeItem('auth_token');
       sessionStorage.removeItem('test_admin_mode');
       sessionStorage.removeItem('test_admin_user');
     }
-
-    if (error) {
-      return { error: { message: error.message } };
-    }
-
     return { error: null };
   } catch (err: any) {
     console.error('Signout error:', err);
-    // Clear localStorage even if signout fails
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user');
       localStorage.removeItem('auth_token');
@@ -277,50 +175,24 @@ export async function signOut(): Promise<{ error: { message: string } | null }> 
 }
 
 export async function getSessionToken(): Promise<string | null> {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    const session = nhostClient.auth.getSession();
-    
-    if (session?.accessToken) {
-      // Update localStorage for compatibility
-      localStorage.setItem('auth_token', session.accessToken);
-      return session.accessToken;
-    }
-
-    // Fallback to localStorage token
-    return localStorage.getItem('auth_token');
-  } catch (err) {
-    console.error('Error getting session token:', err);
-    return localStorage.getItem('auth_token');
-  }
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('auth_token');
 }
 
-// Synchronous version for compatibility
 export function getSessionTokenSync(): string | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+  if (typeof window === 'undefined') return null;
   return localStorage.getItem('auth_token');
 }
 
 export async function resetPassword(email: string): Promise<{ error: { message: string } | null }> {
   try {
-    // Always use production domain for password reset links
-    // This ensures the URL is whitelisted in Nhost and works consistently
-    const redirectUrl = 'https://www.adiology.online/reset-password';
-    
-    const { error } = await nhostClient.auth.resetPassword({
-      email: email.trim().toLowerCase(),
-      options: {
-        redirectTo: redirectUrl,
-      },
+    const result = await apiRequest('/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
     });
 
-    if (error) {
-      return { error: { message: error.message } };
+    if (result && result.success === false) {
+      return { error: { message: result.error || 'Failed to send password reset email' } };
     }
 
     return { error: null };
@@ -335,26 +207,14 @@ export async function updatePassword(
   token?: string
 ): Promise<{ error: { message: string } | null }> {
   try {
-    // For Nhost, password updates are handled differently
-    // If token is provided, it's a password reset flow
     if (token) {
-      // This would typically be handled by Nhost's password reset flow
-      // For now, we'll use the change password method
-      const { error } = await nhostClient.auth.changePassword({
-        newPassword: newPassword,
+      const result = await apiRequest('/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, password: newPassword }),
       });
 
-      if (error) {
-        return { error: { message: error.message } };
-      }
-    } else {
-      // Regular password change for authenticated user
-      const { error } = await nhostClient.auth.changePassword({
-        newPassword: newPassword,
-      });
-
-      if (error) {
-        return { error: { message: error.message } };
+      if (!result.success) {
+        return { error: { message: result.error || 'Failed to reset password' } };
       }
     }
 
@@ -380,94 +240,39 @@ export function getCurrentUser(): User | null {
 }
 
 export async function getCurrentUserAsync(): Promise<User | null> {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+  if (typeof window === 'undefined') return null;
+
+  const token = getSessionTokenSync();
+  if (!token) return getCurrentUser();
 
   try {
-    const user = nhostClient.auth.getUser();
+    const result = await apiRequest('/me');
 
-    if (!user) {
-      return null;
+    if (result.success && result.user) {
+      const user: User = {
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.full_name || '',
+        full_name: result.user.full_name || '',
+        avatar: result.user.avatar_url,
+        role: result.user.role || 'user',
+        subscription_plan: result.user.subscription_plan || 'free',
+        subscription_status: result.user.subscription_status || 'inactive',
+        card_validated: result.user.card_validated || false,
+        selected_plan: result.user.selected_plan || null,
+        email_confirmed_at: result.user.email_verified ? new Date().toISOString() : null,
+        created: result.user.created_at,
+        updated: result.user.updated_at,
+      };
+
+      localStorage.setItem('user', JSON.stringify(user));
+      return user;
     }
-
-    // Try to get user profile from database using GraphQL
-    try {
-      const { data: profileData, error } = await nhostClient.graphql.request(`
-        query GetUserProfile($id: uuid!) {
-          users_by_pk(id: $id) {
-            id
-            email
-            name
-            full_name
-            role
-            subscription_plan
-            subscription_status
-            google_ads_default_account
-            company_name
-            job_title
-            industry
-            company_size
-            phone
-            website
-            country
-            bio
-            created_at
-            updated_at
-          }
-        }
-      `, { id: user.id });
-
-      if (profileData?.users_by_pk && !error) {
-        const profile = profileData.users_by_pk;
-        const userProfile: User = {
-          id: profile.id,
-          email: profile.email || user.email!,
-          name: profile.name || profile.full_name || user.displayName || '',
-          full_name: profile.full_name || profile.name || user.displayName || '',
-          role: profile.role || 'user',
-          subscription_plan: profile.subscription_plan || 'free',
-          subscription_status: profile.subscription_status || 'active',
-          google_ads_default_account: profile.google_ads_default_account,
-          company_name: profile.company_name,
-          job_title: profile.job_title,
-          industry: profile.industry,
-          company_size: profile.company_size,
-          phone: profile.phone,
-          website: profile.website,
-          country: profile.country,
-          bio: profile.bio,
-          created: profile.created_at,
-          updated: profile.updated_at,
-          email_confirmed_at: user.emailVerified ? new Date().toISOString() : null,
-        };
-        
-        // Update localStorage
-        localStorage.setItem('user', JSON.stringify(userProfile));
-        return userProfile;
-      }
-    } catch (profileErr) {
-      console.warn('Error fetching user profile:', profileErr);
-    }
-
-    // Fallback to auth user metadata
-    const userProfile: User = {
-      id: user.id,
-      email: user.email!,
-      name: user.displayName || '',
-      full_name: user.displayName || '',
-      role: 'user',
-      subscription_plan: 'free',
-      subscription_status: 'active',
-      email_confirmed_at: user.emailVerified ? new Date().toISOString() : null,
-    };
-
-    localStorage.setItem('user', JSON.stringify(userProfile));
-    return userProfile;
   } catch (err) {
-    console.error('Error getting current user:', err);
-    return getCurrentUser(); // Fallback to localStorage
+    console.warn('Error fetching user profile:', err);
   }
+
+  return getCurrentUser();
 }
 
 export function isAuthenticated(): boolean {
@@ -477,12 +282,7 @@ export function isAuthenticated(): boolean {
 }
 
 export async function isAuthenticatedAsync(): Promise<boolean> {
-  try {
-    const session = nhostClient.auth.getSession();
-    return session !== null && session.accessToken !== null;
-  } catch (err) {
-    return isAuthenticated(); // Fallback to sync check
-  }
+  return isAuthenticated();
 }
 
 export function clearProfileCache() {
@@ -490,67 +290,23 @@ export function clearProfileCache() {
 }
 
 export async function getCurrentAuthUser(): Promise<{ id: string; email: string } | null> {
-  try {
-    const user = nhostClient.auth.getUser();
-    
-    if (!user) {
-      // Fallback to localStorage
-      const localUser = getCurrentUser();
-      if (localUser) {
-        return {
-          id: localUser.id,
-          email: localUser.email,
-        };
-      }
-      return null;
-    }
-
-    return {
-      id: user.id,
-      email: user.email!,
-    };
-  } catch (err) {
-    console.error('Error getting auth user:', err);
-    const user = getCurrentUser();
-    if (user) {
-      return {
-        id: user.id,
-        email: user.email,
-      };
-    }
-    return null;
+  const user = getCurrentUser();
+  if (user) {
+    return { id: user.id, email: user.email };
   }
+  return null;
 }
 
 export async function getCurrentUserProfile(): Promise<User | null> {
   return getCurrentUserAsync();
 }
 
-
 export async function getSession() {
-  try {
-    const session = nhostClient.auth.getSession();
-    
-    if (session?.accessToken) {
-      // Update localStorage for compatibility
-      localStorage.setItem('auth_token', session.accessToken);
-      return session;
-    }
-
-    // Fallback to localStorage
-    const token = getSessionTokenSync();
-    if (token) {
-      return { accessToken: token };
-    }
-    return null;
-  } catch (err) {
-    console.error('Error getting session:', err);
-    const token = getSessionTokenSync();
-    if (token) {
-      return { accessToken: token };
-    }
-    return null;
+  const token = getSessionTokenSync();
+  if (token) {
+    return { accessToken: token };
   }
+  return null;
 }
 
 export async function createUserProfile(
@@ -558,90 +314,32 @@ export async function createUserProfile(
   email: string,
   fullName: string
 ): Promise<User> {
-  try {
-    const profileData = {
-      id: userId,
-      email: email,
-      full_name: fullName,
-      name: fullName,
-      role: 'user',
-      subscription_plan: 'free',
-      subscription_status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+  const user: User = {
+    id: userId,
+    email,
+    name: fullName,
+    full_name: fullName,
+    role: 'user',
+    subscription_plan: 'free',
+    subscription_status: 'inactive',
+  };
 
-    // Try to insert or update user profile using GraphQL
-    const { data: profile, error } = await nhostClient.graphql.request(`
-      mutation UpsertUser($user: users_insert_input!) {
-        insert_users_one(object: $user, on_conflict: {constraint: users_pkey, update_columns: [updated_at, full_name, name]}) {
-          id
-          email
-          full_name
-          name
-          role
-          subscription_plan
-          subscription_status
-        }
-      }
-    `, { user: profileData });
-
-    const user: User = {
-      id: userId,
-      email,
-      name: fullName,
-      full_name: fullName,
-      role: 'user',
-      subscription_plan: 'free',
-      subscription_status: 'active',
-      ...profile?.insert_users_one,
-    };
-
-    // Store in localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(user));
-    }
-
-    if (error) {
-      console.warn('Error creating/updating user profile:', error);
-    }
-
-    return user;
-  } catch (err) {
-    console.error('Error creating user profile:', err);
-    // Return basic user even if database update fails
-    const user: User = {
-      id: userId,
-      email,
-      name: fullName,
-      full_name: fullName,
-      role: 'user',
-      subscription_plan: 'free',
-      subscription_status: 'active',
-    };
-    
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(user));
-    }
-    
-    return user;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('user', JSON.stringify(user));
   }
+
+  return user;
 }
 
 export async function resendVerificationEmail(email: string) {
   try {
-    // Use production domain for email verification redirect
-    const redirectUrl = getRedirectUrl();
-    
-    const { error } = await nhostClient.auth.sendVerificationEmail({
-      email: email.trim().toLowerCase(),
-      options: {
-        redirectTo: redirectUrl,
-      },
+    const result = await apiRequest('/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
     });
 
-    if (error) {
-      return { error: { message: error.message } };
+    if (!result.success) {
+      return { error: { message: result.error || 'Failed to resend verification email' } };
     }
 
     return { error: null };
@@ -656,43 +354,8 @@ export function isSuperAdmin(): boolean {
   return user?.role === 'superadmin' || user?.role === 'super_admin' || false;
 }
 
-// Initialize auth state on load
-if (typeof window !== 'undefined') {
-  try {
-    // Listen for auth state changes
-    nhostClient.auth.onAuthStateChanged((event, session) => {
-      const eventType = event as string;
-      if (eventType === 'SIGNED_IN' && session?.user) {
-        // Update localStorage when user signs in
-        getCurrentUserAsync().catch(console.error);
-      } else if (eventType === 'SIGNED_OUT') {
-        // Clear localStorage when user signs out
-        localStorage.removeItem('user');
-        localStorage.removeItem('auth_token');
-        // Clear all Nhost-related storage
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith('nhost.') || key.includes('nhost'))) {
-            keysToRemove.push(key);
-          }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-      } else if (eventType === 'TOKEN_CHANGED' && session) {
-        // Update token on refresh
-        localStorage.setItem('auth_token', session.accessToken);
-      }
-    });
-  } catch (err) {
-    console.warn('Failed to initialize auth state listener:', err);
-  }
+export function setLegacyUser(_user: any) {
 }
 
-// Legacy compatibility functions
-export function setNhostUser(_user: any) {
-  // No-op
-}
-
-export function setNhostAuth(_auth: any) {
-  // No-op
+export function setLegacyAuth(_auth: any) {
 }

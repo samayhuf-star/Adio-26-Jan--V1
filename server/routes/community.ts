@@ -8,6 +8,28 @@ const DISCOURSE_API_KEY = process.env.DISCOURSE_API_KEY || '';
 const DISCOURSE_SSO_SECRET = process.env.DISCOURSE_SSO_SECRET || '';
 const DISCOURSE_CATEGORY_ID = process.env.DISCOURSE_CATEGORY_ID || '5';
 
+// Cache for Discourse API responses to prevent rate limiting
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+
+const discourseCache: Map<string, CacheEntry> = new Map();
+const CACHE_TTL = 60 * 1000; // 60 seconds cache
+
+function getCached<T>(key: string): T | null {
+  const entry = discourseCache.get(key);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+    return entry.data as T;
+  }
+  discourseCache.delete(key);
+  return null;
+}
+
+function setCache(key: string, data: any): void {
+  discourseCache.set(key, { data, timestamp: Date.now() });
+}
+
 interface DiscourseUser {
   id: string;
   email: string;
@@ -137,6 +159,7 @@ community.get('/topics', async (c) => {
   try {
     const limit = parseInt(c.req.query('limit') || '10');
     const category = c.req.query('category');
+    const cacheKey = `topics:${limit}:${category || 'all'}`;
 
     // Return mock data if Discourse is not configured
     if (!DISCOURSE_API_KEY) {
@@ -145,6 +168,12 @@ community.get('/topics', async (c) => {
         users: [],
         mock: true,
       });
+    }
+
+    // Check cache first to prevent rate limiting
+    const cached = getCached<{ topics: any[]; users: any[] }>(cacheKey);
+    if (cached) {
+      return c.json({ ...cached, cached: true });
     }
 
     let url = `${DISCOURSE_URL}/latest.json?per_page=${limit}`;
@@ -161,6 +190,13 @@ community.get('/topics', async (c) => {
     });
 
     if (!response.ok) {
+      // On rate limit, return cached data if available or mock data
+      if (response.status === 429) {
+        const staleCache = discourseCache.get(cacheKey);
+        if (staleCache) {
+          return c.json({ ...staleCache.data, cached: true, stale: true });
+        }
+      }
       throw new Error(`Discourse API error: ${response.status}`);
     }
 
@@ -186,7 +222,9 @@ community.get('/topics', async (c) => {
         ),
       })) || [];
 
-    return c.json({ topics, users: data.users || [] });
+    const result = { topics, users: data.users || [] };
+    setCache(cacheKey, result);
+    return c.json(result);
   } catch (error) {
     console.error('Topics fetch error:', error);
     return c.json({
@@ -306,9 +344,17 @@ community.post('/posts', async (c) => {
 
 community.get('/categories', async (c) => {
   try {
+    const cacheKey = 'categories:all';
+    
     // Return mock data if Discourse is not configured
     if (!DISCOURSE_API_KEY) {
       return c.json({ categories: getMockCategories(), mock: true });
+    }
+
+    // Check cache first to prevent rate limiting
+    const cached = getCached<{ categories: any[] }>(cacheKey);
+    if (cached) {
+      return c.json({ ...cached, cached: true });
     }
 
     const response = await fetch(`${DISCOURSE_URL}/categories.json`, {
@@ -320,6 +366,13 @@ community.get('/categories', async (c) => {
     });
 
     if (!response.ok) {
+      // On rate limit, return cached data if available
+      if (response.status === 429) {
+        const staleCache = discourseCache.get(cacheKey);
+        if (staleCache) {
+          return c.json({ ...staleCache.data, cached: true, stale: true });
+        }
+      }
       return c.json({ categories: getMockCategories() });
     }
 
@@ -335,7 +388,9 @@ community.get('/categories', async (c) => {
         topicCount: cat.topic_count,
       })) || [];
 
-    return c.json({ categories });
+    const result = { categories };
+    setCache(cacheKey, result);
+    return c.json(result);
   } catch (error) {
     console.error('Categories fetch error:', error);
     return c.json({ categories: getMockCategories() });

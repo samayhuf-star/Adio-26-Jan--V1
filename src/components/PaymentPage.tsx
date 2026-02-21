@@ -243,7 +243,7 @@ const PaymentForm: React.FC<{
       // Get user email
       let userEmail: string | undefined;
       try {
-        const user = getCurrentUser();
+        const user = await getCurrentAuthUser();
         userEmail = user?.email;
       } catch (e) {
         console.error('Error getting user email:', e);

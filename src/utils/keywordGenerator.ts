@@ -86,8 +86,7 @@ function isValidKeyword(keyword: string, serviceTerms: string[]): boolean {
   const lower = keyword.toLowerCase().trim();
   const words = lower.split(/\s+/).filter(w => w.length > 0);
   
-  // Rule 1: Must be 1-6 words (allow 1-word keywords too)
-  if (words.length < 1 || words.length > 6) return false;
+  if (words.length < 2 || words.length > 6) return false;
   
   // Rule 2: No duplicate consecutive words (e.g., "24/7 24/7 plumber")
   for (let i = 0; i < words.length - 1; i++) {
@@ -261,10 +260,11 @@ function classifyIntent(keyword: string): KeywordIntent {
 }
 
 /**
- * Main keyword generation function
- * Now uses comprehensive expansion engine for 300-500+ keywords
+ * Main keyword generation function - Alphabet Soup Method
+ * Calls backend endpoint that scrapes Google Autocomplete for real user searches.
+ * Falls back to basic expansion if backend is unavailable.
  */
-export function generateKeywords(options: KeywordGenerationOptions): GeneratedKeyword[] {
+export async function generateKeywords(options: KeywordGenerationOptions): Promise<GeneratedKeyword[]> {
   const {
     seedKeywords,
     negativeKeywords = '',
@@ -275,248 +275,107 @@ export function generateKeywords(options: KeywordGenerationOptions): GeneratedKe
     minKeywords = 300
   } = options;
 
-  // Parse negative keywords (comma or newline separated)
   const negativeList = negativeKeywords
     .split(/[,\n]/)
     .map(n => n.trim().toLowerCase())
     .filter(Boolean);
 
-  // Parse seed keywords - normalize to root terms
   const seedList = seedKeywords
     .split(/[,\n]/)
     .map(k => k.trim().toLowerCase())
     .filter(k => k.length >= 2 && k.length <= 50)
-    .slice(0, 10); // Limit seeds to prevent explosion
+    .slice(0, 5);
 
   if (seedList.length === 0) {
     return [];
   }
 
-  // Extract service terms for validation
-  const serviceTerms = extractServiceTerms(seedList);
-  
-  const generatedKeywords: GeneratedKeyword[] = [];
+  let generatedKeywords: GeneratedKeyword[] = [];
   let keywordIdCounter = 0;
 
-  // ============================================================================
-  // PHASE 1: Use comprehensive expansion engine (300-500+ keywords)
-  // ============================================================================
-  console.log(`🚀 Starting comprehensive keyword expansion for ${seedList.length} seeds...`);
-  
   try {
-    const expansionMode = maxKeywords >= 500 ? 'aggressive' : maxKeywords >= 300 ? 'moderate' : 'conservative';
-    const expandedKeywords = expandKeywords(seedList, {
-      expansionMode,
-      includeQuestions: true,
-      includeLongTail: true,
-      maxKeywords: Math.min(maxKeywords, 600)
+    console.log(`[Alphabet Soup] Fetching real autocomplete keywords for ${seedList.length} seeds...`);
+
+    const response = await fetch('/api/keywords/alphabet-soup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seedKeywords: seedList,
+        maxKeywordsPerSeed: Math.ceil(maxKeywords / seedList.length),
+      }),
     });
 
-    console.log(`✅ Expansion engine generated ${expandedKeywords.length} keywords`);
+    if (!response.ok) {
+      throw new Error(`Backend returned ${response.status}`);
+    }
 
-    // Convert expanded keywords to GeneratedKeyword format
-    for (const expanded of expandedKeywords) {
-      // Skip if contains negative keywords
-      if (negativeList.some(neg => expanded.keyword.toLowerCase().includes(neg))) {
-        continue;
-      }
-      // Skip duplicates
-      if (generatedKeywords.some(k => k.text.toLowerCase() === expanded.keyword.toLowerCase())) {
-        continue;
-      }
-      // Skip if doesn't pass validation
-      if (!isValidKeyword(expanded.keyword, serviceTerms)) {
-        continue;
+    const data = await response.json();
+
+    if (data.success && data.keywords && data.keywords.length > 0) {
+      console.log(`[Alphabet Soup] Received ${data.keywords.length} keywords from Google Autocomplete`);
+
+      const serviceTerms = extractServiceTerms(seedList);
+      const seenTexts = new Set<string>();
+
+      for (const kw of data.keywords) {
+        const keyword = (kw.keyword || '').toLowerCase().trim();
+        if (!keyword || keyword.length < 3) continue;
+
+        if (keyword.split(/\s+/).filter(Boolean).length < 2) continue;
+
+        if (negativeList.some(neg => keyword.includes(neg))) continue;
+
+        if (seenTexts.has(keyword)) continue;
+
+        if (!isValidKeyword(keyword, serviceTerms)) continue;
+
+        seenTexts.add(keyword);
+        generatedKeywords.push({
+          id: `kw-${keywordIdCounter++}`,
+          text: keyword,
+          volume: 'Medium',
+          cpc: '$2.50',
+          type: classifyIntent(keyword),
+          matchType: keyword.includes('near me') || keyword.includes('local') ? 'EXACT' : 'BROAD',
+        });
+
+        if (generatedKeywords.length >= maxKeywords) break;
       }
 
-      generatedKeywords.push({
-        id: `kw-${keywordIdCounter++}`,
-        text: expanded.keyword,
-        volume: expanded.avgMonthlySearches >= 5000 ? 'High' : expanded.avgMonthlySearches >= 1000 ? 'Medium' : 'Low',
-        cpc: `$${expanded.avgCpc.toFixed(2)}`,
-        type: classifyIntent(expanded.keyword),
-        matchType: expanded.keyword.includes('near me') || expanded.keyword.includes('local') ? 'EXACT' : 'BROAD'
-      });
+      console.log(`[Alphabet Soup] After filtering: ${generatedKeywords.length} valid keywords`);
+    } else {
+      throw new Error('No keywords returned from Alphabet Soup API');
     }
   } catch (error) {
-    console.warn('⚠️ Expansion engine failed, falling back to vertical patterns:', error);
+    console.warn('[Alphabet Soup] Backend unavailable, using local fallback:', error);
+    generatedKeywords = generateKeywordsFallback(seedList, negativeList, maxKeywords, minKeywords);
   }
 
-  // ============================================================================
-  // PHASE 2: Supplement with vertical-specific patterns if needed
-  // ============================================================================
-  
-  // Helper to add valid keyword
-  const addValidKeyword = (kw: string, volume: string, cpc: string, type: string, matchType: string) => {
-    if (generatedKeywords.length >= maxKeywords) return;
-    if (negativeList.some(neg => kw.includes(neg))) return;
-    if (generatedKeywords.some(k => k.text.toLowerCase() === kw.toLowerCase())) return;
-    if (!isValidKeyword(kw, serviceTerms)) return;
-    
-    generatedKeywords.push({
-      id: `kw-${keywordIdCounter++}`,
-      text: kw,
-      volume,
-      cpc,
-      type,
-      matchType
-    });
-  };
-
-  // Get vertical-specific patterns for additional variations
-  const verticalPatterns = getPatternsForVertical(vertical);
-  console.log(`🎯 Supplementing with ${vertical} vertical patterns...`);
-
-  // Process each seed keyword through VERTICAL-SPECIFIC patterns
-  for (const seed of seedList) {
-    const cleanSeed = seed.trim().toLowerCase();
-    const seedWords = cleanSeed.split(/\s+/).filter(w => w.length > 0);
-    
-    // Skip if seed contains negative keywords
-    if (negativeList.some(neg => cleanSeed.includes(neg))) {
-      continue;
-    }
-
-    // VERTICAL-AWARE CLUSTER 1: Local/Discovery patterns (specific to vertical)
-    verticalPatterns.local.forEach(pattern => {
-      const kw = pattern.replace('[seed]', cleanSeed).replace('[city]', 'your area');
-      if (!kw.includes('[')) {
-        addValidKeyword(kw, 'High', '$4.20', 'Local', 'BROAD');
+  if (generatedKeywords.length < minKeywords) {
+    console.log(`[Alphabet Soup] Only ${generatedKeywords.length} keywords, supplementing with local fallback...`);
+    const existingTexts = new Set(generatedKeywords.map(k => k.text.toLowerCase()));
+    const fallback = generateKeywordsFallback(seedList, negativeList, minKeywords - generatedKeywords.length, 0);
+    for (const kw of fallback) {
+      if (!existingTexts.has(kw.text.toLowerCase())) {
+        kw.id = `kw-${keywordIdCounter++}`;
+        generatedKeywords.push(kw);
+        existingTexts.add(kw.text.toLowerCase());
       }
-    });
-
-    // VERTICAL-AWARE CLUSTER 2: Price/Cost patterns (specific to vertical)
-    verticalPatterns.price.forEach(pattern => {
-      const kw = pattern.replace('[seed]', cleanSeed);
-      if (!kw.includes('[')) {
-        addValidKeyword(kw, 'Medium', '$2.50', 'Commercial', 'PHRASE');
-      }
-    });
-
-    // VERTICAL-AWARE CLUSTER 3: Quality/Comparison patterns (specific to vertical)
-    verticalPatterns.quality.forEach(pattern => {
-      const kw = pattern.replace('[seed]', cleanSeed);
-      if (!kw.includes('[')) {
-        addValidKeyword(kw, 'High', '$3.00', 'Commercial', 'PHRASE');
-      }
-    });
-
-    // VERTICAL-AWARE CLUSTER 4: Urgency patterns (specific to vertical)
-    verticalPatterns.urgency.forEach(pattern => {
-      const kw = pattern.replace('[seed]', cleanSeed);
-      if (!kw.includes('[')) {
-        addValidKeyword(kw, 'High', '$5.00', 'Transactional', 'EXACT');
-      }
-    });
-
-    // VERTICAL-AWARE CLUSTER 5: Service patterns (specific to vertical)
-    verticalPatterns.service.forEach(pattern => {
-      const kw = pattern.replace('[seed]', cleanSeed);
-      if (!kw.includes('[')) {
-        addValidKeyword(kw, 'Medium', '$2.80', 'Transactional', 'BROAD');
-      }
-    });
-
-    // VERTICAL-AWARE CLUSTER 6: Transactional patterns (specific to vertical)
-    verticalPatterns.transactional.forEach(pattern => {
-      const kw = pattern.replace('[seed]', cleanSeed);
-      if (!kw.includes('[')) {
-        addValidKeyword(kw, 'High', '$4.50', classifyIntent(kw), 'EXACT');
-      }
-    });
-
-    // Add the seed keyword itself (if 2-3 words)
-    if (seedWords.length >= 2 && seedWords.length <= 3) {
-      addValidKeyword(cleanSeed, 'High', '$2.50', 'Commercial', 'BROAD');
-    }
-
-    if (generatedKeywords.length >= maxKeywords) break;
-  }
-
-  // If we need more keywords, generate additional vertical-aware variations
-  if (generatedKeywords.length < minKeywords && seedList.length > 0) {
-    const needed = minKeywords - generatedKeywords.length;
-    let generated = 0;
-
-    // Get additional vertical-specific patterns (using imported normalizeVertical)
-    const verticalExtras: Record<string, string[]> = {
-      'Travel': ['[seed] booking', '[seed] reservation', '[seed] tickets', '[seed] comparison', 'compare [seed]', '[seed] deals online', 'best [seed] offers', '[seed] packages', '[seed] flights', '[seed] hotels', '[seed] resorts', '[seed] tours', '[seed] vacation', 'book [seed] now', 'find [seed] deals', '[seed] last minute deals', '[seed] all inclusive', '[seed] adventure'],
-      'E-commerce': ['[seed] online', '[seed] delivery', '[seed] fast shipping', '[seed] in stock', '[seed] buy now', '[seed] purchase', '[seed] checkout', '[seed] sale', '[seed] deal', '[seed] offer', '[seed] discount', '[seed] promo', 'shop [seed]', 'order [seed]', '[seed] amazon', '[seed] ebay', '[seed] walmart'],
-      'Healthcare': ['[seed] clinic', '[seed] doctor', '[seed] appointment', '[seed] near me', '[seed] consultation', '[seed] specialist', '[seed] treatment', '[seed] care', '[seed] hospital', '[seed] urgent care', '[seed] pharmacy', '[seed] telemedicine', 'find [seed]', '[seed] booking', '[seed] reviews'],
-      'Legal': ['[seed] lawyer', '[seed] attorney', '[seed] legal help', '[seed] advice', '[seed] consultation', '[seed] services', '[seed] firm', '[seed] office', '[seed] near me', '[seed] experienced', '[seed] expert', 'hire [seed]', 'contact [seed]'],
-      'Real Estate': ['[seed] listings', '[seed] homes', '[seed] properties', '[seed] for sale', '[seed] for rent', '[seed] agents', '[seed] houses', '[seed] apartments', '[seed] condos', '[seed] land', '[seed] commercial', 'buy [seed]', 'rent [seed]', '[seed] prices'],
-      'Finance': ['[seed] account', '[seed] application', '[seed] online', '[seed] approval', '[seed] calculator', '[seed] rates', '[seed] interest', '[seed] loan', '[seed] credit', '[seed] investment', '[seed] savings', 'apply for [seed]', 'open [seed]'],
-      'Education': ['[seed] course', '[seed] classes', '[seed] training', '[seed] certification', '[seed] online', '[seed] degree', '[seed] program', '[seed] school', '[seed] university', '[seed] college', '[seed] instructor', '[seed] tuition', 'enroll [seed]', 'register [seed]'],
-      'Services': ['[seed] service', '[seed] company', '[seed] local', '[seed] near me', '[seed] quote', '[seed] estimate', '[seed] contractor', '[seed] professional', '[seed] licensed', '[seed] experienced', '[seed] rates', '[seed] prices', 'hire [seed]', 'book [seed]', '[seed] available', '[seed] same day'],
-      'default': ['[seed] service', '[seed] help', '[seed] support', '[seed] online', 'find [seed]', 'get [seed]', '[seed] near me', '[seed] local', '[seed] cost', '[seed] price', 'best [seed]', 'top [seed]', '[seed] reviews', '[seed] rates']
-    };
-
-    const normalizedVertical = normalizeVertical(vertical);
-    const extraPatterns = verticalExtras[normalizedVertical] || verticalExtras['default'];
-
-    // Generate more keywords by cycling through seeds multiple times with different patterns
-    for (let cycle = 0; cycle < 3 && generated < needed; cycle++) {
-      for (const seed of seedList) {
-        if (generated >= needed) break;
-        
-        const patternsToTry = extraPatterns.slice(cycle * Math.ceil(extraPatterns.length / 3), (cycle + 1) * Math.ceil(extraPatterns.length / 3));
-        for (const pattern of patternsToTry) {
-          if (generated >= needed) break;
-          const kw = pattern.replace('[seed]', seed);
-          if (!kw.includes('[')) {
-            const prevLen = generatedKeywords.length;
-            addValidKeyword(kw, 'Medium', '$2.00', classifyIntent(kw), 'BROAD');
-            if (generatedKeywords.length > prevLen) generated++;
-          }
-        }
-      }
+      if (generatedKeywords.length >= maxKeywords) break;
     }
   }
 
-  // Additional fallback: If still below min, generate simple variations
-  if (generatedKeywords.length < minKeywords && seedList.length > 0) {
-    const needed = minKeywords - generatedKeywords.length;
-    const simpleModifiers = [
-      'near me', 'nearby', 'local', 'in my area',
-      'best', 'top', 'quality', 'professional',
-      'cheap', 'affordable', 'cost', 'price',
-      '24/7', 'same day', 'emergency', 'urgent',
-      'online', 'digital', 'virtual', 'remote',
-      'free', 'free estimate', 'free quote', 'free consultation'
-    ];
-    
-    let added = 0;
-    for (const seed of seedList) {
-      for (const mod of simpleModifiers) {
-        if (added >= needed) break;
-        const kw = `${mod} ${seed}`;
-        const prevLen = generatedKeywords.length;
-        addValidKeyword(kw, 'Low', '$1.50', classifyIntent(kw), 'BROAD');
-        if (generatedKeywords.length > prevLen) added++;
-      }
-    }
-  }
-
-  // Limit to maxKeywords
   if (generatedKeywords.length > maxKeywords) {
     generatedKeywords.splice(maxKeywords);
   }
 
-  // Final filter: Remove any keywords containing negative keywords
-  const finalKeywords = generatedKeywords.filter((k) => {
-    const keywordText = (k.text || '').toLowerCase();
-    return !negativeList.some(neg => keywordText.includes(neg));
-  });
-
-  // Apply bid suggestions if intent is classified
-  let keywordsWithBids = finalKeywords;
   if (intentResult) {
     try {
       const { suggestBidCents } = require('./campaignIntelligence/bidSuggestions');
       const baseCPCCents = 2000;
       const emergencyMods = getEmergencyModifiers(vertical);
 
-      keywordsWithBids = finalKeywords.map((kw) => {
+      generatedKeywords = generatedKeywords.map((kw) => {
         const keywordText = (kw.text || '').trim();
         const matchType: any = kw.matchType || 'BROAD';
         const hasEmergency = emergencyMods.some((m: string) =>
@@ -543,5 +402,59 @@ export function generateKeywords(options: KeywordGenerationOptions): GeneratedKe
     }
   }
 
-  return keywordsWithBids;
+  return generatedKeywords;
+}
+
+function generateKeywordsFallback(seedList: string[], negativeList: string[], maxKeywords: number, minKeywords: number): GeneratedKeyword[] {
+  const results: GeneratedKeyword[] = [];
+  let counter = 0;
+
+  const preModifiers = [
+    'best', 'top', 'affordable', 'cheap', 'professional', 'local',
+    'certified', 'licensed', '24/7', 'emergency', 'same day',
+    'quality', 'expert', 'fast', 'reliable', 'trusted', 'online',
+  ];
+  const postModifiers = [
+    'near me', 'services', 'company', 'cost', 'prices', 'quote',
+    'reviews', 'in my area', 'nearby', 'for sale', 'online',
+    'free estimate', 'free quote', 'deals', 'discount', 'today',
+  ];
+
+  for (const seed of seedList) {
+    if (results.length >= maxKeywords) break;
+    const cleanSeed = seed.trim().toLowerCase();
+    if (negativeList.some(neg => cleanSeed.includes(neg))) continue;
+
+    // Master Rule: Minimum 2 words
+    if (cleanSeed.split(/\s+/).filter(Boolean).length >= 2) {
+      results.push({
+        id: `kw-${counter++}`, text: cleanSeed,
+        volume: 'High', cpc: '$2.50', type: classifyIntent(cleanSeed), matchType: 'BROAD'
+      });
+    }
+
+    for (const mod of preModifiers) {
+      if (results.length >= maxKeywords) break;
+      const kw = `${mod} ${cleanSeed}`;
+      if (!negativeList.some(neg => kw.includes(neg)) && !results.some(r => r.text === kw)) {
+        results.push({
+          id: `kw-${counter++}`, text: kw,
+          volume: 'Medium', cpc: '$2.00', type: classifyIntent(kw), matchType: 'BROAD'
+        });
+      }
+    }
+
+    for (const mod of postModifiers) {
+      if (results.length >= maxKeywords) break;
+      const kw = `${cleanSeed} ${mod}`;
+      if (!negativeList.some(neg => kw.includes(neg)) && !results.some(r => r.text === kw)) {
+        results.push({
+          id: `kw-${counter++}`, text: kw,
+          volume: 'Medium', cpc: '$2.00', type: classifyIntent(kw), matchType: 'BROAD'
+        });
+      }
+    }
+  }
+
+  return results;
 }

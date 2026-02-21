@@ -142,7 +142,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
                 <Lock className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
-              <p className="text-xs text-slate-500 -mt-0.5">~ Samay</p>
+
             </div>
             <CardTitle className="text-xl font-bold text-center text-slate-900">
               Invalid Reset Link
@@ -191,7 +191,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
                 <Lock className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
-              <p className="text-xs text-slate-500 -mt-0.5">~ Samay</p>
+
             </div>
             <CardTitle className="text-xl font-bold text-center text-slate-900">
               Reset Your Password

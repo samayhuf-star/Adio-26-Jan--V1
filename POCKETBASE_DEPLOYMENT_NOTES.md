@@ -37,7 +37,7 @@ vercel --prod
 2. **Set environment variables in Vercel**:
    ```
    POCKETBASE_URL=https://your-pocketbase-server.com
-   POCKETBASE_ADMIN_EMAIL=admin@adiology.online
+   POCKETBASE_ADMIN_EMAIL=admin@adiology.io
    POCKETBASE_ADMIN_PASSWORD=Admin@123!ChangeMe
    VITE_POCKETBASE_URL=https://your-pocketbase-server.com
    ```
@@ -75,7 +75,7 @@ Add these to **Vercel Dashboard → Settings → Environment Variables**:
 ### Required for Admin Panel:
 ```bash
 POCKETBASE_URL=https://your-pocketbase-instance.com
-POCKETBASE_ADMIN_EMAIL=admin@adiology.online
+POCKETBASE_ADMIN_EMAIL=admin@adiology.io
 POCKETBASE_ADMIN_PASSWORD=Admin@123!ChangeMe
 VITE_POCKETBASE_URL=https://your-pocketbase-instance.com
 ```
@@ -89,7 +89,7 @@ VITE_POCKETBASE_URL=https://your-pocketbase-instance.com
 ## 🔍 Verify Deployment
 
 1. **Check Vercel deployment status**: https://vercel.com/dashboard
-2. **Test admin panel**: Visit `https://adiology.online/admin`
+2. **Test admin panel**: Visit `https://adiology.io/admin`
 3. **Check PocketBase connection**: Verify `POCKETBASE_URL` is accessible
 4. **Test login**: Use admin credentials to access PocketBase admin UI
 
@@ -108,14 +108,14 @@ VITE_POCKETBASE_URL=https://your-pocketbase-instance.com
 
 4. **Verify proxy route** is working:
    ```bash
-   curl https://adiology.online/admin/_/
+   curl https://adiology.io/admin/_/
    ```
 
 ### CORS Issues
 
 If you see CORS errors, configure PocketBase settings:
 - Go to PocketBase Admin UI → Settings → API
-- Add your domain to allowed origins: `https://adiology.online`
+- Add your domain to allowed origins: `https://adiology.io`
 
 ## 📝 Next Steps
 

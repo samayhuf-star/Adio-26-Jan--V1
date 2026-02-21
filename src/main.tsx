@@ -1,10 +1,19 @@
 import { createRoot } from "react-dom/client";
 import { Suspense } from "react";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import "./styles/themes.css";
-import "./styles/dashboard-theme-modern.css";
-import "./styles/userPreferences.css";
+
+const loadDeferredStyles = () => {
+  import("./styles/dashboard-theme-modern.css");
+  import("./styles/userPreferences.css");
+};
+if (typeof requestIdleCallback === 'function') {
+  requestIdleCallback(loadDeferredStyles, { timeout: 2000 });
+} else {
+  setTimeout(loadDeferredStyles, 100);
+}
 import { Toaster } from "./components/ui/sonner";
 import { notifications } from "./utils/notifications";
 import { toast } from "sonner";
@@ -15,9 +24,7 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { validateEnvironment } from "./utils/envCheck";
 import { loggingService } from "./utils/loggingService";
 import { initVersionCheck, handleChunkLoadError } from "./utils/versionCheck";
-import { NhostProvider } from "./components/NhostProvider";
-
-// Nhost migration complete - using Nhost for auth, database and storage
+import { initPageTracking } from "./utils/pageTracker";
 
 // Initialize notification service
 notifications.setToastInstance(toast);
@@ -71,17 +78,14 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', async (event) => {
     const errorMessage = String(event.reason || '');
     
-    // Ignore browser extension errors and expected Nhost token refresh failures
+    // Ignore browser extension errors and expected token refresh failures
     if (
       errorMessage.includes('sw.js') ||
       errorMessage.includes('mobx-state-tree') ||
       errorMessage.includes('setDetectedLibs') ||
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
-      errorMessage.includes('tabId not found') ||
-      // Suppress expected 401 errors from Nhost token refresh (invalid/expired refresh tokens)
-      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('401')) ||
-      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('Unauthorized'))
+      errorMessage.includes('tabId not found')
     ) {
       event.preventDefault();
       return;
@@ -123,9 +127,7 @@ if (typeof window !== 'undefined') {
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
       (errorMessage.includes('service worker') && errorMessage.includes('extension')) ||
-      // Suppress expected 401 errors from Nhost token refresh (invalid/expired refresh tokens)
-      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('401')) ||
-      (errorMessage.includes('nhost.run/v1/token') && errorMessage.includes('Unauthorized'))
+      errorMessage.includes('tabId not found')
     ) {
       return;
     }
@@ -138,6 +140,9 @@ initializeUserPreferences();
 
 // Initialize version checking for cache busting
 initVersionCheck();
+
+// Initialize page view tracking
+initPageTracking();
 
 // Initialize logging service to start capturing logs
 loggingService.logSystemEvent('Application starting', { timestamp: new Date().toISOString() });
@@ -164,14 +169,14 @@ if (!validateEnvironment()) {
 } else {
   createRoot(rootElement).render(
     <ErrorBoundary>
-      <NhostProvider>
+      <HelmetProvider>
         <ThemeProvider>
           <Suspense fallback={<LoadingScreen />}>
             <App />
           </Suspense>
           <Toaster position="top-right" richColors closeButton visibleToasts={1} />
         </ThemeProvider>
-      </NhostProvider>
+      </HelmetProvider>
     </ErrorBoundary>
   );
 }

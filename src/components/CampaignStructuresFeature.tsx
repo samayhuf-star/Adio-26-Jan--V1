@@ -7,8 +7,14 @@ export function CampaignStructuresFeature() {
   const structures = [
     {
       name: 'SKAG',
-      badge: 'Single Keyword Ad Groups',
-      description: 'Ultra-focused targeting with one keyword per ad group for maximum relevance and Quality Score.',
+      badge: 'All Match Types in One Ad Group',
+      description: 'One keyword per ad group with all match types (broad, phrase, exact) together for maximum relevance and Quality Score.',
+      icon: '🎯',
+    },
+    {
+      name: 'SKAG Split',
+      badge: 'One Match Type Per Ad Group',
+      description: 'Each keyword gets a separate ad group for each match type — giving you granular bid control per broad, phrase, and exact.',
       icon: '🎯',
     },
     {
@@ -90,21 +96,21 @@ export function CampaignStructuresFeature() {
             viewport={{ once: true }}
           >
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-600 rounded-full text-sm mb-6">
-              12 Secret Campaign Structures
+              13 Secret Campaign Structures
             </div>
             
             <h2 className="text-gray-900 mb-6">
-              Choose from <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">12 Highly Optimized</span> Campaign Structures
+              Choose from <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">13 Highly Optimized</span> Campaign Structures
             </h2>
             
             <p className="text-gray-600 text-lg mb-8">
-              Highly optimized campaign structures never revealed before. Select from 12 battle-tested frameworks used by top advertisers to dominate search results and achieve maximum ROI. Each structure is precision-engineered for specific goals and industries.
+              Highly optimized campaign structures never revealed before. Select from 13 battle-tested frameworks used by top advertisers to dominate search results and achieve maximum ROI. Each structure is precision-engineered for specific goals and industries.
             </p>
 
             <div className="space-y-4 mb-8">
               {[
                 {
-                  title: '12 Proven Frameworks',
+                  title: '13 Proven Frameworks',
                   description: 'Comprehensive library of secret campaign structures'
                 },
                 {
@@ -142,7 +148,7 @@ export function CampaignStructuresFeature() {
             </div>
 
             <button className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-xl transition-all flex items-center gap-2 group">
-              Explore All 12 Structures
+              Explore All 13 Structures
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -244,7 +250,7 @@ export function CampaignStructuresFeature() {
           viewport={{ once: true }}
           className="mt-12 flex flex-wrap gap-3 justify-center"
         >
-          <span className="text-gray-500 text-sm">All 12 Structures:</span>
+          <span className="text-gray-500 text-sm">All 13 Structures:</span>
           {structures.map((structure) => (
             <span key={structure.name} className="px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 text-purple-600 rounded-full text-sm border border-purple-100">
               {structure.icon} {structure.name}

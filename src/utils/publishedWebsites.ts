@@ -1,4 +1,4 @@
-import { nhost } from '../lib/nhost';
+import { getSessionTokenSync } from './auth';
 
 export interface PublishedWebsite {
   id: string;
@@ -24,34 +24,32 @@ export interface PublishedWebsiteInput {
   status: 'deploying' | 'ready' | 'error';
 }
 
-/**
- * Get all published websites for a user
- */
+async function apiRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const token = getSessionTokenSync();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`/api/published-websites${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(errorData.error || `Request failed with status ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function getUserPublishedWebsites(userId: string): Promise<PublishedWebsite[]> {
   try {
-    const { data, error } = await nhost.graphql.request(`
-      query GetUserPublishedWebsites($userId: uuid!) {
-        published_websites(where: {user_id: {_eq: $userId}}, order_by: {created_at: desc}) {
-          id
-          user_id
-          name
-          template_id
-          template_data
-          vercel_deployment_id
-          vercel_url
-          vercel_project_id
-          status
-          created_at
-          updated_at
-        }
-      }
-    `, { userId });
-
-    if (error) {
-      console.error('Error fetching published websites:', error);
-      throw error;
-    }
-
+    const data = await apiRequest(`?userId=${userId}`);
     return data?.published_websites || [];
   } catch (error) {
     console.error('Error in getUserPublishedWebsites:', error);
@@ -59,32 +57,14 @@ export async function getUserPublishedWebsites(userId: string): Promise<Publishe
   }
 }
 
-/**
- * Save a new published website
- */
 export async function savePublishedWebsite(
   userId: string,
   website: PublishedWebsiteInput
 ): Promise<PublishedWebsite> {
   try {
-    const { data, error } = await nhost.graphql.request(`
-      mutation InsertPublishedWebsite($object: published_websites_insert_input!) {
-        insert_published_websites_one(object: $object) {
-          id
-          user_id
-          name
-          template_id
-          template_data
-          vercel_deployment_id
-          vercel_url
-          vercel_project_id
-          status
-          created_at
-          updated_at
-        }
-      }
-    `, {
-      object: {
+    const data = await apiRequest('', {
+      method: 'POST',
+      body: JSON.stringify({
         user_id: userId,
         name: website.name,
         template_id: website.template_id,
@@ -93,68 +73,36 @@ export async function savePublishedWebsite(
         vercel_url: website.vercel_url,
         vercel_project_id: website.vercel_project_id,
         status: website.status,
-      }
+      }),
     });
 
-    if (error) {
-      console.error('Error saving published website:', error);
-      throw error;
-    }
-
-    return data.insert_published_websites_one;
+    return data.published_website;
   } catch (error) {
     console.error('Error in savePublishedWebsite:', error);
     throw error;
   }
 }
 
-/**
- * Update a published website
- */
 export async function updatePublishedWebsite(
   id: string,
   updates: Partial<PublishedWebsiteInput>
 ): Promise<PublishedWebsite> {
   try {
-    const { data, error } = await nhost.graphql.request(`
-      mutation UpdatePublishedWebsite($id: uuid!, $updates: published_websites_set_input!) {
-        update_published_websites_by_pk(pk_columns: {id: $id}, _set: $updates) {
-          id
-          user_id
-          name
-          template_id
-          template_data
-          vercel_deployment_id
-          vercel_url
-          vercel_project_id
-          status
-          created_at
-          updated_at
-        }
-      }
-    `, {
-      id,
-      updates: {
+    const data = await apiRequest(`/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),
-      }
+      }),
     });
 
-    if (error) {
-      console.error('Error updating published website:', error);
-      throw error;
-    }
-
-    return data.update_published_websites_by_pk;
+    return data.published_website;
   } catch (error) {
     console.error('Error in updatePublishedWebsite:', error);
     throw error;
   }
 }
 
-/**
- * Update only the status of a published website
- */
 export async function updatePublishedWebsiteStatus(
   id: string,
   status: 'deploying' | 'ready' | 'error'
@@ -162,23 +110,11 @@ export async function updatePublishedWebsiteStatus(
   return updatePublishedWebsite(id, { status });
 }
 
-/**
- * Delete a published website
- */
 export async function deletePublishedWebsite(id: string): Promise<void> {
   try {
-    const { error } = await nhost.graphql.request(`
-      mutation DeletePublishedWebsite($id: uuid!) {
-        delete_published_websites_by_pk(id: $id) {
-          id
-        }
-      }
-    `, { id });
-
-    if (error) {
-      console.error('Error deleting published website:', error);
-      throw error;
-    }
+    await apiRequest(`/${id}`, {
+      method: 'DELETE',
+    });
   } catch (error) {
     console.error('Error in deletePublishedWebsite:', error);
     throw error;

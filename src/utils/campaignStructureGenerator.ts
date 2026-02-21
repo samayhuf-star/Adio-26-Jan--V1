@@ -314,6 +314,8 @@ export function generateCampaignStructure(
   switch (structureType) {
     case 'skag':
       return generateSKAG(keywords, settings);
+    case 'skag_split':
+      return generateSKAGSplit(keywords, settings);
     case 'stag':
       return generateSTAG(keywords, settings);
     case 'mix':
@@ -435,6 +437,52 @@ function generateSKAG(keywords: string[], settings: StructureSettings): Campaign
     campaign.states = settings.selectedStates;
   }
   
+  return {
+    campaigns: [campaign]
+  };
+}
+
+/**
+ * SKAG Split: Single Keyword Ad Group - Match Type Split
+ * Each keyword gets a separate ad group for each selected match type.
+ * e.g., "plumber" → 3 ad groups: "plumber - Broad", "plumber - Phrase", "plumber - Exact"
+ */
+function generateSKAGSplit(keywords: string[], settings: StructureSettings): CampaignStructure {
+  const matchTypes = getMatchTypes(settings.matchTypes);
+  let ads = settings.ads || getDefaultAds(settings);
+  ads = ads.map(ad => ({
+    ...ad,
+    final_url: ad.final_url || settings.url || 'https://www.example.com'
+  }));
+  const negativeKeywords = settings.negativeKeywords || [];
+  const locationTarget = buildLocationTarget(settings);
+
+  const adgroups = keywords.flatMap((keyword) =>
+    matchTypes.map(mt => ({
+      adgroup_name: `${keyword} - ${mt.charAt(0).toUpperCase() + mt.slice(1)}`,
+      keywords: [formatKeyword(keyword, mt)],
+      match_types: [mt],
+      ads: ads,
+      negative_keywords: negativeKeywords,
+      location_target: locationTarget
+    }))
+  );
+
+  const campaign: Campaign = {
+    campaign_name: settings.campaignName,
+    adgroups
+  };
+
+  if (settings.selectedZips && settings.selectedZips.length > 0) {
+    campaign.zip_codes = settings.selectedZips;
+  }
+  if (settings.selectedCities && settings.selectedCities.length > 0) {
+    campaign.cities = settings.selectedCities;
+  }
+  if (settings.selectedStates && settings.selectedStates.length > 0) {
+    campaign.states = settings.selectedStates;
+  }
+
   return {
     campaigns: [campaign]
   };

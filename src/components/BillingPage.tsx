@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, Zap, Star, Crown, Loader2 } from 'lucide-react';
-import { useUser, useAuthCompat } from '../utils/authCompat';
+import { useUserCompat, useAuthCompat } from '../utils/authCompat';
 import { notifications } from '../utils/notifications';
 
 interface Price {
@@ -37,20 +37,21 @@ const PLAN_COLORS: Record<string, string> = {
 
 const PLAN_FEATURES: Record<string, string[]> = {
   starter: [
-    '10 campaigns per month',
+    '15 campaigns per month',
     '1,000 keywords',
     'Basic keyword generation',
     'CSV export',
     'Email support',
   ],
   pro: [
-    'Unlimited campaigns',
+    '50 campaigns per month',
     'Unlimited keywords',
     'AI-powered keyword suggestions',
     'Ad extensions generation',
     'Priority support',
   ],
   enterprise: [
+    'Unlimited campaigns',
     'Everything in Pro',
     'White-label options',
     'API access',
@@ -70,7 +71,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
   const [currentPlan, setCurrentPlan] = useState<string>('free');
   
   // Get email from user object (works with new auth system)
-  const userEmail = user?.email || user?.primaryEmailAddress?.emailAddress || '';
+  const userEmail = user?.email || '';
 
   useEffect(() => {
     loadProducts();
@@ -132,6 +133,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
           priceId,
           email: userEmail,
           userId: user?.id,
+          successUrl: `${window.location.origin}/billing`,
+          cancelUrl: `${window.location.origin}/billing`,
         }),
       });
 
@@ -205,7 +208,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
   }
 
   const sortedProducts = [...products].sort((a, b) => {
-    const tierOrder = { starter: 1, pro: 2, enterprise: 3 };
+    const tierOrder: Record<string, number> = { starter: 1, pro: 2, enterprise: 3 };
     return (tierOrder[getTier(a) as keyof typeof tierOrder] || 99) - 
            (tierOrder[getTier(b) as keyof typeof tierOrder] || 99);
   });
@@ -275,17 +278,17 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
               <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
                 <Check className="w-5 h-5 text-gray-500" />
               </div>
-              <h3 className="text-xl font-bold">Free</h3>
+              <h3 className="text-xl font-bold">Free Trial</h3>
             </div>
             <div className="mb-6">
               <span className="text-4xl font-bold">$0</span>
-              <span className="text-gray-500">/month</span>
+              <span className="text-gray-500">/7 days</span>
             </div>
             <p className="text-gray-600 mb-6">
-              Get started with basic campaign building features.
+              Experience the full power of Adiology with a 7-day risk-free trial.
             </p>
             <ul className="space-y-3 mb-8">
-              {['3 campaigns per month', '100 keywords', 'Basic CSV export', 'Community support'].map((feature, i) => (
+              {['Full access to all tools', 'Campaign Builder 3.0', 'Click Guard protection', '24/7 Support'].map((feature, i) => (
                 <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
                   <Check className="w-4 h-4 text-green-500" />
                   {feature}
@@ -293,14 +296,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
               ))}
             </ul>
             <button
-              disabled={currentPlan === 'free'}
-              className={`w-full py-3 rounded-lg font-medium ${
-                currentPlan === 'free'
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              onClick={() => onBack?.()}
+              className="w-full py-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
             >
-              {currentPlan === 'free' ? 'Current Plan' : 'Downgrade'}
+              Start Free Trial
             </button>
           </div>
 

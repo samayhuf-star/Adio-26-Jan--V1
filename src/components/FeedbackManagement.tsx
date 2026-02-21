@@ -24,7 +24,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { getAllFeedback, updateFeedbackStatus, type FeedbackRecord } from '../utils/feedbackService';
 import { useNotification } from '../contexts/NotificationContext';
@@ -84,7 +84,7 @@ export const FeedbackManagement: React.FC = () => {
       filtered = filtered.filter(item => 
         item.message.toLowerCase().includes(searchLower) ||
         item.user_email?.toLowerCase().includes(searchLower) ||
-        item.page_name?.toLowerCase().includes(searchLower)
+        (item as any).page_name?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -199,8 +199,8 @@ export const FeedbackManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Feedback Management</h1>
-          <p className="text-gray-600">Manage user feedback, feature requests, and bug reports</p>
+          <h1 className="text-2xl font-bold text-white">Feedback Management</h1>
+          <p className="text-white">Manage user feedback, feature requests, and bug reports</p>
         </div>
         <Button onClick={loadFeedback} variant="outline">
           <BarChart3 className="w-4 h-4 mr-2" />
@@ -210,9 +210,9 @@ export const FeedbackManagement: React.FC = () => {
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="feedback">All Feedback ({analytics.total})</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="overview" className="text-white data-[state=active]:text-white">Overview</TabsTrigger>
+          <TabsTrigger value="feedback" className="text-white data-[state=active]:text-white">All Feedback ({analytics.total})</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-white data-[state=active]:text-white">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -387,10 +387,10 @@ export const FeedbackManagement: React.FC = () => {
                           <Calendar className="w-4 h-4" />
                           {new Date(item.created_at).toLocaleDateString()}
                         </span>
-                        {item.page_name && (
+                        {(item as any).page_name && (
                           <span className="flex items-center gap-1">
                             <ExternalLink className="w-4 h-4" />
-                            {item.page_name}
+                            {(item as any).page_name}
                           </span>
                         )}
                       </div>
@@ -520,6 +520,7 @@ export const FeedbackManagement: React.FC = () => {
                 {getTypeIcon(selectedFeedback.type)}
                 {getTypeLabel(selectedFeedback.type)} Details
               </DialogTitle>
+              <DialogDescription className="sr-only">View feedback details</DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4">
@@ -546,33 +547,33 @@ export const FeedbackManagement: React.FC = () => {
                 </div>
                 <div>
                   <span className="font-medium">Page:</span>
-                  <p>{selectedFeedback.page_name || 'Unknown'}</p>
+                  <p>{(selectedFeedback as any).page_name || 'Unknown'}</p>
                 </div>
                 <div>
                   <span className="font-medium">Screen Size:</span>
-                  <p>{selectedFeedback.screen_size || 'Unknown'}</p>
+                  <p>{(selectedFeedback as any).screen_size || 'Unknown'}</p>
                 </div>
               </div>
               
-              {selectedFeedback.page_url && (
+              {(selectedFeedback as any).page_url && (
                 <div>
                   <span className="font-medium">URL:</span>
                   <a 
-                    href={selectedFeedback.page_url} 
+                    href={(selectedFeedback as any).page_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline ml-2"
                   >
-                    {selectedFeedback.page_url}
+                    {(selectedFeedback as any).page_url}
                   </a>
                 </div>
               )}
               
-              {selectedFeedback.browser_info && (
+              {(selectedFeedback as any).browser_info && (
                 <div>
                   <span className="font-medium">Browser:</span>
                   <p className="text-xs text-gray-600 mt-1">
-                    {selectedFeedback.browser_info}
+                    {(selectedFeedback as any).browser_info}
                   </p>
                 </div>
               )}
@@ -602,6 +603,7 @@ export const FeedbackManagement: React.FC = () => {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Respond to Feedback</DialogTitle>
+              <DialogDescription className="sr-only">Send a response to this feedback</DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4">

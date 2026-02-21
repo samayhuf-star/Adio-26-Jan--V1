@@ -81,12 +81,6 @@ function Navigation({ onGetStarted, onLogin }: NavigationProps) {
               </a>
             ))}
             <button 
-              onClick={onLogin}
-              className="px-5 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm"
-            >
-              Sign In
-            </button>
-            <button 
               onClick={onGetStarted}
               className="px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm hover:shadow-lg transition-shadow"
             >
@@ -120,12 +114,6 @@ function Navigation({ onGetStarted, onLogin }: NavigationProps) {
                   {item.name}
                 </motion.a>
               ))}
-              <button 
-                onClick={onLogin}
-                className="block w-full text-left py-2 text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Sign In
-              </button>
               <button 
                 onClick={onGetStarted}
                 className="w-full mt-4 px-5 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm"
@@ -290,7 +278,7 @@ function Features({ onGetStarted }: FeaturesProps) {
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-full shadow-lg font-semibold">
             <span className="text-xl">🔥</span>
-            <span>All 12 Structures Available Instantly</span>
+            <span>All 13 Structures Available Instantly</span>
             <span className="text-xl">🔥</span>
           </div>
         </motion.div>
@@ -377,17 +365,17 @@ function CampaignStructuresFeature({ onGetStarted }: CampaignStructuresFeaturePr
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <motion.div initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-600 rounded-full text-sm font-medium mb-6">
-              12 Secret Campaign Structures
+              13 Secret Campaign Structures
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Choose from <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">12 Highly Optimized</span> Campaign Structures
+              Choose from <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">13 Highly Optimized</span> Campaign Structures
             </h2>
             <p className="text-gray-600 text-lg mb-8">
-              Highly optimized campaign structures never revealed before. Select from 12 battle-tested frameworks used by top advertisers to dominate search results and achieve maximum ROI.
+              Highly optimized campaign structures never revealed before. Select from 13 battle-tested frameworks used by top advertisers to dominate search results and achieve maximum ROI.
             </p>
             <div className="space-y-4 mb-8">
               {[
-                { title: '12 Proven Frameworks', description: 'Comprehensive library of secret campaign structures' },
+                { title: '13 Proven Frameworks', description: 'Comprehensive library of secret campaign structures' },
                 { title: 'Maximum Quality Score', description: 'Optimized for highest ad relevance and CTR' },
                 { title: 'Easy Scalability', description: 'Grow from local to national campaigns effortlessly' },
                 { title: 'Instant Deployment', description: 'Launch complete structures in under 30 seconds' }
@@ -409,7 +397,7 @@ function CampaignStructuresFeature({ onGetStarted }: CampaignStructuresFeaturePr
               onClick={onGetStarted}
               className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-xl transition-all flex items-center gap-2 group font-semibold"
             >
-              Explore All 12 Structures
+              Explore All 13 Structures
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -477,7 +465,7 @@ function CampaignStructuresFeature({ onGetStarted }: CampaignStructuresFeaturePr
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-12 flex flex-wrap gap-3 justify-center">
-          <span className="text-gray-500 text-sm">All 12 Structures:</span>
+          <span className="text-gray-500 text-sm">All 13 Structures:</span>
           {structures.map((structure) => (
             <span key={structure.name} className="px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 text-purple-600 rounded-full text-sm border border-purple-100 font-medium">
               {structure.icon} {structure.name}
@@ -921,7 +909,7 @@ function ContactUs() {
   };
 
   const contactInfo = [
-    { icon: <Mail className="w-6 h-6" />, title: 'Email Us', content: 'support@adiology.online', link: 'mailto:support@adiology.online', color: 'from-blue-400 to-blue-600' },
+    { icon: <Mail className="w-6 h-6" />, title: 'Email Us', content: 'support@adiology.io', link: 'mailto:support@adiology.io', color: 'from-blue-400 to-blue-600' },
     { icon: <Phone className="w-6 h-6" />, title: 'Call Us', content: '+1 304-305-1702', link: 'tel:+13043051702', color: 'from-purple-400 to-purple-600' },
     { icon: <MapPin className="w-6 h-6" />, title: 'Visit Us', content: 'San Francisco, CA', link: '#', color: 'from-pink-400 to-pink-600' }
   ];
@@ -1079,12 +1067,6 @@ function CTASection({ onGetStarted }: CTASectionProps) {
             </motion.div>
 
             <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.6 }} className="mt-8 flex items-center justify-center gap-6 text-sm text-blue-100">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>No credit card required</span>
-              </div>
               <div className="flex items-center gap-2">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />

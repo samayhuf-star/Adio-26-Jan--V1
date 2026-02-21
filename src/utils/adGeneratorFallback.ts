@@ -38,7 +38,7 @@ export async function generateAdsFallback(
 ): Promise<ResponsiveSearchAd[] | ExpandedTextAd[] | CallOnlyAd[]> {
   try {
     // Try to call Python API (if deployed)
-    const pythonApiUrl = import.meta.env.VITE_PYTHON_AD_API_URL || 'http://localhost:8000';
+    const pythonApiUrl = import.meta.env.VITE_PYTHON_AD_API_URL || '/api';
     
     const response = await fetch(`${pythonApiUrl}/generate`, {
       method: 'POST',

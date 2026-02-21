@@ -5,14 +5,9 @@
 
 import { api } from './api';
 import { notifications } from './notifications';
-import { projectId, publicAnonKey } from "./auth"/info';
 import { validateAndFixAds, formatValidationReport } from './adValidationUtils';
 
-// API Base URL
-// For local development, uncomment the line below and comment out the production URL
-const API_BASE = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:8000'
-  : `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca`;
+const API_BASE = '/api';
 
 /**
  * Convert Campaign Builder 1 data to backend request format
@@ -102,7 +97,7 @@ export async function generateCSVWithBackend(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`
+        'Authorization': `Bearer ${import.meta.env.VITE_API_KEY || ''}`
       },
       body: JSON.stringify(request)
     });

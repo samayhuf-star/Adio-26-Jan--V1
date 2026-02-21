@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Check } from './Icons';
 
 const benefits = [
-  'No credit card required',
   'Full access to all features',
   'Cancel anytime',
   'Dedicated support team'

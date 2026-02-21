@@ -9,8 +9,8 @@ The application is experiencing multiple module loading failures due to a combin
 ### 1. **404 Errors for Dynamic Imports** (Primary Issue)
 **Error:**
 ```
-GET https://www.adiology.online/assets/KeywordPlanner-DgMtF0a0.js net::ERR_ABORTED 404 (Not Found)
-GET https://www.adiology.online/assets/TerminalResultsConsole-0zxjkxeh.js net::ERR_ABORTED 404 (Not Found)
+GET https://www.adiology.io/assets/KeywordPlanner-DgMtF0a0.js net::ERR_ABORTED 404 (Not Found)
+GET https://www.adiology.io/assets/TerminalResultsConsole-0zxjkxeh.js net::ERR_ABORTED 404 (Not Found)
 TypeError: Failed to fetch dynamically imported module
 ```
 
@@ -61,7 +61,7 @@ POST https://vumnjkoyxkistmlzotuk.auth.eu-central-1.nhost.run/v1/token 401 (Unau
 ### 3. **500 Internal Server Error from /api/errors** (Tertiary Issue)
 **Error:**
 ```
-POST https://www.adiology.online/api/errors 500 (Internal Server Error)
+POST https://www.adiology.io/api/errors 500 (Internal Server Error)
 ```
 
 **Root Cause:**

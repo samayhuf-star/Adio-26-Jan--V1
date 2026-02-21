@@ -1,0 +1,62 @@
+System Logs Export
+Generated: 2026-02-02T07:07:59.687Z
+Filter: ERROR
+Total Logs: 2
+
+================================================================================
+
+[1] ERROR - Console
+Timestamp: 2026-02-02T07:07:12.491Z
+Message: Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?%s%s 
+
+Check the render method of `Primitive.div.SlotClone`. 
+    at DialogOverlay (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ui/dialog.tsx:70:26)
+    at https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-ON6AEB7X.js?v=4511c65e:61:13
+    at https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-ON6AEB7X.js?v=4511c65e:38:13
+    at https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-ON6AEB7X.js?v=4511c65e:151:13
+    at https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-64DOZU7R.js?v=4511c65e:27:22
+    at Presence (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-WKRY6HB5.js?v=4511c65e:24:11)
+    at Provider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-YQ5MMKT6.js?v=4511c65e:38:15)
+    at DialogPortal (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-TGK5OR2Q.js?v=4511c65e:211:11)
+    at DialogPortal (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ui/dialog.tsx:48:28)
+    at DialogContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ui/dialog.tsx:82:26)
+    at Provider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-YQ5MMKT6.js?v=4511c65e:38:15)
+    at Dialog (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-TGK5OR2Q.js?v=4511c65e:151:5)
+    at Dialog (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ui/dialog.tsx:26:22)
+    at div
+    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:37:25)
+    at Suspense
+    at div
+    at main
+    at div
+    at div
+    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)
+    at App
+    at Suspense
+    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)
+    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=5fdfced8:324:10)
+    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)
+    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)
+Details:
+{
+  "args": [
+    "Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?%s%s",
+    "\n\nCheck the render method of `Primitive.div.SlotClone`.",
+    "\n    at DialogOverlay (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ui/dialog.tsx:70:26)\n    at https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-ON6AEB7X.js?v=4511c65e:61:13\n    at https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-ON6AEB7X.js?v=4511c65e:38:13\n    at https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-ON6AEB7X.js?v=4511c65e:151:13\n    at https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-64DOZU7R.js?v=4511c65e:27:22\n    at Presence (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-WKRY6HB5.js?v=4511c65e:24:11)\n    at Provider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-YQ5MMKT6.js?v=4511c65e:38:15)\n    at DialogPortal (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-TGK5OR2Q.js?v=4511c65e:211:11)\n    at DialogPortal (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ui/dialog.tsx:48:28)\n    at DialogContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ui/dialog.tsx:82:26)\n    at Provider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-YQ5MMKT6.js?v=4511c65e:38:15)\n    at Dialog (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/chunk-TGK5OR2Q.js?v=4511c65e:151:5)\n    at Dialog (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ui/dialog.tsx:26:22)\n    at div\n    at DomainMonitoring (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/DomainMonitoring.tsx:37:25)\n    at Suspense\n    at div\n    at main\n    at div\n    at div\n    at AppContent (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/App.tsx:190:23)\n    at App\n    at Suspense\n    at ThemeProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/contexts/ThemeContext.tsx:25:33)\n    at xe (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/node_modules/.vite/deps/@nhost_react.js?v=5fdfced8:324:10)\n    at NhostProvider (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/NhostProvider.tsx:27:33)\n    at ErrorBoundary (https://2f8dffc8-e898-48a6-986e-b2760a8b9bb2-00-1hvn9ub8s164n.janeway.replit.dev/src/components/ErrorBoundary.tsx:238:5)"
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+[2] ERROR - Console
+Timestamp: 2026-02-02T07:07:39.871Z
+Message: [DomainMonitoring] Cannot add domain - no auth token available
+Details:
+{
+  "args": [
+    "[DomainMonitoring] Cannot add domain - no auth token available"
+  ]
+}
+
+--------------------------------------------------------------------------------
+

@@ -30,11 +30,11 @@
 
 ```
 SENDUNE_API_KEY = bc9029fb-e5a1-45b9-a94e-11ee31e23a68
-SENDUNE_FROM_EMAIL = noreply@adiology.online
-FRONTEND_URL = https://adiology.online
+SENDUNE_FROM_EMAIL = noreply@adiology.io
+FRONTEND_URL = https://adiology.io
 ```
 
-**Important:** Replace `noreply@adiology.online` with your verified Sendune sender email!
+**Important:** Replace `noreply@adiology.io` with your verified Sendune sender email!
 
 ### Step 5: Deploy
 - Click **Deploy** button

@@ -136,11 +136,6 @@ export default function HomepageV2() {
               <button className="mt-6 w-full px-4 py-2 rounded-lg bg-indigo-600 text-white">Get Started</button>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 shadow min-w-0">
-              <div className="text-slate-900 text-lg font-bold">$99.99</div>
-              <div className="mt-4 text-slate-600 text-sm">Lifetime - one-time</div>
-              <button className="mt-6 w-full px-4 py-2 rounded-lg border border-slate-200">Get Started</button>
-            </div>
           </div>
         </div>
       </section>

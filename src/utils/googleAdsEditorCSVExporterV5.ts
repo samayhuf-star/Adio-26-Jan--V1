@@ -7,6 +7,66 @@
  * Based on the master CSV template: Campaign_Enhanced_Full_Assets.csv
  */
 
+function sanitizeAdText(text: string): string {
+  if (!text) return '';
+  let cleaned = text;
+  cleaned = cleaned.replace(/"(\{KeyWord:[^}]+\})"/g, '$1');
+  cleaned = cleaned.replace(/'(\{KeyWord:[^}]+\})'/g, '$1');
+  const dkiPlaceholders: string[] = [];
+  cleaned = cleaned.replace(/\{KeyWord:[^}]*\}/gi, (match) => {
+    dkiPlaceholders.push(match);
+    return `__DKI_${dkiPlaceholders.length - 1}__`;
+  });
+  cleaned = cleaned.replace(/[{}\[\]]/g, '');
+  dkiPlaceholders.forEach((dki, i) => {
+    cleaned = cleaned.replace(`__DKI_${i}__`, dki);
+  });
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  return cleaned;
+}
+
+function truncateHeadline(text: string, maxLen: number): string {
+  if (!text || text.length <= maxLen) return text;
+  const dkiMatch = text.match(/\{KeyWord:[^}]*\}/i);
+  if (dkiMatch) {
+    const dkiTag = dkiMatch[0];
+    const dkiStart = text.indexOf(dkiTag);
+    const dkiEnd = dkiStart + dkiTag.length;
+    if (dkiEnd <= maxLen) {
+      return text.substring(0, maxLen);
+    }
+    const defaultText = dkiTag.match(/\{KeyWord:([^}]*)\}/i)?.[1] || '';
+    if (defaultText.length > maxLen - 11) {
+      const trimmedDefault = defaultText.substring(0, maxLen - 11);
+      return `{KeyWord:${trimmedDefault}}`;
+    }
+    return `{KeyWord:${defaultText}}`;
+  }
+  return text.substring(0, maxLen);
+}
+
+function truncateDescription(text: string, maxLen: number): string {
+  if (!text || text.length <= maxLen) return text;
+  const dkiMatch = text.match(/\{KeyWord:[^}]*\}/i);
+  if (dkiMatch) {
+    const dkiTag = dkiMatch[0];
+    const dkiStart = text.indexOf(dkiTag);
+    const dkiEnd = dkiStart + dkiTag.length;
+    if (dkiEnd <= maxLen) {
+      return text.substring(0, maxLen);
+    }
+    const defaultText = dkiTag.match(/\{KeyWord:([^}]*)\}/i)?.[1] || '';
+    const prefix = text.substring(0, dkiStart);
+    const available = maxLen - prefix.length - 11;
+    if (available > 0) {
+      const trimmedDefault = defaultText.length > available ? defaultText.substring(0, available) : defaultText;
+      return `${prefix}{KeyWord:${trimmedDefault}}`;
+    }
+    return prefix.trimEnd().substring(0, maxLen);
+  }
+  return text.substring(0, maxLen);
+}
+
 // Complete 183-column header array matching Google Ads Editor format
 export const MASTER_CSV_HEADERS = [
   'Campaign',
@@ -136,62 +196,16 @@ export const MASTER_CSV_HEADERS = [
   'Structured Snippet 1 Values',
   'Structured Snippet 2 Header',
   'Structured Snippet 2 Values',
-  'Price Extension Type',
-  'Price Extension Price Qualifier',
-  'Price Extension Item Header',
-  'Price Extension Item Price',
-  'Price Extension Item Final URL',
-  'Price Extension 1 Type',
-  'Price Extension 1 Price Qualifier',
-  'Price Extension 1 Item 1 Header',
-  'Price Extension 1 Item 1 Price',
-  'Price Extension 1 Item 1 Final URL',
-  'Price Extension 1 Item 2 Header',
-  'Price Extension 1 Item 2 Price',
-  'Price Extension 1 Item 2 Final URL',
-  'Price Extension 1 Item 3 Header',
-  'Price Extension 1 Item 3 Price',
-  'Price Extension 1 Item 3 Final URL',
-  'Price Extension 1 Item 4 Header',
-  'Price Extension 1 Item 4 Price',
-  'Price Extension 1 Item 4 Final URL',
-  'Promotion Target',
-  'Promotion Discount Modifier',
-  'Promotion Percent Off',
-  'Promotion Money Amount Off',
-  'Promotion Final URL',
-  'Promotion Status',
-  'Promotion Start Date',
-  'Promotion End Date',
-  'App ID',
-  'App Store',
-  'App Link Text',
-  'App Final URL',
-  'App Status',
-  'Message Text',
-  'Message Final URL',
-  'Message Business Name',
-  'Message Country Code',
-  'Message Phone Number',
-  'Message Status',
-  'Lead Form ID',
-  'Lead Form Name',
-  'Lead Form Headline',
-  'Lead Form Description',
-  'Lead Form Call-to-action',
-  'Lead Form Status',
-  'Image Asset Name',
-  'Image Asset URL',
-  'Image Asset Status',
-  'Video Asset ID',
-  'Video Asset Name',
-  'Video Asset URL',
-  'Video Asset Status',
-  'Business Profile Location',
   'Business Name',
   'Business Address',
   'Business Phone',
-  'Business Website'
+  'Business Website',
+  'Link Text',
+  'Description Line 1',
+  'Description Line 2',
+  'Callout Text',
+  'Snippet Header',
+  'Snippet Values'
 ];
 
 // Column index map for quick access
@@ -234,14 +248,6 @@ export interface CampaignDataV5 {
   callouts?: CalloutV5[];
   snippets?: SnippetV5[];
   callExtensions?: CallExtensionV5[];
-  priceExtensions?: PriceExtensionV5[];
-  promotions?: PromotionV5[];
-  appExtensions?: AppExtensionV5[];
-  messageExtensions?: MessageExtensionV5[];
-  leadFormExtensions?: LeadFormExtensionV5[];
-  imageAssets?: ImageAssetV5[];
-  videoAssets?: VideoAssetV5[];
-  businessInfo?: BusinessInfoV5;
 }
 
 export interface AdGroupV5 {
@@ -307,22 +313,6 @@ export interface SnippetV5 {
   status?: string;
 }
 
-export interface PriceExtensionV5 {
-  type: string;
-  priceQualifier?: string;
-  items: { header: string; price: string; finalUrl: string }[];
-}
-
-export interface PromotionV5 {
-  target: string;
-  discountModifier?: string;
-  percentOff?: string;
-  moneyAmountOff?: string;
-  finalUrl?: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-}
 
 export interface CallExtensionV5 {
   phoneNumber: string;
@@ -335,60 +325,6 @@ export interface CallExtensionV5 {
   devicePreference?: 'All' | 'Mobile' | 'Desktop';
 }
 
-export interface AppExtensionV5 {
-  appId: string;
-  appStore: 'Google Play' | 'Apple App Store';
-  linkText: string;
-  finalUrl: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-  devicePreference?: 'All' | 'Mobile' | 'Desktop';
-}
-
-export interface MessageExtensionV5 {
-  text: string;
-  finalUrl?: string;
-  businessName: string;
-  countryCode: string;
-  phoneNumber: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-  devicePreference?: 'All' | 'Mobile' | 'Desktop';
-}
-
-export interface LeadFormExtensionV5 {
-  id: string;
-  name: string;
-  headline: string;
-  description: string;
-  callToAction: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-}
-
-export interface VideoAssetV5 {
-  id: string;
-  name: string;
-  url: string;
-  status?: string;
-}
-
-export interface ImageAssetV5 {
-  name: string;
-  url: string;
-  status?: string;
-}
-
-export interface BusinessInfoV5 {
-  name?: string;
-  address?: string;
-  phone?: string;
-  website?: string;
-  location?: string;
-}
 
 /**
  * Generate a complete CSV with all 183 columns from campaign data
@@ -414,141 +350,57 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
   campaignRow[COLUMN_INDEX['End Date']] = campaign.endDate || '';
   campaignRow[COLUMN_INDEX['Campaign Status']] = campaign.status || 'Enabled';
   campaignRow[COLUMN_INDEX['Campaign Labels']] = campaign.labels || '';
-  
-  // Add sitelinks to campaign row if available
+
+  // === ALL ASSETS GO DIRECTLY ON THE CAMPAIGN ROW (campaign-level) ===
+  // Google Ads Editor expects assets in the numbered columns on the campaign row itself.
+  // Sitelinks 1-4, Callouts 1-4, Structured Snippets 1-2, and Call Extensions
+  // all belong on this single campaign row for proper import.
+
+  // Sitelinks (up to 4) - directly on campaign row
   if (campaign.sitelinks && campaign.sitelinks.length > 0) {
-    for (let i = 0; i < Math.min(4, campaign.sitelinks.length); i++) {
-      const sl = campaign.sitelinks[i];
-      const num = i + 1;
+    campaign.sitelinks.slice(0, 4).forEach((sl, idx) => {
+      const num = idx + 1;
       campaignRow[COLUMN_INDEX[`Sitelink ${num} Text`]] = sl.text || '';
       campaignRow[COLUMN_INDEX[`Sitelink ${num} Description 1`]] = sl.description1 || '';
       campaignRow[COLUMN_INDEX[`Sitelink ${num} Description 2`]] = sl.description2 || '';
-      campaignRow[COLUMN_INDEX[`Sitelink ${num} Final URL`]] = sl.finalUrl || '';
+      campaignRow[COLUMN_INDEX[`Sitelink ${num} Final URL`]] = sl.finalUrl || campaign.url || '';
       campaignRow[COLUMN_INDEX[`Sitelink ${num} Status`]] = sl.status || 'Enabled';
-    }
+      campaignRow[COLUMN_INDEX[`Sitelink ${num} Start Date`]] = sl.startDate || '';
+      campaignRow[COLUMN_INDEX[`Sitelink ${num} End Date`]] = sl.endDate || '';
+    });
   }
-  
-  // Add callouts to campaign row if available
+
+  // Callouts (up to 4) - directly on campaign row
   if (campaign.callouts && campaign.callouts.length > 0) {
-    for (let i = 0; i < Math.min(4, campaign.callouts.length); i++) {
-      const co = campaign.callouts[i];
-      const num = i + 1;
+    campaign.callouts.slice(0, 4).forEach((co, idx) => {
+      const num = idx + 1;
       campaignRow[COLUMN_INDEX[`Callout ${num} Text`]] = co.text || '';
       campaignRow[COLUMN_INDEX[`Callout ${num} Status`]] = co.status || 'Enabled';
-    }
+      campaignRow[COLUMN_INDEX[`Callout ${num} Start Date`]] = co.startDate || '';
+      campaignRow[COLUMN_INDEX[`Callout ${num} End Date`]] = co.endDate || '';
+    });
   }
-  
-  // Add structured snippets
+
+  // Structured Snippets (up to 2) - directly on campaign row
   if (campaign.snippets && campaign.snippets.length > 0) {
-    if (campaign.snippets[0]) {
-      campaignRow[COLUMN_INDEX['Structured Snippet Header']] = campaign.snippets[0].header || '';
-      campaignRow[COLUMN_INDEX['Structured Snippet Values']] = campaign.snippets[0].values || '';
-    }
-    if (campaign.snippets[1]) {
-      campaignRow[COLUMN_INDEX['Structured Snippet 1 Header']] = campaign.snippets[1].header || '';
-      campaignRow[COLUMN_INDEX['Structured Snippet 1 Values']] = campaign.snippets[1].values || '';
-    }
+    campaign.snippets.slice(0, 2).forEach((sn, idx) => {
+      const num = idx + 1;
+      campaignRow[COLUMN_INDEX[`Structured Snippet ${num} Header`]] = sn.header || '';
+      campaignRow[COLUMN_INDEX[`Structured Snippet ${num} Values`]] = sn.values || '';
+    });
   }
-  
-  // Add call extensions
+
+  // Call Extension - directly on campaign row
   if (campaign.callExtensions && campaign.callExtensions.length > 0) {
-    const callExt = campaign.callExtensions[0]; // Use first call extension
+    const callExt = campaign.callExtensions[0];
     campaignRow[COLUMN_INDEX['PhoneNumber']] = callExt.phoneNumber || '';
     campaignRow[COLUMN_INDEX['VerificationURL']] = callExt.verificationUrl || '';
     campaignRow[COLUMN_INDEX['Call Extension Status']] = callExt.status || 'Enabled';
     campaignRow[COLUMN_INDEX['Call Extension Scheduling']] = callExt.scheduling || '';
   }
-  
-  // Add price extensions
-  if (campaign.priceExtensions && campaign.priceExtensions.length > 0) {
-    const priceExt = campaign.priceExtensions[0]; // Use first price extension
-    campaignRow[COLUMN_INDEX['Price Extension Type']] = priceExt.type || '';
-    campaignRow[COLUMN_INDEX['Price Extension Price Qualifier']] = priceExt.priceQualifier || '';
-    
-    // Add price extension items (up to 4)
-    if (priceExt.items && priceExt.items.length > 0) {
-      campaignRow[COLUMN_INDEX['Price Extension Item Header']] = priceExt.items[0]?.header || '';
-      campaignRow[COLUMN_INDEX['Price Extension Item Price']] = priceExt.items[0]?.price || '';
-      campaignRow[COLUMN_INDEX['Price Extension Item Final URL']] = priceExt.items[0]?.finalUrl || '';
-      
-      // Additional price extension items
-      for (let i = 0; i < Math.min(4, priceExt.items.length); i++) {
-        const item = priceExt.items[i];
-        const itemNum = i + 1;
-        campaignRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Header`]] = item.header || '';
-        campaignRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Price`]] = item.price || '';
-        campaignRow[COLUMN_INDEX[`Price Extension 1 Item ${itemNum} Final URL`]] = item.finalUrl || '';
-      }
-    }
-  }
-  
-  // Add promotion extensions
-  if (campaign.promotions && campaign.promotions.length > 0) {
-    const promotion = campaign.promotions[0]; // Use first promotion
-    campaignRow[COLUMN_INDEX['Promotion Target']] = promotion.target || '';
-    campaignRow[COLUMN_INDEX['Promotion Discount Modifier']] = promotion.discountModifier || '';
-    campaignRow[COLUMN_INDEX['Promotion Percent Off']] = promotion.percentOff || '';
-    campaignRow[COLUMN_INDEX['Promotion Money Amount Off']] = promotion.moneyAmountOff || '';
-    campaignRow[COLUMN_INDEX['Promotion Final URL']] = promotion.finalUrl || '';
-    campaignRow[COLUMN_INDEX['Promotion Status']] = promotion.status || 'Enabled';
-    campaignRow[COLUMN_INDEX['Promotion Start Date']] = promotion.startDate || '';
-    campaignRow[COLUMN_INDEX['Promotion End Date']] = promotion.endDate || '';
-  }
-  
-  // Add app extensions
-  if (campaign.appExtensions && campaign.appExtensions.length > 0) {
-    const appExt = campaign.appExtensions[0]; // Use first app extension
-    campaignRow[COLUMN_INDEX['App ID']] = appExt.appId || '';
-    campaignRow[COLUMN_INDEX['App Store']] = appExt.appStore || '';
-    campaignRow[COLUMN_INDEX['App Link Text']] = appExt.linkText || '';
-    campaignRow[COLUMN_INDEX['App Final URL']] = appExt.finalUrl || '';
-    campaignRow[COLUMN_INDEX['App Status']] = appExt.status || 'Enabled';
-  }
-  
-  // Add message extensions
-  if (campaign.messageExtensions && campaign.messageExtensions.length > 0) {
-    const msgExt = campaign.messageExtensions[0]; // Use first message extension
-    campaignRow[COLUMN_INDEX['Message Text']] = msgExt.text || '';
-    campaignRow[COLUMN_INDEX['Message Final URL']] = msgExt.finalUrl || '';
-    campaignRow[COLUMN_INDEX['Message Business Name']] = msgExt.businessName || '';
-    campaignRow[COLUMN_INDEX['Message Country Code']] = msgExt.countryCode || '';
-    campaignRow[COLUMN_INDEX['Message Phone Number']] = msgExt.phoneNumber || '';
-    campaignRow[COLUMN_INDEX['Message Status']] = msgExt.status || 'Enabled';
-  }
-  
-  // Add lead form extensions
-  if (campaign.leadFormExtensions && campaign.leadFormExtensions.length > 0) {
-    const leadForm = campaign.leadFormExtensions[0]; // Use first lead form
-    campaignRow[COLUMN_INDEX['Lead Form ID']] = leadForm.id || '';
-    campaignRow[COLUMN_INDEX['Lead Form Name']] = leadForm.name || '';
-    campaignRow[COLUMN_INDEX['Lead Form Headline']] = leadForm.headline || '';
-    campaignRow[COLUMN_INDEX['Lead Form Description']] = leadForm.description || '';
-    campaignRow[COLUMN_INDEX['Lead Form Call-to-action']] = leadForm.callToAction || '';
-    campaignRow[COLUMN_INDEX['Lead Form Status']] = leadForm.status || 'Enabled';
-  }
-  
-  // Add business info
-  if (campaign.businessInfo) {
-    campaignRow[COLUMN_INDEX['Business Name']] = campaign.businessInfo.name || '';
-    campaignRow[COLUMN_INDEX['Business Address']] = campaign.businessInfo.address || '';
-    campaignRow[COLUMN_INDEX['Business Phone']] = campaign.businessInfo.phone || '';
-    campaignRow[COLUMN_INDEX['Business Website']] = campaign.businessInfo.website || '';
-    campaignRow[COLUMN_INDEX['Business Profile Location']] = campaign.businessInfo.location || '';
-  }
-  
+
   rows.push(campaignRow);
-  
-  // Ad Group rows (one per ad group) - REQUIRED for Google Ads Editor
-  campaign.adGroups.forEach(adGroup => {
-    const agRow = createEmptyRow();
-    agRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
-    agRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-    agRow[COLUMN_INDEX['Ad Group']] = adGroup.name;
-    agRow[COLUMN_INDEX['Max CPC']] = String(adGroup.maxCpc || 2.00);
-    agRow[COLUMN_INDEX['Ad Group Status']] = adGroup.status || 'Enabled';
-    agRow[COLUMN_INDEX['Ad Group Labels']] = adGroup.labels || '';
-    rows.push(agRow);
-  });
+
   
   // Keyword rows - REQUIRED for Google Ads Editor
   campaign.adGroups.forEach(adGroup => {
@@ -569,15 +421,15 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
     });
   });
   
-  // Ad rows (RSA, DKI, Call-Only) - REQUIRED for Google Ads Editor
+  // Ad rows - only RSA ads for Search campaigns (DKI merged into RSA, Call-Only needs separate campaign)
   campaign.adGroups.forEach(adGroup => {
     adGroup.ads.forEach(ad => {
-      // Skip ads with no headlines or descriptions (invalid ads)
+      if (ad.type === 'DKI') return;
+      if (ad.type === 'CallOnly' && (campaign.campaignType || 'Search') === 'Search') return;
+
       const validHeadlines = (ad.headlines || []).filter((h: string) => h && h.trim());
       const validDescriptions = (ad.descriptions || []).filter((d: string) => d && d.trim());
       
-      // RSA requires at least 3 headlines and 2 descriptions for Google Ads
-      // But we'll be lenient here and only skip if completely empty
       if (validHeadlines.length < 1 || validDescriptions.length < 1) {
         console.warn(`Skipping invalid ad in group "${adGroup.name}": insufficient headlines (${validHeadlines.length}) or descriptions (${validDescriptions.length})`);
         return;
@@ -660,30 +512,28 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
       adRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
       adRow[COLUMN_INDEX['Ad Group']] = adGroup.name;
       adRow[COLUMN_INDEX['Ad Group Status']] = 'Enabled';
-      adRow[COLUMN_INDEX['Ad Type']] = ad.type === 'RSA' ? 'Responsive search ad' : 
-                                       ad.type === 'CallOnly' ? 'Call-only ad' : 
-                                       'Responsive search ad';
+      adRow[COLUMN_INDEX['Ad Type']] = ad.type === 'CallOnly' ? 'Call-only ad' : 'Responsive search ad';
       adRow[COLUMN_INDEX['Final URL']] = ad.finalUrl;
       adRow[COLUMN_INDEX['Mobile Final URL']] = ad.mobileUrl || '';
       
-      // Headlines (up to 15) - use deduplicated unique headlines
+      // Headlines (up to 15) - sanitize and truncate with DKI-safe logic
       for (let i = 0; i < Math.min(15, finalHeadlines.length); i++) {
         const headlineCol = `Headline ${i + 1}`;
         if (COLUMN_INDEX[headlineCol] !== undefined) {
-          adRow[COLUMN_INDEX[headlineCol]] = finalHeadlines[i].substring(0, 30);
+          adRow[COLUMN_INDEX[headlineCol]] = truncateHeadline(sanitizeAdText(finalHeadlines[i]), 30);
         }
       }
       
-      // Descriptions (up to 4) - use deduplicated unique descriptions
+      // Descriptions (up to 4) - sanitize and truncate with DKI-safe logic
       for (let i = 0; i < Math.min(4, finalDescriptions.length); i++) {
         const descCol = `Description ${i + 1}`;
         if (COLUMN_INDEX[descCol] !== undefined) {
-          adRow[COLUMN_INDEX[descCol]] = finalDescriptions[i].substring(0, 90);
+          adRow[COLUMN_INDEX[descCol]] = truncateDescription(sanitizeAdText(finalDescriptions[i]), 90);
         }
       }
       
-      adRow[COLUMN_INDEX['Path 1']] = (ad.path1 || '').substring(0, 15);
-      adRow[COLUMN_INDEX['Path 2']] = (ad.path2 || '').substring(0, 15);
+      adRow[COLUMN_INDEX['Path 1']] = sanitizeAdText(ad.path1 || '').substring(0, 15);
+      adRow[COLUMN_INDEX['Path 2']] = sanitizeAdText(ad.path2 || '').substring(0, 15);
       
       // Call-only specific fields
       if (ad.type === 'CallOnly') {
@@ -774,38 +624,78 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
     }
   }
   
-  // Image asset rows
-  if (campaign.imageAssets && campaign.imageAssets.length > 0) {
-    campaign.imageAssets.forEach(img => {
-      const imgRow = createEmptyRow();
-      imgRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
-      imgRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      imgRow[COLUMN_INDEX['Image Asset Name']] = img.name;
-      imgRow[COLUMN_INDEX['Image Asset URL']] = img.url;
-      imgRow[COLUMN_INDEX['Image Asset Status']] = img.status || 'Enabled';
-      rows.push(imgRow);
-    });
-  }
-  
-  // Video asset rows
-  if (campaign.videoAssets && campaign.videoAssets.length > 0) {
-    campaign.videoAssets.forEach(video => {
-      const videoRow = createEmptyRow();
-      videoRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
-      videoRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      videoRow[COLUMN_INDEX['Video Asset ID']] = video.id;
-      videoRow[COLUMN_INDEX['Video Asset Name']] = video.name;
-      videoRow[COLUMN_INDEX['Video Asset URL']] = video.url;
-      videoRow[COLUMN_INDEX['Video Asset Status']] = video.status || 'Enabled';
-      rows.push(videoRow);
-    });
-  }
-  
   // Convert rows to CSV string with proper escaping
   const csvContent = rows.map(row => row.map(escapeCSV).join(',')).join('\r\n');
   
   // Add UTF-8 BOM for Excel compatibility
   return '\ufeff' + csvContent;
+}
+
+export function generateCallOnlyCampaignRows(callAd: any, baseCampaign: CampaignDataV5): string {
+  const rows: string[][] = [];
+  const campaignName = baseCampaign.campaignName;
+  const callCampaignName = campaignName + ' - Call Only';
+
+  const campRow = createEmptyRow();
+  campRow[COLUMN_INDEX['Campaign']] = callCampaignName;
+  campRow[COLUMN_INDEX['Campaign Daily Budget']] = String(baseCampaign.dailyBudget || 100);
+  campRow[COLUMN_INDEX['Campaign Type']] = 'Search';
+  campRow[COLUMN_INDEX['Bid Strategy Type']] = baseCampaign.bidStrategy || 'Maximize Conversions';
+  campRow[COLUMN_INDEX['Networks']] = baseCampaign.networks || 'Google search';
+  campRow[COLUMN_INDEX['EU political ads']] = 'No';
+  campRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+  rows.push(campRow);
+
+  const adGroupName = callCampaignName + ' - Ads';
+  const countryCode = baseCampaign.locations?.countryCode || callAd.countryCode || 'US';
+  const adRow = createEmptyRow();
+  adRow[COLUMN_INDEX['Campaign']] = callCampaignName;
+  adRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+  adRow[COLUMN_INDEX['Ad Group']] = adGroupName;
+  adRow[COLUMN_INDEX['Ad Group Status']] = 'Enabled';
+  adRow[COLUMN_INDEX['Ad Type']] = 'Call-only ad';
+  adRow[COLUMN_INDEX['Final URL']] = callAd.finalUrl || baseCampaign.url || '';
+  adRow[COLUMN_INDEX['Country Code']] = countryCode;
+
+  const headlines = (callAd.headlines || []).filter((h: string) => h && h.trim());
+  const descriptions = (callAd.descriptions || []).filter((d: string) => d && d.trim());
+  headlines.slice(0, 2).forEach((h: string, i: number) => {
+    const key = `Headline ${i + 1}` as keyof typeof COLUMN_INDEX;
+    if (COLUMN_INDEX[key] !== undefined) adRow[COLUMN_INDEX[key]] = truncateHeadline(sanitizeAdText(h), 30);
+  });
+  descriptions.slice(0, 2).forEach((d: string, i: number) => {
+    const key = `Description ${i + 1}` as keyof typeof COLUMN_INDEX;
+    if (COLUMN_INDEX[key] !== undefined) adRow[COLUMN_INDEX[key]] = truncateDescription(sanitizeAdText(d), 90);
+  });
+
+  if (callAd.phoneNumber) adRow[COLUMN_INDEX['PhoneNumber']] = callAd.phoneNumber;
+  if (callAd.businessName) adRow[COLUMN_INDEX['Business Name']] = callAd.businessName;
+  adRow[COLUMN_INDEX['Ad Status']] = 'Enabled';
+  rows.push(adRow);
+
+  if (baseCampaign.locations) {
+    const addLoc = (name: string, type: string, extras: Record<string, string> = {}) => {
+      const locRow = createEmptyRow();
+      locRow[COLUMN_INDEX['Campaign']] = callCampaignName;
+      locRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      locRow[COLUMN_INDEX['Location']] = name;
+      locRow[COLUMN_INDEX['Location Type']] = type;
+      locRow[COLUMN_INDEX['Location Status']] = 'Enabled';
+      locRow[COLUMN_INDEX['Country Code']] = countryCode;
+      for (const [k, v] of Object.entries(extras)) {
+        if (COLUMN_INDEX[k as keyof typeof COLUMN_INDEX] !== undefined) {
+          locRow[COLUMN_INDEX[k as keyof typeof COLUMN_INDEX]] = v;
+        }
+      }
+      rows.push(locRow);
+    };
+    (baseCampaign.locations.countries || []).forEach((c: string) => addLoc(c, 'Country'));
+    (baseCampaign.locations.states || []).forEach((s: string) => addLoc(s, 'Region', { 'State/Region': s }));
+    (baseCampaign.locations.cities || []).forEach((c: string) => addLoc(c, 'City', { 'City': c }));
+    (baseCampaign.locations.zipCodes || []).forEach((z: string) => addLoc(z, 'Postal Code', { 'Postal Code': z }));
+  }
+
+  return rows.map(row => row.map(escapeCSV).join(',')).join('\r\n');
 }
 
 /**
@@ -849,7 +739,8 @@ export function convertToV5Format(legacyData: any): CampaignDataV5 {
     },
     sitelinks: [],
     callouts: [],
-    snippets: []
+    snippets: [],
+    callExtensions: [],
   };
   
   // Convert ad groups
@@ -977,145 +868,6 @@ export function convertToV5Format(legacyData: any): CampaignDataV5 {
     }));
   }
   
-  // Convert price extensions
-  if (legacyData.priceExtensions && Array.isArray(legacyData.priceExtensions)) {
-    campaign.priceExtensions = legacyData.priceExtensions.map((pe: any) => ({
-      type: pe.type || 'Services',
-      priceQualifier: pe.priceQualifier || pe.price_qualifier || '',
-      items: pe.items || []
-    }));
-  } else if (legacyData.extensions && Array.isArray(legacyData.extensions)) {
-    const priceExts = legacyData.extensions.filter((e: any) => e.type === 'price');
-    campaign.priceExtensions = priceExts.map((pe: any) => ({
-      type: pe.type || 'Services',
-      priceQualifier: pe.priceQualifier || '',
-      items: pe.items || []
-    }));
-  }
-  
-  // Convert app extensions
-  if (legacyData.appExtensions && Array.isArray(legacyData.appExtensions)) {
-    campaign.appExtensions = legacyData.appExtensions.map((ae: any) => ({
-      appId: ae.appId || ae.app_id || '',
-      appStore: ae.appStore || ae.app_store || 'Google Play',
-      linkText: ae.linkText || ae.link_text || 'Download App',
-      finalUrl: ae.finalUrl || ae.final_url || '',
-      status: ae.status || 'Enabled'
-    }));
-  } else if (legacyData.extensions && Array.isArray(legacyData.extensions)) {
-    const appExts = legacyData.extensions.filter((e: any) => e.type === 'app');
-    campaign.appExtensions = appExts.map((ae: any) => ({
-      appId: ae.appId || '',
-      appStore: ae.appStore || 'Google Play',
-      linkText: ae.linkText || 'Download App',
-      finalUrl: ae.finalUrl || '',
-      status: ae.status || 'Enabled'
-    }));
-  }
-  
-  // Convert message extensions
-  if (legacyData.messageExtensions && Array.isArray(legacyData.messageExtensions)) {
-    campaign.messageExtensions = legacyData.messageExtensions.map((me: any) => ({
-      text: me.text || '',
-      finalUrl: me.finalUrl || me.final_url || '',
-      businessName: me.businessName || me.business_name || '',
-      countryCode: me.countryCode || me.country_code || 'US',
-      phoneNumber: me.phoneNumber || me.phone_number || '',
-      status: me.status || 'Enabled'
-    }));
-  } else if (legacyData.extensions && Array.isArray(legacyData.extensions)) {
-    const msgExts = legacyData.extensions.filter((e: any) => e.type === 'message');
-    campaign.messageExtensions = msgExts.map((me: any) => ({
-      text: me.text || '',
-      finalUrl: me.finalUrl || '',
-      businessName: me.businessName || '',
-      countryCode: me.countryCode || 'US',
-      phoneNumber: me.phoneNumber || '',
-      status: me.status || 'Enabled'
-    }));
-  }
-  
-  // Convert lead form extensions
-  if (legacyData.leadFormExtensions && Array.isArray(legacyData.leadFormExtensions)) {
-    campaign.leadFormExtensions = legacyData.leadFormExtensions.map((lf: any) => ({
-      id: lf.id || '',
-      name: lf.name || '',
-      headline: lf.headline || '',
-      description: lf.description || '',
-      callToAction: lf.callToAction || lf.call_to_action || 'Learn More',
-      status: lf.status || 'Enabled'
-    }));
-  } else if (legacyData.extensions && Array.isArray(legacyData.extensions)) {
-    const leadFormExts = legacyData.extensions.filter((e: any) => e.type === 'leadform');
-    campaign.leadFormExtensions = leadFormExts.map((lf: any) => ({
-      id: lf.id || '',
-      name: lf.name || '',
-      headline: lf.headline || '',
-      description: lf.description || '',
-      callToAction: lf.callToAction || 'Learn More',
-      status: lf.status || 'Enabled'
-    }));
-  }
-  
-  // Convert promotions
-  if (legacyData.promotions && Array.isArray(legacyData.promotions)) {
-    campaign.promotions = legacyData.promotions.map((p: any) => ({
-      target: p.target || '',
-      discountModifier: p.discountModifier || p.discount_modifier || '',
-      percentOff: p.percentOff || p.percent_off || '',
-      moneyAmountOff: p.moneyAmountOff || p.money_amount_off || '',
-      finalUrl: p.finalUrl || p.final_url || '',
-      status: p.status || 'Enabled',
-      startDate: p.startDate || p.start_date || '',
-      endDate: p.endDate || p.end_date || ''
-    }));
-  } else if (legacyData.extensions && Array.isArray(legacyData.extensions)) {
-    const promoExts = legacyData.extensions.filter((e: any) => e.type === 'promotion');
-    campaign.promotions = promoExts.map((p: any) => ({
-      target: p.target || '',
-      discountModifier: p.discountModifier || '',
-      percentOff: p.percentOff || '',
-      moneyAmountOff: p.moneyAmountOff || '',
-      finalUrl: p.finalUrl || '',
-      status: p.status || 'Enabled',
-      startDate: p.startDate || '',
-      endDate: p.endDate || ''
-    }));
-  }
-  
-  // Convert image assets
-  if (legacyData.imageAssets && Array.isArray(legacyData.imageAssets)) {
-    campaign.imageAssets = legacyData.imageAssets.map((img: any) => ({
-      name: img.name || '',
-      url: img.url || '',
-      status: img.status || 'Enabled'
-    }));
-  } else if (legacyData.extensions && Array.isArray(legacyData.extensions)) {
-    const imgExts = legacyData.extensions.filter((e: any) => e.type === 'image');
-    campaign.imageAssets = imgExts.map((img: any) => ({
-      name: img.name || '',
-      url: img.url || '',
-      status: img.status || 'Enabled'
-    }));
-  }
-  
-  // Convert video assets
-  if (legacyData.videoAssets && Array.isArray(legacyData.videoAssets)) {
-    campaign.videoAssets = legacyData.videoAssets.map((video: any) => ({
-      id: video.id || '',
-      name: video.name || '',
-      url: video.url || '',
-      status: video.status || 'Enabled'
-    }));
-  } else if (legacyData.extensions && Array.isArray(legacyData.extensions)) {
-    const videoExts = legacyData.extensions.filter((e: any) => e.type === 'video');
-    campaign.videoAssets = videoExts.map((video: any) => ({
-      id: video.id || '',
-      name: video.name || '',
-      url: video.url || '',
-      status: video.status || 'Enabled'
-    }));
-  }
   
   return campaign;
 }
@@ -1134,13 +886,6 @@ export function getCSVStatistics(campaign: CampaignDataV5): {
   sitelinks: number;
   callouts: number;
   callExtensions: number;
-  priceExtensions: number;
-  appExtensions: number;
-  messageExtensions: number;
-  leadFormExtensions: number;
-  promotions: number;
-  imageAssets: number;
-  videoAssets: number;
 } {
   let totalLocations = 0;
   if (campaign.locations) {
@@ -1161,13 +906,6 @@ export function getCSVStatistics(campaign: CampaignDataV5): {
     sitelinks: campaign.sitelinks?.length || 0,
     callouts: campaign.callouts?.length || 0,
     callExtensions: campaign.callExtensions?.length || 0,
-    priceExtensions: campaign.priceExtensions?.length || 0,
-    appExtensions: campaign.appExtensions?.length || 0,
-    messageExtensions: campaign.messageExtensions?.length || 0,
-    leadFormExtensions: campaign.leadFormExtensions?.length || 0,
-    promotions: campaign.promotions?.length || 0,
-    imageAssets: campaign.imageAssets?.length || 0,
-    videoAssets: campaign.videoAssets?.length || 0
   };
 }
 
@@ -1251,101 +989,6 @@ export function validateExtensionData(campaign: CampaignDataV5): ValidationResul
     });
   }
   
-  // Validate app extensions
-  if (campaign.appExtensions) {
-    campaign.appExtensions.forEach((appExt, index) => {
-      if (!appExt.appId) {
-        errors.push(`App Extension ${index + 1}: App ID is required`);
-      }
-      if (!appExt.linkText || appExt.linkText.length > 25) {
-        errors.push(`App Extension ${index + 1}: Link text must be 1-25 characters`);
-      }
-      if (!appExt.finalUrl) {
-        errors.push(`App Extension ${index + 1}: Final URL is required`);
-      }
-    });
-  }
-  
-  // Validate message extensions
-  if (campaign.messageExtensions) {
-    campaign.messageExtensions.forEach((msgExt, index) => {
-      if (!msgExt.text || msgExt.text.length > 35) {
-        errors.push(`Message Extension ${index + 1}: Text must be 1-35 characters`);
-      }
-      if (!msgExt.businessName) {
-        errors.push(`Message Extension ${index + 1}: Business name is required`);
-      }
-      if (!msgExt.phoneNumber) {
-        errors.push(`Message Extension ${index + 1}: Phone number is required`);
-      }
-    });
-  }
-  
-  // Validate lead form extensions
-  if (campaign.leadFormExtensions) {
-    campaign.leadFormExtensions.forEach((leadForm, index) => {
-      if (!leadForm.name) {
-        errors.push(`Lead Form Extension ${index + 1}: Name is required`);
-      }
-      if (!leadForm.headline || leadForm.headline.length > 30) {
-        errors.push(`Lead Form Extension ${index + 1}: Headline must be 1-30 characters`);
-      }
-      if (!leadForm.description || leadForm.description.length > 90) {
-        errors.push(`Lead Form Extension ${index + 1}: Description must be 1-90 characters`);
-      }
-    });
-  }
-  
-  // Validate price extensions
-  if (campaign.priceExtensions) {
-    campaign.priceExtensions.forEach((priceExt, index) => {
-      if (!priceExt.type) {
-        errors.push(`Price Extension ${index + 1}: Type is required`);
-      }
-      if (!priceExt.items || priceExt.items.length === 0) {
-        errors.push(`Price Extension ${index + 1}: At least one price item is required`);
-      }
-      if (priceExt.items && priceExt.items.length > 8) {
-        warnings.push(`Price Extension ${index + 1}: Too many items (${priceExt.items.length}). Maximum is 8.`);
-      }
-    });
-  }
-  
-  // Validate promotions
-  if (campaign.promotions) {
-    campaign.promotions.forEach((promotion, index) => {
-      if (!promotion.target) {
-        errors.push(`Promotion ${index + 1}: Target is required`);
-      }
-      if (!promotion.percentOff && !promotion.moneyAmountOff) {
-        errors.push(`Promotion ${index + 1}: Either percent off or money amount off is required`);
-      }
-    });
-  }
-  
-  // Validate image assets
-  if (campaign.imageAssets) {
-    campaign.imageAssets.forEach((img, index) => {
-      if (!img.name) {
-        errors.push(`Image Asset ${index + 1}: Name is required`);
-      }
-      if (!img.url) {
-        errors.push(`Image Asset ${index + 1}: URL is required`);
-      }
-    });
-  }
-  
-  // Validate video assets
-  if (campaign.videoAssets) {
-    campaign.videoAssets.forEach((video, index) => {
-      if (!video.name) {
-        errors.push(`Video Asset ${index + 1}: Name is required`);
-      }
-      if (!video.url) {
-        errors.push(`Video Asset ${index + 1}: URL is required`);
-      }
-    });
-  }
   
   return {
     isValid: errors.length === 0,
@@ -1399,15 +1042,16 @@ export function validateCSVFormat(csvContent: string): ValidationResult {
   // Check header row
   const headerColumns = parseCSVLine(lines[0]);
   
-  if (headerColumns.length !== 183) {
-    errors.push(`CSV must have exactly 183 columns, found ${headerColumns.length}`);
+  const expectedCols = MASTER_CSV_HEADERS.length;
+  if (headerColumns.length !== expectedCols) {
+    errors.push(`CSV must have exactly ${expectedCols} columns, found ${headerColumns.length}`);
   }
   
   // Check that all data rows have the same number of columns
   for (let i = 1; i < lines.length; i++) {
     const columns = parseCSVLine(lines[i]);
-    if (columns.length !== 183) {
-      errors.push(`Row ${i + 1} has ${columns.length} columns, expected 183`);
+    if (columns.length !== expectedCols) {
+      errors.push(`Row ${i + 1} has ${columns.length} columns, expected ${expectedCols}`);
     }
   }
   

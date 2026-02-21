@@ -6,13 +6,13 @@ import {
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { getUserPublishedWebsites, deletePublishedWebsite, updatePublishedWebsiteStatus, updatePublishedWebsite, PublishedWebsite, savePublishedWebsite } from '../utils/publishedWebsites';
 import { getDeploymentStatus } from '../utils/vercel';
-import { useUserData } from '@nhost/react';
+
 import { notifications } from '../utils/notifications';
 
 export const MyWebsites: React.FC = () => {
@@ -506,6 +506,7 @@ export const MyWebsites: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New Website</DialogTitle>
+            <DialogDescription className="sr-only">Add a new website to your list</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -571,6 +572,7 @@ export const MyWebsites: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Website</DialogTitle>
+            <DialogDescription className="sr-only">Edit website details</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -636,6 +638,7 @@ export const MyWebsites: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Website</DialogTitle>
+            <DialogDescription className="sr-only">Confirm website deletion</DialogDescription>
           </DialogHeader>
           <p className="text-slate-600 py-4">
             Are you sure you want to delete this website? This will remove it from your list but won't delete it from Vercel.

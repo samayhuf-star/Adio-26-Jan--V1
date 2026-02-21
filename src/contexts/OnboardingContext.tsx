@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useUserData, useAuthenticationStatus } from '@nhost/react';
-import { nhost } from '../lib/nhost';
+import { getCurrentUser, getSessionTokenSync } from '../utils/auth';
 
 export interface OnboardingStep {
   id: string;
@@ -79,6 +78,23 @@ interface OnboardingProviderProps {
   children: ReactNode;
 }
 
+async function apiRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const token = getSessionTokenSync();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(endpoint, { ...options, headers });
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
 export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children }) => {
   const [state, setState] = useState<OnboardingState>({
     isFirstTime: false,
@@ -98,62 +114,46 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const checkOnboardingStatus = async () => {
     try {
       setIsLoading(true);
-      const user = useUserData();
+      const user = getCurrentUser();
       
       if (!user) {
         setIsLoading(false);
         return;
       }
 
-      // Check if user has completed onboarding using Nhost GraphQL
-      const { data, error } = await nhost.graphql.request(`
-        query GetUserOnboarding($userId: uuid!) {
-          user_onboarding(where: {user_id: {_eq: $userId}}) {
-            completed
-            skipped
-            current_step
-            steps_completed
+      try {
+        const data = await apiRequest(`/api/onboarding/${user.id}`);
+        const onboardingData = data?.onboarding;
+
+        const isProfileComplete = user && user.name && user.email;
+
+        if (!onboardingData) {
+          setState(prev => ({
+            ...prev,
+            isFirstTime: true,
+            completed: false,
+            skipped: false,
+          }));
+        } else {
+          const steps = [...defaultSteps];
+          if (onboardingData.steps_completed) {
+            onboardingData.steps_completed.forEach((stepId: string) => {
+              const step = steps.find(s => s.id === stepId);
+              if (step) step.completed = true;
+            });
           }
-        }
-      `, { userId: user.id });
 
-      if (error) {
+          setState(prev => ({
+            ...prev,
+            isFirstTime: false,
+            completed: onboardingData.completed || false,
+            skipped: onboardingData.skipped || false,
+            currentStep: onboardingData.current_step || 0,
+            steps,
+          }));
+        }
+      } catch (error) {
         console.error('Error checking onboarding status:', error);
-        setIsLoading(false);
-        return;
-      }
-
-      const onboardingData = data?.user_onboarding?.[0];
-
-      // Check if user profile exists and is complete
-      const isProfileComplete = user && user.displayName && user.email;
-
-      if (!onboardingData) {
-        // First time user
-        setState(prev => ({
-          ...prev,
-          isFirstTime: true,
-          completed: false,
-          skipped: false,
-        }));
-      } else {
-        // Returning user
-        const steps = [...defaultSteps];
-        if (onboardingData.steps_completed) {
-          onboardingData.steps_completed.forEach((stepId: string) => {
-            const step = steps.find(s => s.id === stepId);
-            if (step) step.completed = true;
-          });
-        }
-
-        setState(prev => ({
-          ...prev,
-          isFirstTime: false,
-          completed: onboardingData.completed || false,
-          skipped: onboardingData.skipped || false,
-          currentStep: onboardingData.current_step || 0,
-          steps,
-        }));
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
@@ -164,42 +164,21 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
 
   const saveOnboardingState = async (updates: Partial<OnboardingState>) => {
     try {
-      const user = useUserData();
+      const user = getCurrentUser();
       if (!user) return;
 
       const completedSteps = updates.steps?.filter(s => s.completed).map(s => s.id) || 
                            state.steps.filter(s => s.completed).map(s => s.id);
 
-      const { error } = await nhost.graphql.request(`
-        mutation UpsertUserOnboarding($userId: uuid!, $completed: Boolean!, $skipped: Boolean!, $currentStep: Int!, $stepsCompleted: jsonb!) {
-          insert_user_onboarding(
-            objects: {
-              user_id: $userId,
-              completed: $completed,
-              skipped: $skipped,
-              current_step: $currentStep,
-              steps_completed: $stepsCompleted,
-              updated_at: "now()"
-            },
-            on_conflict: {
-              constraint: user_onboarding_user_id_key,
-              update_columns: [completed, skipped, current_step, steps_completed, updated_at]
-            }
-          ) {
-            affected_rows
-          }
-        }
-      `, {
-        userId: user.id,
-        completed: updates.completed ?? state.completed,
-        skipped: updates.skipped ?? state.skipped,
-        currentStep: updates.currentStep ?? state.currentStep,
-        stepsCompleted: completedSteps,
+      await apiRequest(`/api/onboarding/${user.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          completed: updates.completed ?? state.completed,
+          skipped: updates.skipped ?? state.skipped,
+          currentStep: updates.currentStep ?? state.currentStep,
+          stepsCompleted: completedSteps,
+        }),
       });
-
-      if (error) {
-        console.error('Error saving onboarding state:', error);
-      }
     } catch (error) {
       console.error('Error saving onboarding state:', error);
     }

@@ -59,12 +59,12 @@ Go to: https://supabase.com/dashboard/project/kkdnnrwhzofttzajnwlj/functions/mak
 Add these secrets:
 - `STRIPE_SECRET_KEY` - Your Stripe secret key
 - `STRIPE_WEBHOOK_SECRET` - Your Stripe webhook secret (optional)
-- `FRONTEND_URL` - https://adiology.online
+- `FRONTEND_URL` - https://adiology.io
 - `SUPABASE_URL` - https://kkdnnrwhzofttzajnwlj.supabase.co
 - `SUPABASE_SERVICE_ROLE_KEY` - Your service role key
 - `GEMINI_API_KEY` - If using AI features
 - `SENDUNE_API_KEY` - If using email features
-- `SENDUNE_FROM_EMAIL` - noreply@adiology.online
+- `SENDUNE_FROM_EMAIL` - noreply@adiology.io
 
 ### Step 4: Verify Deployment
 

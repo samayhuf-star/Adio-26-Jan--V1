@@ -44,7 +44,6 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
                 <Sparkle className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
-              <p className="text-xs text-slate-500 -mt-0.5">~ Samay</p>
             </div>
             <CardTitle className="text-2xl font-bold text-slate-900">
               Payment Successful!
@@ -107,8 +106,8 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
 
             <p className="text-xs text-center text-slate-500">
               Need help? Contact us at{' '}
-              <a href="mailto:support@adiology.com" className="text-indigo-600 hover:underline">
-                support@adiology.com
+              <a href="mailto:support@adiology.io" className="text-indigo-600 hover:underline">
+                support@adiology.io
               </a>
             </p>
           </CardContent>

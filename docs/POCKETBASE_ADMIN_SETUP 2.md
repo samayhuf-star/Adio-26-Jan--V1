@@ -2,11 +2,11 @@
 
 ## Overview
 
-The PocketBase admin panel is now accessible at `https://adiology.online/admin`. This provides full access to manage your PocketBase database, collections, users, and settings.
+The PocketBase admin panel is now accessible at `https://adiology.io/admin`. This provides full access to manage your PocketBase database, collections, users, and settings.
 
 ## Access URL
 
-- **Production**: `https://adiology.online/admin`
+- **Production**: `https://adiology.io/admin`
 - **Local Development**: `http://localhost:5000/admin`
 
 ## Initial Admin Credentials Setup
@@ -48,7 +48,7 @@ If you already have a PocketBase admin account:
 **IMPORTANT**: Change these default credentials immediately after first setup!
 
 ### Default Login (Change These!)
-- **Email**: `admin@adiology.online`
+- **Email**: `admin@adiology.io`
 - **Password**: `Admin@123!ChangeMe`
 
 ### How to Change Admin Password
@@ -66,7 +66,7 @@ Add these to your `.env` file:
 ```bash
 # PocketBase Configuration
 POCKETBASE_URL=http://127.0.0.1:8090
-POCKETBASE_ADMIN_EMAIL=admin@adiology.online
+POCKETBASE_ADMIN_EMAIL=admin@adiology.io
 POCKETBASE_ADMIN_PASSWORD=Admin@123!ChangeMe
 
 # Frontend (for client-side PocketBase connection)

@@ -1,7 +1,10 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
-  LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare
+  LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare, Globe, Mail, Plus, Minus, Circle, Keyboard, BarChart3, Activity, Lock, Ticket, FileText
 } from 'lucide-react';
+
+import { initGA, trackPageView } from './lib/analytics';
+import { useAnalytics } from './hooks/use-analytics';
 
 declare global {
   interface Window {
@@ -23,28 +26,32 @@ import { Switch } from './components/ui/switch';
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from './components/ui/sheet';
+import { Popover, PopoverTrigger, PopoverContent } from './components/ui/popover';
 import { getUserPreferences, applyUserPreferences } from './utils/userPreferences';
 import { notifications as notificationService } from './utils/notifications';
 import { setCurrentUserId } from './utils/localStorageHistory';
 import { getCurrentUserProfile, signOut, getSessionToken } from './utils/auth';
 import { getCurrentUser, isAuthenticated } from './utils/auth';
-import { setNhostGetToken } from './utils/historyService';
+import { setAuthGetToken } from './utils/historyService';
 import { DataSourceIndicator } from './components/DataSourceIndicator';
 import { useDataSource } from './hooks/useDataSource';
 import { initStorageManager, clearStorageNow } from './utils/storageManager';
-import { FeedbackButton } from './components/FeedbackButton';
-import { Auth } from './components/Auth';
-import { Dashboard } from './components/Dashboard';
-import { EmailVerification } from './components/EmailVerification';
-import { ResetPassword } from './components/ResetPassword';
-import { PaymentPage } from './components/PaymentPage';
-import { PaymentSuccess } from './components/PaymentSuccess';
-import { PlanSelection } from './components/PlanSelection';
-import CreativeMinimalistHomepage from './components/CreativeMinimalistHomepage';
-import { MobileNavigation, MobileQuickActions } from './components/MobileNavigation';
+const Auth = lazy(() => import('./components/Auth').then(m => ({ default: m.Auth })));
+const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const EmailVerification = lazy(() => import('./components/EmailVerification').then(m => ({ default: m.EmailVerification })));
+const ResetPassword = lazy(() => import('./components/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const PaymentPage = lazy(() => import('./components/PaymentPage').then(m => ({ default: m.PaymentPage })));
+const PaymentSuccess = lazy(() => import('./components/PaymentSuccess').then(m => ({ default: m.PaymentSuccess })));
+const PlanSelection = lazy(() => import('./components/PlanSelection').then(m => ({ default: m.PlanSelection })));
+const SignupWizard = lazy(() => import('./components/SignupWizard').then(m => ({ default: m.SignupWizard })));
+const CreativeMinimalistHomepage = lazy(() => import('./components/CreativeMinimalistHomepage'));
+const MobileNavigation = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileNavigation })));
+const MobileQuickActions = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileQuickActions })));
+const FloatingFeedback = lazy(() => import('./components/FloatingFeedback').then(m => ({ default: m.FloatingFeedback })));
 
 // Lazy load heavy components for code splitting
 const CampaignBuilder3 = lazy(() => import('./components/CampaignBuilder3').then(m => ({ default: m.CampaignBuilder3 })));
@@ -60,19 +67,34 @@ const DraftCampaigns = lazy(() => import('./components/DraftCampaigns').then(m =
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const SupportPanel = lazy(() => import('./components/SupportPanel').then(m => ({ default: m.SupportPanel })));
 const SupportHelpCombined = lazy(() => import('./components/SupportHelpCombined').then(m => ({ default: m.SupportHelpCombined })));
+const HelpSupport = lazy(() => import('./components/HelpSupport').then(m => ({ default: m.HelpSupport })));
 const Blog = lazy(() => import('./components/Blog').then(m => ({ default: m.default })));
 const BlogGenerator = lazy(() => import('./components/BlogGenerator').then(m => ({ default: m.default })));
 const SuperAdminPanel = lazy(() => import('./components/SuperAdminPanel').then(m => ({ default: m.SuperAdminPanel })));
-// PocketBaseAdmin removed
+const SuperAdminApp = lazy(() => import('./components/admin/SuperAdminApp').then(m => ({ default: m.SuperAdminApp })));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
 const TermsOfService = lazy(() => import('./components/TermsOfService').then(m => ({ default: m.TermsOfService })));
 const CookiePolicy = lazy(() => import('./components/CookiePolicy').then(m => ({ default: m.CookiePolicy })));
 const GDPRCompliance = lazy(() => import('./components/GDPRCompliance').then(m => ({ default: m.GDPRCompliance })));
 const RefundPolicy = lazy(() => import('./components/RefundPolicy').then(m => ({ default: m.RefundPolicy })));
 const PromoLandingPage = lazy(() => import('./components/PromoLandingPage').then(m => ({ default: m.PromoLandingPage })));
+const LifetimeDealPage = lazy(() => import('./components/LifetimeDealPage').then(m => ({ default: m.LifetimeDealPage })));
 const TaskManager = lazy(() => import('./components/TaskManager').then(m => ({ default: m.TaskManager })));
 const CommunityPage = lazy(() => import('./modules/community').then(m => ({ default: m.CommunityPage })));
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then(m => ({ default: m.AcceptInvite })));
+const DomainMonitoring = lazy(() => import('./components/DomainMonitoring').then(m => ({ default: m.default })));
+const CampaignBuilderPage = lazy(() => import('./components/feature-pages/CampaignBuilderPage'));
+const ClickGuardPage = lazy(() => import('./components/feature-pages/ClickGuardPage'));
+const ProxyMailPage = lazy(() => import('./components/feature-pages/InstantMailPage'));
+const DomainMonitorPage = lazy(() => import('./components/feature-pages/DomainMonitorPage'));
+const KeywordPlannerPage = lazy(() => import('./components/feature-pages/KeywordPlannerPage'));
+const AdsSearchPage = lazy(() => import('./components/feature-pages/AdsSearchPage'));
+const BlogGeneratorPage = lazy(() => import('./components/feature-pages/BlogGeneratorPage'));
+const TempMail = lazy(() => import('./components/TempMail').then(m => ({ default: m.default })));
+const ClickGuard = lazy(() => import('./components/ClickGuard').then(m => ({ default: m.default })));
+const ContactPage = lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));
+const HelpCenterPage = lazy(() => import('./components/HelpCenterPage').then(m => ({ default: m.HelpCenterPage })));
+const CommunityPageStandalone = lazy(() => import('./components/CommunityPage').then(m => ({ default: m.CommunityPage })));
 
 // Loading component for lazy-loaded modules
 const ComponentLoader = () => (
@@ -84,7 +106,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'admin-panel' | 'accept-invite';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -102,11 +124,24 @@ const AppContent = () => {
   const [viewMode, setViewMode] = useState<'admin' | 'user'>('admin');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Track page views when tab or view changes
+  useEffect(() => {
+    const location = appView === 'user' ? `/dashboard/${activeTab}` : `/${appView}`;
+    trackPageView(location);
+  }, [appView, activeTab]);
+
+  // Initialize Google Analytics when app loads
+  useEffect(() => {
+    if (import.meta.env.VITE_GA_MEASUREMENT_ID) {
+      initGA();
+    }
+  }, []);
   
   // Initialize auth state
   useEffect(() => {
     // Initialize historyService with token getter so it can use database storage
-    setNhostGetToken(getSessionToken);
+    setAuthGetToken(getSessionToken);
     
     const initAuth = async () => {
       setLoading(true);
@@ -155,14 +190,23 @@ const AppContent = () => {
     };
   }, []);
   
-  // Sync user to database when user signs in
+  // Track if user has been synced to prevent infinite loops
+  const userSyncedRef = useRef<string | null>(null);
+  
+  // Sync user to database when user signs in (only once per user)
   useEffect(() => {
     const syncUserToDatabase = async () => {
-      if (!user) return;
+      if (!user?.id) return;
+      
+      // Skip if already synced for this user
+      if (userSyncedRef.current === user.id) return;
       
       try {
         const token = await getSessionToken();
         if (!token) return;
+        
+        // Mark as synced before the request to prevent race conditions
+        userSyncedRef.current = user.id;
         
         const response = await fetch('/api/user/sync', {
           method: 'POST',
@@ -177,16 +221,24 @@ const AppContent = () => {
         
         if (response.ok) {
           console.log('[User Sync] User synced to database');
+        } else {
+          // Reset sync flag if request failed
+          userSyncedRef.current = null;
         }
       } catch (error) {
         console.error('[User Sync] Failed to sync user:', error);
+        // Reset sync flag if request failed
+        userSyncedRef.current = null;
       }
     };
     
-    if (user) {
-    syncUserToDatabase();
+    if (user?.id) {
+      syncUserToDatabase();
+    } else {
+      // Reset when user logs out
+      userSyncedRef.current = null;
     }
-  }, [user]);
+  }, [user?.id]);
   
   // Initialize storage manager on mount (auto-cleanup old data)
   useEffect(() => {
@@ -204,10 +256,6 @@ const AppContent = () => {
       if (e.key === 'user_preferences') {
         const updatedPrefs = getUserPreferences();
         applyUserPreferences(updatedPrefs);
-        // If auto-close is disabled, ensure sidebar is open
-        if (!updatedPrefs.sidebarAutoClose && !sidebarOpen) {
-          setSidebarOpen(true);
-        }
       }
     };
     
@@ -217,9 +265,6 @@ const AppContent = () => {
     const handlePreferenceChange = () => {
       const updatedPrefs = getUserPreferences();
       applyUserPreferences(updatedPrefs);
-      if (!updatedPrefs.sidebarAutoClose && !sidebarOpen) {
-        setSidebarOpen(true);
-      }
     };
     
     window.addEventListener('userPreferencesChanged', handlePreferenceChange);
@@ -230,15 +275,16 @@ const AppContent = () => {
     };
   }, [sidebarOpen]);
 
-  // Sync sidebar state with auto-close preference
-  // When auto-close is disabled, ensure sidebar stays open
+  
+
+  // Toggle compact dashboard text (25% smaller) when in dashboard view
   useEffect(() => {
-    const userPrefs = getUserPreferences();
-    if (!userPrefs.sidebarAutoClose && !sidebarOpen && !sidebarHovered) {
-      // If auto-close is disabled and sidebar is closed (not hovered), open it
-      setSidebarOpen(true);
-    }
-  }, [sidebarOpen, sidebarHovered]);
+    const isDashboard = appView === 'user';
+    document.documentElement.classList.toggle('dashboard-view', isDashboard);
+    return () => {
+      document.documentElement.classList.remove('dashboard-view');
+    };
+  }, [appView]);
 
 
   // Valid tab IDs - used for route validation
@@ -258,6 +304,15 @@ const AppContent = () => {
     'support-help',
     'blog',
     'community',
+    'domain-monitoring',
+    'temp-mail',
+    'click-guard',
+    'click-guard-domains',
+    'click-guard-traffic',
+    'click-guard-analytics',
+    'click-guard-protection',
+    'tickets',
+    'help-docs',
     // 'call-forwarding', // Hidden - module disabled
   ]);
 
@@ -571,7 +626,7 @@ const AppContent = () => {
       const isAdminPath = path.startsWith('/admin') || hostname.startsWith('admin.') || hostname === 'admin.adiology.io';
       
       // Whitelisted super admin emails
-      const superAdminEmails = ['samayhuf@gmail.com'];
+      const superAdminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
       const userEmail = user?.email?.toLowerCase();
       const isWhitelistedEmail = userEmail && superAdminEmails.includes(userEmail);
       
@@ -604,8 +659,8 @@ const AppContent = () => {
   useEffect(() => {
     if (loading) return;
     
-    // Don't interfere with auth flow
-    if (appView === 'auth') return;
+    // Don't interfere with auth or signup-wizard flow
+    if (appView === 'auth' || appView === 'signup-wizard') return;
 
     const path = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
@@ -646,6 +701,15 @@ const AppContent = () => {
         return;
       }
 
+      if (path === '/signup' || path.startsWith('/signup')) {
+        if (!user) {
+          setView('signup-wizard');
+        } else {
+          setView('user');
+        }
+        return;
+      }
+
       if (path.startsWith('/plan-selection')) {
         if (user) {
           setView('plan-selection');
@@ -656,9 +720,27 @@ const AppContent = () => {
         return;
       }
 
+      // Super Admin Panel - dedicated login (public access to login page)
+      if (path === '/superadmin' || path.startsWith('/superadmin')) {
+        setView('superadmin');
+        return;
+      }
+
       // Accept team invite - public access (will prompt sign in if needed)
       if (path.startsWith('/accept-invite')) {
         setView('accept-invite');
+        return;
+      }
+
+      // Email verification - public access
+      if (path === '/verify-email' || path.startsWith('/verify-email')) {
+        setView('verify-email');
+        return;
+      }
+
+      // Password reset - public access
+      if (path === '/reset-password' || path.startsWith('/reset-password')) {
+        setView('reset-password');
         return;
       }
 
@@ -668,81 +750,113 @@ const AppContent = () => {
         return;
       }
 
+      // Lifetime deal landing page - public access
+      if (path === '/lifetime-deal') {
+        setView('lifetime-deal');
+        return;
+      }
+
+      // Legal/Policy pages - public access
+      if (path === '/privacy-policy') {
+        setView('privacy-policy');
+        return;
+      }
+      if (path === '/terms-of-service') {
+        setView('terms-of-service');
+        return;
+      }
+      if (path === '/cookie-policy') {
+        setView('cookie-policy');
+        return;
+      }
+      if (path === '/gdpr-compliance') {
+        setView('gdpr-compliance');
+        return;
+      }
+      if (path === '/refund-policy') {
+        setView('refund-policy');
+        return;
+      }
+
+      if (path === '/contact') {
+        setView('contact');
+        return;
+      }
+      if (path === '/help-center') {
+        setView('help-center');
+        return;
+      }
+      if (path === '/community') {
+        setView('community-page');
+        return;
+      }
+
+      if (path === '/features/campaign-builder') {
+        setView('feature-campaign-builder');
+        return;
+      }
+      if (path === '/features/click-guard') {
+        setView('feature-click-guard');
+        return;
+      }
+      if (path === '/features/proxy-mail') {
+        setView('feature-proxy-mail');
+        return;
+      }
+      if (path === '/features/domain-monitor') {
+        setView('feature-domain-monitor');
+        return;
+      }
+      if (path === '/features/keyword-planner') {
+        setView('feature-keyword-planner');
+        return;
+      }
+      if (path === '/features/ads-search') {
+        setView('feature-ads-search');
+        return;
+      }
+      if (path === '/features/blog-generator') {
+        setView('feature-blog-generator');
+        return;
+      }
       // Admin panel - detect subdomain or /admin path
+      // Super admin has its own authentication system (username/password)
       const hostname = window.location.hostname;
       const isAdminSubdomain = hostname.startsWith('admin.') || hostname === 'admin.adiology.io';
       if (isAdminSubdomain || path.startsWith('/admin')) {
-        // If not logged in, redirect to auth first
-        if (!user) {
-          setAuthMode('sign-in');
-          setView('auth');
-          return;
-        }
-        
-        // Whitelisted super admin emails (fallback if database role not set)
-        const superAdminEmails = [
-          'samayhuf@gmail.com'
-        ];
-        
-        // Check if user is super admin - use database role OR email whitelist
-        const hasAdminRole = user.role === 'superadmin' || user.role === 'super_admin';
-        const isWhitelistedEmail = user.email && superAdminEmails.includes(user.email.toLowerCase());
-        
-        if (hasAdminRole || isWhitelistedEmail) {
-          setView('admin-panel');
-          return;
-        }
-        
-        // If logged in but not admin, show homepage
-        setView('homepage');
+        // Render SuperAdminApp directly - it handles its own authentication
+        setView('superadmin');
         return;
       }
 
       // Show homepage on root path
       if (path === '/' || path === '') {
-        // If user is logged in, check subscription status
         if (user) {
-          const subscriptionPlan = user.subscription_plan || 'free';
-          const subscriptionStatus = user.subscription_status || 'active'; // Default to active instead of inactive
-          const isSuperAdmin = user.role === 'superadmin' || user.role === 'super_admin';
-          const hasPaidPlan = isSuperAdmin || (subscriptionPlan !== 'free' && subscriptionStatus === 'active');
-          
-          if (hasPaidPlan) {
+          const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+          const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
+          const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
+
+          if (hasAccess) {
             setView('user');
           } else {
-            // Only redirect to plan selection if user explicitly has inactive status
-            // This prevents new users from being immediately redirected
-            if (subscriptionStatus === 'inactive' && subscriptionPlan === 'free') {
-              window.history.replaceState({}, '', '/plan-selection');
-              setView('plan-selection');
-            } else {
-              // For new users or users with active free plans, show the user dashboard
-              setView('user');
-            }
+            setView('homepage');
           }
           return;
         }
-        // If no user, show homepage
         setView('homepage');
         return;
       }
 
       // For non-root paths, use normal logic
       if (user) {
-        const subscriptionPlan = user.subscription_plan || 'free';
-        const subscriptionStatus = user.subscription_status || 'active'; // Default to active instead of inactive
-        const isSuperAdmin = user.role === 'superadmin' || user.role === 'super_admin';
-        const hasPaidPlan = isSuperAdmin || (subscriptionPlan !== 'free' && subscriptionStatus === 'active');
-        
-        if (hasPaidPlan) {
+        const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+        const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
+        const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
+
+        if (hasAccess) {
           setView('user');
         } else {
-          // Only redirect to plan selection if explicitly inactive
-          if (subscriptionStatus === 'inactive') {
-            setView('plan-selection');
-          } else {
-            setView('user');
-          }
+          setView('homepage');
         }
       } else {
         setView('homepage');
@@ -760,7 +874,7 @@ const AppContent = () => {
   useEffect(() => {
     if (!loading && !user && (window.location.pathname === '/' || window.location.pathname === '')) {
       // Only set to homepage if we're not already on a specific route
-      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'promo' && appView !== 'accept-invite') {
+      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'signup-wizard' && appView !== 'promo' && appView !== 'accept-invite' && appView !== 'privacy-policy' && appView !== 'terms-of-service' && appView !== 'cookie-policy' && appView !== 'gdpr-compliance' && appView !== 'refund-policy' && appView !== 'contact' && appView !== 'help-center' && appView !== 'community-page' && appView !== 'feature-campaign-builder' && appView !== 'feature-click-guard' && appView !== 'feature-proxy-mail' && appView !== 'feature-domain-monitor' && appView !== 'feature-keyword-planner' && appView !== 'feature-ads-search' && appView !== 'feature-blog-generator' && appView !== 'pricing') {
         setAppView('homepage');
       }
     }
@@ -781,6 +895,15 @@ const AppContent = () => {
         return;
       }
       
+      if (path === '/signup' || path.startsWith('/signup')) {
+        if (!user) {
+          setAppView('signup-wizard');
+        } else {
+          setAppView('user');
+        }
+        return;
+      }
+
       if (path === '/plan-selection' || path.startsWith('/plan-selection')) {
         if (user) {
           setAppView('plan-selection');
@@ -789,25 +912,46 @@ const AppContent = () => {
         }
         return;
       }
-      
+
+      if (path === '/features/campaign-builder') {
+        setAppView('feature-campaign-builder');
+        return;
+      }
+      if (path === '/features/click-guard') {
+        setAppView('feature-click-guard');
+        return;
+      }
+      if (path === '/features/proxy-mail') {
+        setAppView('feature-proxy-mail');
+        return;
+      }
+      if (path === '/features/domain-monitor') {
+        setAppView('feature-domain-monitor');
+        return;
+      }
+      if (path === '/features/keyword-planner') {
+        setAppView('feature-keyword-planner');
+        return;
+      }
+      if (path === '/features/ads-search') {
+        setAppView('feature-ads-search');
+        return;
+      }
+      if (path === '/features/blog-generator') {
+        setAppView('feature-blog-generator');
+        return;
+      }
       if (user) {
-        const subscriptionPlan = user.subscription_plan || 'free';
-        const subscriptionStatus = user.subscription_status || 'active'; // Default to active instead of inactive
-        const isSuperAdmin = user.role === 'superadmin' || user.role === 'super_admin';
-        const hasPaidPlan = isSuperAdmin || (subscriptionPlan !== 'free' && subscriptionStatus === 'active');
-        
-        if (hasPaidPlan) {
+        const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+        const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
+        const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
+
+        if (hasAccess) {
           setAppView('user');
         } else {
-          // Only redirect to plan selection if explicitly inactive
-          if (subscriptionStatus === 'inactive') {
-            setAppView('plan-selection');
-          } else {
-            setAppView('user');
-          }
+          setAppView('homepage');
         }
       } else {
-        // Show homepage for all paths when not logged in
         setAppView('homepage');
       }
     };
@@ -826,26 +970,44 @@ const AppContent = () => {
     }
   }, [user, appView, loading]);
 
+  // Gate: redirect to signup wizard if user hasn't validated their card
+  useEffect(() => {
+    if (user && appView === 'user' && !loading) {
+      const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+      const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
+      
+      const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
+
+      if (!hasAccess) {
+        window.history.pushState({}, '', '/signup');
+        setAppView('signup-wizard');
+      }
+    }
+  }, [user, appView, loading]);
+
 
   // Function to handle plan selection
   const handleSelectPlan = async (planName: string, priceId: string, amount: number, isSubscription: boolean) => {
-    // Check if user is logged in
+    sessionStorage.setItem('selectedPlan', JSON.stringify({ name: planName, priceId, amount, isSubscription }));
+    setSelectedPlan({ name: planName, priceId, amount, isSubscription });
+
     if (!user) {
-      // User not logged in, redirect to signup and store plan selection
-      setSelectedPlan({ name: planName, priceId, amount, isSubscription });
-      setAuthMode('sign-up'); // Enable signups for new users
-      setAppView('auth');
+      window.history.pushState({}, '', '/signup');
+      setAppView('signup-wizard');
       return;
     }
 
-    // User is logged in, create Stripe checkout session
+    if (!user.card_validated && user.subscription_status !== 'active' && user.subscription_status !== 'trialing') {
+      window.history.pushState({}, '', '/signup');
+      setAppView('signup-wizard');
+      return;
+    }
+
     try {
       const { createCheckoutSession } = await import('./utils/stripe');
       await createCheckoutSession(priceId, planName, user.id, user.email);
-      // User will be redirected to Stripe, so we don't need to change appView
     } catch (error) {
       console.error('Checkout error:', error);
-      // Fallback to payment page if Stripe fails
       setSelectedPlan({ name: planName, priceId, amount, isSubscription });
       window.history.pushState({}, '', `/payment?plan=${encodeURIComponent(planName)}&priceId=${encodeURIComponent(priceId)}&amount=${amount}&subscription=${isSubscription}`);
       setAppView('payment');
@@ -854,7 +1016,9 @@ const AppContent = () => {
 
   // Whitelisted super admin emails (fallback if database role not set)
   const superAdminEmails = [
-    'samayhuf@gmail.com'
+    'samayhuf@gmail.com',
+    'adiologyads@gmail.com',
+    'oadiology@gmail.com'
   ];
   
   // Check if current user is super admin - use database role OR email whitelist
@@ -875,7 +1039,7 @@ const AppContent = () => {
         { id: 'one-click-builder', label: '1 Click Builder', icon: Zap, module: 'one-click-builder' },
         { id: 'builder-3', label: 'Builder 3.0', icon: Sparkles, module: 'campaign-wizard' },
         { id: 'preset-campaigns', label: 'Preset Campaigns', icon: Package, module: 'campaign-wizard' },
-        { id: 'draft-campaigns', label: 'Draft Campaigns', icon: FolderOpen, module: 'campaign-wizard' },
+        { id: 'draft-campaigns', label: 'Saved Campaigns', icon: FolderOpen, module: 'campaign-wizard' },
       ]
     },
     {
@@ -891,11 +1055,24 @@ const AppContent = () => {
       ]
     },
 
-    { id: 'community', label: 'Community', icon: MessageSquare, module: null, externalUrl: 'https://community.adiology.io/' },
-    // Blog hidden - disabled
-    // { id: 'blog', label: 'Blog', icon: BookOpen, module: null },
+    { 
+      id: 'click-guard', 
+      label: 'Click Guard', 
+      icon: Shield, 
+      module: null,
+      submenu: [
+        { id: 'click-guard-domains', label: 'Domains', icon: Globe, module: null },
+        { id: 'click-guard-traffic', label: 'Live Traffic', icon: Activity, module: null },
+        { id: 'click-guard-analytics', label: 'Analytics', icon: BarChart3, module: null },
+        { id: 'click-guard-protection', label: 'Protection', icon: Lock, module: null },
+      ]
+    },
+    { id: 'domain-monitoring', label: 'Domain Monitor', icon: Globe, module: null },
+    { id: 'temp-mail', label: 'Proxy Mail', icon: Mail, module: null },
     { id: 'settings', label: 'Settings', icon: Settings, module: 'settings' },
-    { id: 'support-help', label: 'Support & Help', icon: HelpCircle, module: 'support' },
+    { id: 'tickets', label: 'Tickets', icon: Ticket, module: 'support' },
+    { id: 'help-docs', label: 'Help / Docs', icon: FileText, module: null },
+    { id: 'community', label: 'Community', icon: MessageSquare, module: null, externalUrl: 'https://community.adiology.io/' },
     // Super Admin Panel - only visible to super admins
     ...(isSuperAdmin ? [{ id: 'admin-panel', label: 'Admin Panel', icon: Shield, module: null }] : []),
   ];
@@ -1151,6 +1328,186 @@ const AppContent = () => {
     );
   }
 
+  if (appView === 'contact') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <ContactPage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setAppView(previousView);
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'help-center') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <HelpCenterPage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setAppView(previousView);
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'community-page') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <CommunityPageStandalone onBack={() => {
+          window.history.pushState({}, '', '/');
+          setAppView(previousView);
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-campaign-builder') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <CampaignBuilderPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-click-guard') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <ClickGuardPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-proxy-mail') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <ProxyMailPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-domain-monitor') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <DomainMonitorPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-keyword-planner') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <KeywordPlannerPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-ads-search') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <AdsSearchPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'feature-blog-generator') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <BlogGeneratorPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   if (appView === 'plan-selection') {
     return (
       <PlanSelection
@@ -1184,6 +1541,64 @@ const AppContent = () => {
       />
     );
   }
+
+  if (appView === 'signup-wizard') {
+    const storedPlan = sessionStorage.getItem('selectedPlan');
+    const plan = storedPlan ? JSON.parse(storedPlan) : selectedPlan;
+
+    return (
+      <SignupWizard
+        selectedPlan={{
+          name: plan?.name || 'Pro',
+          priceId: plan?.priceId || '',
+          amount: plan?.amount || 9900,
+          isSubscription: plan?.isSubscription !== false,
+          period: plan?.period || 'monthly',
+        }}
+        onSuccess={async () => {
+          sessionStorage.removeItem('selectedPlan');
+          const fetchProfile = async (retries = 3): Promise<any> => {
+            for (let i = 0; i < retries; i++) {
+              try {
+                const profile = await getCurrentUserProfile();
+                if (profile) return profile;
+              } catch (err) {
+                console.error(`Profile fetch attempt ${i + 1} failed:`, err);
+              }
+              if (i < retries - 1) await new Promise(r => setTimeout(r, 1500));
+            }
+            return null;
+          };
+          try {
+            const profile = await fetchProfile();
+            if (profile) {
+              setUser(profile);
+              setCurrentUserId(profile.id);
+            }
+          } catch (err) {
+            console.error('Error refreshing profile after signup wizard:', err);
+          }
+          setLoading(false);
+          window.history.pushState({}, '', '/');
+          setAppView('user');
+          setActiveTab('dashboard');
+        }}
+        onBackToHome={() => {
+          window.history.pushState({}, '', '/');
+          setAppView('homepage');
+        }}
+        onBackToPricing={() => {
+          window.history.pushState({}, '', '/');
+          setAppView('homepage');
+        }}
+        onLogin={() => {
+          setAuthMode('sign-in');
+          setAppView('auth');
+        }}
+      />
+    );
+  }
+
 
   if (appView === 'accept-invite') {
     return (
@@ -1220,6 +1635,32 @@ const AppContent = () => {
             }
           }}
         />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'lifetime-deal') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <LifetimeDealPage
+          onNavigate={(page) => {
+            if (page === 'home') {
+              setAppView('homepage');
+              window.history.pushState(null, '', '/');
+            } else {
+              setPreviousView('lifetime-deal');
+              setAppView(page as AppView);
+            }
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'superadmin') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>}>
+        <SuperAdminApp />
       </Suspense>
     );
   }
@@ -1268,8 +1709,12 @@ const AppContent = () => {
     return (
       <CreativeMinimalistHomepage
         onGetStarted={() => {
-          setAuthMode('sign-up');
-          setAppView('auth');
+          if (!selectedPlan) {
+            sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+            setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+          }
+          window.history.pushState({}, '', '/signup');
+          setAppView('signup-wizard');
         }}
         onLogin={() => {
           setAuthMode('sign-in');
@@ -1278,11 +1723,38 @@ const AppContent = () => {
         onSelectPlan={handleSelectPlan}
         onNavigateToPolicy={(policy: string) => {
           setPreviousView('homepage');
-          if (policy === 'privacy') setAppView('privacy-policy');
-          else if (policy === 'terms') setAppView('terms-of-service');
-          else if (policy === 'cookie') setAppView('cookie-policy');
-          else if (policy === 'gdpr') setAppView('gdpr-compliance');
-          else if (policy === 'refund') setAppView('refund-policy');
+          const policyMap: Record<string, { path: string; view: AppView }> = {
+            'privacy': { path: '/privacy-policy', view: 'privacy-policy' },
+            'terms': { path: '/terms-of-service', view: 'terms-of-service' },
+            'cookie': { path: '/cookie-policy', view: 'cookie-policy' },
+            'gdpr': { path: '/gdpr-compliance', view: 'gdpr-compliance' },
+            'refund': { path: '/refund-policy', view: 'refund-policy' },
+          };
+          const target = policyMap[policy];
+          if (target) {
+            window.history.pushState({}, '', target.path);
+            setAppView(target.view);
+          }
+        }}
+        onNavigateToPage={(page: string) => {
+          setPreviousView('homepage');
+          const pageMap: Record<string, { path: string; view: AppView }> = {
+            '/contact': { path: '/contact', view: 'contact' },
+            '/help-center': { path: '/help-center', view: 'help-center' },
+            '/community': { path: '/community', view: 'community-page' },
+            '/features/campaign-builder': { path: '/features/campaign-builder', view: 'feature-campaign-builder' },
+            '/features/click-guard': { path: '/features/click-guard', view: 'feature-click-guard' },
+            '/features/proxy-mail': { path: '/features/proxy-mail', view: 'feature-proxy-mail' },
+            '/features/domain-monitor': { path: '/features/domain-monitor', view: 'feature-domain-monitor' },
+            '/features/keyword-planner': { path: '/features/keyword-planner', view: 'feature-keyword-planner' },
+            '/features/ads-search': { path: '/features/ads-search', view: 'feature-ads-search' },
+            '/features/blog-generator': { path: '/features/blog-generator', view: 'feature-blog-generator' },
+          };
+          const target = pageMap[page];
+          if (target) {
+            window.history.pushState({}, '', target.path);
+            setAppView(target.view);
+          }
         }}
         onNavigateToApp={(tab: string) => {
           // Store the intended destination tab in sessionStorage
@@ -1306,32 +1778,59 @@ const AppContent = () => {
     return (
       <Auth
         initialMode={authMode === 'sign-in' ? 'login' : 'signup'}
-        onLoginSuccess={() => {
-          // Wait for user state to update, then navigate
-          setTimeout(() => {
-            setAppView('user');
-            setActiveTab('dashboard');
-            // Force a refresh of user state
+        onLoginSuccess={async () => {
+          try {
             const currentUser = getCurrentUser();
             if (currentUser) {
-              getCurrentUserProfile().then(profile => {
-                if (profile) {
-                  setUser(profile);
-                  setCurrentUserId(currentUser.id);
+              const profile = await getCurrentUserProfile();
+              if (profile) {
+                setUser(profile);
+                setCurrentUserId(currentUser.id);
+
+                const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+                const isAdmin = profile.role === 'superadmin' || profile.role === 'super_admin' || adminEmails.includes(profile.email?.toLowerCase() || '');
+
+                // Check if user has access: admin OR card validated OR active subscription status
+                const hasAccess = isAdmin || profile.card_validated || profile.subscription_status === 'active' || profile.subscription_status === 'trialing';
+
+                if (!hasAccess) {
+                  setLoading(false);
+                  window.history.pushState({}, '', '/signup');
+                  setAppView('signup-wizard');
+                  return;
                 }
-              });
+              }
             }
-          }, 200);
+            setLoading(false);
+            setAppView('user');
+            setActiveTab('dashboard');
+          } catch (err) {
+            console.error('Error setting user state after login:', err);
+            setLoading(false);
+            setAppView('user');
+            setActiveTab('dashboard');
+          }
         }}
-        onSignupSuccess={(email, name) => {
-          // After signup, navigate to dashboard if user is authenticated
-          setTimeout(() => {
+        onSignupSuccess={async (email, name) => {
+          try {
             const currentUser = getCurrentUser();
             if (currentUser || isAuthenticated()) {
-              setAppView('user');
-              setActiveTab('dashboard');
+              const profile = await getCurrentUserProfile();
+              if (profile) {
+                setUser(profile);
+                setCurrentUserId(profile.id);
+              }
+              setLoading(false);
+              window.history.pushState({}, '', '/signup');
+              setAppView('signup-wizard');
             }
-          }, 300);
+          } catch (err) {
+            console.error('Error after signup:', err);
+          }
+        }}
+        onSignupRedirect={() => {
+          window.history.pushState({}, '', '/signup');
+          setAppView('signup-wizard');
         }}
         onBackToHome={() => {
           setAppView('homepage');
@@ -1340,8 +1839,7 @@ const AppContent = () => {
     );
   }
 
-  // Protect user view - require authentication
-  // If user isn't signed in on user view, redirect to auth
+  // Protect user view - require authentication and card validation
   if (appView === 'user') {
     if (loading) {
       return (
@@ -1375,22 +1873,31 @@ const AppContent = () => {
         return (
           <Auth
             initialMode="login"
-            onLoginSuccess={() => {
-              // Wait for user state to update, then navigate
-              setTimeout(() => {
-                setAppView('user');
-                setActiveTab('dashboard');
-                // Force a refresh of user state
+            onLoginSuccess={async () => {
+              // First, get user state before navigating
+              try {
                 const currentUser = getCurrentUser();
                 if (currentUser) {
-                  getCurrentUserProfile().then(profile => {
-                    if (profile) {
-                      setUser(profile);
-                      setCurrentUserId(currentUser.id);
-                    }
-                  });
+                  const profile = await getCurrentUserProfile();
+                  if (profile) {
+                    setUser(profile);
+                    setCurrentUserId(currentUser.id);
+                  }
                 }
-              }, 200);
+                // Set loading to false and navigate after user state is set
+                setLoading(false);
+                setAppView('user');
+                setActiveTab('dashboard');
+              } catch (err) {
+                console.error('Error setting user state after login:', err);
+                setLoading(false);
+                setAppView('user');
+                setActiveTab('dashboard');
+              }
+            }}
+            onSignupRedirect={() => {
+              window.history.pushState({}, '', '/signup');
+              setAppView('signup-wizard');
             }}
             onBackToHome={() => {
               setAppView('homepage');
@@ -1479,9 +1986,16 @@ const AppContent = () => {
           </Suspense>
         );
       case 'support':
+      case 'tickets':
         return (
           <Suspense fallback={<ComponentLoader />}>
             <SupportPanel />
+          </Suspense>
+        );
+      case 'help-docs':
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <HelpSupport />
           </Suspense>
         );
       case 'community':
@@ -1508,10 +2022,41 @@ const AppContent = () => {
             <SettingsPanel defaultTab="billing" />
           </Suspense>
         );
-      case 'task-manager':
+      case 'click-guard':
+      case 'click-guard-domains':
         return (
           <Suspense fallback={<ComponentLoader />}>
-            <TaskManager />
+            <ClickGuard defaultTab="domains" />
+          </Suspense>
+        );
+      case 'click-guard-traffic':
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <ClickGuard defaultTab="traffic" />
+          </Suspense>
+        );
+      case 'click-guard-analytics':
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <ClickGuard defaultTab="analytics" />
+          </Suspense>
+        );
+      case 'click-guard-protection':
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <ClickGuard defaultTab="protection" />
+          </Suspense>
+        );
+      case 'domain-monitoring':
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <DomainMonitoring />
+          </Suspense>
+        );
+      case 'temp-mail':
+        return (
+          <Suspense fallback={<ComponentLoader />}>
+            <TempMail />
           </Suspense>
         );
       case 'dashboard':
@@ -1556,13 +2101,17 @@ const AppContent = () => {
       } as React.CSSProperties}
       data-color-theme={userPrefs.colorTheme}
     >
-      {/* Enhanced Desktop Sidebar */}
+      {/* Pexovia-style Desktop Sidebar */}
       <aside 
         className={`hidden md:flex md:flex-col ${
-          (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? 'md:w-64' : 'md:w-20'
-        } transition-all duration-300 glass-card shadow-2xl relative z-10 flex-shrink-0 overflow-y-auto border-r border-white/30`}
+          (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? 'md:w-64' : 'md:w-[72px]'
+        } transition-all duration-300 shadow-2xl relative z-10 flex-shrink-0 overflow-y-auto overflow-x-hidden`}
+        data-collapsed={!(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? "true" : "false"}
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240, 253, 250, 0.95) 100%)'
+          background: (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered))
+            ? 'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(245, 243, 255, 0.97) 100%)'
+            : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          borderRight: (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? '1px solid rgba(226, 232, 240, 0.6)' : 'none'
         }}
         onMouseEnter={() => {
           if (userPrefs.sidebarAutoClose) {
@@ -1575,35 +2124,50 @@ const AppContent = () => {
           }
         }}
       >
-        {/* Enhanced Logo Section */}
-        <div className="h-16 flex items-center justify-between px-5 border-b border-white/30 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
-          {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && (
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg pulse-glow"
-                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+        {/* Logo Section */}
+        <div className={`h-16 flex items-center justify-between flex-shrink-0 ${
+          (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) 
+            ? 'px-5 border-b border-slate-200/60' 
+            : 'px-3 justify-center'
+        }`}>
+          {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? (
+            <>
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
+                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                >
+                  <span className="text-white font-bold text-lg">A</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Adiology.</span>
+                  <span className="text-[9px] font-semibold text-indigo-500 tracking-wider uppercase">Beta</span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setSidebarOpen(false);
+                  setSidebarHovered(false);
+                }}
+                className="p-1.5 rounded-lg hover:bg-indigo-50 transition-all cursor-pointer"
               >
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Adiology</span>
-                <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full tracking-wide uppercase">Beta</span>
-              </div>
-            </div>
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                setSidebarOpen(!sidebarOpen);
+                setSidebarHovered(false);
+              }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
+            >
+              <Menu className="w-5 h-5 text-white" />
+            </button>
           )}
-          <button
-            onClick={() => {
-              setSidebarOpen(!sidebarOpen);
-              setSidebarHovered(false);
-            }}
-            className="p-2 rounded-xl hover:bg-indigo-50 transition-all cursor-pointer modern-button"
-            style={{ background: sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered) ? 'rgba(99, 102, 241, 0.1)' : 'transparent' }}
-          >
-            {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? <X className="w-5 h-5 text-slate-600" /> : <Menu className="w-5 h-5 text-slate-600" />}
-          </button>
         </div>
 
-        
         {/* View Mode Indicator in Sidebar - Only show for owners/admins */}
         {canSwitchViews && (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && (
           <div className="px-4 py-2 border-b border-indigo-100/60">
@@ -1619,7 +2183,6 @@ const AppContent = () => {
                 onCheckedChange={(checked: boolean) => {
                   const newViewMode = checked ? 'admin' : 'user';
                   setViewMode(newViewMode);
-                  // If switching to user view, check if current tab is accessible
                   if (!checked) {
                     const currentItem = allMenuItems.find(item => 
                       item.id === activeTab || item.submenu?.some(sub => sub.id === activeTab)
@@ -1628,7 +2191,6 @@ const AppContent = () => {
                       const itemToCheck = currentItem.id === activeTab ? currentItem : 
                         currentItem.submenu?.find(sub => sub.id === activeTab);
                       if (itemToCheck) {
-                        // Check if item would be accessible in user view mode
                         if (itemToCheck.module && !['dashboard', 'settings', 'support'].includes(itemToCheck.module)) {
                           setActiveTabSafe('dashboard');
                         } else if (itemToCheck.id === 'admin-panel') {
@@ -1644,8 +2206,15 @@ const AppContent = () => {
           </div>
         )}
 
-        {/* Enhanced Navigation */}
-        <nav className="p-4 space-y-3">
+        {/* Section Header - Expanded only */}
+        {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && (
+          <div className="px-5 pt-4 pb-1">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Menu</span>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className={`flex-1 ${(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? 'px-3 py-1' : 'px-2 py-3'} space-y-1`}>
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             const hasSubmenu = item.submenu && item.submenu.length > 0;
@@ -1653,11 +2222,12 @@ const AppContent = () => {
             const isParentActive = activeTab === item.id;
             const hasActiveSubmenu = hasSubmenu && item.submenu?.some(sub => sub.id === activeTab);
             const isActive = isParentActive && !hasActiveSubmenu;
+            const isCollapsed = !(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered));
             
             return (
-              <div key={item.id} className="slide-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
-              <button
-                onClick={() => {
+              <div key={item.id}>
+                <button
+                  onClick={() => {
                     if (hasSubmenu) {
                       setExpandedMenus(prev => {
                         const newSet = new Set(prev);
@@ -1671,47 +2241,63 @@ const AppContent = () => {
                     } else if ((item as any).externalUrl) {
                       window.open((item as any).externalUrl, '_blank', 'noopener,noreferrer');
                     } else if (item.id === 'admin-panel') {
-                      // Navigate to super admin panel view
                       window.history.pushState({}, '', '/admin');
                       setAppView('admin-panel');
                     } else {
-                  setActiveTabSafe(item.id);
+                      setActiveTabSafe(item.id);
                     }
-                }}
-                  className={`sidebar-item w-full flex items-center gap-3 py-3 rounded-2xl transition-all duration-300 group cursor-pointer ${
-                    !(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) 
-                      ? 'justify-center px-3' 
-                      : 'justify-between px-4'
+                  }}
+                  className={`w-full flex items-center transition-all duration-200 group cursor-pointer ${
+                    isCollapsed 
+                      ? 'justify-center p-2.5 rounded-xl mb-1 mx-auto' 
+                      : 'justify-between px-3 py-2 rounded-lg'
                   } ${
-                  isActive
-                      ? `bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl`
-                      : hasActiveSubmenu
-                    ? `bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl`
-                    : `text-slate-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:shadow-lg`
-                }`}
-                style={{ minWidth: 0 }}
-              >
-                  <div className={`flex items-center ${!(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? 'justify-center flex-shrink-0' : 'gap-3 flex-1 min-w-0 overflow-hidden justify-start'}`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                      isActive || hasActiveSubmenu 
-                        ? 'bg-white/20 shadow-lg' 
-                        : 'group-hover:bg-indigo-100 group-hover:shadow-md'
-                    }`}>
-                      <Icon className={`w-5 h-5 shrink-0 ${isActive || hasActiveSubmenu ? 'text-white' : 'text-slate-600 group-hover:text-indigo-600'}`} />
-                    </div>
-                {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && (
-                  <span className="font-semibold whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left" style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}>
-                    {item.label}
-                  </span>
-                )}
+                    isCollapsed
+                      ? (isActive || hasActiveSubmenu)
+                        ? ''
+                        : 'hover:bg-white/20'
+                      : (isActive || hasActiveSubmenu)
+                        ? 'bg-indigo-50 border-l-3 border-indigo-600'
+                        : 'hover:bg-slate-50'
+                  }`}
+                  style={isCollapsed ? {
+                    background: (isActive || hasActiveSubmenu) ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
+                    minWidth: 0
+                  } : { minWidth: 0 }}
+                  title={isCollapsed ? item.label : undefined}
+                >
+                  <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5 flex-1 min-w-0'}`}>
+                    {isCollapsed ? (
+                      <Icon className="w-5 h-5 text-white shrink-0" />
+                    ) : (
+                      <>
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          (isActive || hasActiveSubmenu) ? 'bg-indigo-600' : 'bg-slate-300 group-hover:bg-indigo-400'
+                        }`} />
+                        <span className={`whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left text-[13.5px] ${
+                          (isActive || hasActiveSubmenu) ? 'font-bold text-indigo-700' : 'font-medium text-slate-600 group-hover:text-slate-800'
+                        }`}>
+                          {item.label}
+                        </span>
+                        {(item as any).badge && (
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold rounded-full uppercase tracking-wide shrink-0">
+                            {(item as any).badge}
+                          </span>
+                        )}
+                      </>
+                    )}
                   </div>
-                  {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && hasSubmenu && (
-                    <ChevronDown className={`w-5 h-5 shrink-0 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} ${isActive || hasActiveSubmenu ? 'text-white' : 'text-slate-400'}`} />
+                  {!isCollapsed && hasSubmenu && (
+                    <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                      (isActive || hasActiveSubmenu) ? 'text-indigo-500' : 'text-slate-400'
+                    }`}>
+                      {isExpanded ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                    </div>
                   )}
                 </button>
                 {hasSubmenu && isExpanded && (
-                  <div className={`mt-2 space-y-1 ${(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? 'ml-6 border-l-2 border-indigo-200 pl-4' : ''}`}>
-                    {item.submenu?.map((subItem, subIndex) => {
+                  <div className={`space-y-0.5 ${!isCollapsed ? 'ml-5 mt-1 mb-1 pl-3 border-l border-indigo-100' : 'mt-0.5'}`}>
+                    {item.submenu?.map((subItem) => {
                       const SubIcon = subItem.icon;
                       const isSubActive = activeTab === subItem.id;
                       return (
@@ -1720,26 +2306,38 @@ const AppContent = () => {
                           onClick={() => {
                             setActiveTabSafe(subItem.id);
                           }}
-                          className={`sidebar-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group cursor-pointer ${
-                            isSubActive
-                              ? `bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 shadow-lg border border-indigo-200`
-                              : `text-slate-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:shadow-md`
-                          } ${!(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? 'justify-center px-3' : 'justify-start'}`}
-                          style={{ minWidth: 0, animationDelay: `${subIndex * 0.05}s` }}
+                          className={`w-full flex items-center transition-all duration-200 cursor-pointer ${
+                            isCollapsed
+                              ? 'justify-center p-2 rounded-xl mx-auto'
+                              : 'gap-2.5 px-3 py-1.5 rounded-md'
+                          } ${
+                            isCollapsed
+                              ? isSubActive ? '' : 'hover:bg-white/20'
+                              : isSubActive
+                                ? 'bg-indigo-50/80'
+                                : 'hover:bg-slate-50'
+                          }`}
+                          style={isCollapsed ? {
+                            background: isSubActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
+                            minWidth: 0
+                          } : { minWidth: 0 }}
+                          title={isCollapsed ? subItem.label : undefined}
                         >
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                            isSubActive 
-                              ? 'bg-indigo-200 shadow-md' 
-                              : 'group-hover:bg-indigo-100'
-                          }`}>
-                            <SubIcon className={`w-4 h-4 shrink-0 ${isSubActive ? 'text-indigo-700' : 'text-slate-500 group-hover:text-indigo-600'}`} />
-                          </div>
-                          {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && (
-                            <span className={`font-medium whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left ${isSubActive ? 'text-indigo-700' : 'text-slate-600'}`} style={{ fontSize: 'clamp(0.8125rem, 2.2vw, 0.875rem)' }}>
-                              {subItem.label}
-                            </span>
+                          {isCollapsed ? (
+                            <SubIcon className={`w-4 h-4 text-white/80 shrink-0`} />
+                          ) : (
+                            <>
+                              <div className={`w-1 h-1 rounded-full shrink-0 ${
+                                isSubActive ? 'bg-indigo-500' : 'bg-slate-300'
+                              }`} />
+                              <span className={`whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left text-[12.5px] ${
+                                isSubActive ? 'font-semibold text-indigo-700' : 'font-normal text-slate-500 hover:text-slate-700'
+                              }`}>
+                                {subItem.label}
+                              </span>
+                            </>
                           )}
-              </button>
+                        </button>
                       );
                     })}
                   </div>
@@ -1749,68 +2347,160 @@ const AppContent = () => {
           })}
         </nav>
 
-        {/* Bottom Section - Feedback, Billing & Logout */}
-        <div className="mt-auto p-4 border-t border-slate-200/60 space-y-2">
-          <FeedbackButton 
-            variant="sidebar" 
-            sidebarOpen={sidebarOpen} 
-            sidebarHovered={userPrefs.sidebarAutoClose && sidebarHovered}
-            currentPage={activeTab}
-          />
-          <button
-            onClick={() => setActiveTabSafe('billing')}
-            className={`w-full flex items-center gap-2 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer ${
-              !(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) 
-                ? 'justify-center px-2' 
-                : 'justify-start px-3'
-            } ${
-              activeTab === 'billing'
-                ? `theme-gradient text-white shadow-lg`
-                : `text-slate-700 hover:bg-slate-100`
-            }`}
-          >
-            <CreditCard className={`w-5 h-5 shrink-0 ${activeTab === 'billing' ? 'text-white' : 'text-slate-500'}`} />
-            {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && (
-              <span className="font-medium whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left" style={{ fontSize: 'clamp(0.8125rem, 2.5vw, 0.9375rem)' }}>
-                Billing
-              </span>
-            )}
-          </button>
-          <button
-            onClick={handleLogout}
-            className={`w-full flex items-center gap-2 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer ${
-              !(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) 
-                ? 'justify-center px-2' 
-                : 'justify-start px-3'
-            } text-red-600 hover:bg-red-50`}
-          >
-            <LogOut className="w-5 h-5 shrink-0 text-red-500" />
-            {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && (
-              <span className="font-medium whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left" style={{ fontSize: 'clamp(0.8125rem, 2.5vw, 0.9375rem)' }}>
-                Logout
-              </span>
-            )}
-          </button>
+        {/* Bottom Section */}
+        <div className={`mt-auto flex-shrink-0 ${
+          (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered))
+            ? 'p-3 border-t border-slate-200/60 space-y-1.5'
+            : 'p-2 space-y-2'
+        }`}>
+          {(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? (
+            <>
+              <button
+                onClick={() => setActiveTabSafe('billing')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                  activeTab === 'billing'
+                    ? 'bg-indigo-50 border-l-3 border-indigo-600'
+                    : 'hover:bg-slate-50'
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeTab === 'billing' ? 'bg-indigo-600' : 'bg-slate-300'}`} />
+                <CreditCard className={`w-4 h-4 shrink-0 ${activeTab === 'billing' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span className={`text-[13px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left ${
+                  activeTab === 'billing' ? 'font-bold text-indigo-700' : 'font-medium text-slate-600'
+                }`}>
+                  Billing
+                </span>
+              </button>
+              
+              {/* User Profile with Popover */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-all duration-200 cursor-pointer">
+                    <div 
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-sm font-semibold shadow-sm"
+                      style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                    >
+                      {user?.name ? user.name.charAt(0).toUpperCase() : user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-[13px] font-semibold text-slate-700 truncate">{user?.name || user?.full_name || 'User'}</p>
+                      <p className="text-[11px] text-slate-400 truncate">{user?.email || ''}</p>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="right" align="end" className="w-56 p-1.5" sideOffset={12}>
+                  <div className="space-y-0.5">
+                    <button
+                      onClick={() => setActiveTabSafe('settings')}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <User className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-700">View Profile</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTabSafe('settings')}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <Settings className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-700">Account Settings</span>
+                    </button>
+                    <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-slate-50 transition-colors text-left">
+                      <Keyboard className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-700">Keyboard Shortcuts</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTabSafe('dashboard')}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <BarChart3 className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-700">Quick Stats</span>
+                    </button>
+                    <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-slate-50 transition-colors text-left">
+                      <Sparkles className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-700">AI Features</span>
+                    </button>
+                    <div className="my-1 h-px bg-slate-100" />
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-red-50 transition-colors text-left"
+                    >
+                      <LogOut className="w-4 h-4 text-red-500" />
+                      <span className="text-sm text-red-600">Log out</span>
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </>
+          ) : (
+            <>
+              {/* Collapsed bottom icons */}
+              <button
+                onClick={() => setActiveTabSafe('billing')}
+                className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto cursor-pointer hover:bg-white/20 transition-all"
+                style={{ background: activeTab === 'billing' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)' }}
+                title="Billing"
+              >
+                <CreditCard className="w-5 h-5 text-white" />
+              </button>
+              <button
+                onClick={() => setActiveTabSafe('settings')}
+                className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto cursor-pointer hover:bg-white/20 transition-all"
+                style={{ background: activeTab === 'settings' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)' }}
+                title="Settings"
+              >
+                <Settings className="w-5 h-5 text-white" />
+              </button>
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center mx-auto text-white text-sm font-semibold cursor-pointer hover:ring-2 hover:ring-white/40 transition-all"
+                style={{ background: 'rgba(255,255,255,0.2)' }}
+                onClick={() => {
+                  setSidebarOpen(true);
+                  setSidebarHovered(false);
+                }}
+                title={user?.name || user?.full_name || 'Profile'}
+              >
+                {user?.name ? user.name.charAt(0).toUpperCase() : user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+              </div>
+            </>
+          )}
+          
+          {/* Decorative gradient wave for collapsed state */}
+          {!(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) && (
+            <div className="h-6 mt-2 rounded-b-lg" style={{
+              background: 'linear-gradient(to top, rgba(255,255,255,0.08), transparent)'
+            }} />
+          )}
         </div>
       </aside>
 
-      {/* Enhanced Mobile Sidebar Sheet */}
+      {/* Pexovia-style Mobile Sidebar Sheet */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="w-72 p-0 glass-card border-r border-white/30">
-          <SheetHeader className="h-16 flex items-center justify-between px-5 border-b border-white/30 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
+        <SheetContent side="left" className="w-72 p-0 border-r border-slate-200/60" style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(245, 243, 255, 0.97) 100%)'
+        }}>
+          <SheetHeader className="h-16 flex items-center justify-between px-5 border-b border-slate-200/60">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg pulse-glow">
-                <TrendingUp className="w-6 h-6 text-white" />
+              <div 
+                className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
+                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+              >
+                <span className="text-white font-bold text-lg">A</span>
               </div>
               <div className="flex flex-col">
-                <SheetTitle className="font-bold text-xl bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Adiology</SheetTitle>
-                <span className="text-[10px] font-semibold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full tracking-wide uppercase w-fit">Enhanced Beta</span>
+                <SheetTitle className="font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Adiology.</SheetTitle>
+                <span className="text-[9px] font-semibold text-indigo-500 tracking-wider uppercase">Beta</span>
               </div>
             </div>
           </SheetHeader>
+          <SheetDescription className="sr-only">Mobile navigation menu</SheetDescription>
           
-          <nav className="p-4 space-y-3 overflow-y-auto max-h-[calc(100vh-80px)]">
-            {menuItems.map((item, index) => {
+          <div className="px-5 pt-4 pb-1">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Menu</span>
+          </div>
+
+          <nav className="px-3 py-1 space-y-1 overflow-y-auto flex-1" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            {menuItems.map((item) => {
               const Icon = item.icon;
               const hasSubmenu = item.submenu && item.submenu.length > 0;
               const isExpanded = expandedMenus.has(item.id);
@@ -1819,7 +2509,7 @@ const AppContent = () => {
               const isActive = isParentActive && !hasActiveSubmenu;
               
               return (
-                <div key={item.id} className="slide-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                <div key={item.id}>
                   <button
                     onClick={() => {
                       if (hasSubmenu) {
@@ -1833,63 +2523,65 @@ const AppContent = () => {
                           return newSet;
                         });
                       } else if (item.id === 'admin-panel') {
-                        // Navigate to super admin panel view
                         setMobileMenuOpen(false);
                         window.history.pushState({}, '', '/admin');
                         setAppView('admin-panel');
                       } else if (item.id === 'community') {
-                        // Open community in new tab
                         window.open('https://community.adiology.io/', '_blank');
                         setMobileMenuOpen(false);
                       } else {
                         setActiveTabSafe(item.id);
                       }
                     }}
-                    className={`sidebar-item w-full flex items-center justify-between gap-3 py-3 px-4 rounded-2xl transition-all duration-300 ${
-                      isActive || hasActiveSubmenu
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl'
-                        : 'text-slate-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:shadow-lg'
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 group cursor-pointer ${
+                      (isActive || hasActiveSubmenu)
+                        ? 'bg-indigo-50 border-l-3 border-indigo-600'
+                        : 'hover:bg-slate-50'
                     }`}
+                    style={{ minWidth: 0 }}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                        isActive || hasActiveSubmenu 
-                          ? 'bg-white/20 shadow-lg' 
-                          : 'group-hover:bg-indigo-100'
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        (isActive || hasActiveSubmenu) ? 'bg-indigo-600' : 'bg-slate-300 group-hover:bg-indigo-400'
+                      }`} />
+                      <span className={`whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left text-[13.5px] ${
+                        (isActive || hasActiveSubmenu) ? 'font-bold text-indigo-700' : 'font-medium text-slate-600 group-hover:text-slate-800'
                       }`}>
-                        <Icon className={`w-5 h-5 shrink-0 ${isActive || hasActiveSubmenu ? 'text-white' : 'text-slate-600'}`} />
-                      </div>
-                      <span className="font-semibold">{item.label}</span>
+                        {item.label}
+                      </span>
                     </div>
                     {hasSubmenu && (
-                      <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} ${isActive || hasActiveSubmenu ? 'text-white' : 'text-slate-400'}`} />
+                      <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                        (isActive || hasActiveSubmenu) ? 'text-indigo-500' : 'text-slate-400'
+                      }`}>
+                        {isExpanded ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                      </div>
                     )}
                   </button>
                   
                   {hasSubmenu && isExpanded && (
-                    <div className="ml-6 mt-2 space-y-1">
-                      {item.submenu!.map((subItem, subIndex) => {
-                        const SubIcon = subItem.icon;
+                    <div className="ml-5 mt-1 mb-1 pl-3 border-l border-indigo-100 space-y-0.5">
+                      {item.submenu!.map((subItem) => {
                         const isSubActive = activeTab === subItem.id;
                         return (
                           <button
                             key={subItem.id}
                             onClick={() => setActiveTabSafe(subItem.id)}
-                            className={`sidebar-item w-full flex items-center gap-3 py-2.5 px-4 rounded-xl transition-all duration-300 ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all duration-200 cursor-pointer ${
                               isSubActive
-                                ? 'bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 shadow-lg border border-indigo-200'
-                                : 'text-slate-600 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50'
+                                ? 'bg-indigo-50/80'
+                                : 'hover:bg-slate-50'
                             }`}
-                            style={{ animationDelay: `${subIndex * 0.05}s` }}
+                            style={{ minWidth: 0 }}
                           >
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                              isSubActive 
-                                ? 'bg-indigo-200 shadow-md' 
-                                : 'group-hover:bg-indigo-100'
+                            <div className={`w-1 h-1 rounded-full shrink-0 ${
+                              isSubActive ? 'bg-indigo-500' : 'bg-slate-300'
+                            }`} />
+                            <span className={`whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left text-[12.5px] ${
+                              isSubActive ? 'font-semibold text-indigo-700' : 'font-normal text-slate-500 hover:text-slate-700'
                             }`}>
-                              <SubIcon className={`w-4 h-4 ${isSubActive ? 'text-indigo-700' : 'text-slate-500'}`} />
-                            </div>
-                            <span className="font-medium text-sm">{subItem.label}</span>
+                              {subItem.label}
+                            </span>
                           </button>
                         );
                       })}
@@ -1899,33 +2591,33 @@ const AppContent = () => {
               );
             })}
             
-            {/* Billing & Logout - now scroll with menu */}
-            <div className="pt-4 border-t border-slate-200/60 space-y-3">
+            {/* Billing & User Profile */}
+            <div className="pt-3 mt-2 border-t border-slate-200/60 space-y-1">
               <button
                 onClick={() => setActiveTabSafe('billing')}
-                className={`sidebar-item w-full flex items-center gap-3 py-3 px-4 rounded-2xl transition-all duration-300 ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                   activeTab === 'billing'
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl'
-                    : 'text-slate-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:shadow-lg'
+                    ? 'bg-indigo-50 border-l-3 border-indigo-600'
+                    : 'hover:bg-slate-50'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                  activeTab === 'billing' 
-                    ? 'bg-white/20 shadow-lg' 
-                    : 'group-hover:bg-indigo-100'
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeTab === 'billing' ? 'bg-indigo-600' : 'bg-slate-300'}`} />
+                <CreditCard className={`w-4 h-4 shrink-0 ${activeTab === 'billing' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span className={`text-[13px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left ${
+                  activeTab === 'billing' ? 'font-bold text-indigo-700' : 'font-medium text-slate-600'
                 }`}>
-                  <CreditCard className={`w-5 h-5 ${activeTab === 'billing' ? 'text-white' : 'text-slate-600'}`} />
-                </div>
-                <span className="font-semibold">Billing</span>
+                  Billing
+                </span>
               </button>
               <button
                 onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                className="sidebar-item w-full flex items-center gap-3 py-3 px-4 rounded-2xl transition-all duration-300 text-red-600 hover:bg-red-50 hover:shadow-lg"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-red-50 transition-all duration-200 cursor-pointer"
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:bg-red-100">
-                  <LogOut className="w-5 h-5 text-red-500" />
-                </div>
-                <span className="font-semibold">Logout</span>
+                <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-red-300" />
+                <LogOut className="w-4 h-4 shrink-0 text-red-500" />
+                <span className="text-[13px] font-medium text-red-600 whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left">
+                  Logout
+                </span>
               </button>
             </div>
           </nav>
@@ -1953,74 +2645,6 @@ const AppContent = () => {
             
             {/* Data Source Indicator - Shows if data is from live API or local cache */}
             <DataSourceIndicator source={dataSource} />
-            
-            {/* View Mode Toggle - Only show for owners/admins */}
-            {canSwitchViews && (
-              <div className="flex items-center gap-3 px-4 py-2 rounded-xl glass-effect border border-white/30">
-                <Eye className="w-4 h-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">
-                  {viewMode === 'admin' ? 'Admin View' : 'User View'}
-                </span>
-                <Switch
-                  checked={viewMode === 'admin'}
-                  onCheckedChange={(checked: boolean) => {
-                    const newViewMode = checked ? 'admin' : 'user';
-                    setViewMode(newViewMode);
-                    if (!checked) {
-                      const currentItem = allMenuItems.find(item => 
-                        item.id === activeTab || item.submenu?.some(sub => sub.id === activeTab)
-                      );
-                      if (currentItem) {
-                        const itemToCheck = currentItem.id === activeTab ? currentItem : 
-                          currentItem.submenu?.find(sub => sub.id === activeTab);
-                        if (itemToCheck) {
-                          if (itemToCheck.module && !['dashboard', 'settings', 'support'].includes(itemToCheck.module)) {
-                            setActiveTabSafe('dashboard');
-                          } else if (itemToCheck.id === 'admin-panel') {
-                            setActiveTabSafe('dashboard');
-                          }
-                        }
-                      }
-                    }
-                  }}
-                  className="scale-90"
-                />
-              </div>
-            )}
-            
-            {/* Enhanced Search */}
-            <div className="relative hidden sm:block">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setShowSearchSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
-                className="block w-64 pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 glass-effect placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                placeholder="Search campaigns, keywords..."
-              />
-              
-              {/* Enhanced Search Suggestions */}
-              {showSearchSuggestions && searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 glass-card rounded-xl shadow-xl border border-white/50 z-50 max-h-64 overflow-y-auto">
-                  {searchSuggestions.map((suggestion, index) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => handleSearchSuggestionClick(suggestion)}
-                      className="w-full text-left px-4 py-3 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 first:rounded-t-xl last:rounded-b-xl border-b border-white/30 last:border-b-0"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Search className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700">{suggestion}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Enhanced Notifications */}
             <DropdownMenu>
@@ -2216,7 +2840,7 @@ const AppContent = () => {
         </header>
 
         {/* Enhanced Content Area */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-20 md:pb-6 w-full min-w-0 relative bg-gradient-to-br from-slate-50/50 via-indigo-50/30 to-purple-50/50">
+        <main id="main-content" className="flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-20 md:pb-6 w-full min-w-0 relative bg-gradient-to-br from-slate-50/50 via-indigo-50/30 to-purple-50/50">
           <div className="slide-in-up">
             {renderContent()}
           </div>
@@ -2234,6 +2858,7 @@ const AppContent = () => {
         />
       </div>
 
+      <FloatingFeedback />
     </div>
   );
 };

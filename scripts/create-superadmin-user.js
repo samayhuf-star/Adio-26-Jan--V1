@@ -7,7 +7,7 @@
  *   node scripts/create-superadmin-user.js <email> <password> [full_name]
  * 
  * Example:
- *   node scripts/create-superadmin-user.js admin@adiology.com SecurePassword123 "Super Admin"
+ *   node scripts/create-superadmin-user.js admin@adiology.io SecurePassword123 "Super Admin"
  * 
  * Required Environment Variables:
  *   SUPABASE_SERVICE_ROLE_KEY - Get from Supabase Dashboard → Settings → API
@@ -145,7 +145,7 @@ async function createSuperAdmin(email, password, fullName = 'Super Admin') {
         console.log(`\n📧 Login credentials:`);
         console.log(`   Email: ${email}`);
         console.log(`   Password: ${password}`);
-        console.log(`\n🔗 Login URL: https://www.adiology.online/superadmin`);
+        console.log(`\n🔗 Login URL: https://www.adiology.io/superadmin`);
         return;
       }
       throw authError;
@@ -186,7 +186,7 @@ async function createSuperAdmin(email, password, fullName = 'Super Admin') {
     console.log(`\n📧 Login credentials:`);
     console.log(`   Email: ${email}`);
     console.log(`   Password: ${password}`);
-    console.log(`\n🔗 Login URL: https://www.adiology.online/superadmin`);
+    console.log(`\n🔗 Login URL: https://www.adiology.io/superadmin`);
     console.log('\n⚠️  Keep these credentials secure!');
 
   } catch (error) {
@@ -215,9 +215,9 @@ const args = process.argv.slice(2);
 if (args.length < 2) {
   console.log('Usage: node scripts/create-superadmin-user.js <email> <password> [full_name]');
   console.log('\nExample:');
-  console.log('  node scripts/create-superadmin-user.js admin@adiology.com SecurePassword123 "Super Admin"');
+  console.log('  node scripts/create-superadmin-user.js admin@adiology.io SecurePassword123 "Super Admin"');
   console.log('\nOr with environment variable:');
-  console.log('  SUPABASE_SERVICE_ROLE_KEY=your_key node scripts/create-superadmin-user.js admin@adiology.com password');
+  console.log('  SUPABASE_SERVICE_ROLE_KEY=your_key node scripts/create-superadmin-user.js admin@adiology.io password');
   process.exit(1);
 }
 

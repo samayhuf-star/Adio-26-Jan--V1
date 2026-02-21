@@ -248,7 +248,7 @@ CREATE TABLE IF NOT EXISTS emails (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id),
     recipient_email TEXT NOT NULL,
-    sender_email TEXT DEFAULT 'noreply@adiology.com',
+    sender_email TEXT DEFAULT 'noreply@adiology.io',
     subject TEXT NOT NULL,
     template_name TEXT,
     template_data JSONB,

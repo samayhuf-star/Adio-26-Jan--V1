@@ -53,14 +53,13 @@ interface PlanData {
 }
 
 const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>> = {
-  'Basic Monthly': {
-    name: 'Basic Monthly',
-    displayName: 'Basic',
+  'Starter': {
+    name: 'Starter',
+    displayName: 'Starter',
     period: 'per month',
     isSubscription: true,
     features: [
       '25 Campaigns/month',
-      '2 Team Members',
       'Dashboard & 1-Click Builder',
       'Builder 3.0 & Preset Campaigns',
       'Full Draft/Custom Campaigns',
@@ -74,14 +73,13 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     buttonStyle: 'bg-gray-900 text-white hover:bg-gray-800',
     popular: false
   },
-  'Pro Monthly': {
-    name: 'Pro Monthly',
-    displayName: 'Pro',
+  'Professional': {
+    name: 'Professional',
+    displayName: 'Professional',
     period: 'per month',
     isSubscription: true,
     features: [
       'Unlimited Campaigns',
-      '5 Team Members',
       'All Builder Features',
       'Full Draft/Custom Campaigns',
       'All Keyword Tools',
@@ -95,14 +93,13 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     buttonStyle: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-xl',
     popular: true
   },
-  'Lifetime': {
-    name: 'Lifetime',
-    displayName: 'Lifetime',
-    period: 'one-time',
-    isSubscription: false,
+  'Agency': {
+    name: 'Agency',
+    displayName: 'Agency',
+    period: 'per month',
+    isSubscription: true,
     features: [
-      'Unlimited Campaigns Forever',
-      'Unlimited Team Members',
+      'Unlimited Campaigns',
       'All Professional Features',
       'Dedicated Account Manager',
       'Priority Support (1h+)',
@@ -115,10 +112,31 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     borderColor: 'border-amber-200',
     buttonStyle: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-xl',
     popular: false
+  },
+  'Lifetime': {
+    name: 'Lifetime',
+    displayName: 'Lifetime',
+    period: 'one-time payment',
+    isSubscription: false,
+    features: [
+      'Unlimited Campaigns',
+      'All Professional Features',
+      'Priority Support',
+      'All Keyword Tools',
+      'No Recurring Fees',
+      'Lifetime Updates',
+      '14-day money-back guarantee'
+    ],
+    icon: Crown,
+    color: 'from-emerald-500 to-teal-500',
+    borderColor: 'border-emerald-300',
+    buttonStyle: 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-xl',
+    popular: false,
+    savings: 'Pay once, use forever'
   }
 };
 
-const planOrder = ['Basic Monthly', 'Pro Monthly', 'Lifetime'];
+const planOrder = ['Starter', 'Professional', 'Agency'];
 
 interface PlanSelectionProps {
   onSelectPlan: (planName: string, priceId: string, amount: number, isSubscription: boolean) => void;
@@ -157,37 +175,44 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
         if (!config) continue;
         
         const product = products.find(p => p.name === productName);
-        if (product && product.prices && product.prices.length > 0) {
+          if (product && product.prices && product.prices.length > 0) {
           const price = product.prices[0];
+          // Support both snake_case and camelCase
+          const unitAmount = (price as any).unitAmount || (price as any).unit_amount;
           loadedPlans.push({
             ...config,
-            price: `$${(price.unit_amount / 100).toFixed(2)}`,
+            price: `$${(unitAmount / 100).toFixed(2)}`,
             priceId: price.id,
-            amount: price.unit_amount
+            amount: unitAmount
           });
         }
       }
       
       if (loadedPlans.length === 0) {
-        // Fallback to default plans if Stripe products not available
         const fallbackPlans: PlanData[] = [
           {
-            ...planConfig['Basic Monthly'],
-            price: '$69.99',
+            ...planConfig['Starter'],
+            price: '$49.00',
             priceId: 'price_1Sf7Z2AYv17Z995VOMSBG7GX',
-            amount: 6999
+            amount: 4900
           },
           {
-            ...planConfig['Pro Monthly'],
-            price: '$129.99',
+            ...planConfig['Professional'],
+            price: '$99.00',
             priceId: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN',
-            amount: 12999
+            amount: 9900
+          },
+          {
+            ...planConfig['Agency'],
+            price: '$149.00',
+            priceId: 'price_1Sf7Z5AYv17Z995V7ROFNbzI',
+            amount: 14900
           },
           {
             ...planConfig['Lifetime'],
-            price: '$49.99',
-            priceId: 'price_1Sf7Z5AYv17Z995V7ROFNbzI',
-            amount: 4999
+            price: '$99.00',
+            priceId: 'price_lifetime',
+            amount: 9900
           }
         ];
         setPlans(fallbackPlans);
@@ -269,7 +294,7 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
           </p>
         </MotionDiv>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             return (
