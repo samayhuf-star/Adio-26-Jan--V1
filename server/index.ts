@@ -2645,6 +2645,83 @@ const port = parseInt(process.env.PORT || (isProduction ? '5000' : '3001'), 10);
 console.log(`Starting Admin API Server on port ${port}...`);
 console.log(`Environment: ${isProduction ? 'production' : 'development'}`);
 
+async function seedBlogPosts() {
+  try {
+    const database = getDb();
+    if (!database) return;
+
+    const existing = await database.select({ id: blogPosts.id }).from(blogPosts).limit(1);
+    if (existing.length > 0) {
+      console.log('[Blog Seed] Blog posts already exist, skipping seed.');
+      return;
+    }
+
+    console.log('[Blog Seed] No blog posts found, seeding...');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+
+    let currentDir: string;
+    try {
+      currentDir = path.dirname(fileURLToPath(import.meta.url));
+    } catch {
+      currentDir = __dirname;
+    }
+
+    const possiblePaths = [
+      path.join(currentDir, 'data', 'blogSeedData.json'),
+      path.join(process.cwd(), 'server', 'data', 'blogSeedData.json'),
+    ];
+    const dataPath = possiblePaths.find(p => fs.existsSync(p));
+    
+    if (!dataPath) {
+      console.log('[Blog Seed] Seed data file not found. Tried:', possiblePaths.join(', '));
+      return;
+    }
+
+    console.log(`[Blog Seed] Loading seed data from: ${dataPath}`);
+    const rawData = fs.readFileSync(dataPath, 'utf-8');
+    const posts = JSON.parse(rawData);
+
+    if (!Array.isArray(posts) || posts.length === 0) {
+      console.log('[Blog Seed] Seed data is empty or invalid');
+      return;
+    }
+
+    let seeded = 0;
+    for (const post of posts) {
+      try {
+        await database.insert(blogPosts).values({
+          title: post.title,
+          slug: post.slug,
+          excerpt: post.excerpt,
+          content: post.content,
+          category: post.category,
+          tags: post.tags,
+          author: post.author,
+          readTime: post.readTime,
+          wordCount: post.wordCount,
+          imageUrl: post.imageUrl,
+          featured: post.featured,
+          published: post.published,
+          metaTitle: post.metaTitle,
+          metaDescription: post.metaDescription,
+        });
+        seeded++;
+      } catch (insertErr: any) {
+        if (insertErr.message?.includes('duplicate') || insertErr.code === '23505') {
+          console.log(`[Blog Seed] Skipping duplicate: ${post.slug}`);
+        } else {
+          console.error(`[Blog Seed] Failed to insert "${post.slug}":`, insertErr.message);
+        }
+      }
+    }
+
+    console.log(`[Blog Seed] Successfully seeded ${seeded}/${posts.length} blog posts.`);
+  } catch (error: any) {
+    console.error('[Blog Seed] Error seeding blog posts:', error.message);
+  }
+}
+
 async function seedClickGuardDomains() {
   try {
     const database = getDb();
@@ -2795,6 +2872,7 @@ serve({
   port,
 }, async (info) => {
   console.log(`Admin API Server running on http://localhost:${info.port}`);
+  await seedBlogPosts();
   await seedClickGuardDomains();
   startHourlyReporting();
 });

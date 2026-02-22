@@ -30,6 +30,7 @@ export default function CreativeMinimalistHomepage({
     <div id="main-content" className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
       <Navigation onGetStarted={onGetStarted} onLogin={onLogin} onNavigateToPage={onNavigateToPage} />
       <HeroSection onGetStarted={onGetStarted} />
+      <LifetimeDealBanner onNavigateToPage={onNavigateToPage} />
       <PlatformFeaturesSection onGetStarted={onGetStarted} />
       <CampaignBuilderSection onGetStarted={onGetStarted} />
       <KeywordSuiteSection onGetStarted={onGetStarted} />
@@ -39,6 +40,109 @@ export default function CreativeMinimalistHomepage({
       <PricingSection onSelectPlan={onSelectPlan} />
       <FinalCTA onGetStarted={onGetStarted} />
       <Footer onNavigateToPolicy={onNavigateToPolicy} onNavigateToApp={onNavigateToApp} onNavigateToPage={onNavigateToPage} />
+    </div>
+  );
+}
+
+function LifetimeDealBanner({ onNavigateToPage }: { onNavigateToPage?: (page: string) => void }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 3, hours: 14, minutes: 27, seconds: 42 });
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem('lifetime_deal_end');
+    let endTime: number;
+    if (stored) {
+      endTime = parseInt(stored);
+    } else {
+      endTime = Date.now() + 3 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000;
+      sessionStorage.setItem('lifetime_deal_end', endTime.toString());
+    }
+
+    const tick = () => {
+      const diff = Math.max(0, endTime - Date.now());
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+      });
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative px-4 sm:px-6 py-8 max-w-5xl mx-auto">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        onClick={() => onNavigateToPage?.('/lifetime-deal')}
+        className="relative cursor-pointer group overflow-hidden rounded-2xl border border-amber-500/30 hover:border-amber-400/60 transition-all duration-500"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-950/80 via-orange-950/60 to-purple-950/80" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,191,36,0.15),transparent_60%)]" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-amber-400/20 to-transparent rounded-bl-full" />
+
+        <div className="absolute top-3 left-3 z-10">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/90 text-white text-xs font-bold rounded-full uppercase tracking-wider animate-pulse">
+            <Zap className="w-3 h-3" />
+            Limited Time
+          </span>
+        </div>
+
+        <div className="relative z-10 px-6 pt-12 pb-6 sm:px-8 sm:pt-10 sm:pb-8 flex flex-col sm:flex-row items-center gap-6">
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+              Lifetime Access — <span className="text-amber-400">Just $99</span>
+            </h3>
+            <p className="text-white/60 text-sm mb-4 max-w-md">
+              One payment. All features. Forever. No monthly fees, no limits. Lock in your lifetime deal before it's gone.
+            </p>
+
+            <div className="flex items-center justify-center sm:justify-start gap-3 mb-4">
+              {[
+                { val: timeLeft.days, label: 'Days' },
+                { val: timeLeft.hours, label: 'Hrs' },
+                { val: timeLeft.minutes, label: 'Min' },
+                { val: timeLeft.seconds, label: 'Sec' },
+              ].map((t) => (
+                <div key={t.label} className="text-center">
+                  <div className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center text-lg font-bold text-amber-400 tabular-nums">
+                    {String(t.val).padStart(2, '0')}
+                  </div>
+                  <span className="text-[10px] text-white/40 mt-1 block uppercase">{t.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-4 text-xs text-white/50 justify-center sm:justify-start">
+              <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-400" /> All 15 Structures</span>
+              <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-400" /> Unlimited Campaigns</span>
+              <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-400" /> Priority Support</span>
+            </div>
+          </div>
+
+          <div className="flex-shrink-0">
+            <div className="relative">
+              <div className="text-center mb-2">
+                <span className="text-white/40 text-sm line-through">$588/year</span>
+              </div>
+              <div className="w-28 h-28 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex flex-col items-center justify-center shadow-lg shadow-amber-500/30 group-hover:shadow-amber-500/50 group-hover:scale-105 transition-all duration-300">
+                <span className="text-black/60 text-xs font-semibold">ONLY</span>
+                <span className="text-black text-3xl font-black leading-none">$99</span>
+                <span className="text-black/60 text-[10px] font-semibold">ONE TIME</span>
+              </div>
+              <div className="text-center mt-2">
+                <span className="inline-flex items-center gap-1 text-amber-400 text-xs font-semibold group-hover:gap-2 transition-all">
+                  Claim Now <ArrowRight className="w-3 h-3" />
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -1392,6 +1496,7 @@ function Footer({ onNavigateToPolicy, onNavigateToApp, onNavigateToPage }: { onN
               <li><a href="/contact" onClick={(e) => { e.preventDefault(); onNavigateToPage?.('/contact'); }} className="hover:text-white transition-colors">Contact</a></li>
               <li><a href="/help-center" onClick={(e) => { e.preventDefault(); onNavigateToPage?.('/help-center'); }} className="hover:text-white transition-colors">Help Center</a></li>
               <li><a href="/community" onClick={(e) => { e.preventDefault(); onNavigateToPage?.('/community'); }} className="hover:text-white transition-colors">Community</a></li>
+              <li><a href="/blog" onClick={(e) => { e.preventDefault(); onNavigateToPage?.('/blog'); }} className="hover:text-white transition-colors">Blog</a></li>
             </ul>
           </div>
         </div>

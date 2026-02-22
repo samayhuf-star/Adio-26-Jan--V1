@@ -5,6 +5,36 @@ import { eq, desc, sql, and, gte, lte, count } from 'drizzle-orm';
 
 export const analyticsRoutes = new Hono();
 
+interface ActiveUser {
+  sessionId: string;
+  path: string;
+  referrer: string;
+  ip: string;
+  browser: string;
+  os: string;
+  deviceType: string;
+  screenWidth: number | null;
+  screenHeight: number | null;
+  lastSeen: number;
+  firstSeen: number;
+  country: string | null;
+}
+
+const activeUsers = new Map<string, ActiveUser>();
+
+const ACTIVE_TIMEOUT = 60000;
+
+function pruneInactiveUsers() {
+  const now = Date.now();
+  for (const [key, user] of activeUsers) {
+    if (now - user.lastSeen > ACTIVE_TIMEOUT) {
+      activeUsers.delete(key);
+    }
+  }
+}
+
+setInterval(pruneInactiveUsers, 30000);
+
 function parseUserAgent(ua: string): { browser: string; os: string; deviceType: string } {
   let browser = 'Other';
   let os = 'Other';
@@ -66,6 +96,25 @@ analyticsRoutes.post('/track', async (c) => {
       screenHeight: body.screenHeight || null,
     });
 
+    if (body.sessionId) {
+      const now = Date.now();
+      const existing = activeUsers.get(body.sessionId);
+      activeUsers.set(body.sessionId, {
+        sessionId: body.sessionId,
+        path: body.path || '/',
+        referrer: body.referrer || '',
+        ip,
+        browser,
+        os,
+        deviceType,
+        screenWidth: body.screenWidth || null,
+        screenHeight: body.screenHeight || null,
+        lastSeen: now,
+        firstSeen: existing?.firstSeen || now,
+        country: null,
+      });
+    }
+
     return c.json({ ok: true });
   } catch (error) {
     console.error('[Analytics] Track error:', error);
@@ -73,8 +122,121 @@ analyticsRoutes.post('/track', async (c) => {
   }
 });
 
+analyticsRoutes.post('/heartbeat', async (c) => {
+  try {
+    const contentType = c.req.header('content-type') || '';
+    let body: any;
+    if (contentType.includes('application/json')) {
+      body = await c.req.json();
+    } else {
+      const text = await c.req.text();
+      try { body = JSON.parse(text); } catch { body = {}; }
+    }
+
+    if (!body.sessionId) {
+      return c.json({ ok: true });
+    }
+
+    const ua = c.req.header('user-agent') || '';
+    const { browser, os, deviceType } = parseUserAgent(ua);
+
+    if (deviceType === 'bot') {
+      return c.json({ ok: true });
+    }
+
+    const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+      || c.req.header('x-real-ip')
+      || 'unknown';
+
+    const now = Date.now();
+    const existing = activeUsers.get(body.sessionId);
+    activeUsers.set(body.sessionId, {
+      sessionId: body.sessionId,
+      path: body.path || existing?.path || '/',
+      referrer: body.referrer || existing?.referrer || '',
+      ip,
+      browser,
+      os,
+      deviceType,
+      screenWidth: body.screenWidth || existing?.screenWidth || null,
+      screenHeight: body.screenHeight || existing?.screenHeight || null,
+      lastSeen: now,
+      firstSeen: existing?.firstSeen || now,
+      country: null,
+    });
+
+    return c.json({ ok: true });
+  } catch (error) {
+    return c.json({ ok: true });
+  }
+});
+
+analyticsRoutes.get('/realtime', async (c) => {
+  try {
+    const adminToken = c.req.header('X-Admin-Token');
+    if (!adminToken) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    pruneInactiveUsers();
+
+    const users = Array.from(activeUsers.values())
+      .sort((a, b) => b.lastSeen - a.lastSeen)
+      .map(u => ({
+        sessionId: u.sessionId.substring(0, 8) + '...',
+        path: u.path,
+        referrer: u.referrer,
+        ip: u.ip,
+        browser: u.browser,
+        os: u.os,
+        deviceType: u.deviceType,
+        screenWidth: u.screenWidth,
+        screenHeight: u.screenHeight,
+        duration: Math.round((Date.now() - u.firstSeen) / 1000),
+        lastActivity: Math.round((Date.now() - u.lastSeen) / 1000),
+        country: u.country,
+      }));
+
+    const pageCounts: Record<string, number> = {};
+    const sourceCounts: Record<string, number> = {};
+    const deviceCounts: Record<string, number> = {};
+    const browserCounts: Record<string, number> = {};
+    const osCounts: Record<string, number> = {};
+
+    for (const u of activeUsers.values()) {
+      pageCounts[u.path] = (pageCounts[u.path] || 0) + 1;
+      const source = u.referrer ? (() => { try { return new URL(u.referrer).hostname; } catch { return u.referrer; } })() : 'Direct';
+      sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+      deviceCounts[u.deviceType] = (deviceCounts[u.deviceType] || 0) + 1;
+      browserCounts[u.browser] = (browserCounts[u.browser] || 0) + 1;
+      osCounts[u.os] = (osCounts[u.os] || 0) + 1;
+    }
+
+    const toSorted = (obj: Record<string, number>) =>
+      Object.entries(obj).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+
+    return c.json({
+      activeCount: activeUsers.size,
+      users,
+      activePages: toSorted(pageCounts),
+      sources: toSorted(sourceCounts),
+      devices: toSorted(deviceCounts),
+      browsers: toSorted(browserCounts),
+      operatingSystems: toSorted(osCounts),
+    });
+  } catch (error) {
+    console.error('[Analytics] Realtime error:', error);
+    return c.json({ activeCount: 0, users: [], activePages: [], sources: [], devices: [], browsers: [], operatingSystems: [] });
+  }
+});
+
 analyticsRoutes.get('/stats', async (c) => {
   try {
+    const adminToken = c.req.header('X-Admin-Token');
+    if (!adminToken) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     const db = getDb();
     const days = Math.min(Math.max(parseInt(c.req.query('days') || '30') || 30, 1), 365);
     const startDate = new Date();

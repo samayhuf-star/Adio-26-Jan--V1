@@ -1803,6 +1803,8 @@ const AppContent = () => {
             '/features/keyword-planner': { path: '/features/keyword-planner', view: 'feature-keyword-planner' },
             '/features/ads-search': { path: '/features/ads-search', view: 'feature-ads-search' },
             '/features/blog-generator': { path: '/features/blog-generator', view: 'feature-blog-generator' },
+            '/blog': { path: '/blog', view: 'blog' },
+            '/lifetime-deal': { path: '/lifetime-deal', view: 'lifetime-deal' },
           };
           const target = pageMap[page];
           if (target) {

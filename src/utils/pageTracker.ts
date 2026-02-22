@@ -10,6 +10,7 @@ function getSessionId(): string {
 }
 
 let lastTrackedPath = '';
+let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
 export function trackPageView(path?: string) {
   const currentPath = path || window.location.pathname;
@@ -36,8 +37,33 @@ export function trackPageView(path?: string) {
   }
 }
 
+function sendHeartbeat() {
+  const payload = {
+    sessionId: getSessionId(),
+    path: window.location.pathname,
+    referrer: document.referrer || '',
+    screenWidth: window.screen.width,
+    screenHeight: window.screen.height,
+  };
+
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon('/api/analytics/heartbeat', JSON.stringify(payload));
+  } else {
+    fetch('/api/analytics/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {});
+  }
+}
+
 export function initPageTracking() {
   trackPageView();
+
+  sendHeartbeat();
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(sendHeartbeat, 25000);
 
   const originalPushState = history.pushState;
   history.pushState = function (...args) {
@@ -51,5 +77,17 @@ export function initPageTracking() {
 
   window.addEventListener('navigateTo', () => {
     setTimeout(() => trackPageView(), 50);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    } else if (document.visibilityState === 'visible') {
+      sendHeartbeat();
+      if (!heartbeatInterval) {
+        heartbeatInterval = setInterval(sendHeartbeat, 25000);
+      }
+    }
   });
 }
