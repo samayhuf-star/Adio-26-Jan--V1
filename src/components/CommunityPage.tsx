@@ -92,9 +92,12 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
         <h2 className="text-2xl font-bold text-gray-900 mb-8">What You'll Find</h2>
         <div className="grid md:grid-cols-2 gap-6 mb-16">
           {communityFeatures.map((feature) => (
-            <div
+            <a
               key={feature.title}
-              className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all"
+              href="https://community.adiology.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all block"
             >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white flex-shrink-0">
@@ -106,15 +109,18 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
                   <span className="text-indigo-600 text-sm font-medium">{feature.stats}</span>
                 </div>
               </div>
-            </div>
+            </a>
           ))}
         </div>
 
         <h2 className="text-2xl font-bold text-gray-900 mb-8">Popular Discussions</h2>
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-16">
           {popularTopics.map((topic, index) => (
-            <div
+            <a
               key={index}
+              href="https://community.adiology.io/"
+              target="_blank"
+              rel="noopener noreferrer"
               className={`p-5 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer ${
                 index !== popularTopics.length - 1 ? 'border-b border-gray-100' : ''
               }`}
@@ -132,7 +138,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
                 </div>
               </div>
               <ExternalLink className="w-4 h-4 text-gray-400" />
-            </div>
+            </a>
           ))}
         </div>
 

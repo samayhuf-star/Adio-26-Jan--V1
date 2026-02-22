@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Activity, Zap, Sparkles, Package, Target, Globe, FolderOpen,
-  CheckCircle2, FileText, Layers, TrendingUp, ArrowUp, MessageSquare, Mail, Shield, ShieldCheck
+  CheckCircle2, FileText, Layers, TrendingUp, ArrowUp, Mail, Shield, ShieldCheck
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -15,11 +15,6 @@ import {
   getResponsiveFontSize,
   getResponsivePadding
 } from '../utils/responsive';
-
-// Lazy load community widget - not critical for initial dashboard load
-const CommunityDashboardWidget = lazy(() => 
-  import('../modules/community').then(m => ({ default: m.CommunityDashboardWidget }))
-);
 
 interface DashboardProps {
   user: any;
@@ -405,43 +400,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
               <Package className="w-8 h-8 text-white" />
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Community Section - Lazy loaded for faster initial render */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 slide-in-up">
-        <div className="lg:col-span-2">
-          <Suspense fallback={
-            <div className="glass-card rounded-2xl p-6 shadow-xl border border-white/50 animate-pulse">
-              <div className="h-6 bg-slate-200 rounded w-1/3 mb-4"></div>
-              <div className="space-y-3">
-                <div className="h-4 bg-slate-200 rounded"></div>
-                <div className="h-4 bg-slate-200 rounded w-5/6"></div>
-              </div>
-            </div>
-          }>
-            <CommunityDashboardWidget onViewAll={() => window.open('https://community.adiology.io/', '_blank')} />
-          </Suspense>
-        </div>
-        <div className="glass-card rounded-2xl p-6 shadow-xl border border-white/50">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">Need Help?</h3>
-              <p className="text-sm text-gray-500">Connect with the community</p>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Join our community to share strategies, get tips, and connect with other Google Ads professionals.
-          </p>
-          <button
-            onClick={() => window.open('https://community.adiology.io/', '_blank')}
-            className="w-full py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium hover:from-indigo-700 hover:to-purple-700 transition-all"
-          >
-            Visit Community
-          </button>
         </div>
       </div>
 

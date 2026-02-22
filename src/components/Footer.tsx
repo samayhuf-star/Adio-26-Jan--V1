@@ -98,6 +98,7 @@ export function Footer({ onNavigateToPolicy, onNavigateToSection, onNavigateToAp
               <li><a href="/contact" onClick={(e) => handlePageClick(e, '/contact')} className="text-slate-400 hover:text-white text-sm transition-colors">Contact</a></li>
               <li><a href="/help-center" onClick={(e) => handlePageClick(e, '/help-center')} className="text-slate-400 hover:text-white text-sm transition-colors">Help Center</a></li>
               <li><a href="/community" onClick={(e) => handlePageClick(e, '/community')} className="text-slate-400 hover:text-white text-sm transition-colors">Community</a></li>
+              <li><a href="/blog" onClick={(e) => handlePageClick(e, '/blog')} className="text-slate-400 hover:text-white text-sm transition-colors">Blog</a></li>
             </ul>
           </div>
         </div>
