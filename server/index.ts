@@ -22,7 +22,7 @@ import { analyticsRoutes } from './routes/analytics';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
-import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains, feedback } from '../shared/schema';
+import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains, feedback, blogPosts } from '../shared/schema';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
 import { eq, desc, asc, and } from 'drizzle-orm';
@@ -2497,59 +2497,87 @@ app.post('/api/long-tail-keywords/lists', async (c) => {
 // ============================================
 app.get('/api/blogs', async (c) => {
   try {
-    // Fetch blogs from campaign_history (public endpoint for published blogs)
     const results = await db
-      .select()
-      .from(campaignHistory)
-      .where(eq(campaignHistory.type, 'blog'))
-      .orderBy(desc(campaignHistory.createdAt))
+      .select({
+        id: blogPosts.id,
+        title: blogPosts.title,
+        slug: blogPosts.slug,
+        excerpt: blogPosts.excerpt,
+        category: blogPosts.category,
+        tags: blogPosts.tags,
+        author: blogPosts.author,
+        readTime: blogPosts.readTime,
+        wordCount: blogPosts.wordCount,
+        imageUrl: blogPosts.imageUrl,
+        featured: blogPosts.featured,
+        createdAt: blogPosts.createdAt,
+      })
+      .from(blogPosts)
+      .where(eq(blogPosts.published, true))
+      .orderBy(desc(blogPosts.createdAt))
       .limit(50);
 
-    const blogs = results.map((r: any) => ({
-      id: r.id,
-      title: r.name,
-      ...r.data,
-      createdAt: r.createdAt,
-    }));
-
-    return c.json({ 
-      success: true, 
-      data: blogs 
-    });
+    return c.json({ blogs: results });
   } catch (error: any) {
     console.error('Get blogs error:', error);
     return c.json({ error: 'Failed to get blogs', message: error.message }, 500);
   }
 });
 
-app.post('/api/admin/blogs', async (c) => {
+app.get('/api/blogs/categories/list', async (c) => {
   try {
-    const userId = await getUserIdFromToken(c);
+    const results = await db
+      .select({ category: blogPosts.category })
+      .from(blogPosts)
+      .where(eq(blogPosts.published, true));
     
-    if (!userId) {
-      return c.json({ error: 'Unauthorized' }, 401);
+    const categories = [...new Set(results.map(r => r.category).filter(Boolean))].sort();
+    return c.json({ categories });
+  } catch (error: any) {
+    return c.json({ error: 'Failed to get categories' }, 500);
+  }
+});
+
+app.get('/api/blogs/:slug', async (c) => {
+  try {
+    const slug = c.req.param('slug');
+    const results = await db
+      .select()
+      .from(blogPosts)
+      .where(and(eq(blogPosts.slug, slug), eq(blogPosts.published, true)))
+      .limit(1);
+    
+    if (results.length === 0) {
+      return c.json({ error: 'Article not found' }, 404);
     }
 
-    const blogData = await c.req.json();
+    const related = await db
+      .select({
+        id: blogPosts.id,
+        title: blogPosts.title,
+        slug: blogPosts.slug,
+        excerpt: blogPosts.excerpt,
+        category: blogPosts.category,
+        readTime: blogPosts.readTime,
+        createdAt: blogPosts.createdAt,
+      })
+      .from(blogPosts)
+      .where(and(
+        eq(blogPosts.published, true),
+        eq(blogPosts.category, results[0].category || '')
+      ))
+      .orderBy(desc(blogPosts.createdAt))
+      .limit(4);
     
-    // Save blog to campaign_history with type 'blog'
-    const result = await db.insert(campaignHistory).values({
-      userId,
-      workspaceId: null,
-      type: 'blog',
-      name: blogData.title || 'Untitled Blog',
-      data: blogData,
-      status: 'completed',
-    }).returning();
+    const relatedArticles = related.filter(r => r.slug !== slug).slice(0, 3);
 
     return c.json({ 
-      success: true, 
-      id: result[0]?.id,
-      message: 'Blog saved successfully'
+      article: results[0],
+      related: relatedArticles
     });
   } catch (error: any) {
-    console.error('Save blog error:', error);
-    return c.json({ error: 'Failed to save blog', message: error.message }, 500);
+    console.error('Get blog article error:', error);
+    return c.json({ error: 'Failed to get article', message: error.message }, 500);
   }
 });
 

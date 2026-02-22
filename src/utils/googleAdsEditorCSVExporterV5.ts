@@ -142,6 +142,7 @@ export const MASTER_CSV_HEADERS = [
   'Dynamic Search Ad Description 2',
   'Dynamic Search Ad Domain Language',
   'PhoneNumber',
+  'Country of Phone',
   'VerificationURL',
   'Call Extension Status',
   'Call Extension Scheduling',
@@ -421,11 +422,10 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
     });
   });
   
-  // Ad rows - only RSA ads for Search campaigns (DKI merged into RSA, Call-Only needs separate campaign)
+  // Ad rows - RSA and CallOnly ads for Search campaigns (DKI merged into RSA headlines)
   campaign.adGroups.forEach(adGroup => {
     adGroup.ads.forEach(ad => {
       if (ad.type === 'DKI') return;
-      if (ad.type === 'CallOnly' && (campaign.campaignType || 'Search') === 'Search') return;
 
       const validHeadlines = (ad.headlines || []).filter((h: string) => h && h.trim());
       const validDescriptions = (ad.descriptions || []).filter((d: string) => d && d.trim());
@@ -634,28 +634,17 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
 export function generateCallOnlyCampaignRows(callAd: any, baseCampaign: CampaignDataV5): string {
   const rows: string[][] = [];
   const campaignName = baseCampaign.campaignName;
-  const callCampaignName = campaignName + ' - Call Only';
-
-  const campRow = createEmptyRow();
-  campRow[COLUMN_INDEX['Campaign']] = callCampaignName;
-  campRow[COLUMN_INDEX['Campaign Daily Budget']] = String(baseCampaign.dailyBudget || 100);
-  campRow[COLUMN_INDEX['Campaign Type']] = 'Search';
-  campRow[COLUMN_INDEX['Bid Strategy Type']] = baseCampaign.bidStrategy || 'Maximize Conversions';
-  campRow[COLUMN_INDEX['Networks']] = baseCampaign.networks || 'Google search';
-  campRow[COLUMN_INDEX['EU political ads']] = 'No';
-  campRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-  rows.push(campRow);
-
-  const adGroupName = callCampaignName + ' - Ads';
   const countryCode = baseCampaign.locations?.countryCode || callAd.countryCode || 'US';
+
+  const adGroupName = campaignName + ' - Call Ads';
   const adRow = createEmptyRow();
-  adRow[COLUMN_INDEX['Campaign']] = callCampaignName;
+  adRow[COLUMN_INDEX['Campaign']] = campaignName;
   adRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
   adRow[COLUMN_INDEX['Ad Group']] = adGroupName;
   adRow[COLUMN_INDEX['Ad Group Status']] = 'Enabled';
   adRow[COLUMN_INDEX['Ad Type']] = 'Call-only ad';
   adRow[COLUMN_INDEX['Final URL']] = callAd.finalUrl || baseCampaign.url || '';
-  adRow[COLUMN_INDEX['Country Code']] = countryCode;
+  adRow[COLUMN_INDEX['Country of Phone']] = countryCode;
 
   const headlines = (callAd.headlines || []).filter((h: string) => h && h.trim());
   const descriptions = (callAd.descriptions || []).filter((d: string) => d && d.trim());
@@ -670,30 +659,8 @@ export function generateCallOnlyCampaignRows(callAd: any, baseCampaign: Campaign
 
   if (callAd.phoneNumber) adRow[COLUMN_INDEX['PhoneNumber']] = callAd.phoneNumber;
   if (callAd.businessName) adRow[COLUMN_INDEX['Business Name']] = callAd.businessName;
-  adRow[COLUMN_INDEX['Ad Status']] = 'Enabled';
+  adRow[COLUMN_INDEX['Call Only Ads']] = 'Yes';
   rows.push(adRow);
-
-  if (baseCampaign.locations) {
-    const addLoc = (name: string, type: string, extras: Record<string, string> = {}) => {
-      const locRow = createEmptyRow();
-      locRow[COLUMN_INDEX['Campaign']] = callCampaignName;
-      locRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      locRow[COLUMN_INDEX['Location']] = name;
-      locRow[COLUMN_INDEX['Location Type']] = type;
-      locRow[COLUMN_INDEX['Location Status']] = 'Enabled';
-      locRow[COLUMN_INDEX['Country Code']] = countryCode;
-      for (const [k, v] of Object.entries(extras)) {
-        if (COLUMN_INDEX[k as keyof typeof COLUMN_INDEX] !== undefined) {
-          locRow[COLUMN_INDEX[k as keyof typeof COLUMN_INDEX]] = v;
-        }
-      }
-      rows.push(locRow);
-    };
-    (baseCampaign.locations.countries || []).forEach((c: string) => addLoc(c, 'Country'));
-    (baseCampaign.locations.states || []).forEach((s: string) => addLoc(s, 'Region', { 'State/Region': s }));
-    (baseCampaign.locations.cities || []).forEach((c: string) => addLoc(c, 'City', { 'City': c }));
-    (baseCampaign.locations.zipCodes || []).forEach((z: string) => addLoc(z, 'Postal Code', { 'Postal Code': z }));
-  }
 
   return rows.map(row => row.map(escapeCSV).join(',')).join('\r\n');
 }

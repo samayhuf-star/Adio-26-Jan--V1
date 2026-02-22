@@ -947,6 +947,31 @@ export const aiUsageLogs = pgTable("ai_usage_logs", {
   createdAtIdx: index("idx_ai_usage_created_at").on(table.createdAt),
 }));
 
+export const blogPosts = pgTable("blog_posts", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  slug: text("slug").unique().notNull(),
+  excerpt: text("excerpt"),
+  content: text("content").notNull(),
+  category: text("category"),
+  tags: jsonb("tags").$type<string[]>().default([]),
+  author: text("author").default('Adiology Team'),
+  readTime: text("read_time"),
+  wordCount: integer("word_count").default(0),
+  imageUrl: text("image_url"),
+  published: boolean("published").default(true),
+  featured: boolean("featured").default(false),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  slugIdx: index("idx_blog_posts_slug").on(table.slug),
+  categoryIdx: index("idx_blog_posts_category").on(table.category),
+  publishedIdx: index("idx_blog_posts_published").on(table.published),
+  createdAtIdx: index("idx_blog_posts_created_at").on(table.createdAt),
+}));
+
 export const pageViews = pgTable("page_views", {
   id: serial("id").primaryKey(),
   path: text("path").notNull(),

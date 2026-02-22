@@ -15,6 +15,7 @@ test-results/
 .env
 .env.local
 .env.*.local
+.env.backup
 
 # Python
 __pycache__/

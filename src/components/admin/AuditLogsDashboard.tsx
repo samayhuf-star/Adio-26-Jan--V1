@@ -69,9 +69,10 @@ export function AuditLogsDashboard({ token }: AuditLogsDashboardProps) {
   const [resourceFilter, setResourceFilter] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  const fetchLogs = async () => {
-    setLoading(true);
+  const fetchLogs = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '30' });
       if (searchTerm) params.set('action', searchTerm);
@@ -86,15 +87,23 @@ export function AuditLogsDashboard({ token }: AuditLogsDashboardProps) {
         setLogs(data.logs || []);
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 1);
+        setLastRefresh(new Date());
       }
     } catch (err) {
       console.error('Failed to load audit logs:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => { fetchLogs(); }, [page, resourceFilter, levelFilter]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchLogs(true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [page, searchTerm, resourceFilter, levelFilter]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -121,18 +130,29 @@ export function AuditLogsDashboard({ token }: AuditLogsDashboardProps) {
             <Shield className="w-6 h-6 text-amber-400" />
             Audit Logs
           </h3>
-          <p className="text-sm text-slate-400 mt-1">{total} total actions recorded</p>
+          <p className="text-sm text-slate-400 mt-1">
+            {total} total actions recorded
+            <span className="ml-2 inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-emerald-400 text-xs">Live</span>
+            </span>
+          </p>
         </div>
-        <Button
-          onClick={fetchLogs}
-          disabled={loading}
-          variant="outline"
-          size="sm"
-          className="border-slate-600 text-slate-300 hover:bg-slate-700"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">
+            Updated {lastRefresh.toLocaleTimeString()}
+          </span>
+          <Button
+            onClick={() => fetchLogs()}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">

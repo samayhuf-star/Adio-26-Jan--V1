@@ -69,6 +69,8 @@ const SupportPanel = lazy(() => import('./components/SupportPanel').then(m => ({
 const SupportHelpCombined = lazy(() => import('./components/SupportHelpCombined').then(m => ({ default: m.SupportHelpCombined })));
 const HelpSupport = lazy(() => import('./components/HelpSupport').then(m => ({ default: m.HelpSupport })));
 const Blog = lazy(() => import('./components/Blog').then(m => ({ default: m.default })));
+const BlogListing = lazy(() => import('./components/BlogListing'));
+const BlogArticle = lazy(() => import('./components/BlogArticle'));
 const BlogGenerator = lazy(() => import('./components/BlogGenerator').then(m => ({ default: m.default })));
 const SuperAdminPanel = lazy(() => import('./components/SuperAdminPanel').then(m => ({ default: m.SuperAdminPanel })));
 const SuperAdminApp = lazy(() => import('./components/admin/SuperAdminApp').then(m => ({ default: m.SuperAdminApp })));
@@ -106,7 +108,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -121,6 +123,7 @@ const AppContent = () => {
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [previousView, setPreviousView] = useState<AppView>('homepage');
+  const [blogArticleSlug, setBlogArticleSlug] = useState<string>('');
   const [viewMode, setViewMode] = useState<'admin' | 'user'>('admin');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -819,6 +822,20 @@ const AppContent = () => {
         setView('feature-blog-generator');
         return;
       }
+
+      if (path === '/blog') {
+        setView('blog');
+        return;
+      }
+      if (path.startsWith('/blog/')) {
+        const articleSlug = path.replace('/blog/', '');
+        if (articleSlug) {
+          setBlogArticleSlug(articleSlug);
+          setView('blog-article');
+          return;
+        }
+      }
+
       // Admin panel - detect subdomain or /admin path
       // Super admin has its own authentication system (username/password)
       const hostname = window.location.hostname;
@@ -874,7 +891,7 @@ const AppContent = () => {
   useEffect(() => {
     if (!loading && !user && (window.location.pathname === '/' || window.location.pathname === '')) {
       // Only set to homepage if we're not already on a specific route
-      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'signup-wizard' && appView !== 'promo' && appView !== 'accept-invite' && appView !== 'privacy-policy' && appView !== 'terms-of-service' && appView !== 'cookie-policy' && appView !== 'gdpr-compliance' && appView !== 'refund-policy' && appView !== 'contact' && appView !== 'help-center' && appView !== 'community-page' && appView !== 'feature-campaign-builder' && appView !== 'feature-click-guard' && appView !== 'feature-proxy-mail' && appView !== 'feature-domain-monitor' && appView !== 'feature-keyword-planner' && appView !== 'feature-ads-search' && appView !== 'feature-blog-generator' && appView !== 'pricing') {
+      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'signup-wizard' && appView !== 'promo' && appView !== 'accept-invite' && appView !== 'privacy-policy' && appView !== 'terms-of-service' && appView !== 'cookie-policy' && appView !== 'gdpr-compliance' && appView !== 'refund-policy' && appView !== 'contact' && appView !== 'help-center' && appView !== 'community-page' && appView !== 'feature-campaign-builder' && appView !== 'feature-click-guard' && appView !== 'feature-proxy-mail' && appView !== 'feature-domain-monitor' && appView !== 'feature-keyword-planner' && appView !== 'feature-ads-search' && appView !== 'feature-blog-generator' && appView !== 'pricing' && appView !== 'blog' && appView !== 'blog-article') {
         setAppView('homepage');
       }
     }
@@ -1502,6 +1519,43 @@ const AppContent = () => {
             }
             window.history.pushState({}, '', '/signup');
             setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'blog') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <BlogListing
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onArticleClick={(slug: string) => {
+            setBlogArticleSlug(slug);
+            window.history.pushState({}, '', `/blog/${slug}`);
+            setAppView('blog-article');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'blog-article') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <BlogArticle
+          slug={blogArticleSlug}
+          onBack={() => {
+            window.history.pushState({}, '', '/blog');
+            setAppView('blog');
+          }}
+          onArticleClick={(slug: string) => {
+            setBlogArticleSlug(slug);
+            window.history.pushState({}, '', `/blog/${slug}`);
+            setAppView('blog-article');
           }}
         />
       </Suspense>

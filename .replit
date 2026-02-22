@@ -5,7 +5,7 @@ integrations = ["javascript_openai_ai_integrations:2.0.0", "stripe:2.0.0", "java
 
 [nix]
 channel = "stable-25_05"
-packages = ["imagemagick_light", "mailutils", "nano", "psmisc", "speech-tools", "lsof", "u-root-cmds"]
+packages = ["imagemagick_light", "lsof", "mailutils", "nano", "psmisc", "speech-tools", "u-root-cmds", "unzip"]
 
 [workflows]
 runButton = "Project"

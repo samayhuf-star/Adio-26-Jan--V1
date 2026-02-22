@@ -1628,7 +1628,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       });
       console.log(`[SKAG Split] Generated ${groups.length} ad groups for ${keywords.length} keywords x ${enabledMatchTypes.length} match types`);
     } else if (structureType === 'stag') {
-      // STAG: Group by theme (first word)
       const themeGroups: { [key: string]: any[] } = {};
       keywords.forEach(kw => {
         const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
@@ -1636,7 +1635,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         if (!themeGroups[firstWord]) {
           themeGroups[firstWord] = [];
         }
-        // Keep full keyword object to preserve matchType
         if (!themeGroups[firstWord].find((k: any) => (k.text || k.keyword) === (kw.text || kw.keyword))) {
           themeGroups[firstWord].push(kw);
         }
@@ -1649,8 +1647,262 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           keywords: kwList,
         });
       });
+    } else if (structureType === 'alpha_beta') {
+      const alphaKeywords: any[] = [];
+      const betaKeywords: any[] = [];
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        const wordCount = baseText.split(/\s+/).filter(Boolean).length;
+        if (wordCount <= 3) {
+          alphaKeywords.push({ ...kw, matchType: 'exact' });
+        } else {
+          betaKeywords.push({ ...kw, matchType: 'broad' });
+        }
+      });
+      if (alphaKeywords.length === 0 && betaKeywords.length > 0) {
+        const half = Math.ceil(betaKeywords.length / 2);
+        alphaKeywords.push(...betaKeywords.splice(0, half).map(kw => ({ ...kw, matchType: 'exact' })));
+      }
+      if (betaKeywords.length === 0 && alphaKeywords.length > 0) {
+        const half = Math.ceil(alphaKeywords.length / 2);
+        betaKeywords.push(...alphaKeywords.splice(0, half).map(kw => ({ ...kw, matchType: 'broad' })));
+      }
+      if (alphaKeywords.length > 0) {
+        groups.push({ id: 'ag-1', name: 'Alpha - Exact Match', keywords: alphaKeywords });
+      }
+      if (betaKeywords.length > 0) {
+        groups.push({ id: 'ag-2', name: 'Beta - Broad Match', keywords: betaKeywords });
+      }
+      console.log(`[Alpha-Beta] Generated ${groups.length} ad groups: Alpha(${alphaKeywords.length}), Beta(${betaKeywords.length})`);
+    } else if (structureType === 'match_type') {
+      const broadKws: any[] = [];
+      const phraseKws: any[] = [];
+      const exactKws: any[] = [];
+      keywords.forEach(kw => {
+        broadKws.push({ ...kw, matchType: 'broad' });
+        phraseKws.push({ ...kw, matchType: 'phrase' });
+        exactKws.push({ ...kw, matchType: 'exact' });
+      });
+      groups.push({ id: 'ag-1', name: 'Broad Match', keywords: broadKws });
+      groups.push({ id: 'ag-2', name: 'Phrase Match', keywords: phraseKws });
+      groups.push({ id: 'ag-3', name: 'Exact Match', keywords: exactKws });
+      console.log(`[Match-Type] Generated 3 ad groups with ${keywords.length} keywords each`);
+    } else if (structureType === 'ngram') {
+      const ngramGroups: { [key: string]: any[] } = {};
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        const wordCount = baseText.split(/\s+/).filter(Boolean).length;
+        const label = `${wordCount}-Word`;
+        if (!ngramGroups[label]) ngramGroups[label] = [];
+        ngramGroups[label].push(kw);
+      });
+      const sortedEntries = Object.entries(ngramGroups).sort((a, b) => {
+        const numA = parseInt(a[0]);
+        const numB = parseInt(b[0]);
+        return numA - numB;
+      });
+      sortedEntries.forEach(([label, kwList], idx) => {
+        groups.push({
+          id: `ag-${idx + 1}`,
+          name: `${label} Keywords`,
+          keywords: kwList,
+        });
+      });
+      console.log(`[N-Gram] Generated ${groups.length} ad groups by word count`);
+    } else if (structureType === 'long_tail') {
+      const themeGroups: { [key: string]: any[] } = {};
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        const words = baseText.split(/\s+/).filter(Boolean);
+        const theme = words.slice(0, 2).join(' ').toLowerCase() || 'general';
+        if (!themeGroups[theme]) themeGroups[theme] = [];
+        themeGroups[theme].push({ ...kw, matchType: 'phrase' });
+      });
+      Object.entries(themeGroups).slice(0, 15).forEach(([theme, kwList], idx) => {
+        const titleTheme = theme.replace(/\w\S*/g, (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+        groups.push({
+          id: `ag-${idx + 1}`,
+          name: `Long-Tail - ${titleTheme}`.substring(0, 50),
+          keywords: kwList,
+        });
+      });
+      console.log(`[Long-Tail] Generated ${groups.length} ad groups by theme`);
+    } else if (structureType === 'seasonal') {
+      const themeGroups: { [key: string]: any[] } = {};
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        const firstWord = baseText.split(' ')[0]?.toLowerCase() || 'general';
+        if (!themeGroups[firstWord]) themeGroups[firstWord] = [];
+        themeGroups[firstWord].push(kw);
+      });
+      Object.entries(themeGroups).slice(0, 10).forEach(([theme, kwList], idx) => {
+        const titleTheme = theme.charAt(0).toUpperCase() + theme.slice(1);
+        groups.push({
+          id: `ag-${idx + 1}`,
+          name: `Seasonal - ${titleTheme}`.substring(0, 50),
+          keywords: kwList,
+        });
+      });
+      console.log(`[Seasonal] Generated ${groups.length} ad groups`);
+    } else if (structureType === 'intent') {
+      const intentGroups: { [key: string]: any[] } = {};
+      const intentPatterns: { [key: string]: string[] } = {
+        'Informational': ['how', 'what', 'why', 'when', 'where', 'guide', 'tips', 'learn', 'tutorial'],
+        'Commercial': ['best', 'top', 'review', 'compare', 'vs', 'alternative', 'recommended'],
+        'Transactional': ['buy', 'price', 'cost', 'cheap', 'affordable', 'discount', 'deal', 'order', 'hire', 'book', 'get', 'near'],
+        'Navigational': ['login', 'sign', 'website', 'app', 'download', 'contact'],
+      };
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim().toLowerCase();
+        let matchedIntent = 'Transactional';
+        for (const [intent, patterns] of Object.entries(intentPatterns)) {
+          if (patterns.some(p => baseText.includes(p))) {
+            matchedIntent = intent;
+            break;
+          }
+        }
+        if (!intentGroups[matchedIntent]) intentGroups[matchedIntent] = [];
+        intentGroups[matchedIntent].push(kw);
+      });
+      Object.entries(intentGroups).forEach(([intent, kwList], idx) => {
+        groups.push({
+          id: `ag-${idx + 1}`,
+          name: `${intent} Intent`,
+          keywords: kwList,
+        });
+      });
+      console.log(`[Intent-Based] Generated ${groups.length} ad groups by search intent`);
+    } else if (structureType === 'competitor') {
+      const groupSize = Math.ceil(keywords.length / 5);
+      for (let i = 0; i < 5 && i * groupSize < keywords.length; i++) {
+        const groupKeywords = keywords.slice(i * groupSize, (i + 1) * groupSize).filter(Boolean);
+        if (groupKeywords.length > 0) {
+          groups.push({
+            id: `ag-${i + 1}`,
+            name: `Competitor Group ${i + 1}`,
+            keywords: groupKeywords,
+          });
+        }
+      }
+      console.log(`[Competitor] Generated ${groups.length} ad groups`);
+    } else if (structureType === 'geo') {
+      const selectedCountries = campaignData.selectedGeoCountries?.filter((c: string) => c) || [];
+      if (selectedCountries.length > 0) {
+        selectedCountries.forEach((country: string, idx: number) => {
+          groups.push({
+            id: `ag-${idx + 1}`,
+            name: `${country}`.substring(0, 50),
+            keywords: keywords.map(kw => ({ ...kw })),
+          });
+        });
+      } else {
+        groups.push({
+          id: 'ag-1',
+          name: 'All Locations',
+          keywords: keywords,
+        });
+      }
+      console.log(`[GEO-Segmented] Generated ${groups.length} ad groups by location`);
+    } else if (structureType === 'funnel') {
+      const funnelStages: { [key: string]: any[] } = {
+        'Top of Funnel - Awareness': [],
+        'Middle of Funnel - Consideration': [],
+        'Bottom of Funnel - Conversion': [],
+      };
+      const awarenessPatterns = ['what', 'how', 'why', 'guide', 'tips', 'learn', 'information'];
+      const conversionPatterns = ['buy', 'price', 'cost', 'hire', 'book', 'order', 'near me', 'quote', 'free'];
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim().toLowerCase();
+        if (awarenessPatterns.some(p => baseText.includes(p))) {
+          funnelStages['Top of Funnel - Awareness'].push(kw);
+        } else if (conversionPatterns.some(p => baseText.includes(p))) {
+          funnelStages['Bottom of Funnel - Conversion'].push(kw);
+        } else {
+          funnelStages['Middle of Funnel - Consideration'].push(kw);
+        }
+      });
+      Object.entries(funnelStages).forEach(([stage, kwList], idx) => {
+        if (kwList.length > 0) {
+          groups.push({
+            id: `ag-${idx + 1}`,
+            name: stage,
+            keywords: kwList,
+          });
+        }
+      });
+      console.log(`[Funnel-Based] Generated ${groups.length} ad groups by funnel stage`);
+    } else if (structureType === 'brand_split') {
+      const brandedKws: any[] = [];
+      const nonBrandedKws: any[] = [];
+      const brandTerms = (campaignData.campaignName || '').toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim().toLowerCase();
+        const isBranded = brandTerms.some((bt: string) => baseText.includes(bt));
+        if (isBranded) {
+          brandedKws.push({ ...kw, matchType: 'exact' });
+        } else {
+          nonBrandedKws.push(kw);
+        }
+      });
+      if (brandedKws.length === 0) {
+        const half = Math.ceil(keywords.length / 2);
+        brandedKws.push(...keywords.slice(0, half).map(kw => ({ ...kw, matchType: 'exact' })));
+        nonBrandedKws.length = 0;
+        nonBrandedKws.push(...keywords.slice(half));
+      }
+      if (brandedKws.length > 0) {
+        groups.push({ id: 'ag-1', name: 'Branded Keywords', keywords: brandedKws });
+      }
+      if (nonBrandedKws.length > 0) {
+        groups.push({ id: 'ag-2', name: 'Non-Branded Keywords', keywords: nonBrandedKws });
+      }
+      console.log(`[Brand Split] Generated ${groups.length} ad groups: Branded(${brandedKws.length}), Non-Branded(${nonBrandedKws.length})`);
+    } else if (structureType === 'stag_plus') {
+      const themeGroups: { [key: string]: any[] } = {};
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        const words = baseText.split(/\s+/).filter(Boolean);
+        const theme = words.length >= 2 ? words.slice(0, 2).join(' ').toLowerCase() : (words[0]?.toLowerCase() || 'general');
+        if (!themeGroups[theme]) themeGroups[theme] = [];
+        if (!themeGroups[theme].find((k: any) => (k.text || k.keyword) === (kw.text || kw.keyword))) {
+          themeGroups[theme].push(kw);
+        }
+      });
+      Object.entries(themeGroups).slice(0, 15).forEach(([theme, kwList], idx) => {
+        const titleTheme = theme.replace(/\w\S*/g, (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+        groups.push({
+          id: `ag-${idx + 1}`,
+          name: `${titleTheme}`.substring(0, 50),
+          keywords: kwList,
+        });
+      });
+      console.log(`[STAG+] Generated ${groups.length} ad groups by two-word theme`);
+    } else if (structureType === 'mix') {
+      const enabledMatchTypes = Object.entries(campaignData.keywordTypes || { broad: true, phrase: true, exact: true })
+        .filter(([key, val]) => val && key !== 'negative')
+        .map(([key]) => key);
+      const themeGroups: { [key: string]: any[] } = {};
+      keywords.forEach(kw => {
+        const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+        const firstWord = baseText.split(' ')[0]?.toLowerCase() || 'general';
+        if (!themeGroups[firstWord]) themeGroups[firstWord] = [];
+        enabledMatchTypes.forEach(mt => {
+          const variant = { ...kw, matchType: mt };
+          if (!themeGroups[firstWord].find((k: any) => (k.text || k.keyword) === (kw.text || kw.keyword) && k.matchType === mt)) {
+            themeGroups[firstWord].push(variant);
+          }
+        });
+      });
+      Object.entries(themeGroups).slice(0, 10).forEach(([theme, kwList], idx) => {
+        const titleTheme = theme.charAt(0).toUpperCase() + theme.slice(1);
+        groups.push({
+          id: `ag-${idx + 1}`,
+          name: `Mixed - ${titleTheme}`.substring(0, 50),
+          keywords: kwList,
+        });
+      });
+      console.log(`[Mix] Generated ${groups.length} ad groups with mixed match types`);
     } else {
-      // Default: Create 5-10 ad groups
       const groupSize = Math.ceil(keywords.length / 8);
       for (let i = 0; i < 8 && i * groupSize < keywords.length; i++) {
         const groupKeywords = keywords.slice(i * groupSize, (i + 1) * groupSize)
@@ -1659,7 +1911,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           groups.push({
             id: `ag-${i + 1}`,
             name: `Ad Group ${i + 1}`,
-            keywords: groupKeywords, // Keep full keyword objects with matchType
+            keywords: groupKeywords,
           });
         }
       }
@@ -2764,21 +3016,45 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         }
       }
 
-      const mergedRSA = {
-        type: 'RSA' as const,
-        headlines: mergedHeadlines,
-        descriptions: mergedDescriptions,
-        finalUrl: mergedFinalUrl || campaignData.url || '',
-        path1: mergedPath1,
-        path2: mergedPath2,
-        status: 'Enabled'
-      };
-
       v5CampaignData.adGroups.forEach((group: any) => {
-        group.ads = [mergedRSA];
+        const primaryKeyword = (group.keywords && group.keywords.length > 0)
+          ? (typeof group.keywords[0] === 'string'
+            ? group.keywords[0]
+            : (group.keywords[0].text || group.keywords[0].keyword || ''))
+          : (group.name || '');
+        
+        let cleanKeyword = primaryKeyword
+          .replace(/^\[|\]$/g, '')
+          .replace(/^"|"$/g, '')
+          .replace(/^\+/g, '')
+          .trim();
+        
+        const toTitleCase = (s: string) =>
+          s.replace(/\w\S*/g, (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+        cleanKeyword = toTitleCase(cleanKeyword);
+        
+        if (cleanKeyword.length > 30) {
+          cleanKeyword = cleanKeyword.substring(0, 30).replace(/\s+\S*$/, '');
+        }
+
+        const dkiHeadline = cleanKeyword
+          ? `{KeyWord:${cleanKeyword}}`
+          : mergedHeadlines[0] || 'Professional Service Near You';
+
+        const groupHeadlines = [dkiHeadline, ...mergedHeadlines.filter(h => h !== dkiHeadline)].slice(0, 15);
+
+        group.ads = [{
+          type: 'RSA' as const,
+          headlines: groupHeadlines,
+          descriptions: [...mergedDescriptions],
+          finalUrl: mergedFinalUrl || campaignData.url || '',
+          path1: mergedPath1,
+          path2: mergedPath2,
+          status: 'Enabled'
+        }];
       });
 
-      console.log(`[CSV] Merged RSA: ${mergedHeadlines.length} headlines, ${mergedDescriptions.length} descriptions. DKI headlines folded in. Call-Only ad handled via call extension on campaign row.`);
+      console.log(`[CSV] Per-group unique RSA created: ${v5CampaignData.adGroups.length} ad groups, each with DKI headline 1. ${mergedHeadlines.length} base headlines, ${mergedDescriptions.length} descriptions. Call-Only ad handled via call extension on campaign row.`);
       
       // If no specific locations, add the target country
       if (!v5CampaignData.locations?.countries?.length && 
@@ -2810,7 +3086,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         };
         const callRows = generateCallOnlyCampaignRows(callAdData, v5CampaignData);
         csvContent = csvContent + '\r\n' + callRows;
-        console.log(`[CSV] Appended Call-Only campaign "${v5CampaignData.campaignName} - Call Only" with phone: ${callAdData.phoneNumber}, country: ${countryCode}`);
+        console.log(`[CSV] Appended Call-Only ad under "${v5CampaignData.campaignName}" with phone: ${callAdData.phoneNumber}, country: ${countryCode}`);
       }
 
       setCampaignData(prev => ({
@@ -2865,11 +3141,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           campaignSet.add(campaignName);
         }
         
-        if (adGroupName && !adType && !keyword && !negativeKw && !locationType) {
-          adGroupsSet.add(campaignName + '|||' + adGroupName);
-        }
-        
-        if (adGroupName && keyword) {
+        if (adGroupName) {
           adGroupsSet.add(campaignName + '|||' + adGroupName);
         }
         
@@ -5147,7 +5419,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                   <FileText className="w-4 h-4 text-white" />
                 </div>
                 <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-0.5">
-                  {campaignData.ads.length * Math.max(1, campaignData.adGroups.length)}
+                  {Math.max(1, campaignData.adGroups.length) + (campaignData.ads.some((ad: any) => ad.type === 'call' || ad.type === 'call_only' || ad.adType === 'CallOnly') ? 1 : 0)}
                 </div>
                 <div className="text-xs font-medium text-slate-700">Ads</div>
               </CardContent>
