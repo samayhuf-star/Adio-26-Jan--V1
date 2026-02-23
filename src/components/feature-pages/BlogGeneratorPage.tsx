@@ -21,6 +21,28 @@ export default function BlogGeneratorPage({ onGetStarted, onBack }: BlogGenerato
         <meta property="og:description" content="Generate SEO-optimized blog posts for your Google Ads landing pages with AI." />
         <meta property="og:url" content="https://adiology.io/features/blog-generator" />
         <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="AI Blog Generator - SEO Content Creation | Adiology" />
+        <meta name="twitter:description" content="Generate SEO-optimized blog posts for your Google Ads landing pages with AI." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "AI Blog Generator",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://adiology.io/features/blog-generator",
+          "description": "Generate SEO-optimized blog posts for your Google Ads landing pages with Adiology's AI Blog Generator. Create long-form content in minutes with configurable parameters.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io"
+          }
+        })}</script>
       </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
         <Navigation onGetStarted={onGetStarted} onBack={onBack} />

@@ -22,6 +22,28 @@ export default function KeywordPlannerPage({ onGetStarted, onBack }: KeywordPlan
         <meta property="og:description" content="Find the best keywords for your Google Ads campaigns with Adiology's AI-powered Keyword Planner." />
         <meta property="og:url" content="https://adiology.io/features/keyword-planner" />
         <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="AI Keyword Planner - Discover High-Converting Keywords | Adiology" />
+        <meta name="twitter:description" content="Find the best keywords for your Google Ads campaigns with Adiology's AI-powered Keyword Planner." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Keyword Planner",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://adiology.io/features/keyword-planner",
+          "description": "Find the best keywords for your Google Ads campaigns with Adiology's AI-powered Keyword Planner. Get search volume data, intent classification, and export-ready keyword lists.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io"
+          }
+        })}</script>
       </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
         <Navigation onGetStarted={onGetStarted} onBack={onBack} />

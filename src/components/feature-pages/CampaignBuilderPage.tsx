@@ -22,6 +22,28 @@ export default function CampaignBuilderPage({ onGetStarted, onBack }: CampaignBu
         <meta property="og:description" content="Build Google Ads campaigns in minutes with 13 campaign structures including SKAG, STAG, Alpha-Beta." />
         <meta property="og:url" content="https://adiology.io/features/campaign-builder" />
         <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Google Ads Campaign Builder - AI-Powered Campaign Creation | Adiology" />
+        <meta name="twitter:description" content="Build Google Ads campaigns in minutes with 13 campaign structures including SKAG, STAG, Alpha-Beta." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Google Ads Campaign Builder",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://adiology.io/features/campaign-builder",
+          "description": "Build Google Ads campaigns in minutes with 13 campaign structures including SKAG, STAG, Alpha-Beta, and Intent-Based. AI-powered ad generation with CSV export for Google Ads Editor.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io"
+          }
+        })}</script>
       </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
         <Navigation onGetStarted={onGetStarted} onBack={onBack} />

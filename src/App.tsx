@@ -97,6 +97,8 @@ const ClickGuard = lazy(() => import('./components/ClickGuard').then(m => ({ def
 const ContactPage = lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));
 const HelpCenterPage = lazy(() => import('./components/HelpCenterPage').then(m => ({ default: m.HelpCenterPage })));
 const CommunityPageStandalone = lazy(() => import('./components/CommunityPage').then(m => ({ default: m.CommunityPage })));
+const AppSumoRedeem = lazy(() => import('./components/AppSumoRedeem').then(m => ({ default: m.AppSumoRedeem })));
+const DemoPage = lazy(() => import('./components/DemoPage'));
 
 // Loading component for lazy-loaded modules
 const ComponentLoader = () => (
@@ -108,7 +110,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article' | 'appsumo-redeem' | 'demo';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -759,6 +761,18 @@ const AppContent = () => {
         return;
       }
 
+      // AppSumo license redemption - public access
+      if (path === '/appsumo/redeem' || path.startsWith('/appsumo/redeem')) {
+        setView('appsumo-redeem');
+        return;
+      }
+
+      // Demo page - public access
+      if (path === '/demo') {
+        setView('demo');
+        return;
+      }
+
       // Legal/Policy pages - public access
       if (path === '/privacy-policy') {
         setView('privacy-policy');
@@ -891,7 +905,7 @@ const AppContent = () => {
   useEffect(() => {
     if (!loading && !user && (window.location.pathname === '/' || window.location.pathname === '')) {
       // Only set to homepage if we're not already on a specific route
-      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'signup-wizard' && appView !== 'promo' && appView !== 'accept-invite' && appView !== 'privacy-policy' && appView !== 'terms-of-service' && appView !== 'cookie-policy' && appView !== 'gdpr-compliance' && appView !== 'refund-policy' && appView !== 'contact' && appView !== 'help-center' && appView !== 'community-page' && appView !== 'feature-campaign-builder' && appView !== 'feature-click-guard' && appView !== 'feature-proxy-mail' && appView !== 'feature-domain-monitor' && appView !== 'feature-keyword-planner' && appView !== 'feature-ads-search' && appView !== 'feature-blog-generator' && appView !== 'pricing' && appView !== 'blog' && appView !== 'blog-article') {
+      if (appView !== 'homepage' && appView !== 'auth' && appView !== 'reset-password' && appView !== 'verify-email' && appView !== 'payment' && appView !== 'payment-success' && appView !== 'plan-selection' && appView !== 'signup-wizard' && appView !== 'promo' && appView !== 'accept-invite' && appView !== 'privacy-policy' && appView !== 'terms-of-service' && appView !== 'cookie-policy' && appView !== 'gdpr-compliance' && appView !== 'refund-policy' && appView !== 'contact' && appView !== 'help-center' && appView !== 'community-page' && appView !== 'feature-campaign-builder' && appView !== 'feature-click-guard' && appView !== 'feature-proxy-mail' && appView !== 'feature-domain-monitor' && appView !== 'feature-keyword-planner' && appView !== 'feature-ads-search' && appView !== 'feature-blog-generator' && appView !== 'pricing' && appView !== 'blog' && appView !== 'blog-article' && appView !== 'appsumo-redeem' && appView !== 'demo') {
         setAppView('homepage');
       }
     }
@@ -930,6 +944,10 @@ const AppContent = () => {
         return;
       }
 
+      if (path === '/demo') {
+        setAppView('demo');
+        return;
+      }
       if (path === '/features/campaign-builder') {
         setAppView('feature-campaign-builder');
         return;
@@ -1525,6 +1543,27 @@ const AppContent = () => {
     );
   }
 
+  if (appView === 'demo') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <DemoPage
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onGetStarted={() => {
+            if (!selectedPlan) {
+              sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+              setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            }
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   if (appView === 'blog') {
     return (
       <Suspense fallback={<ComponentLoader />}>
@@ -1701,10 +1740,45 @@ const AppContent = () => {
             if (page === 'home') {
               setAppView('homepage');
               window.history.pushState(null, '', '/');
+            } else if (page === 'complete-signup') {
+              const lifetimeEmail = sessionStorage.getItem('lifetime_signup_email') || '';
+              sessionStorage.setItem('selectedPlan', JSON.stringify({
+                name: 'Lifetime',
+                priceId: '',
+                amount: 9900,
+                isSubscription: false,
+                period: 'lifetime',
+                isLifetimeDeal: true,
+                prefillEmail: lifetimeEmail,
+              }));
+              window.history.pushState({}, '', '/signup');
+              setAppView('signup-wizard');
             } else {
               setPreviousView('lifetime-deal');
               setAppView(page as AppView);
             }
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'appsumo-redeem') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <AppSumoRedeem
+          user={user}
+          onNavigate={(page) => {
+            if (page === 'home') {
+              setAppView('homepage');
+              window.history.pushState(null, '', '/');
+            } else {
+              setAppView(page as AppView);
+            }
+          }}
+          onLogin={() => {
+            setAuthMode('sign-up');
+            setAppView('auth');
           }}
         />
       </Suspense>
@@ -1805,6 +1879,7 @@ const AppContent = () => {
             '/features/blog-generator': { path: '/features/blog-generator', view: 'feature-blog-generator' },
             '/blog': { path: '/blog', view: 'blog' },
             '/lifetime-deal': { path: '/lifetime-deal', view: 'lifetime-deal' },
+            '/demo': { path: '/demo', view: 'demo' },
           };
           const target = pageMap[page];
           if (target) {

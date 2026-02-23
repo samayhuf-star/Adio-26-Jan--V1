@@ -16,7 +16,6 @@ interface PricingPlan {
   isLifetime?: boolean;
   limits: {
     campaigns: string;
-    teamMembers: string;
   };
   features: {
     name: string;
@@ -63,7 +62,7 @@ const plans: PricingPlan[] = [
     popular: false,
     earlyBirdDiscount: 0,
     tagline: 'Perfect for solo marketers',
-    limits: { campaigns: '25', teamMembers: '2' },
+    limits: { campaigns: '25' },
     features: []
   },
   {
@@ -76,8 +75,8 @@ const plans: PricingPlan[] = [
     gradientTo: 'to-pink-500',
     popular: true,
     earlyBirdDiscount: 0,
-    tagline: 'Most popular for growing teams',
-    limits: { campaigns: '∞', teamMembers: '5' },
+    tagline: 'Most popular for growing marketers',
+    limits: { campaigns: '∞' },
     features: []
   },
   {
@@ -90,8 +89,8 @@ const plans: PricingPlan[] = [
     gradientTo: 'to-orange-500',
     popular: false,
     earlyBirdDiscount: 0,
-    tagline: 'Built for agencies & teams',
-    limits: { campaigns: '∞', teamMembers: '∞' },
+    tagline: 'Built for agencies & professionals',
+    limits: { campaigns: '∞' },
     features: []
   },
 ];
@@ -363,7 +362,7 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> CSV Export Enhancement</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Live Ad Preview</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Basic Analytics Dashboard</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Team Collaboration v2</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Advanced Campaign Tools</li>
                   </ul>
                 </div>
                 <div>

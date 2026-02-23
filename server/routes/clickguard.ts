@@ -498,6 +498,25 @@ clickGuardRoutes.options('/track', async (c) => {
   return c.text('', 200);
 });
 
+function ipMatchesCidr(ip: string, cidr: string): boolean {
+  try {
+    if (!cidr.includes('/')) return ip === cidr;
+    const [network, prefixStr] = cidr.split('/');
+    const prefix = parseInt(prefixStr, 10);
+    if (isNaN(prefix) || prefix < 0 || prefix > 32) return false;
+    const ipNum = ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+    const netNum = network.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+    const mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
+    return (ipNum & mask) === (netNum & mask);
+  } catch {
+    return ip === cidr;
+  }
+}
+
+function ipInList(ip: string, list: string[]): boolean {
+  return list.some(entry => ipMatchesCidr(ip, entry.trim()));
+}
+
 clickGuardRoutes.post('/track', async (c) => {
   c.header('Access-Control-Allow-Origin', '*');
   c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -506,7 +525,6 @@ clickGuardRoutes.post('/track', async (c) => {
 
   try {
     let raw: any;
-    const contentType = c.req.header('content-type') || '';
     const text = await c.req.text();
     try {
       raw = JSON.parse(text);
@@ -546,20 +564,23 @@ clickGuardRoutes.post('/track', async (c) => {
     const userAgent = c.req.header('user-agent') || '';
     const parsed = parseUserAgent(userAgent);
 
-    const geo = await getGeoData(ip);
+    const settings = (domain.settings as any) || {};
+    const rules = {
+      ...DEFAULT_PROTECTION_RULES,
+      ...settings.protectionRules,
+    };
+    const vpnRules = { ...DEFAULT_PROTECTION_RULES.vpnProxyBlocking, ...rules.vpnProxyBlocking };
+    const clickRules = { ...DEFAULT_PROTECTION_RULES.repetitiveClickDetection, ...rules.repetitiveClickDetection };
+    const aiRules = { ...DEFAULT_PROTECTION_RULES.aiFraudDetection, ...rules.aiFraudDetection };
+    const ipListRules = { ...DEFAULT_PROTECTION_RULES.ipWhitelistBlacklist, ...rules.ipWhitelistBlacklist };
+    const vpnClickRules = { ...DEFAULT_PROTECTION_RULES.vpnClickFraud, ...rules.vpnClickFraud };
+    const clusterRules = { ...DEFAULT_PROTECTION_RULES.ipClusterBlocking, ...rules.ipClusterBlocking };
 
-    let botScore = 0;
-    if (headless) botScore += 40;
-    if (!mouseMovements || mouseMovements === 0) botScore += 20;
-    if (timeOnPage !== undefined && timeOnPage < 2) botScore += 10;
-    if (/HeadlessChrome|PhantomJS|Selenium|Bot|Crawl|Spider/i.test(userAgent)) botScore += 30;
+    let shouldBlock = false;
+    let blockReason = '';
+    let fraudEventType = '';
 
-    let threatLevel = 'low';
-    if (botScore >= 70) threatLevel = 'critical';
-    else if (botScore >= 50) threatLevel = 'high';
-    else if (botScore >= 30) threatLevel = 'medium';
-
-    const [blockedEntry] = await db
+    const [existingBlock] = await db
       .select()
       .from(clickGuardBlockedIps)
       .where(and(
@@ -567,7 +588,194 @@ clickGuardRoutes.post('/track', async (c) => {
         eq(clickGuardBlockedIps.ipAddress, ip)
       ));
 
-    const isBlocked = !!blockedEntry;
+    if (existingBlock) {
+      shouldBlock = true;
+      blockReason = existingBlock.reason || 'Previously blocked';
+    }
+
+    if (ipListRules.enabled && !shouldBlock) {
+      const whitelist: string[] = ipListRules.whitelist || [];
+      const blacklist: string[] = ipListRules.blacklist || [];
+      if (whitelist.length > 0 && ipInList(ip, whitelist)) {
+        const geo = await getGeoData(ip);
+        const [visitor] = await db.insert(clickGuardVisitors).values({
+          siteId, ipAddress: ip, userAgent, fingerprint,
+          country: geo?.country || null, city: geo?.city || null,
+          region: geo?.regionName || null, isp: geo?.isp || null,
+          org: geo?.org || null, asNumber: geo?.as || null,
+          timezone: geo?.timezone || null,
+          deviceType: parsed.deviceType, browser: parsed.browser,
+          browserVersion: parsed.browserVersion, os: parsed.os, osVersion: parsed.osVersion,
+          screenWidth, screenHeight, language, referrer, pageUrl,
+          isProxy: false, isVpn: false, isBot: false, isTor: false,
+          botScore: 0, threatLevel: 'low', clickCount, mouseMovements, timeOnPage,
+          blocked: false,
+        }).returning();
+        if (!domain.verified) {
+          await db.update(clickGuardDomains)
+            .set({ verified: true, verifiedAt: new Date(), updatedAt: new Date() })
+            .where(eq(clickGuardDomains.id, domain.id));
+        }
+        return c.json({ success: true, blocked: false });
+      }
+      if (blacklist.length > 0 && ipInList(ip, blacklist)) {
+        shouldBlock = true;
+        blockReason = 'IP blacklisted by protection rules';
+        fraudEventType = 'blacklisted_ip';
+      }
+    }
+
+    const geo = await getGeoData(ip);
+
+    const isProxy = geo?.proxy || false;
+    const isHosting = geo?.hosting || false;
+    const isVpn = isHosting;
+    const ispLower = (geo?.isp || '').toLowerCase();
+    const orgLower = (geo?.org || '').toLowerCase();
+    const isTor = /\btor\b|tor exit|tor relay|torproject/i.test(ispLower)
+      || /\btor\b|tor exit|tor relay|torproject/i.test(orgLower);
+
+    if (vpnRules.enabled && !shouldBlock) {
+      if (vpnRules.blockProxy && isProxy) {
+        shouldBlock = true;
+        blockReason = `Proxy detected (ISP: ${geo?.isp || 'unknown'})`;
+        fraudEventType = 'proxy_blocked';
+      }
+      if (vpnRules.blockVpn && isVpn && !shouldBlock) {
+        shouldBlock = true;
+        blockReason = `VPN/Datacenter detected (ISP: ${geo?.isp || 'unknown'}, Org: ${geo?.org || 'unknown'})`;
+        fraudEventType = 'vpn_blocked';
+      }
+      if (vpnRules.blockTor && isTor && !shouldBlock) {
+        shouldBlock = true;
+        blockReason = `Tor exit node detected (ISP: ${geo?.isp || 'unknown'})`;
+        fraudEventType = 'tor_blocked';
+      }
+    }
+
+    const sensitivityMultiplier = aiRules.sensitivity === 'high' ? 1.3 : aiRules.sensitivity === 'low' ? 0.7 : 1.0;
+
+    let botScore = 0;
+    if (headless) botScore += Math.round(40 * sensitivityMultiplier);
+    if (!mouseMovements || mouseMovements === 0) botScore += Math.round(20 * sensitivityMultiplier);
+    if (timeOnPage !== undefined && timeOnPage < 2) botScore += Math.round(10 * sensitivityMultiplier);
+    if (/HeadlessChrome|PhantomJS|Selenium|Bot|Crawl|Spider/i.test(userAgent)) botScore += Math.round(30 * sensitivityMultiplier);
+
+    if (isProxy || isVpn) botScore += Math.round(15 * sensitivityMultiplier);
+    if (isTor) botScore += Math.round(25 * sensitivityMultiplier);
+
+    botScore = Math.min(botScore, 100);
+
+    const autoBlockThreshold = aiRules.enabled ? (aiRules.threshold || 70) : 70;
+
+    let threatLevel = 'low';
+    if (botScore >= autoBlockThreshold) threatLevel = 'critical';
+    else if (botScore >= Math.round(autoBlockThreshold * 0.7)) threatLevel = 'high';
+    else if (botScore >= Math.round(autoBlockThreshold * 0.43)) threatLevel = 'medium';
+
+    if (aiRules.enabled && aiRules.autoBlock && botScore >= autoBlockThreshold && !shouldBlock) {
+      shouldBlock = true;
+      blockReason = `Auto-blocked: bot score ${botScore} (threshold: ${autoBlockThreshold}, sensitivity: ${aiRules.sensitivity})`;
+      fraudEventType = 'bot_detected';
+    }
+
+    if (clickRules.enabled && !shouldBlock) {
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+      const [minuteResult] = await db
+        .select({ cnt: count() })
+        .from(clickGuardVisitors)
+        .where(and(
+          eq(clickGuardVisitors.siteId, siteId),
+          eq(clickGuardVisitors.ipAddress, ip),
+          gte(clickGuardVisitors.createdAt, oneMinuteAgo)
+        ));
+
+      const clicksPerMinute = Number(minuteResult?.cnt || 0);
+      if (clicksPerMinute >= (clickRules.maxClicksPerMinute || 5)) {
+        shouldBlock = true;
+        blockReason = `Repetitive clicks: ${clicksPerMinute + 1} clicks in 1 minute (limit: ${clickRules.maxClicksPerMinute})`;
+        fraudEventType = 'repetitive_clicks';
+      }
+
+      if (!shouldBlock) {
+        const [hourResult] = await db
+          .select({ cnt: count() })
+          .from(clickGuardVisitors)
+          .where(and(
+            eq(clickGuardVisitors.siteId, siteId),
+            eq(clickGuardVisitors.ipAddress, ip),
+            gte(clickGuardVisitors.createdAt, oneHourAgo)
+          ));
+
+        const clicksPerHour = Number(hourResult?.cnt || 0);
+        if (clicksPerHour >= (clickRules.maxClicksPerHour || 10)) {
+          shouldBlock = true;
+          blockReason = `Repetitive clicks: ${clicksPerHour + 1} clicks in 1 hour (limit: ${clickRules.maxClicksPerHour})`;
+          fraudEventType = 'repetitive_clicks';
+        }
+      }
+    }
+
+    if (vpnClickRules.enabled && (isProxy || isVpn || isTor) && !shouldBlock) {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const [vpnClickResult] = await db
+        .select({ cnt: count() })
+        .from(clickGuardVisitors)
+        .where(and(
+          eq(clickGuardVisitors.siteId, siteId),
+          eq(clickGuardVisitors.ipAddress, ip),
+          gte(clickGuardVisitors.createdAt, oneHourAgo)
+        ));
+      const vpnClicks = Number(vpnClickResult?.cnt || 0);
+      if (vpnClicks >= (vpnClickRules.autoBlockAfterClicks || 2)) {
+        shouldBlock = true;
+        blockReason = `VPN/Proxy user exceeded click limit: ${vpnClicks + 1} clicks (limit: ${vpnClickRules.autoBlockAfterClicks} for VPN/Proxy)`;
+        fraudEventType = 'vpn_click_fraud';
+      }
+    }
+
+    if (clusterRules.enabled && !shouldBlock) {
+      const clusterPrefix = clusterRules.clusterRange || 24;
+      const ipParts = ip.split('.');
+      if (ipParts.length === 4) {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        let subnetPattern = '';
+        if (clusterPrefix >= 24) subnetPattern = `${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.%`;
+        else if (clusterPrefix >= 16) subnetPattern = `${ipParts[0]}.${ipParts[1]}.%`;
+        else subnetPattern = `${ipParts[0]}.%`;
+
+        const clusterResult = await db.execute(sql`
+          SELECT COUNT(DISTINCT ip_address) as cnt
+          FROM click_guard_visitors
+          WHERE site_id = ${siteId}
+            AND ip_address LIKE ${subnetPattern}
+            AND created_at >= ${oneHourAgo}
+        `);
+        const clusterCount = Number((clusterResult.rows[0] as any)?.cnt || 0);
+        if (clusterCount >= (clusterRules.maxClicksFromCluster || 20)) {
+          shouldBlock = true;
+          blockReason = `IP cluster attack: ${clusterCount} unique IPs from /${clusterPrefix} subnet in 1 hour`;
+          fraudEventType = 'ip_cluster';
+        }
+      }
+    }
+
+    if (shouldBlock && !existingBlock) {
+      try {
+        await db.insert(clickGuardBlockedIps).values({
+          siteId,
+          ipAddress: ip,
+          reason: blockReason,
+          autoBlocked: true,
+        });
+      } catch (blockErr: any) {
+        if (!blockErr?.message?.includes('duplicate')) {
+          console.error('[ClickGuard] Failed to insert block:', blockErr);
+        }
+      }
+    }
 
     const [visitor] = await db
       .insert(clickGuardVisitors)
@@ -593,25 +801,25 @@ clickGuardRoutes.post('/track', async (c) => {
         language,
         referrer,
         pageUrl,
-        isProxy: geo?.proxy || false,
-        isVpn: false,
-        isBot: botScore >= 50,
-        isTor: false,
+        isProxy,
+        isVpn,
+        isBot: botScore >= Math.round(autoBlockThreshold * 0.7),
+        isTor,
         botScore,
         threatLevel,
         clickCount,
         mouseMovements,
         timeOnPage,
-        blocked: isBlocked,
+        blocked: shouldBlock,
       })
       .returning();
 
-    if (threatLevel === 'high' || threatLevel === 'critical') {
+    if (shouldBlock || threatLevel === 'high' || threatLevel === 'critical') {
       await db.insert(clickGuardFraudEvents).values({
         siteId,
         visitorId: visitor.id,
-        eventType: botScore >= 70 ? 'bot_detected' : 'suspicious_activity',
-        severity: threatLevel,
+        eventType: fraudEventType || (botScore >= autoBlockThreshold ? 'bot_detected' : 'suspicious_activity'),
+        severity: shouldBlock ? 'critical' : threatLevel,
         ipAddress: ip,
         details: {
           botScore,
@@ -619,16 +827,20 @@ clickGuardRoutes.post('/track', async (c) => {
           mouseMovements,
           timeOnPage,
           userAgent,
+          isProxy,
+          isVpn,
+          isTor,
+          blockReason: blockReason || null,
+          geoIsp: geo?.isp || null,
+          geoOrg: geo?.org || null,
+          rulesApplied: {
+            vpnProxyBlocking: vpnRules.enabled,
+            repetitiveClickDetection: clickRules.enabled,
+            aiFraudDetection: aiRules.enabled,
+            vpnClickFraud: vpnClickRules.enabled,
+            ipClusterBlocking: clusterRules.enabled,
+          },
         },
-      });
-    }
-
-    if (botScore >= 70 && !isBlocked) {
-      await db.insert(clickGuardBlockedIps).values({
-        siteId,
-        ipAddress: ip,
-        reason: `Auto-blocked: bot score ${botScore}`,
-        autoBlocked: true,
       });
     }
 
@@ -639,7 +851,7 @@ clickGuardRoutes.post('/track', async (c) => {
         .where(eq(clickGuardDomains.id, domain.id));
     }
 
-    return c.json({ success: true, blocked: isBlocked });
+    return c.json({ success: true, blocked: shouldBlock });
   } catch (error) {
     console.error('Failed to track visitor:', error);
     return c.json({ error: 'Failed to track visitor' }, 500);

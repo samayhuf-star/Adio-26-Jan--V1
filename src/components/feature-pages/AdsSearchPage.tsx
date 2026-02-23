@@ -21,6 +21,28 @@ export default function AdsSearchPage({ onGetStarted, onBack }: AdsSearchPagePro
         <meta property="og:description" content="Research competitor Google Ads with Adiology's Ads Search tool." />
         <meta property="og:url" content="https://adiology.io/features/ads-search" />
         <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Ads Search - Spy on Competitor Google Ads | Adiology" />
+        <meta name="twitter:description" content="Research competitor Google Ads with Adiology's Ads Search tool." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Ads Search",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://adiology.io/features/ads-search",
+          "description": "Research competitor Google Ads with Adiology's Ads Search tool. View active ad copy, headlines, descriptions, and landing pages from the Google Ads Transparency Center.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io"
+          }
+        })}</script>
       </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
         <Navigation onGetStarted={onGetStarted} onBack={onBack} />

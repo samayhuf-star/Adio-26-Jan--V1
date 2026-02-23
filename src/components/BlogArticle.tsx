@@ -207,16 +207,7 @@ export default function BlogArticle({ slug, onBack, onArticleClick }: BlogArticl
           </div>
 
           <div
-            className="prose prose-slate prose-lg max-w-none
-              prose-headings:font-bold prose-headings:tracking-tight
-              prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:text-slate-900 prose-h2:border-l-4 prose-h2:border-blue-500 prose-h2:pl-4
-              prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-slate-800
-              prose-p:text-slate-600 prose-p:leading-relaxed prose-p:mb-4
-              prose-strong:text-slate-900
-              prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
-              prose-ul:my-4 prose-li:text-slate-600
-              prose-figure:my-8 prose-figure:bg-slate-50 prose-figure:rounded-xl prose-figure:p-6 prose-figure:border prose-figure:border-slate-200
-              prose-figcaption:text-sm prose-figcaption:text-slate-500 prose-figcaption:italic prose-figcaption:mt-2"
+            className="blog-article-content max-w-none"
             dangerouslySetInnerHTML={{ __html: article.content }}
           />
 

@@ -9,8 +9,44 @@
  */
 
 import OpenAI from 'openai';
+import { db } from './db';
+import { aiUsageLogs } from '../shared/schema';
 
 const openai = new OpenAI();
+
+async function logAiUsage(data: {
+  userId?: string | null;
+  feature: string;
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  durationMs: number;
+  status?: string;
+  error?: string;
+  metadata?: any;
+}) {
+  try {
+    const totalTokens = data.promptTokens + data.completionTokens;
+    // Rough estimation of cost for gpt-4o: $5 per 1M tokens ($0.0005 per 100 tokens)
+    const costCents = (totalTokens / 1000) * 0.5; 
+
+    await db.insert(aiUsageLogs).values({
+      userId: data.userId || null,
+      feature: data.feature,
+      model: data.model,
+      promptTokens: data.promptTokens,
+      completionTokens: data.completionTokens,
+      totalTokens: totalTokens,
+      costCents: costCents.toString(),
+      durationMs: data.durationMs,
+      status: data.status || 'success',
+      error: data.error || null,
+      metadata: data.metadata || {},
+    });
+  } catch (err) {
+    console.error('[AI Usage Log] Failed to log:', err);
+  }
+}
 
 export interface BlogSection {
   title: string;
@@ -53,14 +89,39 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(w => w.length > 0).length;
 }
 
-async function generateWithOpenAI(prompt: string, maxTokens: number = 2000): Promise<string> {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: maxTokens,
-    temperature: 0.7
-  });
-  return response.choices[0]?.message?.content || '';
+async function generateWithOpenAI(prompt: string, maxTokens: number = 2000, feature: string = 'blog-generator'): Promise<string> {
+  const startTime = Date.now();
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens,
+      temperature: 0.7
+    });
+    
+    const durationMs = Date.now() - startTime;
+    await logAiUsage({
+      feature,
+      model: 'gpt-4o',
+      promptTokens: response.usage?.prompt_tokens || 0,
+      completionTokens: response.usage?.completion_tokens || 0,
+      durationMs,
+    });
+
+    return response.choices[0]?.message?.content || '';
+  } catch (error: any) {
+    const durationMs = Date.now() - startTime;
+    await logAiUsage({
+      feature,
+      model: 'gpt-4o',
+      promptTokens: 0,
+      completionTokens: 0,
+      durationMs,
+      status: 'error',
+      error: error.message
+    });
+    throw error;
+  }
 }
 
 async function generateOutline(config: BlogConfig): Promise<{

@@ -31,9 +31,9 @@ export const WelcomeStep: React.FC = () => {
     },
     {
       icon: <Users className="w-6 h-6 text-purple-600" />,
-      title: 'Team Collaboration',
-      description: 'Work together with your team on marketing projects seamlessly',
-      benefit: 'Better teamwork'
+      title: 'Click Fraud Protection',
+      description: 'Protect your ad spend from invalid clicks and bot traffic automatically',
+      benefit: 'Save ad budget'
     },
     {
       icon: <Globe className="w-6 h-6 text-blue-600" />,

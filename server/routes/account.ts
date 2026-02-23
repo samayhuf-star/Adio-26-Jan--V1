@@ -49,14 +49,61 @@ accountRoutes.post('/register', async (c) => {
       return c.json({ success: false, error: 'Email and password are required' }, 400);
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
     const passwordHash = await bcrypt.hash(password, 10);
+
+    const existingUser = await pool.query(
+      'SELECT id, password_hash, subscription_plan, subscription_status FROM users WHERE email = $1',
+      [normalizedEmail]
+    );
+
+    if (existingUser.rows.length > 0) {
+      const existing = existingUser.rows[0];
+
+      if (!existing.password_hash) {
+        const isLifetime = existing.subscription_plan === 'Lifetime' && existing.subscription_status === 'active';
+        await pool.query(
+          `UPDATE users 
+           SET password_hash = $1, full_name = COALESCE($2, full_name), email_verified = true, card_validated = $4, updated_at = NOW()
+           WHERE id = $3`,
+          [passwordHash, name || null, existing.id, isLifetime]
+        );
+
+        const jwtToken = jwt.sign(
+          { userId: existing.id, email: normalizedEmail, role: 'user' },
+          JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+
+        await pool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [existing.id]);
+
+        console.log(`[Auth] Existing passwordless user completed setup: ${normalizedEmail} (plan: ${existing.subscription_plan})`);
+        return c.json({
+          success: true,
+          message: 'Account setup complete.',
+          userId: existing.id,
+          token: jwtToken,
+          isLifetimeDeal: isLifetime,
+          skipPayment: isLifetime,
+          user: {
+            id: existing.id,
+            email: normalizedEmail,
+            subscription_plan: existing.subscription_plan,
+            subscription_status: existing.subscription_status,
+          },
+        });
+      }
+
+      return c.json({ success: false, error: 'An account with this email already exists' }, 409);
+    }
+
     const userId = crypto.randomUUID();
 
     try {
       await pool.query(
         `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, created_at, updated_at)
          VALUES ($1, $2, $3, $4, false, 'user', 'free', 'active', NOW(), NOW())`,
-        [userId, email.toLowerCase().trim(), name || null, passwordHash]
+        [userId, normalizedEmail, name || null, passwordHash]
       );
     } catch (dbError: any) {
       if (dbError.code === '23505') {

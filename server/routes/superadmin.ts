@@ -1,328 +1,177 @@
 import { Hono } from 'hono';
+import { sql, eq, desc, and, like } from 'drizzle-orm';
 import { db } from '../db';
-import { users, subscriptions, auditLogs } from '../../shared/schema';
-import { eq, desc, sql, count } from 'drizzle-orm';
-import crypto from 'crypto';
-import { nhostAdmin } from '../nhostAdmin';
+import { users, subscriptions, aiUsageLogs, auditLogs, emailLogs } from '../../shared/schema';
 import { getUncachableStripeClient } from '../stripeClient';
-import { getWhatsAppStatus, setReportingEnabled, sendTestMessage, sendHourlyReport } from '../services/whatsapp';
+import crypto from 'crypto';
 
 const app = new Hono();
 
-const SUPERADMIN_USERNAME = process.env.SUPERADMIN_USERNAME;
-const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD;
+const activeAdminTokens = new Map<string, { username: string; createdAt: number }>();
 
-const activeTokens = new Map<string, { expires: number }>();
-const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const TOKEN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 15 * 60 * 1000;
-
-function generateToken(): string {
-  return crypto.randomBytes(32).toString('hex');
-}
-
-function isValidToken(token: string): boolean {
-  const session = activeTokens.get(token);
-  if (!session) return false;
-  if (Date.now() > session.expires) {
-    activeTokens.delete(token);
-    return false;
-  }
-  return true;
-}
-
-function isRateLimited(ip: string): boolean {
-  const attempt = loginAttempts.get(ip);
-  if (!attempt) return false;
-  
-  if (Date.now() - attempt.lastAttempt > LOCKOUT_DURATION) {
-    loginAttempts.delete(ip);
-    return false;
-  }
-  
-  return attempt.count >= MAX_LOGIN_ATTEMPTS;
-}
-
-function recordLoginAttempt(ip: string, success: boolean) {
-  if (success) {
-    loginAttempts.delete(ip);
-    return;
-  }
-  
-  const attempt = loginAttempts.get(ip) || { count: 0, lastAttempt: 0 };
-  attempt.count++;
-  attempt.lastAttempt = Date.now();
-  loginAttempts.set(ip, attempt);
-}
-
-async function logAuditAction(params: {
-  action: string;
-  resourceType: string;
-  resourceId?: string;
-  oldValues?: any;
-  newValues?: any;
-  details?: any;
-  level?: string;
-}) {
-  try {
-    await db.insert(auditLogs).values({
-      adminUserId: 'superadmin',
-      action: params.action,
-      resourceType: params.resourceType,
-      resourceId: params.resourceId || null,
-      oldValues: params.oldValues || null,
-      newValues: params.newValues || null,
-      details: params.details || null,
-      level: params.level || 'info',
-    });
-  } catch (err) {
-    console.error('[Audit] Failed to log action:', err);
+function cleanExpiredTokens() {
+  const now = Date.now();
+  for (const [token, data] of activeAdminTokens) {
+    if (now - data.createdAt > TOKEN_MAX_AGE_MS) {
+      activeAdminTokens.delete(token);
+    }
   }
 }
 
-function authMiddleware(c: any, next: any) {
+async function authMiddleware(c: any, next?: any) {
   const authHeader = c.req.header('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader?.startsWith('Bearer ')) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
-  
   const token = authHeader.substring(7);
-  if (!isValidToken(token)) {
+  cleanExpiredTokens();
+  const session = activeAdminTokens.get(token);
+  if (!session) {
     return c.json({ error: 'Invalid or expired token' }, 401);
   }
-  
-  return next();
+  if (next) await next();
 }
 
 app.post('/login', async (c) => {
   try {
-    if (!SUPERADMIN_USERNAME || !SUPERADMIN_PASSWORD) {
-      console.error('[SuperAdmin] Credentials not configured in environment variables');
-      return c.json({ error: 'Admin panel not configured' }, 503);
-    }
-    
-    const clientIp = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
-    
-    if (isRateLimited(clientIp)) {
-      console.log(`[SuperAdmin] Rate limited login attempt from IP: ${clientIp}`);
-      return c.json({ error: 'Too many failed attempts. Please try again later.' }, 429);
-    }
-    
     const { username, password } = await c.req.json();
-    
-    if (username !== SUPERADMIN_USERNAME || password !== SUPERADMIN_PASSWORD) {
-      console.log(`[SuperAdmin] Failed login attempt for username: ${username} from IP: ${clientIp}`);
-      recordLoginAttempt(clientIp, false);
+
+    const validUsername = process.env.SUPERADMIN_USERNAME || 'superadmin';
+    const validPassword = process.env.SUPERADMIN_PASSWORD;
+
+    if (!validPassword) {
+      return c.json({ error: 'Admin login not configured' }, 500);
+    }
+
+    if (username !== validUsername || password !== validPassword) {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
-    
-    recordLoginAttempt(clientIp, true);
-    
-    const token = generateToken();
-    const expires = Date.now() + (24 * 60 * 60 * 1000);
-    activeTokens.set(token, { expires });
-    
-    console.log(`[SuperAdmin] Successful login from IP: ${clientIp}`);
-    await logAuditAction({ action: 'admin_login', resourceType: 'session', details: { ip: clientIp } });
-    return c.json({ token, expires });
-  } catch (error: any) {
+
+    const token = crypto.randomBytes(32).toString('hex');
+    activeAdminTokens.set(token, { username: validUsername, createdAt: Date.now() });
+
+    try {
+      await db.insert(auditLogs).values({
+        action: 'admin_login',
+        resourceType: 'auth',
+        details: { username, ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown' },
+        level: 'info',
+      });
+    } catch (e) {}
+
+    return c.json({ token, username: validUsername });
+  } catch (error) {
     console.error('[SuperAdmin] Login error:', error);
     return c.json({ error: 'Login failed' }, 500);
   }
 });
 
-app.get('/validate', authMiddleware, async (c) => {
-  return c.json({ valid: true });
+app.get('/validate', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const token = authHeader.substring(7);
+  cleanExpiredTokens();
+  const session = activeAdminTokens.get(token);
+  if (!session) {
+    return c.json({ error: 'Invalid or expired token' }, 401);
+  }
+  return c.json({ valid: true, username: session.username });
 });
 
-app.post('/logout', authMiddleware, async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const token = authHeader?.substring(7);
-  if (token) {
-    activeTokens.delete(token);
+// Helper to log admin actions
+async function logAuditAction(data: {
+  action: string;
+  resourceType?: string;
+  resourceId?: string;
+  oldValues?: any;
+  newValues?: any;
+  details?: any;
+  level?: 'info' | 'warn' | 'error';
+}) {
+  try {
+    // We'll use the existing logAdminAction from adminAuthService if possible, 
+    // but for simplicity here we use the direct insert since it was already there
+    await db.insert(auditLogs).values({
+      action: data.action,
+      resourceType: data.resourceType || null,
+      resourceId: data.resourceId || null,
+      oldValues: data.oldValues || null,
+      newValues: data.newValues || null,
+      details: data.details || null,
+      level: data.level || 'info',
+    });
+  } catch (error) {
+    console.error('[Audit Log] Failed to log admin action:', error);
   }
-  return c.json({ success: true });
-});
+}
 
 app.get('/stats', authMiddleware, async (c) => {
   try {
-    // Get user count from Nhost
-    let totalUsers = 0;
-    let blockedUsers = 0;
-    
-    if (nhostAdmin.isConfigured()) {
-      totalUsers = await nhostAdmin.getUserCount();
-      blockedUsers = await nhostAdmin.getBlockedUserCount();
-    }
-    
-    // Get subscriptions from local database (Stripe sync)
-    let activeSubscriptions = 0;
-    let trialUsers = 0;
-    let monthlyRevenue = 0;
-    
-    try {
-      const [activeSubCount] = await db
-        .select({ count: count() })
-        .from(subscriptions)
-        .where(eq(subscriptions.status, 'active'));
-      activeSubscriptions = activeSubCount?.count || 0;
-      
-      const [trialCount] = await db
-        .select({ count: count() })
-        .from(subscriptions)
-        .where(eq(subscriptions.status, 'trialing'));
-      trialUsers = trialCount?.count || 0;
-      
-      const revenueResult = await db
-        .select({ 
-          total: sql<number>`COALESCE(SUM(CASE WHEN status = 'active' THEN 
-            CASE plan_name 
-              WHEN 'Starter' THEN 49
-              WHEN 'Professional' THEN 99
-              WHEN 'Agency' THEN 149
-              ELSE 0 
-            END 
-          ELSE 0 END), 0)` 
-        })
-        .from(subscriptions);
-      monthlyRevenue = revenueResult[0]?.total || 0;
-    } catch (dbError) {
-      console.error('[SuperAdmin] Subscriptions DB error:', dbError);
-    }
-    
+    const totalUsers = await db.execute(sql`SELECT COUNT(*) as count FROM users`).catch(() => ({ rows: [{ count: 0 }] }));
+    const activeSubscriptions = await db.execute(sql`SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'`).catch(() => ({ rows: [{ count: 0 }] }));
+    const trialUsers = await db.execute(sql`SELECT COUNT(*) as count FROM subscriptions WHERE status = 'trialing'`).catch(() => ({ rows: [{ count: 0 }] }));
+    const blockedUsers = await db.execute(sql`SELECT COUNT(*) as count FROM users WHERE is_blocked = true`).catch(() => ({ rows: [{ count: 0 }] }));
+    const revenueResult = await db.execute(sql`
+      SELECT COALESCE(SUM(CASE 
+        WHEN plan_name = 'Starter' THEN 2900
+        WHEN plan_name = 'Professional' THEN 5900
+        WHEN plan_name = 'Agency' THEN 12900
+        ELSE 0 
+      END), 0) as revenue
+      FROM subscriptions WHERE status = 'active'
+    `).catch(() => ({ rows: [{ revenue: 0 }] }));
+
     return c.json({
-      totalUsers,
-      activeSubscriptions,
-      monthlyRevenue,
-      trialUsers,
-      blockedUsers
+      totalUsers: Number((totalUsers.rows[0] as any)?.count || 0),
+      activeSubscriptions: Number((activeSubscriptions.rows[0] as any)?.count || 0),
+      monthlyRevenue: Number((revenueResult.rows[0] as any)?.revenue || 0) / 100,
+      trialUsers: Number((trialUsers.rows[0] as any)?.count || 0),
+      blockedUsers: Number((blockedUsers.rows[0] as any)?.count || 0),
     });
   } catch (error: any) {
     console.error('[SuperAdmin] Stats error:', error);
-    return c.json({ error: 'Failed to load stats' }, 500);
+    return c.json({ totalUsers: 0, activeSubscriptions: 0, monthlyRevenue: 0, trialUsers: 0, blockedUsers: 0 });
   }
 });
 
 app.get('/users', authMiddleware, async (c) => {
   try {
-    // Get users from Nhost
-    if (!nhostAdmin.isConfigured()) {
-      console.error('[SuperAdmin] Nhost not configured');
-      return c.json({ users: [], error: 'Nhost not configured' });
-    }
-    
-    const nhostUsers = await nhostAdmin.getUsers(200, 0);
-    
-    // Transform to expected format
-    const allUsers = nhostUsers.map((user: any) => ({
-      id: user.id,
-      email: user.email,
-      fullName: user.displayName || user.metadata?.name || '',
-      role: user.metadata?.role || 'user',
-      subscriptionPlan: user.metadata?.subscriptionPlan || null,
-      subscriptionStatus: user.metadata?.subscriptionStatus || null,
-      isBlocked: user.disabled || false,
-      createdAt: user.createdAt,
-      lastSignIn: user.lastSeen
-    }));
-    
+    const allUsers = await db.select({
+      id: users.id,
+      email: users.email,
+      fullName: users.fullName,
+      role: users.role,
+      subscriptionPlan: users.subscriptionPlan,
+      subscriptionStatus: users.subscriptionStatus,
+      isBlocked: users.isBlocked,
+      createdAt: users.createdAt,
+      lastSignIn: users.lastSignIn,
+    }).from(users).orderBy(desc(users.createdAt));
+
     return c.json({ users: allUsers });
   } catch (error: any) {
     console.error('[SuperAdmin] Users error:', error);
-    return c.json({ error: 'Failed to load users' }, 500);
+    return c.json({ users: [] });
   }
 });
 
-// Get single user by ID
-app.get('/users/:userId', authMiddleware, async (c) => {
+app.post('/users/:id/block', authMiddleware, async (c) => {
   try {
-    const userId = c.req.param('userId');
-    
-    if (!nhostAdmin.isConfigured()) {
-      return c.json({ error: 'Nhost not configured' }, 500);
-    }
-    
-    const user = await nhostAdmin.getUserById(userId);
-    
-    if (!user) {
+    const userId = c.req.param('id');
+    const { block } = await c.req.json();
+
+    const existing = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (existing.length === 0) {
       return c.json({ error: 'User not found' }, 404);
     }
-    
-    return c.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName || '',
-        avatarUrl: user.avatarUrl || null,
-        disabled: user.disabled || false,
-        emailVerified: user.emailVerified || false,
-        metadata: user.metadata || {},
-        createdAt: user.createdAt,
-        lastSeen: user.lastSeen
-      }
-    });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Get user error:', error);
-    return c.json({ error: 'Failed to get user' }, 500);
-  }
-});
 
-// Update user details
-app.put('/users/:userId', authMiddleware, async (c) => {
-  try {
-    const userId = c.req.param('userId');
-    const { displayName, email, metadata } = await c.req.json();
-    
-    if (!nhostAdmin.isConfigured()) {
-      return c.json({ error: 'Nhost not configured' }, 500);
-    }
-    
-    let success = true;
-    
-    if (displayName !== undefined) {
-      success = success && await nhostAdmin.updateUserDisplayName(userId, displayName);
-    }
-    
-    if (email !== undefined) {
-      success = success && await nhostAdmin.updateUserEmail(userId, email);
-    }
-    
-    if (metadata !== undefined) {
-      success = success && await nhostAdmin.updateUserMetadata(userId, metadata);
-    }
-    
-    if (!success) {
-      return c.json({ error: 'Failed to update user' }, 500);
-    }
-    
-    console.log(`[SuperAdmin] User ${userId} updated`);
-    await logAuditAction({ action: 'user_updated', resourceType: 'user', resourceId: userId, newValues: { displayName, email } });
-    return c.json({ success: true });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Update user error:', error);
-    return c.json({ error: 'Failed to update user' }, 500);
-  }
-});
+    await db.update(users).set({ isBlocked: !!block, updatedAt: new Date() }).where(eq(users.id, userId));
+    await logAuditAction({ action: block ? 'user_blocked' : 'user_unblocked', resourceType: 'user', resourceId: userId, details: { email: existing[0].email } });
 
-// Block/unblock user
-app.post('/users/:userId/block', authMiddleware, async (c) => {
-  try {
-    const userId = c.req.param('userId');
-    const { block } = await c.req.json();
-    
-    if (!nhostAdmin.isConfigured()) {
-      return c.json({ error: 'Nhost not configured' }, 500);
-    }
-    
-    const success = await nhostAdmin.setUserDisabled(userId, block);
-    
-    if (!success) {
-      return c.json({ error: 'Failed to update user' }, 500);
-    }
-    
-    console.log(`[SuperAdmin] User ${userId} ${block ? 'blocked' : 'unblocked'}`);
-    await logAuditAction({ action: block ? 'user_blocked' : 'user_unblocked', resourceType: 'user', resourceId: userId });
     return c.json({ success: true });
   } catch (error: any) {
     console.error('[SuperAdmin] Block user error:', error);
@@ -330,23 +179,43 @@ app.post('/users/:userId/block', authMiddleware, async (c) => {
   }
 });
 
-// Delete user
-app.delete('/users/:userId', authMiddleware, async (c) => {
+app.put('/users/:id', authMiddleware, async (c) => {
   try {
-    const userId = c.req.param('userId');
-    
-    if (!nhostAdmin.isConfigured()) {
-      return c.json({ error: 'Nhost not configured' }, 500);
+    const userId = c.req.param('id');
+    const { displayName, email } = await c.req.json();
+
+    const existing = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (existing.length === 0) {
+      return c.json({ error: 'User not found' }, 404);
     }
-    
-    const success = await nhostAdmin.deleteUser(userId);
-    
-    if (!success) {
-      return c.json({ error: 'Failed to delete user' }, 500);
+
+    const updates: any = { updatedAt: new Date() };
+    if (displayName !== undefined) updates.fullName = displayName;
+    if (email !== undefined) updates.email = email;
+
+    await db.update(users).set(updates).where(eq(users.id, userId));
+    await logAuditAction({ action: 'user_updated', resourceType: 'user', resourceId: userId, oldValues: { fullName: existing[0].fullName, email: existing[0].email }, newValues: updates });
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Update user error:', error);
+    return c.json({ error: 'Failed to update user' }, 500);
+  }
+});
+
+app.delete('/users/:id', authMiddleware, async (c) => {
+  try {
+    const userId = c.req.param('id');
+
+    const existing = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (existing.length === 0) {
+      return c.json({ error: 'User not found' }, 404);
     }
-    
-    console.log(`[SuperAdmin] User ${userId} deleted`);
-    await logAuditAction({ action: 'user_deleted', resourceType: 'user', resourceId: userId, level: 'warning' });
+
+    await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
+    await db.delete(users).where(eq(users.id, userId));
+    await logAuditAction({ action: 'user_deleted', resourceType: 'user', resourceId: userId, details: { email: existing[0].email } });
+
     return c.json({ success: true });
   } catch (error: any) {
     console.error('[SuperAdmin] Delete user error:', error);
@@ -356,94 +225,44 @@ app.delete('/users/:userId', authMiddleware, async (c) => {
 
 app.get('/subscriptions', authMiddleware, async (c) => {
   try {
-    const allSubs = await db
-      .select({
-        id: subscriptions.id,
-        stripeSubscriptionId: subscriptions.stripeSubscriptionId,
-        userId: subscriptions.userId,
-        planName: subscriptions.planName,
-        status: subscriptions.status,
-        currentPeriodStart: subscriptions.currentPeriodStart,
-        currentPeriodEnd: subscriptions.currentPeriodEnd,
-        cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
-        createdAt: subscriptions.createdAt,
-        updatedAt: subscriptions.updatedAt
-      })
-      .from(subscriptions)
-      .orderBy(desc(subscriptions.createdAt))
-      .limit(200);
-    
-    const subsWithEmail = await Promise.all(
-      allSubs.map(async (sub: typeof allSubs[0]) => {
-        let userEmail = null;
-        if (sub.userId) {
-          // Try to get email from Nhost first
-          if (nhostAdmin.isConfigured()) {
-            const nhostUser = await nhostAdmin.getUserById(sub.userId);
-            userEmail = nhostUser?.email || null;
-          }
-          // Fallback to local DB
-          if (!userEmail) {
-            const [user] = await db
-              .select({ email: users.email })
-              .from(users)
-              .where(eq(users.id, sub.userId))
-              .limit(1);
-            userEmail = user?.email || null;
-          }
-        }
-        return { ...sub, userEmail };
-      })
-    );
-    
-    return c.json({ subscriptions: subsWithEmail });
+    const allSubs = await db.execute(sql`
+      SELECT s.id, s.user_id as "userId", u.email as "userEmail", s.plan_name as "planName", 
+             s.status, s.current_period_end as "currentPeriodEnd", 
+             s.cancel_at_period_end as "cancelAtPeriodEnd", s.created_at as "createdAt"
+      FROM subscriptions s
+      LEFT JOIN users u ON s.user_id = u.id
+      ORDER BY s.created_at DESC
+    `).catch(() => ({ rows: [] }));
+
+    return c.json({ subscriptions: allSubs.rows });
   } catch (error: any) {
     console.error('[SuperAdmin] Subscriptions error:', error);
-    return c.json({ error: 'Failed to load subscriptions' }, 500);
+    return c.json({ subscriptions: [] });
   }
 });
 
-// Get single subscription
-app.get('/subscriptions/:subId', authMiddleware, async (c) => {
+app.put('/subscriptions/:id', authMiddleware, async (c) => {
   try {
-    const subId = c.req.param('subId');
-    
-    const [sub] = await db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.id, subId))
-      .limit(1);
-    
-    if (!sub) {
+    const subId = c.req.param('id');
+    const { planName, status } = await c.req.json();
+
+    const existing = await db.select().from(subscriptions).where(eq(subscriptions.id, subId)).limit(1);
+    if (existing.length === 0) {
       return c.json({ error: 'Subscription not found' }, 404);
     }
-    
-    return c.json({ subscription: sub });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Get subscription error:', error);
-    return c.json({ error: 'Failed to get subscription' }, 500);
-  }
-});
 
-// Update subscription
-app.put('/subscriptions/:subId', authMiddleware, async (c) => {
-  try {
-    const subId = c.req.param('subId');
-    const { planName, status, cancelAtPeriodEnd } = await c.req.json();
-    
-    const updateData: any = { updatedAt: new Date() };
-    
-    if (planName !== undefined) updateData.planName = planName;
-    if (status !== undefined) updateData.status = status;
-    if (cancelAtPeriodEnd !== undefined) updateData.cancelAtPeriodEnd = cancelAtPeriodEnd;
-    
-    await db
-      .update(subscriptions)
-      .set(updateData)
-      .where(eq(subscriptions.id, subId));
-    
-    console.log(`[SuperAdmin] Subscription ${subId} updated`);
-    await logAuditAction({ action: 'subscription_updated', resourceType: 'subscription', resourceId: subId, newValues: { planName, status, cancelAtPeriodEnd } });
+    const updates: any = { updatedAt: new Date() };
+    if (planName) updates.planName = planName;
+    if (status) updates.status = status;
+
+    await db.update(subscriptions).set(updates).where(eq(subscriptions.id, subId));
+
+    if (existing[0].userId && planName) {
+      await db.update(users).set({ subscriptionPlan: planName, updatedAt: new Date() }).where(eq(users.id, existing[0].userId));
+    }
+
+    await logAuditAction({ action: 'subscription_updated', resourceType: 'subscription', resourceId: subId, oldValues: { planName: existing[0].planName, status: existing[0].status }, newValues: updates });
+
     return c.json({ success: true });
   } catch (error: any) {
     console.error('[SuperAdmin] Update subscription error:', error);
@@ -451,33 +270,23 @@ app.put('/subscriptions/:subId', authMiddleware, async (c) => {
   }
 });
 
-// Cancel subscription (set to canceled status)
-app.post('/subscriptions/:subId/cancel', authMiddleware, async (c) => {
+app.post('/subscriptions/:id/cancel', authMiddleware, async (c) => {
   try {
-    const subId = c.req.param('subId');
-    const { immediate } = await c.req.json();
-    
-    if (immediate) {
-      await db
-        .update(subscriptions)
-        .set({ 
-          status: 'canceled',
-          cancelAtPeriodEnd: false,
-          updatedAt: new Date()
-        })
-        .where(eq(subscriptions.id, subId));
-    } else {
-      await db
-        .update(subscriptions)
-        .set({ 
-          cancelAtPeriodEnd: true,
-          updatedAt: new Date()
-        })
-        .where(eq(subscriptions.id, subId));
+    const subId = c.req.param('id');
+
+    const existing = await db.select().from(subscriptions).where(eq(subscriptions.id, subId)).limit(1);
+    if (existing.length === 0) {
+      return c.json({ error: 'Subscription not found' }, 404);
     }
-    
-    console.log(`[SuperAdmin] Subscription ${subId} ${immediate ? 'canceled' : 'set to cancel at period end'}`);
-    await logAuditAction({ action: 'subscription_canceled', resourceType: 'subscription', resourceId: subId, details: { immediate }, level: 'warning' });
+
+    await db.update(subscriptions).set({ status: 'canceled', canceledAt: new Date(), updatedAt: new Date() }).where(eq(subscriptions.id, subId));
+
+    if (existing[0].userId) {
+      await db.update(users).set({ subscriptionStatus: 'canceled', updatedAt: new Date() }).where(eq(users.id, existing[0].userId));
+    }
+
+    await logAuditAction({ action: 'subscription_canceled', resourceType: 'subscription', resourceId: subId });
+
     return c.json({ success: true });
   } catch (error: any) {
     console.error('[SuperAdmin] Cancel subscription error:', error);
@@ -485,22 +294,23 @@ app.post('/subscriptions/:subId/cancel', authMiddleware, async (c) => {
   }
 });
 
-// Reactivate subscription
-app.post('/subscriptions/:subId/reactivate', authMiddleware, async (c) => {
+app.post('/subscriptions/:id/reactivate', authMiddleware, async (c) => {
   try {
-    const subId = c.req.param('subId');
-    
-    await db
-      .update(subscriptions)
-      .set({ 
-        status: 'active',
-        cancelAtPeriodEnd: false,
-        updatedAt: new Date()
-      })
-      .where(eq(subscriptions.id, subId));
-    
-    console.log(`[SuperAdmin] Subscription ${subId} reactivated`);
+    const subId = c.req.param('id');
+
+    const existing = await db.select().from(subscriptions).where(eq(subscriptions.id, subId)).limit(1);
+    if (existing.length === 0) {
+      return c.json({ error: 'Subscription not found' }, 404);
+    }
+
+    await db.update(subscriptions).set({ status: 'active', canceledAt: null, cancelAtPeriodEnd: false, updatedAt: new Date() }).where(eq(subscriptions.id, subId));
+
+    if (existing[0].userId) {
+      await db.update(users).set({ subscriptionStatus: 'active', updatedAt: new Date() }).where(eq(users.id, existing[0].userId));
+    }
+
     await logAuditAction({ action: 'subscription_reactivated', resourceType: 'subscription', resourceId: subId });
+
     return c.json({ success: true });
   } catch (error: any) {
     console.error('[SuperAdmin] Reactivate subscription error:', error);
@@ -508,457 +318,22 @@ app.post('/subscriptions/:subId/reactivate', authMiddleware, async (c) => {
   }
 });
 
-// Delete subscription
-app.delete('/subscriptions/:subId', authMiddleware, async (c) => {
+app.delete('/subscriptions/:id', authMiddleware, async (c) => {
   try {
-    const subId = c.req.param('subId');
-    
-    await db
-      .delete(subscriptions)
-      .where(eq(subscriptions.id, subId));
-    
-    console.log(`[SuperAdmin] Subscription ${subId} deleted`);
-    await logAuditAction({ action: 'subscription_deleted', resourceType: 'subscription', resourceId: subId, level: 'warning' });
+    const subId = c.req.param('id');
+
+    const existing = await db.select().from(subscriptions).where(eq(subscriptions.id, subId)).limit(1);
+    if (existing.length === 0) {
+      return c.json({ error: 'Subscription not found' }, 404);
+    }
+
+    await db.delete(subscriptions).where(eq(subscriptions.id, subId));
+    await logAuditAction({ action: 'subscription_deleted', resourceType: 'subscription', resourceId: subId, details: { planName: existing[0].planName, userId: existing[0].userId } });
+
     return c.json({ success: true });
   } catch (error: any) {
     console.error('[SuperAdmin] Delete subscription error:', error);
     return c.json({ error: 'Failed to delete subscription' }, 500);
-  }
-});
-
-app.get('/email-stats', authMiddleware, async (c) => {
-  try {
-    const sentTodayResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM email_logs 
-      WHERE created_at >= CURRENT_DATE
-    `).catch(() => ({ rows: [{ count: 0 }] }));
-
-    const deliveredResult = await db.execute(sql`
-      SELECT 
-        COUNT(*) FILTER (WHERE status = 'delivered') as delivered,
-        COUNT(*) as total
-      FROM email_logs
-    `).catch(() => ({ rows: [{ delivered: 0, total: 0 }] }));
-
-    const openedResult = await db.execute(sql`
-      SELECT 
-        COUNT(*) FILTER (WHERE opened = true) as opened,
-        COUNT(*) as total
-      FROM email_logs
-    `).catch(() => ({ rows: [{ opened: 0, total: 0 }] }));
-
-    const bouncedResult = await db.execute(sql`
-      SELECT 
-        COUNT(*) FILTER (WHERE status = 'bounced') as bounced,
-        COUNT(*) as total
-      FROM email_logs
-    `).catch(() => ({ rows: [{ bounced: 0, total: 0 }] }));
-
-    const sentToday = Number(sentTodayResult.rows[0]?.count || 0);
-    const delivered = Number(deliveredResult.rows[0]?.delivered || 0);
-    const totalDelivery = Number(deliveredResult.rows[0]?.total || 0);
-    const opened = Number(openedResult.rows[0]?.opened || 0);
-    const totalOpened = Number(openedResult.rows[0]?.total || 0);
-    const bounced = Number(bouncedResult.rows[0]?.bounced || 0);
-    const totalBounced = Number(bouncedResult.rows[0]?.total || 0);
-
-    return c.json({
-      sentToday,
-      deliveryRate: totalDelivery > 0 ? Math.round((delivered / totalDelivery) * 100) : 0,
-      openRate: totalOpened > 0 ? Math.round((opened / totalOpened) * 100) : 0,
-      bounceRate: totalBounced > 0 ? Math.round((bounced / totalBounced) * 100) : 0,
-    });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Email stats error:', error);
-    return c.json({ sentToday: 0, deliveryRate: 0, openRate: 0, bounceRate: 0 });
-  }
-});
-
-app.get('/stripe-dashboard', authMiddleware, async (c) => {
-  try {
-    const stripe = await getUncachableStripeClient();
-
-    let totalRevenue = 0;
-    let recentTransactions: any[] = [];
-
-    if (stripe) {
-      try {
-        const charges = await stripe.charges.list({ limit: 100 });
-        totalRevenue = charges.data
-          .filter((ch) => ch.status === 'succeeded')
-          .reduce((sum, ch) => sum + ch.amount, 0) / 100;
-      } catch (stripeErr) {
-        console.error('[SuperAdmin] Stripe charges error:', stripeErr);
-      }
-
-      try {
-        const recent = await stripe.charges.list({ limit: 10, expand: ['data.customer'] });
-        recentTransactions = recent.data.map((ch) => ({
-          amount: ch.amount / 100,
-          currency: ch.currency,
-          status: ch.status,
-          created: new Date(ch.created * 1000).toISOString(),
-          customerEmail: typeof ch.customer === 'object' && ch.customer !== null ? (ch.customer as any).email || null : null,
-        }));
-      } catch (stripeErr) {
-        console.error('[SuperAdmin] Stripe recent transactions error:', stripeErr);
-      }
-    }
-
-    let mrr = 0;
-    try {
-      const mrrResult = await db
-        .select({
-          total: sql<number>`COALESCE(SUM(CASE
-            WHEN status = 'active' THEN
-              CASE plan_name
-                WHEN 'Starter' THEN 49
-                WHEN 'Professional' THEN 99
-                WHEN 'Agency' THEN 149
-                ELSE 0
-              END
-            ELSE 0 END), 0)`
-        })
-        .from(subscriptions);
-      mrr = mrrResult[0]?.total || 0;
-    } catch (dbErr) {
-      console.error('[SuperAdmin] MRR DB error:', dbErr);
-    }
-
-    let lifetimeDeals = 0;
-    try {
-      const [ltResult] = await db
-        .select({ count: count() })
-        .from(users)
-        .where(eq(users.subscriptionPlan, 'Lifetime'));
-      lifetimeDeals = ltResult?.count || 0;
-    } catch (dbErr) {
-      console.error('[SuperAdmin] Lifetime deals DB error:', dbErr);
-    }
-    const lifetimeRevenue = lifetimeDeals * 99;
-
-    let churnRate = 0;
-    try {
-      const churnResult = await db.execute(sql`
-        SELECT
-          COUNT(*) FILTER (WHERE status = 'canceled') as canceled,
-          COUNT(*) FILTER (WHERE status = 'active') as active
-        FROM subscriptions
-      `);
-      const canceled = Number(churnResult.rows[0]?.canceled || 0);
-      const active = Number(churnResult.rows[0]?.active || 0);
-      const total = active + canceled;
-      churnRate = total > 0 ? Math.round((canceled / total) * 10000) / 100 : 0;
-    } catch (dbErr) {
-      console.error('[SuperAdmin] Churn rate DB error:', dbErr);
-    }
-
-    let planDistribution: any[] = [];
-    try {
-      const distResult = await db.execute(sql`
-        SELECT subscription_plan as plan, COUNT(*) as count
-        FROM users
-        GROUP BY subscription_plan
-        ORDER BY count DESC
-      `);
-      planDistribution = distResult.rows.map((row: any) => ({
-        plan: row.plan || 'free',
-        count: Number(row.count),
-      }));
-    } catch (dbErr) {
-      console.error('[SuperAdmin] Plan distribution DB error:', dbErr);
-    }
-
-    return c.json({
-      totalRevenue,
-      mrr,
-      lifetimeDeals,
-      lifetimeRevenue,
-      churnRate,
-      recentTransactions,
-      planDistribution,
-    });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Stripe dashboard error:', error);
-    return c.json({ error: 'Failed to load stripe dashboard' }, 500);
-  }
-});
-
-app.get('/system-health', authMiddleware, async (c) => {
-  try {
-    const mem = process.memoryUsage();
-    const memoryUsage = {
-      rss: Math.round((mem.rss / 1024 / 1024) * 100) / 100,
-      heapTotal: Math.round((mem.heapTotal / 1024 / 1024) * 100) / 100,
-      heapUsed: Math.round((mem.heapUsed / 1024 / 1024) * 100) / 100,
-    };
-
-    let dbStatus = 'disconnected';
-    try {
-      await db.execute(sql`SELECT 1`);
-      dbStatus = 'connected';
-    } catch (dbErr) {
-      console.error('[SuperAdmin] DB health check failed:', dbErr);
-    }
-
-    let dbStats = { tableCount: 0, dbSize: '0 bytes' };
-    try {
-      const tableResult = await db.execute(sql`SELECT count(*) as table_count FROM information_schema.tables WHERE table_schema = 'public'`);
-      const sizeResult = await db.execute(sql`SELECT pg_size_pretty(pg_database_size(current_database())) as db_size`);
-      dbStats = {
-        tableCount: Number(tableResult.rows[0]?.table_count || 0),
-        dbSize: String(sizeResult.rows[0]?.db_size || '0 bytes'),
-      };
-    } catch (dbErr) {
-      console.error('[SuperAdmin] DB stats error:', dbErr);
-    }
-
-    return c.json({
-      uptime: process.uptime(),
-      memoryUsage,
-      nodeVersion: process.version,
-      environment: process.env.NODE_ENV || 'development',
-      dbStatus,
-      dbStats,
-      serverTime: new Date().toISOString(),
-      activeAdminSessions: activeTokens.size,
-    });
-  } catch (error: any) {
-    console.error('[SuperAdmin] System health error:', error);
-    return c.json({ error: 'Failed to load system health' }, 500);
-  }
-});
-
-app.get('/promo-codes', authMiddleware, async (c) => {
-  try {
-    const stripe = await getUncachableStripeClient();
-    if (!stripe) {
-      return c.json({ promoCodes: [] });
-    }
-
-    const promoCodes = await stripe.promotionCodes.list({ limit: 20, active: true, expand: ['data.coupon'] });
-    const formatted = promoCodes.data.map((pc: any) => ({
-      id: pc.id,
-      code: pc.code,
-      percentOff: pc.coupon?.percent_off || null,
-      timesRedeemed: pc.coupon?.times_redeemed || 0,
-      maxRedemptions: pc.max_redemptions || null,
-      active: pc.active,
-      created: new Date(pc.created * 1000).toISOString(),
-    }));
-
-    return c.json({ promoCodes: formatted });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Promo codes error:', error);
-    return c.json({ error: 'Failed to load promo codes' }, 500);
-  }
-});
-
-app.post('/promo-codes', authMiddleware, async (c) => {
-  try {
-    const stripe = await getUncachableStripeClient();
-    if (!stripe) {
-      return c.json({ error: 'Stripe not configured' }, 503);
-    }
-
-    const { code, percentOff, maxRedemptions, duration } = await c.req.json();
-
-    if (!code || !percentOff) {
-      return c.json({ error: 'code and percentOff are required' }, 400);
-    }
-
-    const coupon = await stripe.coupons.create({
-      percent_off: percentOff,
-      duration: duration || 'once',
-    });
-
-    const promoCode = await (stripe.promotionCodes as any).create({
-      coupon: coupon.id,
-      code,
-      max_redemptions: maxRedemptions || undefined,
-    });
-
-    await logAuditAction({ action: 'promo_code_created', resourceType: 'promo_code', resourceId: promoCode.id, newValues: { code, percentOff, maxRedemptions } });
-
-    return c.json({
-      success: true,
-      promoCode: {
-        id: promoCode.id,
-        code: promoCode.code,
-        percentOff: coupon.percent_off,
-        active: promoCode.active,
-      },
-    });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Create promo code error:', error);
-    return c.json({ error: error.message || 'Failed to create promo code' }, 500);
-  }
-});
-
-app.post('/promo-codes/:promoId/deactivate', authMiddleware, async (c) => {
-  try {
-    const stripe = await getUncachableStripeClient();
-    if (!stripe) {
-      return c.json({ error: 'Stripe not configured' }, 503);
-    }
-
-    const promoId = c.req.param('promoId');
-    await stripe.promotionCodes.update(promoId, { active: false });
-    await logAuditAction({ action: 'promo_code_deactivated', resourceType: 'promo_code', resourceId: promoId, level: 'warning' });
-
-    return c.json({ success: true });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Deactivate promo code error:', error);
-    return c.json({ error: error.message || 'Failed to deactivate promo code' }, 500);
-  }
-});
-
-app.get('/email-monitoring', authMiddleware, async (c) => {
-  try {
-    const sentTodayResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM email_logs
-      WHERE sent_at >= CURRENT_DATE
-    `).catch(() => ({ rows: [{ count: 0 }] }));
-
-    const deliveredResult = await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE status = 'delivered') as delivered,
-        COUNT(*) as total
-      FROM email_logs
-    `).catch(() => ({ rows: [{ delivered: 0, total: 0 }] }));
-
-    const openedResult = await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE opens > 0) as opened,
-        COUNT(*) as total
-      FROM email_logs
-    `).catch(() => ({ rows: [{ opened: 0, total: 0 }] }));
-
-    const bouncedResult = await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE status = 'bounced') as bounced,
-        COUNT(*) as total
-      FROM email_logs
-    `).catch(() => ({ rows: [{ bounced: 0, total: 0 }] }));
-
-    const sentToday = Number(sentTodayResult.rows[0]?.count || 0);
-    const delivered = Number(deliveredResult.rows[0]?.delivered || 0);
-    const totalDelivery = Number(deliveredResult.rows[0]?.total || 0);
-    const opened = Number(openedResult.rows[0]?.opened || 0);
-    const totalOpened = Number(openedResult.rows[0]?.total || 0);
-    const bounced = Number(bouncedResult.rows[0]?.bounced || 0);
-    const totalBounced = Number(bouncedResult.rows[0]?.total || 0);
-
-    let totalSent = 0;
-    try {
-      const totalResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs`);
-      totalSent = Number(totalResult.rows[0]?.count || 0);
-    } catch (dbErr) {
-      console.error('[SuperAdmin] Email total count error:', dbErr);
-    }
-
-    let recentEmails: any[] = [];
-    try {
-      const recentResult = await db.execute(sql`SELECT id, recipient, subject, status, opens, clicks, sent_at FROM email_logs ORDER BY sent_at DESC LIMIT 15`);
-      recentEmails = recentResult.rows.map((row: any) => ({
-        id: row.id,
-        to: row.recipient,
-        subject: row.subject,
-        status: row.status,
-        opened: (row.opens || 0) > 0,
-        clicked: (row.clicks || 0) > 0,
-        sentAt: row.sent_at,
-      }));
-    } catch (dbErr) {
-      console.error('[SuperAdmin] Recent emails error:', dbErr);
-    }
-
-    let dailyStats: any[] = [];
-    try {
-      const dailyResult = await db.execute(sql`
-        SELECT DATE(sent_at) as date, COUNT(*) as count,
-          COUNT(*) FILTER (WHERE status = 'delivered') as delivered,
-          COUNT(*) FILTER (WHERE opens > 0) as opened
-        FROM email_logs
-        WHERE sent_at >= NOW() - INTERVAL '7 days'
-        GROUP BY DATE(sent_at)
-        ORDER BY date DESC
-      `);
-      dailyStats = dailyResult.rows.map((row: any) => ({
-        date: row.date,
-        count: Number(row.count),
-        delivered: Number(row.delivered),
-        opened: Number(row.opened),
-      }));
-    } catch (dbErr) {
-      console.error('[SuperAdmin] Daily email stats error:', dbErr);
-    }
-
-    return c.json({
-      sentToday,
-      deliveryRate: totalDelivery > 0 ? Math.round((delivered / totalDelivery) * 100) : 0,
-      openRate: totalOpened > 0 ? Math.round((opened / totalOpened) * 100) : 0,
-      bounceRate: totalBounced > 0 ? Math.round((bounced / totalBounced) * 100) : 0,
-      totalSent,
-      recentEmails,
-      dailyStats,
-    });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Email monitoring error:', error);
-    return c.json({
-      sentToday: 0,
-      deliveryRate: 0,
-      openRate: 0,
-      bounceRate: 0,
-      totalSent: 0,
-      recentEmails: [],
-      dailyStats: [],
-    });
-  }
-});
-
-app.get('/audit-logs', authMiddleware, async (c) => {
-  try {
-    const page = Math.max(1, parseInt(c.req.query('page') || '1'));
-    const pageLimit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50')));
-    const actionFilter = (c.req.query('action') || '').slice(0, 100);
-    const resourceFilter = c.req.query('resource') || '';
-    const levelFilter = c.req.query('level') || '';
-    const offset = (page - 1) * pageLimit;
-
-    const validResources = ['user', 'subscription', 'promo_code', 'session', 'whatsapp'];
-    const validLevels = ['info', 'warning', 'error'];
-
-    const conditions: ReturnType<typeof sql>[] = [];
-    if (actionFilter) {
-      conditions.push(sql`action ILIKE ${'%' + actionFilter + '%'}`);
-    }
-    if (resourceFilter && validResources.includes(resourceFilter)) {
-      conditions.push(sql`resource_type = ${resourceFilter}`);
-    }
-    if (levelFilter && validLevels.includes(levelFilter)) {
-      conditions.push(sql`level = ${levelFilter}`);
-    }
-
-    const whereClause = conditions.length > 0
-      ? sql`WHERE ${conditions.reduce((acc, cond, i) => i === 0 ? cond : sql`${acc} AND ${cond}`)}`
-      : sql``;
-
-    const [countResult, logsResult] = await Promise.all([
-      db.execute(sql`SELECT COUNT(*) as count FROM audit_logs ${whereClause}`),
-      db.execute(sql`SELECT id, admin_user_id, action, resource_type, resource_id, old_values, new_values, details, level, created_at FROM audit_logs ${whereClause} ORDER BY created_at DESC LIMIT ${pageLimit} OFFSET ${offset}`),
-    ]);
-    const total = Number(countResult.rows[0]?.count || 0);
-
-    return c.json({
-      logs: logsResult.rows,
-      total,
-      page,
-      totalPages: Math.ceil(total / pageLimit),
-    });
-  } catch (error: any) {
-    console.error('[SuperAdmin] Audit logs error:', error);
-    return c.json({ logs: [], total: 0, page: 1, totalPages: 0 });
   }
 });
 
@@ -1031,7 +406,10 @@ app.get('/ai-usage', authMiddleware, async (c) => {
       FROM ai_usage_logs
       ORDER BY created_at DESC
       LIMIT 20
-    `).catch(() => ({ rows: [] }));
+    `).catch((err) => {
+      console.error('[AI Usage] Recent logs error:', err);
+      return { rows: [] };
+    });
 
     const stats = totalResult.rows[0] || {};
     const today = todayResult.rows[0] || {};
@@ -1071,7 +449,19 @@ app.get('/ai-usage', authMiddleware, async (c) => {
         tokens: Number(r.tokens),
         costCents: Number(r.cost_cents),
       })),
-      recentLogs: recentResult.rows,
+      recentLogs: recentResult.rows.map((r: any) => ({
+        id: r.id,
+        user_id: r.user_id,
+        feature: r.feature,
+        model: r.model,
+        prompt_tokens: Number(r.prompt_tokens),
+        completion_tokens: Number(r.completion_tokens),
+        total_tokens: Number(r.total_tokens),
+        cost_cents: r.cost_cents,
+        duration_ms: Number(r.duration_ms),
+        status: r.status,
+        created_at: r.created_at,
+      })),
     });
   } catch (error: any) {
     console.error('[SuperAdmin] AI usage error:', error);
@@ -1085,6 +475,9 @@ app.get('/ai-usage', authMiddleware, async (c) => {
     });
   }
 });
+
+// WhatsApp reporting status
+import { getWhatsAppStatus, setReportingEnabled, sendTestMessage, sendHourlyReport } from '../services/whatsapp';
 
 app.get('/whatsapp-status', authMiddleware, async (c) => {
   return c.json(getWhatsAppStatus());
@@ -1109,4 +502,293 @@ app.post('/whatsapp-send-report', authMiddleware, async (c) => {
   return c.json({ success });
 });
 
+app.get('/system-health', authMiddleware, async (c) => {
+  try {
+    const memoryUsage = process.memoryUsage();
+
+    let dbStatus = 'disconnected';
+    let dbStats = { tableCount: 0, dbSize: '0 MB' };
+    try {
+      const tableResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = 'public'
+      `);
+      const sizeResult = await db.execute(sql`
+        SELECT pg_size_pretty(pg_database_size(current_database())) as size
+      `);
+      dbStatus = 'connected';
+      dbStats = {
+        tableCount: Number((tableResult.rows[0] as any)?.count || 0),
+        dbSize: (sizeResult.rows[0] as any)?.size || '0 MB',
+      };
+    } catch (e) {
+      dbStatus = 'error';
+    }
+
+    return c.json({
+      uptime: process.uptime(),
+      memoryUsage: {
+        rss: memoryUsage.rss,
+        heapTotal: memoryUsage.heapTotal,
+        heapUsed: memoryUsage.heapUsed,
+      },
+      nodeVersion: process.version,
+      environment: process.env.NODE_ENV || 'development',
+      dbStatus,
+      dbStats,
+      serverTime: new Date().toISOString(),
+      activeAdminSessions: activeAdminTokens.size,
+    });
+  } catch (error: any) {
+    console.error('[SuperAdmin] System health error:', error);
+    return c.json({ error: 'Failed to fetch system health' }, 500);
+  }
+});
+
+app.get('/stripe-dashboard', authMiddleware, async (c) => {
+  try {
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ error: 'Stripe not configured' }, 503);
+    }
+
+    const charges = await stripeClient.charges.list({ limit: 100 });
+    const succeededCharges = charges.data.filter(ch => ch.status === 'succeeded');
+    const totalRevenue = succeededCharges.reduce((sum, ch) => sum + ch.amount, 0);
+
+    const activeStripeSubscriptions = await stripeClient.subscriptions.list({ status: 'active', limit: 100 });
+    const mrr = activeStripeSubscriptions.data.reduce((sum, sub) => {
+      const item = sub.items?.data?.[0];
+      const amount = item?.price?.unit_amount || 0;
+      const interval = item?.price?.recurring?.interval || 'month';
+      
+      // Normalize to monthly
+      if (interval === 'year') {
+        return sum + Math.round(amount / 12);
+      }
+      return sum + amount;
+    }, 0);
+
+    const lifetimeUsers = await db.execute(sql`
+      SELECT COUNT(*) as count FROM users WHERE LOWER(subscription_plan) = 'lifetime'
+    `).catch(() => ({ rows: [{ count: 0 }] }));
+    const lifetimeDeals = Number((lifetimeUsers.rows[0] as any)?.count || 0);
+    const lifetimeRevenue = lifetimeDeals * 9900;
+
+    const churnedSubs = await stripeClient.subscriptions.list({ status: 'canceled', limit: 100 });
+    const totalSubs = activeStripeSubscriptions.data.length + churnedSubs.data.length;
+    const churnRate = totalSubs > 0 ? (churnedSubs.data.length / totalSubs) * 100 : 0;
+
+    const recentPayments = await stripeClient.paymentIntents.list({ limit: 20 });
+    const recentTransactions = recentPayments.data.map(pi => ({
+      amount: pi.amount,
+      currency: pi.currency,
+      status: pi.status,
+      created: new Date(pi.created * 1000).toISOString(),
+      customerEmail: (pi as any).receipt_email || null,
+    }));
+
+    const planResult = await db.execute(sql`
+      SELECT COALESCE(subscription_plan, 'free') as plan, COUNT(*) as count
+      FROM users
+      GROUP BY subscription_plan
+      ORDER BY count DESC
+    `).catch(() => ({ rows: [] }));
+    const planDistribution = planResult.rows.map((r: any) => ({
+      plan: r.plan || 'free',
+      count: Number(r.count),
+    }));
+
+    return c.json({
+      totalRevenue,
+      mrr,
+      lifetimeDeals,
+      lifetimeRevenue,
+      churnRate: Math.round(churnRate * 100) / 100,
+      recentTransactions,
+      planDistribution,
+    });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Stripe dashboard error:', error);
+    return c.json({ error: 'Failed to fetch Stripe data' }, 500);
+  }
+});
+
+app.get('/promo-codes', authMiddleware, async (c) => {
+  try {
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ promoCodes: [] });
+    }
+
+    const promotionCodes = await stripeClient.promotionCodes.list({ limit: 50, expand: ['data.coupon'] });
+    const promoCodes = promotionCodes.data.map((pc: any) => ({
+      id: pc.id,
+      code: pc.code,
+      percentOff: pc.coupon?.percent_off || 0,
+      amountOff: pc.coupon?.amount_off || 0,
+      timesRedeemed: pc.times_redeemed || 0,
+      maxRedemptions: pc.max_redemptions || null,
+      active: pc.active,
+      created: new Date(pc.created * 1000).toISOString(),
+      duration: pc.coupon?.duration || 'forever',
+    }));
+
+    return c.json({ promoCodes });
+  } catch (error: any) {
+    console.error('[SuperAdmin] List promo codes error:', error);
+    return c.json({ promoCodes: [] });
+  }
+});
+
+app.post('/promo-codes', authMiddleware, async (c) => {
+  try {
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ error: 'Stripe not configured' }, 503);
+    }
+
+    const body = await c.req.json();
+    const { code, percentOff, maxRedemptions, duration } = body;
+
+    if (!code || !percentOff) {
+      return c.json({ error: 'Code and percentOff are required' }, 400);
+    }
+
+    const coupon = await stripeClient.coupons.create({
+      percent_off: Number(percentOff),
+      duration: duration || 'forever',
+      name: `${percentOff}% Off - ${code.toUpperCase()}`,
+      metadata: { created_by: 'superadmin' },
+    });
+
+    const promoParams: any = {
+      coupon: coupon.id,
+      code: code.toUpperCase(),
+    };
+    if (maxRedemptions) {
+      promoParams.max_redemptions = Number(maxRedemptions);
+    }
+
+    const promoCode = await stripeClient.promotionCodes.create(promoParams);
+
+    await logAuditAction({
+      action: 'promo_code_created',
+      resourceType: 'promo_code',
+      resourceId: promoCode.id,
+      details: { code: promoCode.code, percentOff, maxRedemptions, duration },
+    });
+
+    return c.json({
+      success: true,
+      promoCode: {
+        id: promoCode.id,
+        code: promoCode.code,
+        percentOff: coupon.percent_off,
+        timesRedeemed: 0,
+        maxRedemptions: promoCode.max_redemptions || null,
+        active: promoCode.active,
+        created: new Date(promoCode.created * 1000).toISOString(),
+        duration: coupon.duration,
+      },
+    });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Create promo code error:', error);
+    return c.json({ error: error?.message || 'Failed to create promo code' }, 500);
+  }
+});
+
+app.post('/promo-codes/:id/deactivate', authMiddleware, async (c) => {
+  try {
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ error: 'Stripe not configured' }, 503);
+    }
+
+    const promoId = c.req.param('id');
+    await stripeClient.promotionCodes.update(promoId, { active: false });
+
+    await logAuditAction({
+      action: 'promo_code_deactivated',
+      resourceType: 'promo_code',
+      resourceId: promoId,
+    });
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Deactivate promo code error:', error);
+    return c.json({ error: error?.message || 'Failed to deactivate promo code' }, 500);
+  }
+});
+
+app.get('/email-logs', authMiddleware, async (c) => {
+  try {
+    const page = parseInt(c.req.query('page') || '1', 10);
+    const limit = parseInt(c.req.query('limit') || '20', 10);
+    const search = c.req.query('search') || '';
+    const statusFilter = c.req.query('status') || '';
+    const offset = (page - 1) * limit;
+
+    const totalResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs`);
+    const total = Number((totalResult.rows[0] as any)?.count || 0);
+
+    const sentResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE status = 'sent'`);
+    const failedResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE status = 'failed'`);
+    const openedResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE opens > 0`);
+    const clickedResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE clicks > 0`);
+
+    const stats = {
+      total,
+      sent: Number((sentResult.rows[0] as any)?.count || 0),
+      failed: Number((failedResult.rows[0] as any)?.count || 0),
+      opened: Number((openedResult.rows[0] as any)?.count || 0),
+      clicked: Number((clickedResult.rows[0] as any)?.count || 0),
+    };
+
+    let logsQuery = sql`
+      SELECT id, recipient, subject, template_id, sequence_id, status, message_id,
+             opens, clicks, sent_at, opened_at, clicked_at, bounced_at, error
+      FROM email_logs
+    `;
+
+    const conditions: any[] = [];
+    if (search) {
+      logsQuery = sql`
+        SELECT id, recipient, subject, template_id, sequence_id, status, message_id,
+               opens, clicks, sent_at, opened_at, clicked_at, bounced_at, error
+        FROM email_logs
+        WHERE (recipient ILIKE ${'%' + search + '%'} OR subject ILIKE ${'%' + search + '%'})
+      `;
+      if (statusFilter && statusFilter !== 'all') {
+        logsQuery = sql`
+          SELECT id, recipient, subject, template_id, sequence_id, status, message_id,
+                 opens, clicks, sent_at, opened_at, clicked_at, bounced_at, error
+          FROM email_logs
+          WHERE (recipient ILIKE ${'%' + search + '%'} OR subject ILIKE ${'%' + search + '%'})
+            AND status = ${statusFilter}
+        `;
+      }
+    } else if (statusFilter && statusFilter !== 'all') {
+      logsQuery = sql`
+        SELECT id, recipient, subject, template_id, sequence_id, status, message_id,
+               opens, clicks, sent_at, opened_at, clicked_at, bounced_at, error
+        FROM email_logs
+        WHERE status = ${statusFilter}
+      `;
+    }
+
+    const finalQuery = sql`${logsQuery} ORDER BY sent_at DESC LIMIT ${limit} OFFSET ${offset}`;
+    const logsResult = await db.execute(finalQuery);
+
+    return c.json({
+      logs: logsResult.rows,
+      total,
+      stats,
+    });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Email logs error:', error);
+    return c.json({ logs: [], total: 0, stats: { total: 0, sent: 0, failed: 0, opened: 0, clicked: 0 } });
+  }
+});
+
 export { app as superadminRoutes };
+

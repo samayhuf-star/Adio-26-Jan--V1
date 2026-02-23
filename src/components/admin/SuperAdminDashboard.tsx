@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { 
   Shield, LogOut, Users, CreditCard, RefreshCw, Search, 
   Ban, CheckCircle, Eye, TrendingUp, DollarSign, Activity,
   UserCheck, AlertTriangle, Calendar, Mail, ChevronRight,
   Edit, Trash2, X, Save, MoreHorizontal, MessageSquare,
-  Server, Tag, Brain, FileText, MessageCircle
+  Server, Tag, Brain, FileText, MessageCircle, Globe
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -21,6 +21,7 @@ import { AuditLogsDashboard } from './AuditLogsDashboard';
 import { AIUsageDashboard } from './AIUsageDashboard';
 import { WhatsAppConfigPanel } from './WhatsAppConfigPanel';
 import AnalyticsDashboard from './AnalyticsDashboard';
+const SEODirectoryGuide = lazy(() => import('./SEODirectoryGuide'));
 import {
   Dialog,
   DialogContent,
@@ -76,7 +77,7 @@ interface SubscriptionRecord {
   createdAt: string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'emails' | 'email-monitoring' | 'analytics' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp';
+type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'emails' | 'email-monitoring' | 'analytics' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -466,6 +467,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             { id: 'ai-usage', label: 'AI Usage', icon: Brain },
             { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
             { id: 'analytics', label: 'Analytics', icon: Activity },
+            { id: 'seo', label: 'SEO & Directories', icon: Globe },
             { id: 'feedback', label: 'Feedback', icon: MessageSquare }
           ].map(tab => (
             <Button
@@ -861,6 +863,13 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           <AnalyticsDashboard token={token} />
         )}
 
+        {/* SEO & Directories Tab */}
+        {activeTab === 'seo' && (
+          <Suspense fallback={<div className="text-center text-slate-400 py-10">Loading SEO guide...</div>}>
+            <SEODirectoryGuide />
+          </Suspense>
+        )}
+
         {/* Feedback Tab */}
         {activeTab === 'feedback' && (
           <NotificationProvider>
@@ -1182,7 +1191,7 @@ function EmailManagementSection({ token }: { token: string }) {
 
       {emailTab === 'logs' && (
         <div className="bg-white rounded-xl p-6">
-          <EmailLogs />
+          <EmailLogs token={token} />
         </div>
       )}
     </div>

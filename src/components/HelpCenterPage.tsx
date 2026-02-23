@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Search, BookOpen, Zap, Target, Settings, Shield, CreditCard, MessageSquare, ChevronRight, ChevronDown, Mail, ExternalLink, HelpCircle, Rocket, BarChart3, Users, CheckCircle2, Lightbulb, AlertTriangle } from 'lucide-react';
 
 interface HelpCenterPageProps {
@@ -226,7 +227,7 @@ export const HelpCenterPage: React.FC<HelpCenterPageProps> = ({ onBack }) => {
           description: 'Compare features across different pricing tiers',
           content: [
             { type: 'text', body: 'Adiology offers four pricing tiers to fit different needs, from individual marketers to agencies managing multiple clients.' },
-            { type: 'list', heading: 'Available Plans', body: 'Starter ($49/month): Essential campaign building tools, up to 10 campaigns per month, basic keyword generation\nProfessional ($99/month): Unlimited campaigns, advanced AI features, priority support, all keyword tools\nAgency ($149/month): Everything in Professional plus team collaboration, white-label exports, bulk campaign management\nLifetime ($99 one-time): Full access to all features with a single payment, no recurring charges' },
+            { type: 'list', heading: 'Available Plans', body: 'Starter ($49/month): Essential campaign building tools, up to 10 campaigns per month, basic keyword generation\nProfessional ($99/month): Unlimited campaigns, advanced AI features, priority support, all keyword tools\nAgency ($149/month): Everything in Professional plus white-label exports, bulk campaign management, dedicated support\nLifetime ($99 one-time): Full access to all features with a single payment, no recurring charges' },
             { type: 'tip', body: 'All paid plans include a 7-day free trial and a 14-day money-back guarantee. The Lifetime plan is the best value for long-term users.' }
           ]
         },
@@ -433,8 +434,21 @@ export const HelpCenterPage: React.FC<HelpCenterPageProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white">
+    <>
+      <Helmet>
+        <title>Help Center - Adiology | Guides, FAQs & Documentation</title>
+        <meta name="description" content="Find answers to common questions about Adiology. Browse guides, tutorials, and FAQs about Google Ads campaign building, keyword planning, and more." />
+        <link rel="canonical" href="https://adiology.io/help-center" />
+        <meta property="og:title" content="Help Center - Adiology" />
+        <meta property="og:description" content="Find answers to common questions about Adiology and Google Ads campaign building." />
+        <meta property="og:url" content="https://adiology.io/help-center" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Help Center - Adiology" />
+        <meta name="twitter:description" content="Find answers to common questions about Adiology." />
+      </Helmet>
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <button
             onClick={handleBack}
@@ -614,5 +628,6 @@ export const HelpCenterPage: React.FC<HelpCenterPageProps> = ({ onBack }) => {
         )}
       </div>
     </div>
+    </>
   );
 };

@@ -24,6 +24,28 @@ export default function InstantMailPage({ onGetStarted, onBack }: InstantMailPag
         <meta property="og:description" content="Generate anonymous email addresses for competitive intelligence research." />
         <meta property="og:url" content="https://adiology.io/features/proxy-mail" />
         <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Proxy Mail - Anonymous Email for Competitive Intelligence | Adiology" />
+        <meta name="twitter:description" content="Generate anonymous email addresses for competitive intelligence research." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Proxy Mail",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://adiology.io/features/proxy-mail",
+          "description": "Generate anonymous email addresses for competitive intelligence research. Sign up for competitor newsletters and trials without revealing your identity.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io"
+          }
+        })}</script>
       </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
         <Navigation onGetStarted={onGetStarted} onBack={onBack} />

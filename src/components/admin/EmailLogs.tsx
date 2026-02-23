@@ -7,8 +7,6 @@ import {
   Mail, Search, RefreshCw, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, Eye, MousePointer, AlertTriangle
 } from 'lucide-react';
-import { useAuthCompat } from '../../utils/authCompat';
-
 interface EmailLog {
   id: string;
   recipient: string;
@@ -34,7 +32,11 @@ interface EmailStats {
   clicked: number;
 }
 
-export function EmailLogs() {
+interface EmailLogsProps {
+  token?: string;
+}
+
+export function EmailLogs({ token }: EmailLogsProps = {}) {
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,13 +44,12 @@ export function EmailLogs() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState<EmailStats>({ total: 0, sent: 0, failed: 0, opened: 0, clicked: 0 });
-  const { getToken } = useAuthCompat();
   const perPage = 20;
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const token = await getToken();
+      const adminToken = token || sessionStorage.getItem('superadmin_token');
       const params = new URLSearchParams({
         page: page.toString(),
         limit: perPage.toString(),
@@ -56,9 +57,9 @@ export function EmailLogs() {
         ...(statusFilter !== 'all' && { status: statusFilter })
       });
       
-      const response = await fetch(`/api/admin/email/logs?${params}`, {
+      const response = await fetch(`/api/superadmin/email-logs?${params}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${adminToken}`,
           'Content-Type': 'application/json'
         }
       });

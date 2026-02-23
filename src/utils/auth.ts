@@ -66,7 +66,7 @@ export async function signUpWithEmail(
   password: string,
   passwordConfirm?: string,
   name?: string
-): Promise<{ data: User | null; error: { message: string } | null; needsEmailVerification?: boolean; message?: string }> {
+): Promise<{ data: User | null; error: { message: string } | null; needsEmailVerification?: boolean; message?: string; token?: string; skipPayment?: boolean; isLifetimeDeal?: boolean; user?: any }> {
   try {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
@@ -82,6 +82,13 @@ export async function signUpWithEmail(
       return { data: null, error: { message: result.error || 'Registration failed' } };
     }
 
+    if (result.token) {
+      localStorage.setItem('auth_token', result.token);
+      if (result.user) {
+        localStorage.setItem('user', JSON.stringify(result.user));
+      }
+    }
+
     if (result.needsEmailVerification) {
       return {
         data: null,
@@ -91,7 +98,14 @@ export async function signUpWithEmail(
       };
     }
 
-    return { data: null, error: null };
+    return {
+      data: null,
+      error: null,
+      token: result.token,
+      skipPayment: result.skipPayment,
+      isLifetimeDeal: result.isLifetimeDeal,
+      user: result.user,
+    };
   } catch (err: any) {
     console.error('Signup error:', err);
     return { data: null, error: { message: err.message || 'Failed to create account' } };

@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { 
@@ -27,20 +28,50 @@ export default function CreativeMinimalistHomepage({
   onNavigateToPage
 }: CreativeMinimalistHomepageProps) {
   return (
-    <div id="main-content" className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
-      <Navigation onGetStarted={onGetStarted} onLogin={onLogin} onNavigateToPage={onNavigateToPage} />
-      <HeroSection onGetStarted={onGetStarted} />
-      <LifetimeDealBanner onNavigateToPage={onNavigateToPage} />
-      <PlatformFeaturesSection onGetStarted={onGetStarted} />
-      <CampaignBuilderSection onGetStarted={onGetStarted} />
-      <KeywordSuiteSection onGetStarted={onGetStarted} />
-      <SecurityToolsSection onGetStarted={onGetStarted} />
-      <AIFeaturesSection onGetStarted={onGetStarted} />
-      <SocialProofSection />
-      <PricingSection onSelectPlan={onSelectPlan} />
-      <FinalCTA onGetStarted={onGetStarted} />
-      <Footer onNavigateToPolicy={onNavigateToPolicy} onNavigateToApp={onNavigateToApp} onNavigateToPage={onNavigateToPage} />
-    </div>
+    <>
+      <Helmet>
+        <title>Adiology - AI-Powered Google Ads Campaign Builder & Management Platform</title>
+        <meta name="description" content="Build, optimize, and manage Google Ads campaigns with AI-powered tools. Campaign builder, keyword planner, click fraud protection, ad research, and more. Start free." />
+        <link rel="canonical" href="https://adiology.io/" />
+        <meta property="og:title" content="Adiology - AI-Powered Google Ads Campaign Builder" />
+        <meta property="og:description" content="Build, optimize, and manage Google Ads campaigns with AI. Campaign builder, keyword planner, click fraud protection, and more." />
+        <meta property="og:url" content="https://adiology.io/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Adiology" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Adiology - AI-Powered Google Ads Campaign Builder" />
+        <meta name="twitter:description" content="Build, optimize, and manage Google Ads campaigns with AI-powered tools." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "Adiology",
+          "url": "https://adiology.io",
+          "description": "AI-Powered Google Ads Campaign Builder & Management Platform",
+          "sameAs": [],
+          "offers": {
+            "@type": "AggregateOffer",
+            "lowPrice": "0",
+            "highPrice": "99",
+            "priceCurrency": "USD",
+            "offerCount": "4"
+          }
+        })}</script>
+      </Helmet>
+      <div id="main-content" className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
+        <Navigation onGetStarted={onGetStarted} onLogin={onLogin} onNavigateToPage={onNavigateToPage} />
+        <HeroSection onGetStarted={onGetStarted} onNavigateToPage={onNavigateToPage} />
+        <LifetimeDealBanner onNavigateToPage={onNavigateToPage} />
+        <PlatformFeaturesSection onGetStarted={onGetStarted} />
+        <CampaignBuilderSection onGetStarted={onGetStarted} />
+        <KeywordSuiteSection onGetStarted={onGetStarted} />
+        <SecurityToolsSection onGetStarted={onGetStarted} />
+        <AIFeaturesSection onGetStarted={onGetStarted} />
+        <SocialProofSection />
+        <PricingSection onSelectPlan={onSelectPlan} />
+        <FinalCTA onGetStarted={onGetStarted} />
+        <Footer onNavigateToPolicy={onNavigateToPolicy} onNavigateToApp={onNavigateToApp} onNavigateToPage={onNavigateToPage} />
+      </div>
+    </>
   );
 }
 
@@ -213,7 +244,7 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
   );
 }
 
-function HeroSection({ onGetStarted }: { onGetStarted?: () => void }) {
+function HeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: () => void; onNavigateToPage?: (page: string) => void }) {
   const heroFeatures = [
     {
       icon: Rocket,
@@ -300,7 +331,7 @@ function HeroSection({ onGetStarted }: { onGetStarted?: () => void }) {
               transition={{ duration: 0.6, delay: 0.3 }}
             >
               <motion.button
-                onClick={onGetStarted}
+                onClick={() => onNavigateToPage?.('/demo')}
                 className="px-8 py-4 bg-white/10 border-2 border-white/20 text-white rounded-2xl font-semibold text-lg hover:bg-white/15 hover:border-violet-400/40 backdrop-blur-sm transition-all"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}

@@ -146,13 +146,19 @@ function Step1CreateAccount({
   onNext,
   onLogin,
   onBackToHome,
+  prefillEmail,
+  isLifetimeDeal,
+  onLifetimeComplete,
 }: {
   onNext: (email: string, name: string) => void;
   onLogin: () => void;
   onBackToHome: () => void;
+  prefillEmail?: string;
+  isLifetimeDeal?: boolean;
+  onLifetimeComplete?: () => void;
 }) {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(prefillEmail || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -188,6 +194,11 @@ function Step1CreateAccount({
         throw new Error(result.error.message || 'Signup failed');
       }
 
+      if (result.skipPayment && onLifetimeComplete) {
+        onLifetimeComplete();
+        return;
+      }
+
       onNext(email.trim().toLowerCase(), name.trim());
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred');
@@ -212,8 +223,12 @@ function Step1CreateAccount({
       </div>
 
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white mb-1">Create your account</h2>
-        <p className="text-gray-400 text-sm">Start building winning campaigns today</p>
+        <h2 className="text-2xl font-bold text-white mb-1">
+          {isLifetimeDeal ? 'Complete your account setup' : 'Create your account'}
+        </h2>
+        <p className="text-gray-400 text-sm">
+          {isLifetimeDeal ? 'Your Lifetime Access is confirmed — just set a password to get started' : 'Start building winning campaigns today'}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -313,10 +328,10 @@ function Step1CreateAccount({
           {isLoading ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="w-5 h-5 animate-spin" />
-              Creating account...
+              {isLifetimeDeal ? 'Setting up account...' : 'Creating account...'}
             </span>
           ) : (
-            'Continue to Payment'
+            isLifetimeDeal ? 'Complete Account Setup' : 'Continue to Payment'
           )}
         </Button>
       </form>
@@ -832,6 +847,9 @@ function WizardContent({
   const [userName, setUserName] = useState('');
   const [activePlan, setActivePlan] = useState(initialPlan);
 
+  const isLifetimeDeal = (initialPlan as any).isLifetimeDeal === true;
+  const prefillEmail = (initialPlan as any).prefillEmail || '';
+
   const handleStep1Complete = useCallback((email: string, name: string) => {
     setUserEmail(email);
     setUserName(name);
@@ -842,9 +860,25 @@ function WizardContent({
     setCurrentStep(3);
   }, []);
 
+  const handleLifetimeComplete = useCallback(() => {
+    sessionStorage.removeItem('lifetime_checkout_email');
+    sessionStorage.removeItem('lifetime_signup_email');
+    sessionStorage.removeItem('selectedPlan');
+    setCurrentStep(3);
+  }, []);
+
   const stableOnSuccess = useCallback(() => {
     onSuccess();
   }, [onSuccess]);
+
+  const effectiveStep = isLifetimeDeal && currentStep === 3 ? 3 : currentStep;
+  const lifetimePlanForConfirmation = {
+    name: 'Lifetime',
+    priceId: '',
+    amount: 9900,
+    isSubscription: false,
+    period: 'lifetime',
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -852,17 +886,20 @@ function WizardContent({
 
       <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-gradient-to-br from-slate-950 via-[#0f0d24] to-slate-950">
         <div className="w-full max-w-md">
-          <StepIndicator currentStep={currentStep} />
+          <StepIndicator currentStep={isLifetimeDeal ? (currentStep === 1 ? 1 : 3) : currentStep} />
 
           {currentStep === 1 && (
             <Step1CreateAccount
               onNext={handleStep1Complete}
               onLogin={onLogin}
               onBackToHome={onBackToHome}
+              prefillEmail={prefillEmail}
+              isLifetimeDeal={isLifetimeDeal}
+              onLifetimeComplete={handleLifetimeComplete}
             />
           )}
 
-          {currentStep === 2 && (
+          {currentStep === 2 && !isLifetimeDeal && (
             <Step2PaymentForm
               selectedPlan={activePlan}
               userEmail={userEmail}
@@ -873,10 +910,10 @@ function WizardContent({
             />
           )}
 
-          {currentStep === 3 && (
+          {effectiveStep === 3 && (
             <Step3Confirmation
-              selectedPlan={activePlan}
-              userEmail={userEmail}
+              selectedPlan={isLifetimeDeal ? lifetimePlanForConfirmation : activePlan}
+              userEmail={userEmail || prefillEmail}
               userName={userName}
               onSuccess={stableOnSuccess}
             />

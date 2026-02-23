@@ -35,6 +35,21 @@ function pruneInactiveUsers() {
 
 setInterval(pruneInactiveUsers, 30000);
 
+function normalizeReferrer(referrer: string | null | undefined, requestHost?: string): string | null {
+  if (!referrer || referrer.trim() === '') return null;
+  try {
+    const url = new URL(referrer);
+    const hostname = url.hostname;
+    if (hostname.includes('__replco') || referrer.includes('__replco') || referrer.includes('workspace_iframe')) return null;
+    if (hostname.includes('.janeway.replit.dev') || hostname.includes('.replit.dev')) return null;
+    if (requestHost && hostname === requestHost) return null;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return null;
+    return hostname;
+  } catch {
+    return referrer.trim() || null;
+  }
+}
+
 function parseUserAgent(ua: string): { browser: string; os: string; deviceType: string } {
   let browser = 'Other';
   let os = 'Other';
@@ -81,10 +96,13 @@ analyticsRoutes.post('/track', async (c) => {
       || c.req.header('x-real-ip')
       || 'unknown';
 
+    const requestHost = c.req.header('host')?.split(':')[0] || '';
+    const normalizedReferrer = normalizeReferrer(body.referrer, requestHost);
+
     const db = getDb();
     await db.insert(pageViews).values({
       path: body.path || '/',
-      referrer: body.referrer || null,
+      referrer: normalizedReferrer,
       userAgent: ua,
       ip,
       sessionId: body.sessionId || null,
@@ -102,7 +120,7 @@ analyticsRoutes.post('/track', async (c) => {
       activeUsers.set(body.sessionId, {
         sessionId: body.sessionId,
         path: body.path || '/',
-        referrer: body.referrer || '',
+        referrer: normalizedReferrer || '',
         ip,
         browser,
         os,
@@ -148,12 +166,15 @@ analyticsRoutes.post('/heartbeat', async (c) => {
       || c.req.header('x-real-ip')
       || 'unknown';
 
+    const requestHost = c.req.header('host')?.split(':')[0] || '';
+    const normalizedRef = normalizeReferrer(body.referrer, requestHost);
+
     const now = Date.now();
     const existing = activeUsers.get(body.sessionId);
     activeUsers.set(body.sessionId, {
       sessionId: body.sessionId,
       path: body.path || existing?.path || '/',
-      referrer: body.referrer || existing?.referrer || '',
+      referrer: normalizedRef || existing?.referrer || '',
       ip,
       browser,
       os,
@@ -237,12 +258,36 @@ analyticsRoutes.get('/stats', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const db = getDb();
-    const days = Math.min(Math.max(parseInt(c.req.query('days') || '30') || 30, 1), 365);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    const daysQuery = c.req.query('days');
+    let days = 30;
+    let startDate = new Date();
+    let endDate: Date | null = null;
 
-    const dateFilter = gte(pageViews.createdAt, startDate);
+    if (daysQuery === 'today') {
+      days = 0;
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+    } else if (daysQuery === 'yesterday') {
+      days = 1;
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date();
+      endDate.setDate(endDate.getDate() - 1);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (daysQuery === '2') {
+      days = 2;
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 2);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      days = Math.min(Math.max(parseInt(daysQuery || '30') || 30, 1), 365);
+      startDate.setDate(startDate.getDate() - days);
+    }
+
+    const dateFilter = endDate 
+      ? and(gte(pageViews.createdAt, startDate), lte(pageViews.createdAt, endDate))
+      : gte(pageViews.createdAt, startDate);
 
     const [
       totalViewsResult,

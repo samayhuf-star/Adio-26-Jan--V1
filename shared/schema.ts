@@ -972,6 +972,28 @@ export const blogPosts = pgTable("blog_posts", {
   createdAtIdx: index("idx_blog_posts_created_at").on(table.createdAt),
 }));
 
+export const appsumoLicenses = pgTable("appsumo_licenses", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  licenseKey: text("license_key").unique().notNull(),
+  userId: text("user_id"),
+  email: text("email"),
+  tier: integer("tier").default(1),
+  status: text("status").notNull().default("inactive"),
+  productId: text("product_id"),
+  activatedAt: timestamp("activated_at"),
+  deactivatedAt: timestamp("deactivated_at"),
+  eventLog: jsonb("event_log").$type<Array<{event: string, timestamp: number, tier?: number}>>().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  licenseKeyIdx: index("idx_appsumo_license_key").on(table.licenseKey),
+  userIdIdx: index("idx_appsumo_user_id").on(table.userId),
+  statusIdx: index("idx_appsumo_status").on(table.status),
+  emailIdx: index("idx_appsumo_email").on(table.email),
+}));
+
+export type AppSumoLicense = typeof appsumoLicenses.$inferSelect;
+
 export const pageViews = pgTable("page_views", {
   id: serial("id").primaryKey(),
   path: text("path").notNull(),

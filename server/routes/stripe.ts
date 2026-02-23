@@ -914,23 +914,40 @@ stripe.post('/webhook', async (c) => {
         console.log(`[Stripe Webhook] Lifetime deal purchase by ${customerEmail}`);
 
         if (customerEmail) {
+          let lifetimeUserId: string | null = null;
+
           try {
-            await stripePool.query(
+            const updateResult = await stripePool.query(
               `UPDATE users 
                SET subscription_plan = 'Lifetime', 
                    subscription_status = 'active',
                    updated_at = NOW()
-               WHERE LOWER(email) = LOWER($1)`,
+               WHERE LOWER(email) = LOWER($1)
+               RETURNING id`,
               [customerEmail]
             );
-            console.log(`[Stripe Webhook] Upgraded ${customerEmail} to Lifetime plan`);
+
+            if (updateResult.rowCount && updateResult.rowCount > 0) {
+              lifetimeUserId = updateResult.rows[0].id;
+              console.log(`[Stripe Webhook] Upgraded existing user ${customerEmail} to Lifetime plan`);
+            } else {
+              const newUserId = crypto.randomUUID();
+              const stripeCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null;
+              await stripePool.query(
+                `INSERT INTO users (id, email, role, subscription_plan, subscription_status, email_verified, stripe_customer_id, created_at, updated_at)
+                 VALUES ($1, LOWER($2), 'user', 'Lifetime', 'active', false, $3, NOW(), NOW())`,
+                [newUserId, customerEmail, stripeCustomerId]
+              );
+              lifetimeUserId = newUserId;
+              console.log(`[Stripe Webhook] Created new user ${customerEmail} with Lifetime plan`);
+            }
           } catch (dbErr) {
-            console.error('[Stripe Webhook] DB update error:', dbErr);
+            console.error('[Stripe Webhook] DB update/create error:', dbErr);
           }
 
           try {
-            const { sendEmail } = await import('../resendClient');
-            await sendEmail({
+            const { sendEmail: sendResendEmail } = await import('../resendClient');
+            await sendResendEmail({
               to: customerEmail,
               subject: 'Your Adiology Lifetime Access is Active!',
               html: buildLifetimeConfirmationEmail(customerEmail, session.amount_total),
@@ -940,28 +957,42 @@ stripe.post('/webhook', async (c) => {
             console.error('[Stripe Webhook] Email send error:', emailErr);
           }
 
-          try {
-            const userResult = await stripePool.query(
-              `SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND (email_verified IS NULL OR email_verified = false) LIMIT 1`,
-              [customerEmail]
-            );
-            if (userResult.rows.length > 0) {
-              const userId = userResult.rows[0].id;
-              const verifyToken = crypto.randomUUID();
-              const verifyExpires = new Date();
-              verifyExpires.setHours(verifyExpires.getHours() + 24);
-              await stripePool.query(
-                `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
-                 VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
-                [userId, verifyToken, verifyExpires]
+          if (lifetimeUserId) {
+            try {
+              const userResult = await stripePool.query(
+                `SELECT id FROM users WHERE id = $1 AND (email_verified IS NULL OR email_verified = false) LIMIT 1`,
+                [lifetimeUserId]
               );
-              const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
-              const verificationUrl = `${PROD_URL}/verify-email?token=${verifyToken}&email=${encodeURIComponent(customerEmail.toLowerCase())}`;
-              await EmailService.sendRaw(customerEmail.toLowerCase(), 'emailVerification', { verification_url: verificationUrl });
-              console.log(`[Stripe Webhook] Verification email sent to ${customerEmail} after lifetime deal`);
+              if (userResult.rows.length > 0) {
+                const userId = userResult.rows[0].id;
+                const verifyToken = crypto.randomUUID();
+                const verifyExpires = new Date();
+                verifyExpires.setHours(verifyExpires.getHours() + 24);
+                await stripePool.query(
+                  `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
+                   VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
+                  [userId, verifyToken, verifyExpires]
+                );
+                const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
+                const verificationUrl = `${PROD_URL}/verify-email?token=${verifyToken}&email=${encodeURIComponent(customerEmail.toLowerCase())}`;
+
+                const { sendEmail: sendVerifyEmail } = await import('../resendClient');
+                const { emailTemplates } = await import('../email-templates');
+                const template = emailTemplates.emailVerification;
+                let verifyHtml = template.html
+                  .replace(/\{\{verification_url\}\}/g, verificationUrl)
+                  .replace(/\{\{year\}\}/g, new Date().getFullYear().toString());
+
+                await sendVerifyEmail({
+                  to: customerEmail.toLowerCase(),
+                  subject: template.subject,
+                  html: verifyHtml,
+                });
+                console.log(`[Stripe Webhook] Verification email sent to ${customerEmail} after lifetime deal`);
+              }
+            } catch (verifyErr: any) {
+              console.error('[Stripe Webhook] Verification email error (non-fatal):', verifyErr?.message);
             }
-          } catch (verifyErr: any) {
-            console.error('[Stripe Webhook] Verification email error (non-fatal):', verifyErr?.message);
           }
         }
       } else {
@@ -1011,6 +1042,8 @@ stripe.post('/webhook', async (c) => {
 function buildLifetimeConfirmationEmail(email: string, amountTotal?: number): string {
   const amount = amountTotal ? `$${(amountTotal / 100).toFixed(2)}` : '$99.00';
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
+  const setupUrl = `${PROD_URL}/lifetime-deal?success=true`;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -1032,8 +1065,21 @@ function buildLifetimeConfirmationEmail(email: string, amountTotal?: number): st
       <strong>Account:</strong> ${email}
     </div>
   </div>
+
+  <div style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:20px;margin-bottom:24px;text-align:left;">
+    <h3 style="color:#93c5fd;font-size:14px;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">Next Steps — Set Up Your Account</h3>
+    <div style="color:#dbeafe;font-size:14px;line-height:2;">
+      <strong>1.</strong> Click the button below to set your password<br>
+      <strong>2.</strong> Choose a secure password for your account<br>
+      <strong>3.</strong> Start building campaigns immediately
+    </div>
+  </div>
+
+  <a href="${setupUrl}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:12px;font-weight:700;font-size:18px;margin-bottom:16px;">
+    Set Up Your Account
+  </a>
   
-  <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:20px;margin-bottom:32px;text-align:left;">
+  <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:20px;margin-top:24px;margin-bottom:32px;text-align:left;">
     <h3 style="color:#6ee7b7;font-size:14px;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">What You Get</h3>
     <div style="color:#d1fae5;font-size:14px;line-height:2;">
       &#9989; 13 Campaign Structures (SKAG, STAG, Alpha-Beta & more)<br>
@@ -1046,10 +1092,6 @@ function buildLifetimeConfirmationEmail(email: string, amountTotal?: number): st
       &#9989; All Future Updates Included
     </div>
   </div>
-  
-  <a href="https://adiology.io" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:16px;">
-    Go to Your Dashboard
-  </a>
   
   <p style="color:#6ee7b7;font-size:12px;margin-top:32px;">Questions? Just reply to this email — we're here to help.</p>
 </div>

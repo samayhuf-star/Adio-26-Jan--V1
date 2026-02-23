@@ -352,7 +352,7 @@ function RealtimePanel({ token }: { token: string }) {
 export default function AnalyticsDashboard({ token }: { token: string }) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState<string | number>(30);
   const [activeTab, setActiveTab] = useState<'realtime' | 'overview' | 'pages' | 'live'>('realtime');
 
   const fetchData = async () => {
@@ -389,13 +389,20 @@ export default function AnalyticsDashboard({ token }: { token: string }) {
         <div className="flex items-center gap-2">
           {activeTab !== 'realtime' && (
             <div className="flex bg-slate-800 rounded-lg p-0.5">
-              {[7, 30, 90].map((d) => (
+              {[
+                { label: 'Today', value: 'today' },
+                { label: 'Yesterday', value: 'yesterday' },
+                { label: '2d', value: '2' },
+                { label: '7d', value: 7 },
+                { label: '30d', value: 30 },
+                { label: '90d', value: 90 }
+              ].map((d) => (
                 <button
-                  key={d}
-                  onClick={() => setDays(d)}
-                  className={`px-3 py-1.5 text-xs rounded-md transition-all ${days === d ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  key={d.value}
+                  onClick={() => setDays(d.value)}
+                  className={`px-3 py-1.5 text-xs rounded-md transition-all ${days === d.value ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                 >
-                  {d}d
+                  {d.label}
                 </button>
               ))}
             </div>

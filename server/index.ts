@@ -19,10 +19,11 @@ import { tempMailRoutes } from './routes/tempmail';
 import { clickGuardRoutes } from './routes/clickguard';
 import { googleAdsRoutes } from './routes/googleads';
 import { analyticsRoutes } from './routes/analytics';
+import { appsumoRoutes } from './routes/appsumo';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
-import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains, feedback, blogPosts } from '../shared/schema';
+import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains, feedback, blogPosts, aiUsageLogs } from '../shared/schema';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
 import { eq, desc, asc, and } from 'drizzle-orm';
@@ -123,6 +124,7 @@ app.route('/api/tempmail', tempMailRoutes);
 app.route('/api/clickguard', clickGuardRoutes);
 app.route('/api/analytics', analyticsRoutes);
 app.route('/api/google-ads', googleAdsRoutes);
+app.route('/api/appsumo', appsumoRoutes);
 
 app.get('/googlebc7aae8bc89f46c1.html', async (c) => {
   try {
@@ -2098,12 +2100,37 @@ Return ONLY valid JSON in this exact format:
   "description2": "string"
 }`;
 
+    const startTime = Date.now();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 500,
     });
+
+    const durationMs = Date.now() - startTime;
+    const promptTokens = completion.usage?.prompt_tokens || 0;
+    const completionTokens = completion.usage?.completion_tokens || 0;
+    const totalTokens = promptTokens + completionTokens;
+    // Estimate cost for gpt-4o-mini: $0.15 per 1M tokens ($0.000015 per 100 tokens)
+    const costCents = (totalTokens / 1000) * 0.015;
+
+    try {
+      const userId = await getUserIdFromToken(c);
+      await db.insert(aiUsageLogs).values({
+        userId: userId || null,
+        feature: 'campaign-builder-dki',
+        model: 'gpt-4o-mini',
+        promptTokens,
+        completionTokens,
+        totalTokens,
+        costCents: costCents.toString(),
+        durationMs,
+        status: 'success',
+      });
+    } catch (logErr) {
+      console.error('[AI Usage Log] Failed to log in DKI:', logErr);
+    }
 
     const content = completion.choices[0]?.message?.content || '';
     
@@ -2866,6 +2893,7 @@ app.post('/api/keywords/alphabet-soup', async (c) => {
 });
 
 import { startHourlyReporting } from './services/whatsapp';
+import { startUptimeMonitoring } from './services/uptimeMonitor';
 
 serve({
   fetch: app.fetch,
@@ -2875,6 +2903,7 @@ serve({
   await seedBlogPosts();
   await seedClickGuardDomains();
   startHourlyReporting();
+  startUptimeMonitoring();
 });
 
 // Export for Vercel serverless functions

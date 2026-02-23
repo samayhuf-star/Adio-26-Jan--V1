@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Mail, Phone, MapPin, Send, Clock, MessageSquare } from 'lucide-react';
 
 interface ContactPageProps {
@@ -61,8 +62,21 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white">
+    <>
+      <Helmet>
+        <title>Contact Us - Adiology | Get Support & Help</title>
+        <meta name="description" content="Get in touch with Adiology. Contact our support team for help with Google Ads campaign building, account issues, or feature requests." />
+        <link rel="canonical" href="https://adiology.io/contact" />
+        <meta property="og:title" content="Contact Us - Adiology" />
+        <meta property="og:description" content="Get in touch with Adiology support team." />
+        <meta property="og:url" content="https://adiology.io/contact" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Contact Us - Adiology" />
+        <meta name="twitter:description" content="Get in touch with Adiology support team." />
+      </Helmet>
+      <div className="min-h-screen bg-white">
+        <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <button
             onClick={onBack}
@@ -294,5 +308,6 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
         </div>
       </div>
     </div>
+    </>
   );
 };

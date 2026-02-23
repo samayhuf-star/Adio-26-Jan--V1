@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import {
   Zap, Check, Sparkles, Target, BarChart3,
@@ -28,9 +29,13 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
   const [promoApplied, setPromoApplied] = useState<{ valid: boolean; discount?: string; newAmount?: number } | null>(null);
   const [promoError, setPromoError] = useState('');
 
+  const [checkoutEmail, setCheckoutEmail] = useState('');
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('success') === 'true') {
+      const storedEmail = sessionStorage.getItem('lifetime_checkout_email') || '';
+      setCheckoutEmail(storedEmail);
       setShowSuccess(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -40,6 +45,8 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
     setIsLoading(true);
     setEmailError('');
     try {
+      sessionStorage.setItem('lifetime_checkout_email', userEmail.trim().toLowerCase());
+
       const response = await fetch('/api/stripe/lifetime-deal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,9 +180,39 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+    <>
+      <Helmet>
+        <title>Lifetime Deal - Adiology | One-Time Payment, Lifetime Access</title>
+        <meta name="description" content="Get lifetime access to Adiology for a one-time payment of $99. All features included: campaign builder, keyword planner, click guard, AI blog generator, and more." />
+        <link rel="canonical" href="https://adiology.io/lifetime-deal" />
+        <meta property="og:title" content="Lifetime Deal - Adiology | $99 One-Time Payment" />
+        <meta property="og:description" content="Get lifetime access to all Adiology features for just $99. Campaign builder, keyword planner, click guard, and more." />
+        <meta property="og:url" content="https://adiology.io/lifetime-deal" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Lifetime Deal - Adiology | $99 One-Time Payment" />
+        <meta name="twitter:description" content="Get lifetime access to all Adiology features for just $99." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "Adiology Lifetime Deal",
+          "description": "Lifetime access to all Adiology Google Ads tools",
+          "url": "https://adiology.io/lifetime-deal",
+          "offers": {
+            "@type": "Offer",
+            "price": "99",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock"
+          },
+          "brand": {
+            "@type": "Organization",
+            "name": "Adiology"
+          }
+        })}</script>
+      </Helmet>
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
 
-      <nav className="border-b border-white/10 bg-slate-950/80 backdrop-blur-lg sticky top-0 z-50">
+        <nav className="border-b border-white/10 bg-slate-950/80 backdrop-blur-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div
             className="flex items-center gap-2 cursor-pointer"
@@ -209,15 +246,23 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
             <div className="flex-1">
               <h3 className="text-xl font-bold text-emerald-300 mb-1">Payment Successful!</h3>
               <p className="text-emerald-200/80 text-sm leading-relaxed">
-                Welcome to Adiology Lifetime! Your account has been upgraded. Check your email for a confirmation with login instructions.
-                You now have permanent access to all features — no recurring charges, ever.
+                {checkoutEmail ? (
+                  <>Your Lifetime Access is confirmed for <strong className="text-emerald-300">{checkoutEmail}</strong>. To get started, set up your password below. We've also sent setup instructions to your email.</>
+                ) : (
+                  <>Your Lifetime Access is confirmed! To get started, set up your account below. Check your email for setup instructions.</>
+                )}
               </p>
               <Button
-                onClick={() => onNavigate?.('login')}
+                onClick={() => {
+                  if (checkoutEmail) {
+                    sessionStorage.setItem('lifetime_signup_email', checkoutEmail);
+                  }
+                  onNavigate?.('complete-signup');
+                }}
                 className="mt-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6"
                 size="sm"
               >
-                Go to Dashboard <ArrowRight className="w-4 h-4 ml-2" />
+                Set Up Your Account <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
             <button
@@ -544,5 +589,6 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         </div>
       )}
     </div>
+    </>
   );
 }

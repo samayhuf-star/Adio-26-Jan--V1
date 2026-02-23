@@ -24,6 +24,28 @@ export default function DomainMonitorPage({ onGetStarted, onBack }: DomainMonito
         <meta property="og:description" content="Monitor your domains with expiry tracking, SSL certificates, and DNS record alerts." />
         <meta property="og:url" content="https://adiology.io/features/domain-monitor" />
         <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Domain Monitor - Track Domain Expiry, SSL & DNS | Adiology" />
+        <meta name="twitter:description" content="Monitor your domains with expiry tracking, SSL certificates, and DNS record alerts." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Domain Monitoring",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://adiology.io/features/domain-monitor",
+          "description": "Monitor your domains with Adiology's Domain Monitor. Track domain expiry, SSL certificates, DNS records, and get email alerts before issues affect your Google Ads campaigns.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io"
+          }
+        })}</script>
       </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
         <Navigation onGetStarted={onGetStarted} onBack={onBack} />

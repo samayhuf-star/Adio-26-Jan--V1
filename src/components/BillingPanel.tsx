@@ -533,7 +533,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {[
                                     "Unlimited Campaigns", "Advanced Keyword Planner", "CSV Export", 
-                                    "Priority Support", "Team Collaboration"
+                                    "Priority Support", "Click Guard Protection"
                                 ].map((feature, i) => (
                                     <div key={i} className="flex items-center gap-2 text-sm text-slate-600">
                                         <CheckCircle className="w-4 h-4 text-green-500" /> {feature}
@@ -659,10 +659,6 @@ Generated on ${new Date().toLocaleDateString()}`;
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">1 Team Member</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                                             <span className="text-xs text-slate-700">Basic Analytics</span>
                                         </li>
                                         <li className="flex items-start gap-2">
@@ -708,10 +704,6 @@ Generated on ${new Date().toLocaleDateString()}`;
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                                             <span className="text-xs text-slate-700 font-semibold">50 Active Campaigns</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700 font-semibold">3 Team Members</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
@@ -761,10 +753,6 @@ Generated on ${new Date().toLocaleDateString()}`;
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                                             <span className="text-xs text-slate-700 font-semibold">Unlimited Campaigns</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700 font-semibold">Unlimited Team Members</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />

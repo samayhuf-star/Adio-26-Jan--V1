@@ -5,6 +5,8 @@ Allow: /features/
 Allow: /contact
 Allow: /help-center
 Allow: /lifetime-deal
+Allow: /blog
+Allow: /blog/
 Disallow: /api/
 Disallow: /admin/
 Disallow: /superadmin
@@ -12,5 +14,6 @@ Disallow: /payment
 Disallow: /signup
 Disallow: /verify-email
 Disallow: /reset-password
+Disallow: /accept-invite
 
 Sitemap: https://adiology.io/sitemap.xml
