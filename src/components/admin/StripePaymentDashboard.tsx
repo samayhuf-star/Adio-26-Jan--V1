@@ -17,6 +17,7 @@ interface StripeDashboardData {
     status: string;
     created: string;
     customerEmail: string | null;
+    description: string | null;
   }>;
   planDistribution: Array<{ plan: string; count: number }>;
 }
@@ -240,6 +241,7 @@ export function StripePaymentDashboard({ token }: StripePaymentDashboardProps) {
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Date</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Customer</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Description</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Amount</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Status</th>
               </tr>
@@ -249,6 +251,7 @@ export function StripePaymentDashboard({ token }: StripePaymentDashboardProps) {
                 <tr key={i} className="hover:bg-slate-700/30">
                   <td className="px-4 py-3 text-slate-400 text-sm">{formatDate(tx.created)}</td>
                   <td className="px-4 py-3 text-white text-sm">{tx.customerEmail || 'Unknown'}</td>
+                  <td className="px-4 py-3 text-slate-400 text-sm">{tx.description || '—'}</td>
                   <td className="px-4 py-3 text-white font-medium text-sm">
                     {formatUSD(tx.amount)}
                   </td>
@@ -257,7 +260,7 @@ export function StripePaymentDashboard({ token }: StripePaymentDashboardProps) {
               ))}
               {data.recentTransactions.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                     No recent transactions
                   </td>
                 </tr>

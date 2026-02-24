@@ -112,11 +112,31 @@ accountRoutes.post('/register', async (c) => {
       throw dbError;
     }
 
-    console.log(`[Auth] User registered: ${email} (verification email deferred until after payment)`);
+    try {
+      const verifyToken = crypto.randomUUID();
+      const verifyExpires = new Date();
+      verifyExpires.setHours(verifyExpires.getHours() + 24);
+
+      await pool.query(
+        `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
+        [userId, verifyToken, verifyExpires]
+      );
+
+      const emailBase = getEmailBaseUrl(c);
+      const verificationUrl = `${emailBase}/verify-email?token=${verifyToken}&email=${encodeURIComponent(normalizedEmail)}`;
+      await EmailService.sendRaw(normalizedEmail, 'emailVerification', { verification_url: verificationUrl });
+      console.log(`[Auth] Verification email sent to ${normalizedEmail} after registration`);
+    } catch (emailErr: any) {
+      console.error(`[Auth] Failed to send verification email (non-fatal):`, emailErr?.message);
+    }
+
+    console.log(`[Auth] User registered: ${email}`);
     return c.json({
       success: true,
-      message: 'Account created. Proceed to payment.',
+      message: 'Account created. Please verify your email.',
       userId,
+      needsEmailVerification: true,
     });
   } catch (error: any) {
     console.error('[Auth] Registration error:', error);
@@ -153,7 +173,7 @@ accountRoutes.post('/login', async (c) => {
     }
 
     if (!user.email_verified) {
-      return c.json({ success: false, error: 'Please verify your email before signing in', needsEmailVerification: true }, 403);
+      return c.json({ success: false, error: 'Please verify your email before signing in', needsEmailVerification: true, email: user.email }, 403);
     }
 
     if (user.is_blocked) {
@@ -266,9 +286,11 @@ accountRoutes.post('/resend-verification', async (c) => {
       return c.json({ success: false, error: 'Email is required' }, 400);
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     const userResult = await pool.query(
       'SELECT * FROM users WHERE email = $1 AND email_verified = false',
-      [email.toLowerCase().trim()]
+      [normalizedEmail]
     );
 
     if (userResult.rows.length === 0) {
@@ -276,6 +298,16 @@ accountRoutes.post('/resend-verification', async (c) => {
     }
 
     const user = userResult.rows[0];
+
+    const recentTokens = await pool.query(
+      `SELECT COUNT(*) as cnt FROM email_verification_tokens 
+       WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+      [user.id]
+    );
+    const recentCount = parseInt(recentTokens.rows[0]?.cnt || '0', 10);
+    if (recentCount >= 3) {
+      return c.json({ success: false, error: 'Too many verification emails sent. Please try again in an hour.' }, 429);
+    }
 
     await pool.query(
       'UPDATE email_verification_tokens SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL',
@@ -296,11 +328,37 @@ accountRoutes.post('/resend-verification', async (c) => {
     const verificationUrl = `${emailBase}/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
     await EmailService.sendRaw(user.email, 'emailVerification', { verification_url: verificationUrl });
 
-    console.log(`[Auth] Verification email resent: ${email} (verification link base: ${emailBase})`);
+    console.log(`[Auth] Verification email resent: ${email} (${recentCount + 1}/3 this hour)`);
     return c.json({ success: true, message: 'Verification email sent' });
   } catch (error: any) {
     console.error('[Auth] Resend verification error:', error);
     return c.json({ success: false, error: 'Failed to resend verification email' }, 500);
+  }
+});
+
+accountRoutes.get('/verification-status', async (c) => {
+  try {
+    const email = c.req.query('email');
+    if (!email) {
+      return c.json({ success: false, error: 'Email is required' }, 400);
+    }
+
+    const result = await pool.query(
+      'SELECT email_verified FROM users WHERE email = $1',
+      [email.toLowerCase().trim()]
+    );
+
+    if (result.rows.length === 0) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    return c.json({ 
+      success: true, 
+      verified: result.rows[0].email_verified === true 
+    });
+  } catch (error: any) {
+    console.error('[Auth] Verification status check error:', error);
+    return c.json({ success: false, error: 'Failed to check verification status' }, 500);
   }
 });
 
@@ -378,11 +436,11 @@ accountRoutes.post('/reset-password', async (c) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     await pool.query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      'UPDATE users SET password_hash = $1, email_verified = true, updated_at = NOW() WHERE id = $2',
       [passwordHash, tokenRecord.user_id]
     );
 
-    console.log(`[Auth] Password reset completed for user: ${tokenRecord.user_id}`);
+    console.log(`[Auth] Password reset completed for user: ${tokenRecord.user_id} (email auto-verified)`);
     return c.json({ success: true, message: 'Password has been reset successfully' });
   } catch (error: any) {
     console.error('[Auth] Reset password error:', error);

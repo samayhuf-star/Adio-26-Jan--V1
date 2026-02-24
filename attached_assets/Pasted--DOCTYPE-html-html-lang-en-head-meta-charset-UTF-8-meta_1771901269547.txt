@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adiology Payment Flow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0f0; min-height: 100vh; padding: 30px 20px; }
+  h1 { text-align: center; color: #7c6cf5; font-size: 1.6rem; margin-bottom: 6px; }
+  .subtitle { text-align: center; color: #888; font-size: 0.85rem; margin-bottom: 30px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 30px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #aaa; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 3px; }
+
+  .flow-container { max-width: 900px; margin: 0 auto; }
+
+  /* Phase headers */
+  .phase { margin-bottom: 10px; }
+  .phase-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; padding-left: 4px; }
+
+  /* Node row */
+  .row { display: flex; align-items: flex-start; gap: 0; margin-bottom: 0; }
+  .row-nodes { display: flex; align-items: center; gap: 0; width: 100%; }
+
+  /* Nodes */
+  .node {
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .node-start { background: #7c6cf5; color: #fff; font-weight: 700; border-radius: 20px; text-align: center; min-width: 120px; }
+  .node-action { background: #1e1e35; border: 1.5px solid #7c6cf5; color: #d0d0ff; min-width: 160px; }
+  .node-check { background: #1e2a1e; border: 1.5px solid #4caf50; color: #a5d6a7; min-width: 150px; border-radius: 20px; }
+  .node-email { background: #1a2535; border: 1.5px solid #29b6f6; color: #90caf9; min-width: 160px; }
+  .node-guard { background: #2a1a1a; border: 1.5px solid #ef5350; color: #ef9a9a; min-width: 150px; }
+  .node-success { background: #1e2e1e; border: 1.5px solid #66bb6a; color: #a5d6a7; font-weight: 600; min-width: 160px; }
+  .node-db { background: #1e1e2a; border: 1.5px dashed #ab47bc; color: #ce93d8; min-width: 150px; }
+  .node-end { background: #4caf50; color: #fff; font-weight: 700; border-radius: 20px; text-align: center; min-width: 120px; }
+
+  /* Arrows */
+  .arrow { color: #555; font-size: 1.1rem; padding: 0 4px; align-self: center; flex-shrink: 0; }
+  .arrow-down-wrap { display: flex; justify-content: center; color: #555; font-size: 1.1rem; margin: 3px 0; }
+  .arrow-label { font-size: 0.65rem; color: #888; background: #0f0f1a; padding: 1px 5px; border-radius: 3px; }
+
+  /* Branch container */
+  .branch-row { display: flex; gap: 16px; align-items: flex-start; width: 100%; margin: 0; }
+  .branch-col { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .branch-label { font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-bottom: 4px; }
+  .label-yes { background: #1b3a1b; color: #66bb6a; border: 1px solid #4caf50; }
+  .label-no { background: #3a1b1b; color: #ef9a9a; border: 1px solid #ef5350; }
+  .label-warn { background: #3a2a0a; color: #ffcc80; border: 1px solid #ffa726; }
+
+  /* Guardrail badge */
+  .guardrail { display: inline-block; font-size: 0.6rem; font-weight: 700; background: #3a1b1b; color: #ff8a80; border: 1px solid #ef5350; border-radius: 4px; padding: 1px 5px; margin-bottom: 3px; }
+  .check-badge { display: inline-block; font-size: 0.6rem; font-weight: 700; background: #1b3a1b; color: #a5d6a7; border: 1px solid #4caf50; border-radius: 4px; padding: 1px 5px; margin-bottom: 3px; }
+
+  /* Section separator */
+  .sep { border: none; border-top: 1px solid #222; margin: 16px 0 12px; }
+
+  /* Full flow using flex column */
+  .full-flow { display: flex; flex-direction: column; align-items: center; }
+  .full-flow > * { width: 100%; max-width: 700px; }
+
+  /* Guardrails panel */
+  .guardrails-panel { margin-top: 40px; }
+  .gp-title { font-size: 1rem; font-weight: 700; color: #7c6cf5; margin-bottom: 16px; text-align: center; }
+  .gp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .gp-card { background: #1a1a2e; border-radius: 10px; padding: 14px; border-left: 3px solid; }
+  .gp-card.red { border-color: #ef5350; }
+  .gp-card.blue { border-color: #29b6f6; }
+  .gp-card.green { border-color: #66bb6a; }
+  .gp-card.yellow { border-color: #ffa726; }
+  .gp-card.purple { border-color: #ab47bc; }
+  .gp-card h4 { font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; }
+  .gp-card.red h4 { color: #ef9a9a; }
+  .gp-card.blue h4 { color: #90caf9; }
+  .gp-card.green h4 { color: #a5d6a7; }
+  .gp-card.yellow h4 { color: #ffcc80; }
+  .gp-card.purple h4 { color: #ce93d8; }
+  .gp-card ul { list-style: none; padding: 0; }
+  .gp-card ul li { font-size: 0.73rem; color: #aaa; padding: 2px 0; padding-left: 10px; position: relative; }
+  .gp-card ul li::before { content: '→'; position: absolute; left: 0; color: #555; }
+
+  .center { display: flex; justify-content: center; }
+  .w-node { width: fit-content; }
+</style>
+</head>
+<body>
+
+<h1>🚀 Adiology Payment Flow</h1>
+<p class="subtitle">Complete flow with guardrails, email checks & credential delivery</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#7c6cf5"></div> Action / Step</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4caf50;border-radius:50%"></div> Verification Check</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#29b6f6"></div> Email Trigger</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef5350"></div> Guardrail / Error</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ab47bc;border-style:dashed;border:1.5px dashed #ab47bc"></div> DB Operation</div>
+</div>
+
+<div class="flow-container">
+<div class="full-flow">
+
+  <!-- PHASE 1: SIGNUP -->
+  <div class="phase-title">📋 Phase 1 — User Signup</div>
+
+  <div class="center"><div class="node node-start w-node">User Visits Adiology.io</div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="center"><div class="node node-action w-node">Fills Signup Form<br><small>Name · Email · Password · Plan</small></div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Check: Email format -->
+  <div class="center"><div class="node node-check w-node">✔ Validate Email Format &amp; Password Strength</div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Branch: email already exists? -->
+  <div class="branch-row">
+    <div class="branch-col">
+      <span class="branch-label label-no">Email Already Exists</span>
+      <div class="node node-guard" style="text-align:center">
+        <div class="guardrail">GUARDRAIL</div><br>
+        Show error: "Account exists.<br>Login or reset password."<br>
+        <small>Offer magic link resend</small>
+      </div>
+    </div>
+    <div class="branch-col" style="align-items:center;">
+      <span class="branch-label label-yes">New Email</span>
+      <div class="arrow-down-wrap" style="margin:0">↓</div>
+      <div class="node node-db" style="text-align:center">
+        💾 Create User in Neon DB<br>
+        <small>status: <b>unverified</b><br>plan: selected plan<br>payment_status: pending</small>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Email: Verification -->
+  <div class="center"><div class="node node-email w-node">
+    📧 Send Verification Email<br>
+    <small>Token expires: 24 hrs · Unique link</small>
+  </div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Check: Email delivered? -->
+  <div class="center"><div class="node node-check w-node">✔ Check Email Delivery Status<br><small>(SMTP/Resend delivery webhook)</small></div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="branch-row">
+    <div class="branch-col">
+      <span class="branch-label label-no">Email Bounced / Failed</span>
+      <div class="node node-guard" style="text-align:center">
+        <div class="guardrail">GUARDRAIL</div><br>
+        Log bounce · Alert admin<br>
+        Show: "Check your email address"<br>
+        <small>Option to re-enter email</small>
+      </div>
+    </div>
+    <div class="branch-col">
+      <span class="branch-label label-yes">Email Delivered</span>
+      <div class="node node-action" style="text-align:center">
+        User clicks verification link<br>
+        <small>Show: "Check your inbox" page<br>with Resend button</small>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Check: Token valid? -->
+  <div class="center"><div class="node node-check w-node">✔ Validate Token (exists + not expired)</div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="branch-row">
+    <div class="branch-col">
+      <span class="branch-label label-no">Token Expired / Invalid</span>
+      <div class="node node-guard" style="text-align:center">
+        <div class="guardrail">GUARDRAIL</div><br>
+        Invalidate old token<br>
+        Resend new verification email<br>
+        <small>Max 3 resends / hr</small>
+      </div>
+    </div>
+    <div class="branch-col">
+      <span class="branch-label label-yes">Token Valid</span>
+      <div class="node node-db" style="text-align:center">
+        💾 Update DB<br>
+        <small>status: <b>verified</b><br>email_verified_at: timestamp</small>
+      </div>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- PHASE 2: PAYMENT -->
+  <div class="phase-title">💳 Phase 2 — Payment</div>
+
+  <div class="center"><div class="node node-action w-node">Redirect to Plan Selection / Checkout<br><small>Show selected plan details + pricing</small></div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="center"><div class="node node-action w-node">User Enters Payment Details<br><small>Razorpay / Stripe checkout</small></div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Check: Duplicate payment? -->
+  <div class="center"><div class="node node-check w-node">✔ Check for Duplicate Order ID in DB</div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="branch-row">
+    <div class="branch-col">
+      <span class="branch-label label-no">Duplicate Found</span>
+      <div class="node node-guard" style="text-align:center">
+        <div class="guardrail">GUARDRAIL</div><br>
+        Block payment · Show:<br>"Already processed"<br>
+        <small>Redirect to dashboard</small>
+      </div>
+    </div>
+    <div class="branch-col">
+      <span class="branch-label label-yes">Fresh Order</span>
+      <div class="node node-action" style="text-align:center">
+        Create Order in Payment Gateway<br>
+        <small>Store order_id in DB<br>payment_status: initiated</small>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="center"><div class="node node-action w-node">User Submits Payment</div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Webhook -->
+  <div class="center"><div class="node node-check w-node">✔ Webhook Received from Gateway<br><small>Verify signature / authenticity</small></div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="branch-row">
+    <div class="branch-col">
+      <span class="branch-label label-no">Payment Failed</span>
+      <div class="node node-guard" style="text-align:center">
+        <div class="guardrail">GUARDRAIL</div><br>
+        Log failure reason<br>
+        💾 Update: payment_status: failed<br>
+        📧 Send "Payment Failed" email<br>
+        <small>Retry link · Support contact</small>
+      </div>
+    </div>
+    <div class="branch-col">
+      <span class="branch-label label-warn">Webhook Delayed / Missing</span>
+      <div class="node node-guard" style="text-align:center">
+        <div class="guardrail">GUARDRAIL</div><br>
+        Cron job: poll gateway status<br>
+        every 5 min for 30 min<br>
+        <small>Alert admin if unresolved</small>
+      </div>
+    </div>
+    <div class="branch-col">
+      <span class="branch-label label-yes">Payment Success</span>
+      <div class="node node-db" style="text-align:center">
+        💾 Update DB<br>
+        <small>payment_status: <b>paid</b><br>plan: activated<br>subscription_start: now<br>subscription_end: +30/365 days</small>
+      </div>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- PHASE 3: POST-PAYMENT -->
+  <div class="phase-title">✅ Phase 3 — Post-Payment Delivery</div>
+
+  <div class="center"><div class="node node-email w-node">
+    📧 Send Payment Confirmation Email<br>
+    <small>Invoice · Plan details · Amount · Date</small>
+  </div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Check: Confirmation email delivered? -->
+  <div class="center"><div class="node node-check w-node">✔ Confirm Email Delivery (webhook/status check)</div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="branch-row">
+    <div class="branch-col">
+      <span class="branch-label label-no">Email Failed</span>
+      <div class="node node-guard" style="text-align:center">
+        <div class="guardrail">GUARDRAIL</div><br>
+        Retry 3x with 5 min delay<br>
+        After 3 fails → Admin alert<br>
+        <small>Store invoice in dashboard anyway</small>
+      </div>
+    </div>
+    <div class="branch-col">
+      <span class="branch-label label-yes">Email Delivered</span>
+      <div class="node node-email" style="text-align:center">
+        📧 Send Login Credentials Email<br>
+        <small>Email · Temp password (if set)<br>or "Set your password" link<br>Dashboard URL · Getting started guide</small>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <!-- Check: Credentials email delivered? -->
+  <div class="center"><div class="node node-check w-node">✔ Confirm Credentials Email Delivered</div></div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="branch-row">
+    <div class="branch-col">
+      <span class="branch-label label-no">Not Delivered</span>
+      <div class="node node-guard" style="text-align:center">
+        <div class="guardrail">GUARDRAIL</div><br>
+        Show credentials on-screen<br>(masked password + copy btn)<br>
+        <small>Admin notified to follow up</small>
+      </div>
+    </div>
+    <div class="branch-col">
+      <span class="branch-label label-yes">Delivered</span>
+      <div class="node node-db" style="text-align:center">
+        💾 Log: credentials_sent: true<br>
+        <small>onboarding_status: pending</small>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down-wrap">↓</div>
+
+  <div class="center"><div class="node node-success w-node">
+    🎉 User Lands on Adiology Dashboard<br>
+    <small>Onboarding checklist shown · Plan active</small>
+  </div></div>
+  <div class="arrow-down-wrap">↓</div>
+  <div class="center"><div class="node node-end w-node">✅ Flow Complete</div></div>
+
+</div>
+
+<!-- GUARDRAILS SUMMARY PANEL -->
+<div class="guardrails-panel">
+  <div class="gp-title">🛡️ Guardrails &amp; Checks Summary</div>
+  <div class="gp-grid">
+
+    <div class="gp-card red">
+      <h4>🔐 Signup Guardrails</h4>
+      <ul>
+        <li>Block duplicate emails at DB level (UNIQUE constraint)</li>
+        <li>Enforce password: min 8 chars, 1 number, 1 symbol</li>
+        <li>Rate limit: max 5 signup attempts / IP / hour</li>
+        <li>Block disposable email domains</li>
+      </ul>
+    </div>
+
+    <div class="gp-card blue">
+      <h4>📧 Email Delivery Checks</h4>
+      <ul>
+        <li>Verification email: retry 3x on bounce</li>
+        <li>Token expiry: 24 hrs, max 3 resends/hr</li>
+        <li>Payment email: retry 3x with 5 min delay</li>
+        <li>Credentials email: fallback = show on screen</li>
+        <li>All sends logged in DB (sent_at, status, attempts)</li>
+      </ul>
+    </div>
+
+    <div class="gp-card yellow">
+      <h4>💳 Payment Guardrails</h4>
+      <ul>
+        <li>Verify webhook signature (HMAC)</li>
+        <li>Idempotency key on every order</li>
+        <li>Cron job polls if webhook delayed &gt;5 min</li>
+        <li>Block duplicate order IDs at DB level</li>
+        <li>Payment failure → auto-retry email with link</li>
+      </ul>
+    </div>
+
+    <div class="gp-card green">
+      <h4>✅ Post-Payment Checks</h4>
+      <ul>
+        <li>Plan activation only after payment_status = paid</li>
+        <li>Subscription dates set from server (not client)</li>
+        <li>Invoice stored in DB + attached to email</li>
+        <li>Credentials email sent only after payment confirmed</li>
+      </ul>
+    </div>
+
+    <div class="gp-card purple">
+      <h4>💾 DB Schema Additions Needed</h4>
+      <ul>
+        <li>users: email_verified, verification_token, token_expiry</li>
+        <li>users: payment_status, plan, sub_start, sub_end</li>
+        <li>email_logs: user_id, type, sent_at, status, attempts</li>
+        <li>payments: order_id, gateway_ref, amount, status, webhook_at</li>
+      </ul>
+    </div>
+
+    <div class="gp-card red">
+      <h4>🚨 Admin Alerts Triggered When</h4>
+      <ul>
+        <li>Email bounces after 3 retries</li>
+        <li>Webhook missing after 30 min</li>
+        <li>Payment status stuck in "initiated" &gt;1 hr</li>
+        <li>More than 10 failed signups from same IP</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+</div>
+</body>
+</html>

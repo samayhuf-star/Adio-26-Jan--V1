@@ -63,6 +63,7 @@ interface UserRecord {
   subscriptionStatus: string;
   isBlocked: boolean;
   createdAt: string;
+  updatedAt: string | null;
   lastSignIn: string | null;
 }
 
@@ -75,6 +76,8 @@ interface SubscriptionRecord {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   createdAt: string;
+  updatedAt: string | null;
+  paidAmountCents: number | string;
 }
 
 type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'emails' | 'email-monitoring' | 'analytics' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo';
@@ -606,6 +609,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Status</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Joined</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Last Login</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Updated</th>
                       <th className="text-right px-4 py-3 text-sm font-medium text-slate-300">Actions</th>
                     </tr>
                   </thead>
@@ -631,6 +635,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                         </td>
                         <td className="px-4 py-3 text-slate-400 text-sm">
                           {user.lastSignIn ? formatDate(user.lastSignIn) : 'Never'}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400 text-sm">
+                          {user.updatedAt ? formatDate(user.updatedAt) : '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -733,7 +740,10 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">User</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Plan</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Status</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Created</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Updated</th>
                       <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Period End</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Paid Amount</th>
                       <th className="text-right px-4 py-3 text-sm font-medium text-slate-300">Actions</th>
                     </tr>
                   </thead>
@@ -742,7 +752,6 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                       <tr key={sub.id} className="hover:bg-slate-700/30">
                         <td className="px-4 py-3">
                           <p className="text-white font-medium">{sub.userEmail || 'Unknown'}</p>
-                          <p className="text-xs text-slate-500">{formatDate(sub.createdAt)}</p>
                         </td>
                         <td className="px-4 py-3">
                           <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
@@ -758,7 +767,20 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                           )}
                         </td>
                         <td className="px-4 py-3 text-slate-400 text-sm">
+                          {formatDate(sub.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400 text-sm">
+                          {sub.updatedAt ? formatDate(sub.updatedAt) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400 text-sm">
                           {formatDate(sub.currentPeriodEnd)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium">
+                          {Number(sub.paidAmountCents) > 0 ? (
+                            <span className="text-green-400">${(Number(sub.paidAmountCents) / 100).toFixed(2)}</span>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">

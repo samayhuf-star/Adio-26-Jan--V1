@@ -149,6 +149,7 @@ app.get('/users', authMiddleware, async (c) => {
       subscriptionStatus: users.subscriptionStatus,
       isBlocked: users.isBlocked,
       createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
       lastSignIn: users.lastSignIn,
     }).from(users).orderBy(desc(users.createdAt));
 
@@ -228,7 +229,12 @@ app.get('/subscriptions', authMiddleware, async (c) => {
     const allSubs = await db.execute(sql`
       SELECT s.id, s.user_id as "userId", u.email as "userEmail", s.plan_name as "planName", 
              s.status, s.current_period_end as "currentPeriodEnd", 
-             s.cancel_at_period_end as "cancelAtPeriodEnd", s.created_at as "createdAt"
+             s.cancel_at_period_end as "cancelAtPeriodEnd", s.created_at as "createdAt",
+             s.updated_at as "updatedAt",
+             COALESCE(
+               (SELECT SUM(p.amount_cents) FROM payments p WHERE p.subscription_id = s.id AND p.status = 'succeeded'),
+               0
+             ) as "paidAmountCents"
       FROM subscriptions s
       LEFT JOIN users u ON s.user_id = u.id
       ORDER BY s.created_at DESC
@@ -585,6 +591,7 @@ app.get('/stripe-dashboard', authMiddleware, async (c) => {
       status: pi.status,
       created: new Date(pi.created * 1000).toISOString(),
       customerEmail: (pi as any).receipt_email || null,
+      description: pi.description || null,
     }));
 
     const planResult = await db.execute(sql`

@@ -258,6 +258,7 @@ analyticsRoutes.get('/stats', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
+    const db = getDb();
     const daysQuery = c.req.query('days');
     let days = 30;
     let startDate = new Date();

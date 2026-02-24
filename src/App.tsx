@@ -1647,6 +1647,7 @@ const AppContent = () => {
           amount: plan?.amount || 9900,
           isSubscription: plan?.isSubscription !== false,
           period: plan?.period || 'monthly',
+          ...(plan?.isLifetimeDeal ? { isLifetimeDeal: true, prefillEmail: plan.prefillEmail || '' } : {}),
         }}
         onSuccess={async () => {
           sessionStorage.removeItem('selectedPlan');

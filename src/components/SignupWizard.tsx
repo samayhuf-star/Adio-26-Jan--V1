@@ -50,12 +50,17 @@ const features = [
   { icon: Globe, label: 'Domain Monitor', color: 'from-purple-500 to-violet-600' },
 ];
 
-function StepIndicator({ currentStep }: { currentStep: number }) {
-  const steps = [
-    { num: 1, label: 'Account' },
-    { num: 2, label: 'Payment' },
-    { num: 3, label: 'Confirmation' },
-  ];
+function StepIndicator({ currentStep, isLifetimeDeal = false }: { currentStep: number; isLifetimeDeal?: boolean }) {
+  const steps = isLifetimeDeal
+    ? [
+        { num: 1, label: 'Account' },
+        { num: 2, label: 'Confirmation' },
+      ]
+    : [
+        { num: 1, label: 'Account' },
+        { num: 2, label: 'Payment' },
+        { num: 3, label: 'Confirmation' },
+      ];
 
   return (
     <div className="flex items-center justify-center gap-2 mb-8">
@@ -197,6 +202,13 @@ function Step1CreateAccount({
       if (result.skipPayment && onLifetimeComplete) {
         onLifetimeComplete();
         return;
+      }
+
+      if (result.needsEmailVerification && isLifetimeDeal) {
+        if (onLifetimeComplete) {
+          onLifetimeComplete();
+          return;
+        }
       }
 
       onNext(email.trim().toLowerCase(), name.trim());
@@ -853,8 +865,15 @@ function WizardContent({
   const handleStep1Complete = useCallback((email: string, name: string) => {
     setUserEmail(email);
     setUserName(name);
-    setCurrentStep(2);
-  }, []);
+    if (isLifetimeDeal) {
+      sessionStorage.removeItem('lifetime_checkout_email');
+      sessionStorage.removeItem('lifetime_signup_email');
+      sessionStorage.removeItem('selectedPlan');
+      setCurrentStep(2);
+    } else {
+      setCurrentStep(2);
+    }
+  }, [isLifetimeDeal]);
 
   const handleStep2Complete = useCallback(() => {
     setCurrentStep(3);
@@ -864,14 +883,14 @@ function WizardContent({
     sessionStorage.removeItem('lifetime_checkout_email');
     sessionStorage.removeItem('lifetime_signup_email');
     sessionStorage.removeItem('selectedPlan');
-    setCurrentStep(3);
+    setCurrentStep(2);
   }, []);
 
   const stableOnSuccess = useCallback(() => {
     onSuccess();
   }, [onSuccess]);
 
-  const effectiveStep = isLifetimeDeal && currentStep === 3 ? 3 : currentStep;
+  const showConfirmation = isLifetimeDeal ? currentStep === 2 : currentStep === 3;
   const lifetimePlanForConfirmation = {
     name: 'Lifetime',
     priceId: '',
@@ -886,7 +905,7 @@ function WizardContent({
 
       <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-gradient-to-br from-slate-950 via-[#0f0d24] to-slate-950">
         <div className="w-full max-w-md">
-          <StepIndicator currentStep={isLifetimeDeal ? (currentStep === 1 ? 1 : 3) : currentStep} />
+          <StepIndicator currentStep={currentStep} isLifetimeDeal={isLifetimeDeal} />
 
           {currentStep === 1 && (
             <Step1CreateAccount
