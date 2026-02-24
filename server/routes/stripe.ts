@@ -888,6 +888,57 @@ stripe.post('/send-welcome-email', async (c) => {
   }
 });
 
+/** GET /api/stripe/payment-methods/:email – Retrieve saved payment methods for a user */
+stripe.get('/payment-methods/:email', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ paymentMethods: [] }, 401);
+    }
+    const token = authHeader.substring(7);
+    const payload = decodeJwtPayload(token);
+    if (!payload || !payload.email) {
+      return c.json({ paymentMethods: [] }, 401);
+    }
+
+    const email = decodeURIComponent(c.req.param('email')).toLowerCase().trim();
+    const tokenEmail = (payload.email as string).toLowerCase().trim();
+    if (email !== tokenEmail) {
+      return c.json({ paymentMethods: [] }, 403);
+    }
+
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ paymentMethods: [] });
+    }
+
+    const customers = await stripeClient.customers.list({ email, limit: 1 });
+    if (customers.data.length === 0) {
+      return c.json({ paymentMethods: [] });
+    }
+
+    const customer = customers.data[0];
+    const methods = await stripeClient.paymentMethods.list({
+      customer: customer.id,
+      type: 'card',
+    });
+
+    const paymentMethods = methods.data.map((pm: any) => ({
+      id: pm.id,
+      brand: pm.card?.brand || 'unknown',
+      last4: pm.card?.last4 || '****',
+      expMonth: pm.card?.exp_month,
+      expYear: pm.card?.exp_year,
+      isDefault: customer.invoice_settings?.default_payment_method === pm.id,
+    }));
+
+    return c.json({ paymentMethods });
+  } catch (error: any) {
+    console.error('[Stripe] Payment methods error:', error?.message);
+    return c.json({ paymentMethods: [] });
+  }
+});
+
 /** POST /api/stripe/webhook – Stripe webhook handler for checkout events */
 stripe.post('/webhook', async (c) => {
   try {

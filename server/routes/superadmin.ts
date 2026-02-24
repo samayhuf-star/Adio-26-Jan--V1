@@ -204,6 +204,34 @@ app.put('/users/:id', authMiddleware, async (c) => {
   }
 });
 
+app.put('/users/:id/password', authMiddleware, async (c) => {
+  try {
+    const userId = c.req.param('id');
+    const { password } = await c.req.json();
+
+    if (!password || password.length < 6) {
+      return c.json({ error: 'Password must be at least 6 characters' }, 400);
+    }
+
+    const existing = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (existing.length === 0) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    const bcryptModule = await import('bcryptjs');
+    const bcryptLib = bcryptModule.default || bcryptModule;
+    const passwordHash = await bcryptLib.hash(password, 10);
+
+    await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, userId));
+    await logAuditAction({ action: 'user_password_changed', resourceType: 'user', resourceId: userId, details: { email: existing[0].email, changedBy: 'superadmin' } });
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Change password error:', error);
+    return c.json({ error: 'Failed to change password' }, 500);
+  }
+});
+
 app.delete('/users/:id', authMiddleware, async (c) => {
   try {
     const userId = c.req.param('id');

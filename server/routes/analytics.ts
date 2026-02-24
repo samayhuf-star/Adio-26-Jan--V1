@@ -92,7 +92,8 @@ analyticsRoutes.post('/track', async (c) => {
       return c.json({ ok: true });
     }
 
-    const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+    const ip = c.req.header('cf-connecting-ip')
+      || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
       || c.req.header('x-real-ip')
       || 'unknown';
 
@@ -162,7 +163,8 @@ analyticsRoutes.post('/heartbeat', async (c) => {
       return c.json({ ok: true });
     }
 
-    const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+    const ip = c.req.header('cf-connecting-ip')
+      || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
       || c.req.header('x-real-ip')
       || 'unknown';
 

@@ -164,6 +164,9 @@ accountRoutes.post('/login', async (c) => {
     const user = result.rows[0];
 
     if (!user.password_hash) {
+      if (user.subscription_plan === 'Lifetime' || user.stripe_customer_id) {
+        return c.json({ success: false, error: 'Your payment was received! Please complete your account setup first by clicking "Set Up Your Account" from your confirmation email, or sign up with this email address.' }, 401);
+      }
       return c.json({ success: false, error: 'Invalid email or password' }, 401);
     }
 

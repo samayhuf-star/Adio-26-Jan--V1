@@ -38,7 +38,6 @@ import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
 import { GoogleAdsPushButton } from './GoogleAdsPushButton';
 import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
-import { isSuperAdmin } from '../utils/auth';
 
 interface DraftCampaignsProps {
   onLoadCampaign: (data: any, mode: 'resume' | 'edit') => void;
@@ -255,7 +254,7 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
         </Button>
       </div>
 
-      {isSuperAdmin() && <GoogleAdsConnectionStatus variant="full" />}
+      <GoogleAdsConnectionStatus variant="full" />
 
       {/* Shell View - Two Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -454,7 +453,6 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
                             >
                               <Download className="w-4 h-4" />
                             </Button>
-                            {isSuperAdmin() && (
                             <GoogleAdsPushButton
                               campaignData={{
                                 campaignName: campaign.name,
@@ -472,7 +470,6 @@ export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
                               googleAdsPushStatus={campaign.data?.googleAdsPushStatus}
                               variant="icon"
                             />
-                            )}
                             <Button
                               variant="ghost"
                               size="icon"

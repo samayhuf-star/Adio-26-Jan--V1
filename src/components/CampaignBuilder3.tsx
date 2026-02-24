@@ -63,7 +63,6 @@ import { TerminalCard, TerminalLine } from './ui/terminal-card';
 import { ApiStatusIndicator } from './ApiStatusIndicator';
 import { GoogleAdsPushButton } from './GoogleAdsPushButton';
 import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
-import { isSuperAdmin } from '../utils/auth';
 import { generateCampaignAssets, assetsToAdExtensions } from '../utils/campaignAssetGenerator';
 
 // Campaign Structure Types (14 structures)
@@ -5561,11 +5560,9 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             </div>
           </div>
 
-          {isSuperAdmin() && (
           <div className="mb-4">
             <GoogleAdsConnectionStatus variant="full" />
           </div>
-          )}
 
           {/* Primary Action Section */}
           <div className="mb-6 space-y-3">
@@ -5576,7 +5573,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             <Download className="w-5 h-5 mr-2" />
             Download CSV for Google Ads Editor
           </Button>
-          {isSuperAdmin() && (
           <GoogleAdsPushButton
             campaignData={{
               campaignName: campaignData.campaignName,
@@ -5595,7 +5591,6 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             size="lg"
             className="w-full h-14 text-lg font-semibold"
           />
-          )}
           </div>
 
 

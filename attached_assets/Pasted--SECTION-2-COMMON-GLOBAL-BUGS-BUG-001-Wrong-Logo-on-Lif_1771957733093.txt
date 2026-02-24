@@ -1,0 +1,137 @@
+
+SECTION 2: COMMON / GLOBAL BUGS
+BUG-001 — Wrong Logo on Lifetime Deal Page
+	∙	Location: https://adiology.io/lifetime-deal
+	∙	Issue: Incorrect/old logo displayed on the Lifetime Deal page
+	∙	Expected: Updated Adiology logo should appear
+	∙	Actual: Wrong logo is showing
+	∙	Priority: Medium
+
+BUG-002 — Dashboard Buttons Not Working
+	∙	Location: Dashboard (post-login)
+	∙	Issue: All/multiple buttons on the dashboard are non-functional
+	∙	Expected: Buttons should trigger their respective actions or navigation
+	∙	Actual: Buttons do nothing when clicked
+	∙	Priority: Critical
+
+BUG-003 — Call Ad: Only 1 Call Ad Gets Added
+	∙	Location: Campaign Builder → Call Ad section
+	∙	Issue: When adding a Call Ad, system only creates 1 call ad regardless of how many are intended
+	∙	Expected: Multiple call ads should be addable
+	∙	Actual: Only 1 call ad is created
+	∙	Priority: High
+
+BUG-004 — Call Extension: “Phone Country Can’t Be Empty” Error
+	∙	Location: Campaign Builder → Call Extension section
+	∙	Issue: Adding a Call Extension throws error: “Phone country can’t be empty”
+	∙	Expected: Call Extension saves successfully; if Phone Country is required, the field must be visible, pre-populated, or clearly validated before submission
+	∙	Actual: Error blocks saving; Call Extension cannot be added
+	∙	Root Cause (suspected): Phone Country field is missing, hidden, or not being passed to the backend
+	∙	Priority: Critical
+
+SECTION 3: CAMPAIGN BUILDER — ALL 15 CAMPAIGNS
+CAMPAIGN 1 — SKAG
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+CAMPAIGN 2 — SKAG Split
+	∙	Status: ❌ Error
+	∙	Issue: Both Ads and Keywords generation are being skipped entirely
+	∙	Expected: SKAG Split campaign should generate ads and keywords as part of its structure
+	∙	Actual: Ads section = empty/skipped, Keywords section = empty/skipped
+	∙	Priority: Critical
+
+CAMPAIGN 3 — STAG
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+CAMPAIGN 4 — Mix
+	∙	Status: ❌ Error
+	∙	Issue: Keywords generation is being skipped
+	∙	Expected: Mix campaign should generate keywords
+	∙	Actual: Keywords section = empty/skipped
+	∙	Priority: Critical
+
+CAMPAIGN 5 — STAG+
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+CAMPAIGN 6 — Intent-Based
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+CAMPAIGN 7 — Alpha-Beta
+	∙	Status: ❌ Error
+	∙	Issue: Keywords generation is being skipped
+	∙	Expected: Alpha-Beta campaign should generate keywords
+	∙	Actual: Keywords section = empty/skipped
+	∙	Priority: Critical
+
+CAMPAIGN 8 — Match-Type
+	∙	Status: ❌ Error
+	∙	Issue: Keywords generation is being skipped
+	∙	Expected: Match-Type campaign should generate keywords
+	∙	Actual: Keywords section = empty/skipped
+	∙	Priority: Critical
+
+CAMPAIGN 9 — GEO
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+CAMPAIGN 10 — Funnel
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+CAMPAIGN 11 — Brand
+	∙	Status: ❌ Error
+	∙	Issue: Keywords generation is being skipped
+	∙	Expected: Brand campaign should generate keywords
+	∙	Actual: Keywords section = empty/skipped
+	∙	Priority: Critical
+
+CAMPAIGN 12 — Competitor
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+CAMPAIGN 13 — N-Gram
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+CAMPAIGN 14 — Long-Tail
+	∙	Status: ❌ Error
+	∙	Issue: Keywords generation is being skipped
+	∙	Expected: Long-Tail campaign should generate keywords
+	∙	Actual: Keywords section = empty/skipped
+	∙	Priority: Critical
+
+CAMPAIGN 15 — Seasonal
+	∙	Status: ✅ Working
+	∙	Issues: None
+
+SECTION 4: FULL SUMMARY TABLE
+
+
+
+|Bug ID |Location          |Issue                               |Priority|
+|-------|------------------|------------------------------------|--------|
+|BUG-001|Lifetime Deal Page|Wrong logo displayed                |Medium  |
+|BUG-002|Dashboard         |All buttons non-functional          |Critical|
+|BUG-003|Call Ad           |Only 1 call ad added                |High    |
+|BUG-004|Call Extension    |“Phone country can’t be empty” error|Critical|
+|BUG-005|SKAG Split        |Ads + Keywords both skipped         |Critical|
+|BUG-006|Mix               |Keywords skipped                    |Critical|
+|BUG-007|Alpha-Beta        |Keywords skipped                    |Critical|
+|BUG-008|Match-Type        |Keywords skipped                    |Critical|
+|BUG-009|Brand             |Keywords skipped                    |Critical|
+|BUG-010|Long-Tail         |Keywords skipped                    |Critical|
+
+SECTION 5: PATTERN ANALYSIS FOR DEVELOPER
+Keywords Skipped Bug — 6 Campaigns Affected:
+SKAG Split, Mix, Alpha-Beta, Match-Type, Brand, Long-Tail
+This is almost certainly one common root cause — not 6 separate bugs. The developer should investigate the keyword generation function shared across these 6 campaign types. The 9 working campaigns (SKAG, STAG, STAG+, Intent-Based, GEO, Funnel, Competitor, N-Gram, Seasonal) can be used as reference to identify what’s different in the broken ones.
+SKAG Split is the only campaign where Ads are also skipped — this may indicate an additional issue specific to the SKAG Split ad generation logic.
+
+Total Bugs: 10
+Critical: 8 | High: 1 | Medium: 1
+Campaigns Working: 9/15
+Campaigns with Errors: 6/15

@@ -100,7 +100,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
   
   // CRUD state for users
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
-  const [editForm, setEditForm] = useState({ displayName: '', email: '' });
+  const [editForm, setEditForm] = useState({ displayName: '', email: '', newPassword: '' });
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserRecord | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   
@@ -190,7 +190,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     setEditingUser(user);
     setEditForm({
       displayName: user.fullName || '',
-      email: user.email
+      email: user.email,
+      newPassword: ''
     });
   };
 
@@ -208,6 +209,17 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
       });
       
       if (response.ok) {
+        if (editForm.newPassword.trim().length > 0) {
+          const pwRes = await adminFetch(`/api/superadmin/users/${editingUser.id}/password`, {
+            method: 'PUT',
+            body: JSON.stringify({ password: editForm.newPassword.trim() })
+          });
+          if (!pwRes.ok) {
+            const pwErr = await pwRes.json();
+            alert(pwErr.error || 'User saved but password change failed');
+          }
+        }
+
         setUsers(users.map(u => 
           u.id === editingUser.id 
             ? { ...u, fullName: editForm.displayName, email: editForm.email } 
@@ -390,10 +402,13 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return new Date(dateStr).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     });
   };
 
@@ -928,6 +943,17 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                 type="email"
                 className="bg-slate-700/50 border-slate-600 text-white"
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">New Password</label>
+              <Input
+                value={editForm.newPassword}
+                onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
+                placeholder="Leave blank to keep current password"
+                type="password"
+                className="bg-slate-700/50 border-slate-600 text-white"
+              />
+              <p className="text-xs text-slate-500">Minimum 6 characters. Leave empty to keep existing password.</p>
             </div>
             {editingUser && (
               <div className="p-3 bg-slate-700/30 rounded-lg text-sm text-slate-400">

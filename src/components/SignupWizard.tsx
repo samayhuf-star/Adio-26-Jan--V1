@@ -929,7 +929,7 @@ function WizardContent({
             />
           )}
 
-          {effectiveStep === 3 && (
+          {showConfirmation && (
             <Step3Confirmation
               selectedPlan={isLifetimeDeal ? lifetimePlanForConfirmation : activePlan}
               userEmail={userEmail || prefillEmail}
