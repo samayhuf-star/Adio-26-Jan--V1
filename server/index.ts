@@ -20,6 +20,7 @@ import { clickGuardRoutes } from './routes/clickguard';
 import { googleAdsRoutes } from './routes/googleads';
 import { analyticsRoutes } from './routes/analytics';
 import { appsumoRoutes } from './routes/appsumo';
+import { affonsoRoutes } from './routes/affonso';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -125,6 +126,7 @@ app.route('/api/clickguard', clickGuardRoutes);
 app.route('/api/analytics', analyticsRoutes);
 app.route('/api/google-ads', googleAdsRoutes);
 app.route('/api/appsumo', appsumoRoutes);
+app.route('/api/affonso', affonsoRoutes);
 
 app.get('/googlebc7aae8bc89f46c1.html', async (c) => {
   try {

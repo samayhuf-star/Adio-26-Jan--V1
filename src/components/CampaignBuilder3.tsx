@@ -63,6 +63,7 @@ import { TerminalCard, TerminalLine } from './ui/terminal-card';
 import { ApiStatusIndicator } from './ApiStatusIndicator';
 import { GoogleAdsPushButton } from './GoogleAdsPushButton';
 import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
+import { GOOGLE_ADS_ENABLED } from '../utils/featureFlags';
 import { generateCampaignAssets, assetsToAdExtensions } from '../utils/campaignAssetGenerator';
 
 // Campaign Structure Types (14 structures)
@@ -902,13 +903,25 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   // Helper to filter keywords based on structure type
   const filterKeywordsByStructure = (keywords: any[], structureId: string) => {
     if (structureId === 'long_tail') {
-      // Long-Tail: Only 4+ word keywords
-      return keywords.filter(kw => {
+      let filtered = keywords.filter(kw => {
         const text = (kw.text || kw.keyword || '').replace(/^\[|\]$|^"|"$/g, '').trim();
         return text.split(/\s+/).filter(Boolean).length >= 4;
       });
+      if (filtered.length === 0) {
+        filtered = keywords.filter(kw => {
+          const text = (kw.text || kw.keyword || '').replace(/^\[|\]$|^"|"$/g, '').trim();
+          return text.split(/\s+/).filter(Boolean).length >= 3;
+        });
+      }
+      if (filtered.length === 0) {
+        filtered = [...keywords].sort((a, b) => {
+          const aLen = (a.text || a.keyword || '').split(/\s+/).length;
+          const bLen = (b.text || b.keyword || '').split(/\s+/).length;
+          return bLen - aLen;
+        });
+      }
+      return filtered;
     }
-    // Other structures don't filter keywords in the UI
     return keywords;
   };
 
@@ -916,12 +929,16 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   const handleStructureSelect = (structureId: string) => {
     setUserManuallySelectedStructure(true);
     setCampaignData(prev => {
-      // Filter selectedKeywords based on new structure
       const filteredSelected = filterKeywordsByStructure(prev.selectedKeywords, structureId);
+      const keywordsForGroups = filteredSelected.length > 0 ? filteredSelected : prev.selectedKeywords;
+      const newAdGroups = keywordsForGroups.length > 0 
+        ? generateAdGroupsFromKeywords(keywordsForGroups, structureId)
+        : [];
       return { 
         ...prev, 
         selectedStructure: structureId,
-        selectedKeywords: filteredSelected
+        selectedKeywords: filteredSelected.length > 0 ? filteredSelected : prev.selectedKeywords,
+        adGroups: newAdGroups
       };
     });
   };
@@ -2163,19 +2180,20 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       return;
     }
 
-    // Check if this ad type already exists
-    const existingAdType = campaignData.ads.find(ad => 
-      (ad.type === adType) || 
-      (adType === 'rsa' && ad.adType === 'RSA') ||
-      (adType === 'dki' && ad.adType === 'DKI') ||
-      (adType === 'call' && (ad.adType === 'CallOnly' || ad.type === 'call'))
-    );
+    // Check if this ad type already exists (allow multiple call ads)
+    if (adType !== 'call') {
+      const existingAdType = campaignData.ads.find(ad => 
+        (ad.type === adType) || 
+        (adType === 'rsa' && ad.adType === 'RSA') ||
+        (adType === 'dki' && ad.adType === 'DKI')
+      );
 
-    if (existingAdType) {
-      notifications.info(`A ${adType.toUpperCase()} ad already exists. Maximum 3 ads allowed.`, {
-        title: 'Ad Type Exists'
-      });
-      return;
+      if (existingAdType) {
+        notifications.info(`A ${adType.toUpperCase()} ad already exists. Maximum 3 ads allowed.`, {
+          title: 'Ad Type Exists'
+        });
+        return;
+      }
     }
 
     if (campaignData.selectedKeywords.length === 0) {
@@ -2838,9 +2856,13 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           }
         } else if (ext.type === 'call' && !hasCallExt) {
           hasCallExt = true;
+          const targetCountryCode = campaignData.targetCountry === 'United States' ? 'US' : 
+                                    campaignData.targetCountry === 'Canada' ? 'CA' :
+                                    campaignData.targetCountry === 'United Kingdom' ? 'GB' :
+                                    campaignData.targetCountry === 'Australia' ? 'AU' : 'US';
           callExtensions.push({
             phoneNumber: ext.phone || ext.phoneNumber || '',
-            countryCode: ext.countryCode || 'US',
+            countryCode: ext.countryCode || targetCountryCode,
             status: 'Enabled'
           });
         }
@@ -5560,9 +5582,11 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             </div>
           </div>
 
+          {GOOGLE_ADS_ENABLED && (
           <div className="mb-4">
             <GoogleAdsConnectionStatus variant="full" />
           </div>
+          )}
 
           {/* Primary Action Section */}
           <div className="mb-6 space-y-3">
@@ -5573,6 +5597,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             <Download className="w-5 h-5 mr-2" />
             Download CSV for Google Ads Editor
           </Button>
+          {GOOGLE_ADS_ENABLED && (
           <GoogleAdsPushButton
             campaignData={{
               campaignName: campaignData.campaignName,
@@ -5591,6 +5616,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             size="lg"
             className="w-full h-14 text-lg font-semibold"
           />
+          )}
           </div>
 
 
@@ -5812,11 +5838,19 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         return;
       }
       
-      // Ensure SKAG structure is set when coming from keywords to ads wizard
-      setCampaignData(prev => ({
-        ...prev,
-        selectedStructure: prev.selectedStructure || 'skag',
-      }));
+      setCampaignData(prev => {
+        const structure = prev.selectedStructure || 'skag';
+        const needsAdGroupSync = prev.adGroups.length === 0 || 
+          prev.adGroups.every((ag: any) => !ag.keywords || ag.keywords.length === 0);
+        const adGroups = needsAdGroupSync 
+          ? generateAdGroupsFromKeywords(prev.selectedKeywords, structure)
+          : prev.adGroups;
+        return {
+          ...prev,
+          selectedStructure: structure,
+          adGroups,
+        };
+      });
       setCurrentStep(4);
     }
     else if (currentStep === 4) {

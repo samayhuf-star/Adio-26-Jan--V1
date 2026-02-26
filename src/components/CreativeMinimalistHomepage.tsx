@@ -209,7 +209,13 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
             <button onClick={() => onNavigateToPage?.('/pricing')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Pricing</button>
           </div>
 
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={onLogin}
+              className={`px-5 py-2.5 text-sm font-semibold rounded-xl border transition-all hover:scale-105 ${isScrolled ? 'border-white/20 text-white hover:bg-white/10' : 'border-indigo-400/40 text-indigo-200 hover:bg-white/10'}`}
+            >
+              Sign In
+            </button>
             <button 
               onClick={onGetStarted}
               className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-violet-200/50 hover:shadow-xl hover:shadow-violet-300/50 transition-all hover:scale-105"
@@ -234,6 +240,9 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/proxy-mail'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Proxy Mail</button>
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/domain-monitor'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Domain Monitor</button>
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/pricing'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Pricing</button>
+            <button onClick={() => { setMobileOpen(false); onLogin?.(); }} className="w-full px-6 py-3 border border-white/20 text-white rounded-xl text-sm font-semibold hover:bg-white/10 transition-colors">
+              Sign In
+            </button>
             <button onClick={onGetStarted} className="w-full px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-sm font-semibold">
               Get Started Free
             </button>
@@ -338,6 +347,20 @@ function HeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: () => 
               >
                 See It In Action
               </motion.button>
+            </motion.div>
+
+            <motion.div
+              className="flex flex-wrap justify-center items-center gap-4 mb-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <a href="https://microlaunch.net/p/adiology?utm_source=badge-winner-microlaunch&utm_medium=badge" target="_blank" rel="noopener noreferrer">
+                <img src="https://wild-dust-0517.microlaunch.workers.dev/microlaunch-challenger-badges/ml_challenger_v5.svg" alt="Microlaunch Challenger Badge" width="200" height="63" style={{ width: '200px', height: '63px' }} />
+              </a>
+              <a href="https://microlaunch.net/p/adiology?utm_source=badge-winner-microlaunch&utm_medium=badge" target="_blank" rel="noopener noreferrer">
+                <img src="https://wild-dust-0517.microlaunch.workers.dev/badges/potd/ml_potd_badge_v4.svg" alt="Microlaunch Product of the Day Badge" width="200" height="63" style={{ width: '200px', height: '63px' }} />
+              </a>
             </motion.div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl mx-auto mt-10">

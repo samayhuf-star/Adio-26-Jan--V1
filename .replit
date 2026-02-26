@@ -89,6 +89,8 @@ SUPABASE_DB_PASSWORD = "fJGSDy9SpYIkchu1"
 SUPERADMIN_USERNAME = "superadmin"
 SUPERADMIN_PASSWORD = "Adiology@2026!"
 ADMIN_API_KEY = "d352703d88458424307d6650a083a32e823ca5b7b179abb46333f6a75d589ac1"
+AFFONSO_PROGRAM_ID = "cmm3pjxd4002t12ijzoookmni"
 
 [userenv.production]
 DOMAIN = "https://adiology.io"
+VITE_GOOGLE_ADS_ENABLED = "false"

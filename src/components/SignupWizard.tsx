@@ -4,7 +4,7 @@ import { loadStripe, Stripe as StripeType } from '@stripe/stripe-js';
 import {
   Eye, EyeOff, ArrowLeft, Sparkle, Shield, Rocket, Search, ShieldCheck,
   MailOpen, Globe, Layers, CreditCard, Clock, CheckCircle, Loader2,
-  AlertCircle, Tag, Check, ChevronDown
+  AlertCircle, Tag, Check, ChevronDown, Mail, RefreshCw
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -171,6 +171,68 @@ function Step1CreateAccount({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState('');
+  const [verifiedName, setVerifiedName] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [checkingVerification, setCheckingVerification] = useState(false);
+
+  useEffect(() => {
+    if (!pendingVerification) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/account/verification-status?email=${encodeURIComponent(verifiedEmail)}`);
+        const data = await res.json();
+        if (data.verified) {
+          clearInterval(interval);
+          onNext(verifiedEmail, verifiedName);
+        }
+      } catch {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [pendingVerification, verifiedEmail, verifiedName, onNext]);
+
+  const handleManualCheck = async () => {
+    setCheckingVerification(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/account/verification-status?email=${encodeURIComponent(verifiedEmail)}`);
+      const data = await res.json();
+      if (data.verified) {
+        onNext(verifiedEmail, verifiedName);
+      } else {
+        setError("Your email hasn't been verified yet. Please click the link in your email.");
+      }
+    } catch {
+      setError('Could not check verification status. Please try again.');
+    } finally {
+      setCheckingVerification(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResendLoading(true);
+    setResendMessage('');
+    setError('');
+    try {
+      const res = await fetch('/api/account/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verifiedEmail }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResendMessage('Verification email resent! Check your inbox.');
+      } else {
+        setError(data.error || 'Failed to resend verification email.');
+      }
+    } catch {
+      setError('Failed to resend verification email.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,11 +266,11 @@ function Step1CreateAccount({
         return;
       }
 
-      if (result.needsEmailVerification && isLifetimeDeal) {
-        if (onLifetimeComplete) {
-          onLifetimeComplete();
-          return;
-        }
+      if (result.needsEmailVerification) {
+        setVerifiedEmail(email.trim().toLowerCase());
+        setVerifiedName(name.trim());
+        setPendingVerification(true);
+        return;
       }
 
       onNext(email.trim().toLowerCase(), name.trim());
@@ -218,6 +280,93 @@ function Step1CreateAccount({
       setIsLoading(false);
     }
   };
+
+  if (pendingVerification) {
+    return (
+      <div>
+        <div className="lg:hidden mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-violet-500 to-indigo-600">
+              <Sparkle className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">Adiology</span>
+          </div>
+        </div>
+
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-5">
+            <Mail className="w-8 h-8 text-indigo-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Check your inbox</h2>
+          <p className="text-gray-400 text-sm">
+            We sent a verification link to
+          </p>
+          <p className="text-indigo-300 font-semibold mt-1">{verifiedEmail}</p>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-5 mb-6 text-sm text-gray-300 space-y-2">
+          <p>1. Open the email from Adiology in your inbox.</p>
+          <p>2. Click the <span className="text-indigo-300 font-medium">"Verify Email Address"</span> button.</p>
+          <p>3. Come back here — you'll be moved forward automatically.</p>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
+        {resendMessage && (
+          <div className="flex items-center gap-2 text-green-400 text-sm bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            {resendMessage}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <Button
+            onClick={handleManualCheck}
+            disabled={checkingVerification}
+            className="w-full text-white h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500"
+          >
+            {checkingVerification ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Checking...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                I've verified my email — Continue
+              </span>
+            )}
+          </Button>
+
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendLoading}
+            className="w-full flex items-center justify-center gap-2 text-gray-400 hover:text-white text-sm transition-colors py-2"
+          >
+            {resendLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Resend verification email
+          </button>
+        </div>
+
+        <p className="text-center text-xs text-gray-500 mt-6">
+          Didn't receive it? Check your spam folder or try a different email address.{' '}
+          <button
+            type="button"
+            onClick={() => { setPendingVerification(false); setError(''); setResendMessage(''); }}
+            className="text-indigo-400 hover:text-indigo-300 underline"
+          >
+            Go back
+          </button>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -854,9 +1003,15 @@ function WizardContent({
   onBackToPricing,
   onLogin,
 }: SignupWizardProps) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [userEmail, setUserEmail] = useState('');
-  const [userName, setUserName] = useState('');
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+  })();
+  const storedToken = localStorage.getItem('auth_token');
+  const alreadyHasAccount = !!(storedToken && storedUser?.email);
+
+  const [currentStep, setCurrentStep] = useState(alreadyHasAccount ? 2 : 1);
+  const [userEmail, setUserEmail] = useState(alreadyHasAccount ? (storedUser?.email || '') : '');
+  const [userName, setUserName] = useState(alreadyHasAccount ? (storedUser?.full_name || storedUser?.name || '') : '');
   const [activePlan, setActivePlan] = useState(initialPlan);
 
   const isLifetimeDeal = (initialPlan as any).isLifetimeDeal === true;

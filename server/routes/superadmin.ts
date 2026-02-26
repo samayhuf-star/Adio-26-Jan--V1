@@ -1,22 +1,39 @@
 import { Hono } from 'hono';
 import { sql, eq, desc, and, like } from 'drizzle-orm';
 import { db } from '../db';
-import { users, subscriptions, aiUsageLogs, auditLogs, emailLogs } from '../../shared/schema';
+import { users, subscriptions, aiUsageLogs, auditLogs, emailLogs, userEvents } from '../../shared/schema';
 import { getUncachableStripeClient } from '../stripeClient';
 import crypto from 'crypto';
+import { logUserEvent } from '../services/userEventLogger';
+import EmailService from '../emailService';
 
 const app = new Hono();
 
-const activeAdminTokens = new Map<string, { username: string; createdAt: number }>();
-
 const TOKEN_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-function cleanExpiredTokens() {
-  const now = Date.now();
-  for (const [token, data] of activeAdminTokens) {
-    if (now - data.createdAt > TOKEN_MAX_AGE_MS) {
-      activeAdminTokens.delete(token);
+function generateAdminToken(username: string, password: string): string {
+  const timestamp = Date.now();
+  const payload = `${username}:${timestamp}`;
+  const hmac = crypto.createHmac('sha256', password).update(payload).digest('hex');
+  return Buffer.from(`${payload}:${hmac}`).toString('base64url');
+}
+
+function verifyAdminToken(token: string, password: string): { valid: boolean; username?: string } {
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString('utf8');
+    const parts = decoded.split(':');
+    if (parts.length !== 3) return { valid: false };
+    const [username, timestampStr, hmac] = parts;
+    const timestamp = parseInt(timestampStr, 10);
+    if (isNaN(timestamp) || Date.now() - timestamp > TOKEN_MAX_AGE_MS) {
+      return { valid: false };
     }
+    const payload = `${username}:${timestamp}`;
+    const expectedHmac = crypto.createHmac('sha256', password).update(payload).digest('hex');
+    const valid = crypto.timingSafeEqual(Buffer.from(hmac, 'hex'), Buffer.from(expectedHmac, 'hex'));
+    return valid ? { valid: true, username } : { valid: false };
+  } catch {
+    return { valid: false };
   }
 }
 
@@ -26,9 +43,10 @@ async function authMiddleware(c: any, next?: any) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const token = authHeader.substring(7);
-  cleanExpiredTokens();
-  const session = activeAdminTokens.get(token);
-  if (!session) {
+  const password = process.env.SUPERADMIN_PASSWORD;
+  if (!password) return c.json({ error: 'Admin not configured' }, 500);
+  const result = verifyAdminToken(token, password);
+  if (!result.valid) {
     return c.json({ error: 'Invalid or expired token' }, 401);
   }
   if (next) await next();
@@ -49,8 +67,7 @@ app.post('/login', async (c) => {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    activeAdminTokens.set(token, { username: validUsername, createdAt: Date.now() });
+    const token = generateAdminToken(validUsername, validPassword);
 
     try {
       await db.insert(auditLogs).values({
@@ -74,12 +91,13 @@ app.get('/validate', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const token = authHeader.substring(7);
-  cleanExpiredTokens();
-  const session = activeAdminTokens.get(token);
-  if (!session) {
+  const password = process.env.SUPERADMIN_PASSWORD;
+  if (!password) return c.json({ error: 'Admin not configured' }, 500);
+  const result = verifyAdminToken(token, password);
+  if (!result.valid) {
     return c.json({ error: 'Invalid or expired token' }, 401);
   }
-  return c.json({ valid: true, username: session.username });
+  return c.json({ valid: true, username: result.username });
 });
 
 // Helper to log admin actions
@@ -172,6 +190,7 @@ app.post('/users/:id/block', authMiddleware, async (c) => {
 
     await db.update(users).set({ isBlocked: !!block, updatedAt: new Date() }).where(eq(users.id, userId));
     await logAuditAction({ action: block ? 'user_blocked' : 'user_unblocked', resourceType: 'user', resourceId: userId, details: { email: existing[0].email } });
+    await logUserEvent(userId, block ? 'blocked' : 'unblocked', block ? 'Account blocked' : 'Account unblocked', `Account ${block ? 'blocked' : 'unblocked'} by admin`, { email: existing[0].email });
 
     return c.json({ success: true });
   } catch (error: any) {
@@ -196,6 +215,7 @@ app.put('/users/:id', authMiddleware, async (c) => {
 
     await db.update(users).set(updates).where(eq(users.id, userId));
     await logAuditAction({ action: 'user_updated', resourceType: 'user', resourceId: userId, oldValues: { fullName: existing[0].fullName, email: existing[0].email }, newValues: updates });
+    await logUserEvent(userId, 'admin_edit', 'Profile edited by admin', `User profile updated by superadmin`, { oldValues: { fullName: existing[0].fullName, email: existing[0].email }, newValues: updates });
 
     return c.json({ success: true });
   } catch (error: any) {
@@ -224,6 +244,7 @@ app.put('/users/:id/password', authMiddleware, async (c) => {
 
     await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, userId));
     await logAuditAction({ action: 'user_password_changed', resourceType: 'user', resourceId: userId, details: { email: existing[0].email, changedBy: 'superadmin' } });
+    await logUserEvent(userId, 'password_changed', 'Password changed by admin', `Password was changed by superadmin`, { email: existing[0].email });
 
     return c.json({ success: true });
   } catch (error: any) {
@@ -241,6 +262,7 @@ app.delete('/users/:id', authMiddleware, async (c) => {
       return c.json({ error: 'User not found' }, 404);
     }
 
+    await logUserEvent(userId, 'deleted', 'Account deleted', `Account deleted by admin`, { email: existing[0].email });
     await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
     await db.delete(users).where(eq(users.id, userId));
     await logAuditAction({ action: 'user_deleted', resourceType: 'user', resourceId: userId, details: { email: existing[0].email } });
@@ -296,6 +318,9 @@ app.put('/subscriptions/:id', authMiddleware, async (c) => {
     }
 
     await logAuditAction({ action: 'subscription_updated', resourceType: 'subscription', resourceId: subId, oldValues: { planName: existing[0].planName, status: existing[0].status }, newValues: updates });
+    if (existing[0].userId) {
+      await logUserEvent(existing[0].userId, 'admin_edit', 'Subscription edited by admin', `Subscription updated by superadmin`, { subscriptionId: subId, oldPlan: existing[0].planName, oldStatus: existing[0].status, newPlan: planName, newStatus: status });
+    }
 
     return c.json({ success: true });
   } catch (error: any) {
@@ -317,6 +342,7 @@ app.post('/subscriptions/:id/cancel', authMiddleware, async (c) => {
 
     if (existing[0].userId) {
       await db.update(users).set({ subscriptionStatus: 'canceled', updatedAt: new Date() }).where(eq(users.id, existing[0].userId));
+      await logUserEvent(existing[0].userId, 'subscription_canceled', 'Subscription canceled by admin', `Subscription canceled by superadmin`, { subscriptionId: subId, planName: existing[0].planName });
     }
 
     await logAuditAction({ action: 'subscription_canceled', resourceType: 'subscription', resourceId: subId });
@@ -341,6 +367,7 @@ app.post('/subscriptions/:id/reactivate', authMiddleware, async (c) => {
 
     if (existing[0].userId) {
       await db.update(users).set({ subscriptionStatus: 'active', updatedAt: new Date() }).where(eq(users.id, existing[0].userId));
+      await logUserEvent(existing[0].userId, 'subscription_reactivated', 'Subscription reactivated by admin', `Subscription reactivated by superadmin`, { subscriptionId: subId, planName: existing[0].planName });
     }
 
     await logAuditAction({ action: 'subscription_reactivated', resourceType: 'subscription', resourceId: subId });
@@ -570,7 +597,7 @@ app.get('/system-health', authMiddleware, async (c) => {
       dbStatus,
       dbStats,
       serverTime: new Date().toISOString(),
-      activeAdminSessions: activeAdminTokens.size,
+      activeAdminSessions: 1,
     });
   } catch (error: any) {
     console.error('[SuperAdmin] System health error:', error);
@@ -822,6 +849,238 @@ app.get('/email-logs', authMiddleware, async (c) => {
   } catch (error: any) {
     console.error('[SuperAdmin] Email logs error:', error);
     return c.json({ logs: [], total: 0, stats: { total: 0, sent: 0, failed: 0, opened: 0, clicked: 0 } });
+  }
+});
+
+app.get('/users-unified', authMiddleware, async (c) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT 
+        u.id,
+        u.email,
+        u.full_name as "fullName",
+        u.role,
+        u.subscription_plan as "subscriptionPlan",
+        u.subscription_status as "subscriptionStatus",
+        u.is_blocked as "isBlocked",
+        u.created_at as "createdAt",
+        u.updated_at as "updatedAt",
+        u.last_sign_in as "lastSignIn",
+        u.email_verified as "emailVerified",
+        u.card_validated as "cardValidated",
+        u.stripe_customer_id as "stripeCustomerId",
+        s.id as "subscriptionId",
+        s.plan_name as "subPlanName",
+        s.status as "subStatus",
+        s.current_period_start as "subPeriodStart",
+        s.current_period_end as "subPeriodEnd",
+        s.cancel_at_period_end as "subCancelAtPeriodEnd",
+        s.trial_start as "subTrialStart",
+        s.trial_end as "subTrialEnd",
+        s.created_at as "subCreatedAt",
+        s.updated_at as "subUpdatedAt",
+        COALESCE(p.total_paid, 0) as "totalPaidCents",
+        p.last_payment_date as "lastPaymentDate",
+        p.last_payment_status as "lastPaymentStatus",
+        COALESCE(p.payment_count, 0) as "paymentCount"
+      FROM users u
+      LEFT JOIN (
+        SELECT DISTINCT ON (user_id) *
+        FROM subscriptions
+        ORDER BY user_id, created_at DESC
+      ) s ON s.user_id = u.id
+      LEFT JOIN (
+        SELECT 
+          user_id,
+          SUM(amount_cents) as total_paid,
+          MAX(paid_at) as last_payment_date,
+          (SELECT status FROM payments p2 WHERE p2.user_id = payments.user_id ORDER BY created_at DESC LIMIT 1) as last_payment_status,
+          COUNT(*) as payment_count
+        FROM payments
+        GROUP BY user_id
+      ) p ON p.user_id = u.id
+      ORDER BY u.created_at DESC
+    `);
+
+    return c.json({ users: result.rows });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Users unified error:', error);
+    return c.json({ users: [] });
+  }
+});
+
+app.get('/users/:id/lifecycle', authMiddleware, async (c) => {
+  try {
+    const userId = c.req.param('id');
+
+    const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (userResult.length === 0) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    const user = userResult[0];
+
+    const events = await db.execute(sql`
+      SELECT id, event_type as "eventType", title, description, metadata, created_at as "createdAt"
+      FROM user_events
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+    `);
+
+    const userEmailLogs = await db.execute(sql`
+      SELECT id, subject, status, template_id as "templateId", sent_at as "sentAt", 
+             opened_at as "openedAt", clicked_at as "clickedAt", bounced_at as "bouncedAt",
+             error, opens, clicks
+      FROM email_logs
+      WHERE recipient = ${user.email}
+      ORDER BY sent_at DESC
+      LIMIT 50
+    `);
+
+    const userAuditLogs = await db.execute(sql`
+      SELECT id, action, resource_type as "resourceType", old_values as "oldValues", 
+             new_values as "newValues", details, level, created_at as "createdAt"
+      FROM audit_logs
+      WHERE resource_id = ${userId} OR user_id = ${userId}
+      ORDER BY created_at DESC
+      LIMIT 50
+    `);
+
+    const userPayments = await db.execute(sql`
+      SELECT id, amount_cents as "amountCents", currency, status, 
+             payment_method_type as "paymentMethodType", description, receipt_url as "receiptUrl",
+             paid_at as "paidAt", created_at as "createdAt"
+      FROM payments
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+    `);
+
+    const userSubscriptions = await db.execute(sql`
+      SELECT id, plan_name as "planName", status, current_period_start as "periodStart",
+             current_period_end as "periodEnd", cancel_at_period_end as "cancelAtPeriodEnd",
+             canceled_at as "canceledAt", trial_start as "trialStart", trial_end as "trialEnd",
+             created_at as "createdAt", updated_at as "updatedAt"
+      FROM subscriptions
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+    `);
+
+    return c.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        subscriptionPlan: user.subscriptionPlan,
+        subscriptionStatus: user.subscriptionStatus,
+        isBlocked: user.isBlocked,
+        emailVerified: user.emailVerified,
+        cardValidated: user.cardValidated,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        lastSignIn: user.lastSignIn,
+      },
+      events: events.rows,
+      emailLogs: userEmailLogs.rows,
+      auditLogs: userAuditLogs.rows,
+      payments: userPayments.rows,
+      subscriptions: userSubscriptions.rows,
+    });
+  } catch (error: any) {
+    console.error('[SuperAdmin] User lifecycle error:', error);
+    return c.json({ error: 'Failed to fetch user lifecycle' }, 500);
+  }
+});
+
+app.post('/backfill-user-events', authMiddleware, async (c) => {
+  try {
+    let count = 0;
+
+    const allUsers = await db.select({
+      id: users.id,
+      email: users.email,
+      createdAt: users.createdAt,
+      lastSignIn: users.lastSignIn,
+      emailVerified: users.emailVerified,
+      cardValidated: users.cardValidated,
+      subscriptionPlan: users.subscriptionPlan,
+    }).from(users);
+
+    for (const user of allUsers) {
+      if (user.createdAt) {
+        await logUserEvent(user.id, 'signup', 'Account created', `User signed up with email ${user.email}`, { email: user.email }, user.createdAt);
+        count++;
+      }
+      if (user.emailVerified) {
+        await logUserEvent(user.id, 'email_verified', 'Email verified', undefined, { email: user.email }, user.createdAt || new Date());
+        count++;
+      }
+      if (user.cardValidated) {
+        await logUserEvent(user.id, 'card_validated', 'Payment card validated', undefined, {}, user.createdAt || new Date());
+        count++;
+      }
+      if (user.lastSignIn) {
+        await logUserEvent(user.id, 'login', 'User logged in', undefined, {}, user.lastSignIn);
+        count++;
+      }
+    }
+
+    const allSubs = await db.execute(sql`
+      SELECT s.*, u.email FROM subscriptions s LEFT JOIN users u ON s.user_id = u.id
+    `);
+    for (const sub of allSubs.rows as any[]) {
+      await logUserEvent(sub.user_id, 'subscription_created', `Subscription created: ${sub.plan_name}`, 
+        `Plan: ${sub.plan_name}, Status: ${sub.status}`, 
+        { planName: sub.plan_name, status: sub.status }, sub.created_at);
+      count++;
+    }
+
+    const allPayments = await db.execute(sql`
+      SELECT p.*, u.email FROM payments p LEFT JOIN users u ON p.user_id = u.id
+    `);
+    for (const pay of allPayments.rows as any[]) {
+      const eventType = pay.status === 'succeeded' ? 'payment_succeeded' : 'payment_failed';
+      await logUserEvent(pay.user_id, eventType, 
+        `Payment ${pay.status}: $${((pay.amount_cents || 0) / 100).toFixed(2)}`,
+        pay.description || undefined,
+        { amountCents: pay.amount_cents, currency: pay.currency, status: pay.status },
+        pay.paid_at || pay.created_at);
+      count++;
+    }
+
+    const allEmails = await db.execute(sql`
+      SELECT e.*, u.id as user_id FROM email_logs e LEFT JOIN users u ON u.email = e.recipient
+    `);
+    for (const email of allEmails.rows as any[]) {
+      if (email.user_id) {
+        await logUserEvent(email.user_id, 'email_sent', `Email sent: ${email.subject}`,
+          undefined, { templateId: email.template_id, status: email.status }, email.sent_at);
+        count++;
+      }
+    }
+
+    return c.json({ success: true, eventsCreated: count });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Backfill error:', error);
+    return c.json({ error: 'Failed to backfill events' }, 500);
+  }
+});
+
+app.post('/users/:id/send-credentials', authMiddleware, async (c) => {
+  try {
+    const userId = c.req.param('id');
+    const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!userRows.length) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    const user = userRows[0];
+    const result = await EmailService.sendLoginCredentials(user.email, user.fullName || '');
+    if (!result.success) {
+      return c.json({ error: result.error || 'Failed to send email' }, 500);
+    }
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Send credentials error:', error);
+    return c.json({ error: 'Failed to send credentials email' }, 500);
   }
 });
 

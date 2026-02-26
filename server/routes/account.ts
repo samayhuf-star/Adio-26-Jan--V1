@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { getDatabaseUrl } from '../dbConfig';
 import { EmailService } from '../emailService';
+import { logUserEvent } from '../services/userEventLogger';
 
 const { Pool } = pg;
 const pool = new Pool({ connectionString: getDatabaseUrl() });
@@ -77,6 +78,9 @@ accountRoutes.post('/register', async (c) => {
 
         await pool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [existing.id]);
 
+        await logUserEvent(existing.id, 'signup', 'Account setup completed', `Existing passwordless user completed account setup`, { email: normalizedEmail, plan: existing.subscription_plan });
+        await logUserEvent(existing.id, 'login', 'User logged in', `Login after account setup`, { email: normalizedEmail });
+
         console.log(`[Auth] Existing passwordless user completed setup: ${normalizedEmail} (plan: ${existing.subscription_plan})`);
         return c.json({
           success: true,
@@ -102,7 +106,7 @@ accountRoutes.post('/register', async (c) => {
     try {
       await pool.query(
         `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, false, 'user', 'free', 'active', NOW(), NOW())`,
+         VALUES ($1, $2, $3, $4, true, 'user', 'free', 'active', NOW(), NOW())`,
         [userId, normalizedEmail, name || null, passwordHash]
       );
     } catch (dbError: any) {
@@ -112,31 +116,28 @@ accountRoutes.post('/register', async (c) => {
       throw dbError;
     }
 
-    try {
-      const verifyToken = crypto.randomUUID();
-      const verifyExpires = new Date();
-      verifyExpires.setHours(verifyExpires.getHours() + 24);
+    const jwtToken = jwt.sign(
+      { userId, email: normalizedEmail, role: 'user' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-      await pool.query(
-        `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
-         VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
-        [userId, verifyToken, verifyExpires]
-      );
+    await logUserEvent(userId, 'signup', 'User registered', `New account created`, { email: normalizedEmail, name: name || null });
 
-      const emailBase = getEmailBaseUrl(c);
-      const verificationUrl = `${emailBase}/verify-email?token=${verifyToken}&email=${encodeURIComponent(normalizedEmail)}`;
-      await EmailService.sendRaw(normalizedEmail, 'emailVerification', { verification_url: verificationUrl });
-      console.log(`[Auth] Verification email sent to ${normalizedEmail} after registration`);
-    } catch (emailErr: any) {
-      console.error(`[Auth] Failed to send verification email (non-fatal):`, emailErr?.message);
-    }
+    EmailService.sendRaw(normalizedEmail, 'welcome', { name: name || 'there' }).catch(() => {});
 
     console.log(`[Auth] User registered: ${email}`);
     return c.json({
       success: true,
-      message: 'Account created. Please verify your email.',
+      message: 'Account created successfully.',
       userId,
-      needsEmailVerification: true,
+      token: jwtToken,
+      user: {
+        id: userId,
+        email: normalizedEmail,
+        subscription_plan: 'free',
+        subscription_status: 'active',
+      },
     });
   } catch (error: any) {
     console.error('[Auth] Registration error:', error);
@@ -175,10 +176,6 @@ accountRoutes.post('/login', async (c) => {
       return c.json({ success: false, error: 'Invalid email or password' }, 401);
     }
 
-    if (!user.email_verified) {
-      return c.json({ success: false, error: 'Please verify your email before signing in', needsEmailVerification: true, email: user.email }, 403);
-    }
-
     if (user.is_blocked) {
       return c.json({ success: false, error: 'Your account has been suspended. Please contact support.' }, 403);
     }
@@ -190,6 +187,7 @@ accountRoutes.post('/login', async (c) => {
     );
 
     await pool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [user.id]);
+    await logUserEvent(user.id, 'login', 'User logged in', `Successful login`, { email: user.email });
 
     console.log(`[Auth] User logged in: ${email}`);
     return c.json({
@@ -255,6 +253,8 @@ accountRoutes.post('/verify-email', async (c) => {
     );
 
     await EmailService.sendRaw(user.email, 'welcome', { name: user.full_name || 'there' });
+    await logUserEvent(user.id, 'email_verified', 'Email verified', `User verified their email address`, { email: user.email });
+    await logUserEvent(user.id, 'email_sent', 'Welcome email sent', `Welcome email dispatched after verification`, { email: user.email, template: 'welcome' });
 
     console.log(`[Auth] Email verified: ${user.email}`);
     return c.json({
@@ -330,6 +330,7 @@ accountRoutes.post('/resend-verification', async (c) => {
     const emailBase = getEmailBaseUrl(c);
     const verificationUrl = `${emailBase}/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`;
     await EmailService.sendRaw(user.email, 'emailVerification', { verification_url: verificationUrl });
+    await logUserEvent(user.id, 'email_verification_sent', 'Verification email resent', `Verification email resent`, { email: user.email, attemptNumber: recentCount + 1 });
 
     console.log(`[Auth] Verification email resent: ${email} (${recentCount + 1}/3 this hour)`);
     return c.json({ success: true, message: 'Verification email sent' });
@@ -398,6 +399,7 @@ accountRoutes.post('/forgot-password', async (c) => {
       const baseUrl = getBaseUrl(c);
       const resetUrl = `${baseUrl}/reset-password?token=${token}`;
       const emailResult = await EmailService.sendRaw(user.email, 'passwordReset', { reset_url: resetUrl });
+      await logUserEvent(user.id, 'password_reset_requested', 'Password reset requested', `Password reset email sent`, { email: normalizedEmail });
 
       if (emailResult.success) {
         console.log(`[Auth] Password reset email sent to: ${normalizedEmail}`);
@@ -442,6 +444,8 @@ accountRoutes.post('/reset-password', async (c) => {
       'UPDATE users SET password_hash = $1, email_verified = true, updated_at = NOW() WHERE id = $2',
       [passwordHash, tokenRecord.user_id]
     );
+
+    await logUserEvent(tokenRecord.user_id, 'password_reset_completed', 'Password reset completed', `Password was successfully reset`);
 
     console.log(`[Auth] Password reset completed for user: ${tokenRecord.user_id} (email auto-verified)`);
     return c.json({ success: true, message: 'Password has been reset successfully' });

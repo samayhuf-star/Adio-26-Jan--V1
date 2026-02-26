@@ -1014,3 +1014,18 @@ export const pageViews = pgTable("page_views", {
   createdAtIdx: index("idx_page_views_created_at").on(table.createdAt),
   deviceTypeIdx: index("idx_page_views_device_type").on(table.deviceType),
 }));
+
+export const userEvents = pgTable("user_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  eventType: text("event_type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_user_events_user_id").on(table.userId),
+  eventTypeIdx: index("idx_user_events_event_type").on(table.eventType),
+  createdAtIdx: index("idx_user_events_created_at").on(table.createdAt),
+  userCreatedIdx: index("idx_user_events_user_created").on(table.userId, table.createdAt),
+}));

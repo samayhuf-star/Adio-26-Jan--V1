@@ -518,6 +518,57 @@ export const emailTemplates = {
 </body>
 </html>
     `
+  },
+
+  loginCredentials: {
+    name: 'Login Credentials',
+    subject: 'Your Adiology Login Details',
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <div style="background: white; border-radius: 12px; padding: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 28px; font-weight: bold; color: #6366f1; margin: 0;">ADIOLOGY</h1>
+        <p style="color: #6b7280; margin: 5px 0 0 0;">Google Ads Made Easy</p>
+      </div>
+
+      <h2 style="color: #1f2937; margin-bottom: 20px;">Your Login Details</h2>
+      <p style="color: #4b5563; margin-bottom: 20px;">
+        Here are your login credentials for Adiology:
+      </p>
+
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+        <p style="margin: 0 0 10px 0; color: #374151;"><strong>Email / Username:</strong></p>
+        <p style="margin: 0 0 20px 0; color: #6366f1; font-size: 16px; font-weight: 600;">{{email}}</p>
+        <p style="margin: 0; color: #6b7280; font-size: 13px;">
+          If you don't remember your password, you can reset it using the button below.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="{{login_url}}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #6366f1, #9333ea); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin-right: 10px;">Log In</a>
+        <a href="{{reset_url}}" style="display: inline-block; padding: 14px 32px; background: #f3f4f6; color: #374151; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">Reset Password</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px;">
+        If you have any issues logging in, please contact our support team.
+      </p>
+    </div>
+
+    <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+      <p>&copy; {{year}} Adiology. All rights reserved.</p>
+      <p><a href="{{unsubscribe_url}}" style="color: #9ca3af;">Unsubscribe</a></p>
+    </div>
+  </div>
+</body>
+</html>
+    `
   }
 };
 

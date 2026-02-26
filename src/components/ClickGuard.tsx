@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { GOOGLE_ADS_ENABLED } from '../utils/featureFlags';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getSessionToken } from '../utils/auth';
 import {
@@ -327,6 +328,7 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
   const [gAdsCampaignsLoading, setGAdsCampaignsLoading] = useState(false);
   const [gAdsPushing, setGAdsPushing] = useState(false);
   const [gAdsPushResult, setGAdsPushResult] = useState<any>(null);
+  const [gAdsManualCustomerId, setGAdsManualCustomerId] = useState('');
   const [lastIpPush, setLastIpPush] = useState<any>(null);
 
   const [error, setError] = useState<string | null>(null);
@@ -2373,6 +2375,7 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                             <button onClick={() => handleExportBlockedIPs('googleads')} disabled={exportingIPs} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50">
                               <Download className="w-3.5 h-3.5" /> Download Google Ads Format
                             </button>
+                            {GOOGLE_ADS_ENABLED && (
                             <button
                               onClick={openGAdsPushDialog}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"
@@ -2380,10 +2383,11 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                               <ExternalLink className="w-3.5 h-3.5" />
                               {selectedIPs.size > 0 ? `Push ${selectedIPs.size} IPs to Google Ads` : 'Push to Google Ads'}
                             </button>
+                            )}
                           </div>
                         )}
                       </div>
-                      {lastIpPush && (
+                      {GOOGLE_ADS_ENABLED && lastIpPush && (
                         <div className="flex items-center gap-2 text-xs text-slate-500 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
                           <CheckCircle className="w-3.5 h-3.5 text-orange-500" />
                           <span>
@@ -2834,6 +2838,7 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                     )}
                   </div>
 
+                  {GOOGLE_ADS_ENABLED && (
                   <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="p-5 border-b border-gray-100">
                       <div className="flex items-center justify-between">
@@ -2863,27 +2868,45 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                           <p className="text-xs text-slate-400 mb-4 max-w-xs">
                             Link your Google Ads account to automatically sync blocked IPs as campaign exclusions.
                           </p>
-                          <button
-                            onClick={async () => {
-                              await fetchGAdsStatus();
-                              if (!gAdsConnected) {
+                          <div className="w-full max-w-xs space-y-2">
+                            <input
+                              type="text"
+                              placeholder="Enter Customer ID (e.g. 123-456-7890)"
+                              value={gAdsManualCustomerId || ''}
+                              onChange={(e) => setGAdsManualCustomerId(e.target.value)}
+                              className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            />
+                            <button
+                              onClick={async () => {
+                                const cleaned = (gAdsManualCustomerId || '').replace(/[-\s]/g, '');
+                                if (cleaned.length !== 10 || !/^\d+$/.test(cleaned)) {
+                                  setError('Enter a valid 10-digit Customer ID');
+                                  return;
+                                }
                                 try {
                                   const headers = await authHeaders();
-                                  const res = await fetch('/api/google-ads/auth/url', { headers });
-                                  if (res.ok) {
-                                    const data = await res.json();
-                                    window.location.href = data.url;
+                                  const res = await fetch('/api/google-ads/link-account', {
+                                    method: 'POST',
+                                    headers: { ...headers, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ customerId: cleaned }),
+                                  });
+                                  const data = await res.json();
+                                  if (res.ok && data.success) {
+                                    setGAdsConnected(true);
+                                    await fetchGAdsStatus();
+                                  } else {
+                                    setError(data.error || 'Failed to link account');
                                   }
                                 } catch (err) {
-                                  setError('Failed to connect to Google Ads');
+                                  setError('Failed to link Google Ads account');
                                 }
-                              }
-                            }}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold rounded-lg hover:from-orange-600 hover:to-amber-600 transition-all shadow-sm"
-                          >
-                            <Link className="w-4 h-4" />
-                            Connect Google Ads Account
-                          </button>
+                              }}
+                              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold rounded-lg hover:from-orange-600 hover:to-amber-600 transition-all shadow-sm w-full justify-center"
+                            >
+                              <Link className="w-4 h-4" />
+                              Link Google Ads Account
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <>
@@ -3028,6 +3051,7 @@ export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: Ta
                       )}
                     </div>
                   </div>
+                  )}
                 </div>
               )}
             </motion.div>

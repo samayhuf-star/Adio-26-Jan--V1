@@ -66,6 +66,7 @@ const DraftCampaigns = lazy(() => import('./components/DraftCampaigns').then(m =
 
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const SupportPanel = lazy(() => import('./components/SupportPanel').then(m => ({ default: m.SupportPanel })));
+const ReferralsDashboard = lazy(() => import('./components/ReferralsDashboard').then(m => ({ default: m.ReferralsDashboard })));
 const SupportHelpCombined = lazy(() => import('./components/SupportHelpCombined').then(m => ({ default: m.SupportHelpCombined })));
 const HelpSupport = lazy(() => import('./components/HelpSupport').then(m => ({ default: m.HelpSupport })));
 const Blog = lazy(() => import('./components/Blog').then(m => ({ default: m.default })));
@@ -715,6 +716,12 @@ const AppContent = () => {
         return;
       }
 
+      if (path === '/login' || path === '/signin') {
+        setAuthMode('sign-in');
+        setView('auth');
+        return;
+      }
+
       if (path.startsWith('/plan-selection')) {
         if (user) {
           setView('plan-selection');
@@ -833,7 +840,8 @@ const AppContent = () => {
         return;
       }
       if (path === '/features/blog-generator') {
-        setView('feature-blog-generator');
+        window.history.replaceState({}, '', '/');
+        setView('homepage');
         return;
       }
 
@@ -935,6 +943,12 @@ const AppContent = () => {
         return;
       }
 
+      if (path === '/login' || path === '/signin') {
+        setAuthMode('sign-in');
+        setAppView('auth');
+        return;
+      }
+
       if (path === '/plan-selection' || path.startsWith('/plan-selection')) {
         if (user) {
           setAppView('plan-selection');
@@ -973,7 +987,8 @@ const AppContent = () => {
         return;
       }
       if (path === '/features/blog-generator') {
-        setAppView('feature-blog-generator');
+        window.history.replaceState({}, '', '/');
+        setAppView('homepage');
         return;
       }
       if (user) {
@@ -1023,7 +1038,9 @@ const AppContent = () => {
 
   // Function to handle plan selection
   const handleSelectPlan = async (planName: string, priceId: string, amount: number, isSubscription: boolean) => {
-    sessionStorage.setItem('selectedPlan', JSON.stringify({ name: planName, priceId, amount, isSubscription }));
+    const planData = JSON.stringify({ name: planName, priceId, amount, isSubscription });
+    sessionStorage.setItem('selectedPlan', planData);
+    localStorage.setItem('signup_pending_plan', planData);
     setSelectedPlan({ name: planName, priceId, amount, isSubscription });
 
     if (!user) {
@@ -1292,10 +1309,20 @@ const AppContent = () => {
     return (
       <EmailVerification
         onVerificationSuccess={() => {
-          // Bug_74: Redirect to login screen after email verification
-          window.history.pushState({}, '', '/');
-          setAuthMode('sign-in');
-          setAppView('auth');
+          const storedPlan = sessionStorage.getItem('selectedPlan') || localStorage.getItem('signup_pending_plan');
+          if (storedPlan) {
+            try {
+              const plan = JSON.parse(storedPlan);
+              sessionStorage.setItem('selectedPlan', JSON.stringify(plan));
+              setSelectedPlan(plan);
+            } catch {}
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup-wizard');
+          } else {
+            window.history.pushState({}, '', '/');
+            setAuthMode('sign-in');
+            setAppView('auth');
+          }
         }}
           onBackToHome={() => {
           setAppView('auth');
@@ -1651,6 +1678,7 @@ const AppContent = () => {
         }}
         onSuccess={async () => {
           sessionStorage.removeItem('selectedPlan');
+          localStorage.removeItem('signup_pending_plan');
           const fetchProfile = async (retries = 3): Promise<any> => {
             for (let i = 0; i < retries; i++) {
               try {
@@ -1687,6 +1715,7 @@ const AppContent = () => {
         }}
         onLogin={() => {
           setAuthMode('sign-in');
+          window.history.pushState({}, '', '/login');
           setAppView('auth');
         }}
       />
@@ -1839,7 +1868,9 @@ const AppContent = () => {
       <CreativeMinimalistHomepage
         onGetStarted={() => {
           if (!selectedPlan) {
-            sessionStorage.setItem('selectedPlan', JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true }));
+            const defaultPlan = JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
+            sessionStorage.setItem('selectedPlan', defaultPlan);
+            localStorage.setItem('signup_pending_plan', defaultPlan);
             setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
           }
           window.history.pushState({}, '', '/signup');
@@ -1934,6 +1965,7 @@ const AppContent = () => {
               }
             }
             setLoading(false);
+            window.history.pushState({}, '', '/');
             setAppView('user');
             setActiveTab('dashboard');
           } catch (err) {

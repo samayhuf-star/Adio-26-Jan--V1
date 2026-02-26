@@ -266,6 +266,20 @@ export const EmailService = {
       console.error('[EmailService] Error sending raw email:', error);
       return { success: false, error: error.message };
     }
+  },
+
+  async sendLoginCredentials(email: string, name: string) {
+    const baseUrl = process.env.APP_URL || process.env.DOMAIN || 'https://adiology.io';
+    return sendEmail({
+      to: email,
+      templateId: 'loginCredentials',
+      variables: {
+        name: name || 'there',
+        email,
+        login_url: `${baseUrl}/login`,
+        reset_url: `${baseUrl}/reset-password`
+      }
+    });
   }
 };
 

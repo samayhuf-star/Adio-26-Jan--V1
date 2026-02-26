@@ -6,6 +6,7 @@ interface AssetGeneratorInput {
   uniqueValueProposition?: string;
   location?: string;
   phoneNumber?: string;
+  countryCode?: string;
 }
 
 export interface GeneratedSitelink {
@@ -278,7 +279,7 @@ export function generateCampaignAssets(input: AssetGeneratorInput): GeneratedAss
   if (phoneNumber && phoneNumber !== '(555) 123-4567') {
     callExtensions.push({
       phoneNumber,
-      countryCode: 'US',
+      countryCode: input.countryCode || 'US',
       status: 'Enabled',
     });
   }

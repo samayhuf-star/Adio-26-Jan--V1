@@ -1,9 +1,8 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
-import { createHmac, randomBytes } from 'crypto';
 import { db } from '../db';
 import { googleAdsTokens, campaignHistory, clickGuardIpPushLog } from '../../shared/schema';
-import { desc, and } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
 import { getUserIdFromToken } from '../utils/auth';
 
 const googleAds = new Hono();
@@ -11,70 +10,21 @@ const googleAds = new Hono();
 const GOOGLE_ADS_CLIENT_ID = process.env.GOOGLE_ADS_CLIENT_ID || '';
 const GOOGLE_ADS_CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET || '';
 const GOOGLE_ADS_DEVELOPER_TOKEN = process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '';
+const GOOGLE_ADS_MCC_REFRESH_TOKEN = process.env.GOOGLE_ADS_MCC_REFRESH_TOKEN || '';
+const GOOGLE_ADS_MCC_CUSTOMER_ID = (process.env.GOOGLE_ADS_MCC_CUSTOMER_ID || '').replace(/-/g, '');
 const GOOGLE_ADS_API_BASE = 'https://googleads.googleapis.com/v18/';
 
-const STATE_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET || randomBytes(32).toString('hex');
+let mccAccessToken: string | null = null;
+let mccAccessTokenExpiry: Date | null = null;
 
-function signOAuthState(userId: string): string {
-  const nonce = randomBytes(16).toString('hex');
-  const payload = JSON.stringify({ userId, nonce, ts: Date.now() });
-  const signature = createHmac('sha256', STATE_SECRET).update(payload).digest('hex');
-  return Buffer.from(JSON.stringify({ payload, signature })).toString('base64url');
-}
-
-function verifyOAuthState(stateParam: string): { userId: string } | null {
-  try {
-    const decoded = JSON.parse(Buffer.from(stateParam, 'base64url').toString());
-    const { payload, signature } = decoded;
-    const expectedSig = createHmac('sha256', STATE_SECRET).update(payload).digest('hex');
-    if (signature !== expectedSig) return null;
-    const data = JSON.parse(payload);
-    const age = Date.now() - data.ts;
-    if (age > 10 * 60 * 1000) return null;
-    return { userId: data.userId };
-  } catch {
+async function getValidMCCAccessToken(): Promise<string | null> {
+  if (!GOOGLE_ADS_MCC_REFRESH_TOKEN) {
+    console.error('[GoogleAds] MCC refresh token not configured');
     return null;
   }
-}
 
-function getRedirectUri(requestHost?: string): string {
-  if (requestHost && !requestHost.includes('adiology.io')) {
-    const protocol = 'https';
-    return `${protocol}://${requestHost}/api/google-ads/auth/callback`;
-  }
-  return 'https://adiology.io/api/google-ads/auth/callback';
-}
-
-function getGoogleAdsHeaders(accessToken: string, customerId?: string): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Authorization': `Bearer ${accessToken}`,
-    'developer-token': GOOGLE_ADS_DEVELOPER_TOKEN,
-    'Content-Type': 'application/json',
-  };
-  if (customerId) {
-    headers['login-customer-id'] = customerId.replace(/-/g, '');
-  }
-  return headers;
-}
-
-async function getValidAccessToken(userId: string): Promise<{ accessToken: string; customerId: string | null; loginCustomerId: string | null } | null> {
-  const tokens = await db
-    .select()
-    .from(googleAdsTokens)
-    .where(eq(googleAdsTokens.userId, userId))
-    .limit(1);
-
-  if (tokens.length === 0) return null;
-
-  const tokenRecord = tokens[0];
-  const now = new Date();
-
-  if (tokenRecord.accessToken && tokenRecord.accessTokenExpiry && tokenRecord.accessTokenExpiry > now) {
-    return {
-      accessToken: tokenRecord.accessToken,
-      customerId: tokenRecord.customerId,
-      loginCustomerId: tokenRecord.loginCustomerId,
-    };
+  if (mccAccessToken && mccAccessTokenExpiry && mccAccessTokenExpiry > new Date()) {
+    return mccAccessToken;
   }
 
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -83,235 +33,131 @@ async function getValidAccessToken(userId: string): Promise<{ accessToken: strin
     body: new URLSearchParams({
       client_id: GOOGLE_ADS_CLIENT_ID,
       client_secret: GOOGLE_ADS_CLIENT_SECRET,
-      refresh_token: tokenRecord.refreshToken,
+      refresh_token: GOOGLE_ADS_MCC_REFRESH_TOKEN,
       grant_type: 'refresh_token',
     }),
   });
 
   if (!tokenResponse.ok) {
-    console.error('[GoogleAds] Token refresh failed:', await tokenResponse.text());
+    console.error('[GoogleAds] MCC token refresh failed:', await tokenResponse.text());
     return null;
   }
 
   const tokenData = await tokenResponse.json() as { access_token: string; expires_in: number };
-  const expiry = new Date(Date.now() + tokenData.expires_in * 1000);
+  mccAccessToken = tokenData.access_token;
+  mccAccessTokenExpiry = new Date(Date.now() + (tokenData.expires_in - 60) * 1000);
 
-  await db
-    .update(googleAdsTokens)
-    .set({
-      accessToken: tokenData.access_token,
-      accessTokenExpiry: expiry,
-      updatedAt: new Date(),
-    })
-    .where(eq(googleAdsTokens.userId, userId));
-
-  return {
-    accessToken: tokenData.access_token,
-    customerId: tokenRecord.customerId,
-    loginCustomerId: tokenRecord.loginCustomerId,
-  };
+  return mccAccessToken;
 }
 
-googleAds.get('/auth/url', async (c) => {
+function getGoogleAdsHeaders(accessToken: string, loginCustomerId?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${accessToken}`,
+    'developer-token': GOOGLE_ADS_DEVELOPER_TOKEN,
+    'Content-Type': 'application/json',
+  };
+  if (loginCustomerId) {
+    headers['login-customer-id'] = loginCustomerId.replace(/-/g, '');
+  }
+  return headers;
+}
+
+googleAds.post('/link-account', async (c) => {
   try {
     const userId = await getUserIdFromToken(c);
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const host = c.req.header('host') || '';
-    const redirectUri = getRedirectUri(host);
-    console.log('[GoogleAds] Auth URL - host:', host, 'redirectUri:', redirectUri);
+    const body = await c.req.json();
+    const customerIdRaw = (body.customerId || '').replace(/[-\s]/g, '');
 
-    const stateData = signOAuthState(userId);
-    const stateWithHost = Buffer.from(JSON.stringify({ 
-      s: stateData, 
-      h: host 
-    })).toString('base64url');
-
-    const params = new URLSearchParams({
-      client_id: GOOGLE_ADS_CLIENT_ID,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/adwords',
-      access_type: 'offline',
-      prompt: 'consent',
-      state: stateWithHost,
-    });
-
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    return c.json({ url });
-  } catch (error: any) {
-    console.error('[GoogleAds] Auth URL error:', error);
-    return c.json({ error: 'Failed to generate auth URL' }, 500);
-  }
-});
-
-googleAds.get('/auth/callback', async (c) => {
-  try {
-    const code = c.req.query('code');
-    const stateParam = c.req.query('state');
-    const error = c.req.query('error');
-    const callbackHost = c.req.header('host') || '';
-
-    console.log('[GoogleAds] Callback received - host:', callbackHost);
-
-    if (error) {
-      console.error('[GoogleAds] OAuth error:', error);
-      return c.redirect('/?google_ads_error=' + encodeURIComponent(error));
+    if (!customerIdRaw || customerIdRaw.length !== 10 || !/^\d+$/.test(customerIdRaw)) {
+      return c.json({ error: 'Invalid Customer ID. Must be a 10-digit number (e.g. 123-456-7890).' }, 400);
     }
 
-    if (!code || !stateParam) {
-      return c.redirect('/?google_ads_error=missing_params');
+    const accessToken = await getValidMCCAccessToken();
+    if (!accessToken) {
+      return c.json({ error: 'Google Ads MCC not configured. Please contact the administrator.' }, 500);
     }
 
-    let originalHost = '';
-    let stateData = '';
-    try {
-      const stateWrapper = JSON.parse(Buffer.from(stateParam, 'base64url').toString());
-      stateData = stateWrapper.s || stateParam;
-      originalHost = stateWrapper.h || '';
-    } catch {
-      stateData = stateParam;
-    }
-
-    const state = verifyOAuthState(stateData);
-    if (!state) {
-      console.error('[GoogleAds] Invalid or expired OAuth state');
-      return c.redirect('/?google_ads_error=invalid_state');
-    }
-
-    const redirectUri = getRedirectUri(originalHost || callbackHost);
-    console.log('[GoogleAds] Token exchange - redirectUri:', redirectUri);
-
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: GOOGLE_ADS_CLIENT_ID,
-        client_secret: GOOGLE_ADS_CLIENT_SECRET,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code',
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      const errText = await tokenResponse.text();
-      console.error('[GoogleAds] Token exchange failed:', errText);
-      return c.redirect('/?google_ads_error=token_exchange_failed');
-    }
-
-    const tokenData = await tokenResponse.json() as {
-      access_token: string;
-      refresh_token?: string;
-      expires_in: number;
-    };
-
-    if (!tokenData.refresh_token) {
-      console.error('[GoogleAds] No refresh token received');
-      return c.redirect('/?google_ads_error=no_refresh_token');
-    }
-
-    console.log('[GoogleAds] Token exchange successful, fetching accessible customers...');
-    const expiry = new Date(Date.now() + tokenData.expires_in * 1000);
-
-    let customerId: string | null = null;
-    let loginCustomerId: string | null = null;
-    let accessibleAccounts: Array<{ id: string; name: string; isManager: boolean }> = [];
+    let accountName = `Account ${customerIdRaw}`;
+    let verified = false;
+    let inviteSent = false;
 
     try {
-      const customerResponse = await fetch(
-        `${GOOGLE_ADS_API_BASE}customers:listAccessibleCustomers`,
+      const detailRes = await fetch(
+        `${GOOGLE_ADS_API_BASE}customers/${customerIdRaw}`,
         {
-          headers: getGoogleAdsHeaders(tokenData.access_token),
+          headers: getGoogleAdsHeaders(accessToken, GOOGLE_ADS_MCC_CUSTOMER_ID),
         }
       );
 
-      const customerResponseText = await customerResponse.text();
-      console.log('[GoogleAds] listAccessibleCustomers status:', customerResponse.status, 'response:', customerResponseText.substring(0, 500));
+      if (detailRes.ok) {
+        const detail = await detailRes.json() as {
+          descriptiveName?: string;
+          manager?: boolean;
+          currencyCode?: string;
+          timeZone?: string;
+        };
+        accountName = detail.descriptiveName || accountName;
+        verified = true;
+        console.log('[GoogleAds] Verified customer', customerIdRaw, '- name:', accountName);
+      } else {
+        const errText = await detailRes.text();
+        console.warn('[GoogleAds] Could not verify customer', customerIdRaw, ':', errText.substring(0, 300));
 
-      if (customerResponse.ok) {
-        const customerData = JSON.parse(customerResponseText) as { resourceNames?: string[] };
-        const resourceNames = customerData.resourceNames || [];
-        console.log('[GoogleAds] Found', resourceNames.length, 'accessible customers:', resourceNames);
-        
-        for (const rn of resourceNames) {
-          const cid = rn.replace('customers/', '');
-          try {
-            const detailRes = await fetch(
-              `${GOOGLE_ADS_API_BASE}customers/${cid}`,
-              {
-                headers: getGoogleAdsHeaders(tokenData.access_token, cid),
-              }
-            );
-            const detailText = await detailRes.text();
-            if (detailRes.ok) {
-              const detail = JSON.parse(detailText) as { 
-                descriptiveName?: string; 
-                manager?: boolean;
-                id?: string;
-              };
-              console.log('[GoogleAds] Customer', cid, '- name:', detail.descriptiveName, 'manager:', detail.manager);
-              accessibleAccounts.push({
-                id: cid,
-                name: detail.descriptiveName || `Account ${cid}`,
-                isManager: detail.manager === true,
-              });
-              if (detail.manager === true && !loginCustomerId) {
-                loginCustomerId = cid;
-              }
-            } else {
-              console.warn('[GoogleAds] Customer detail fetch failed for', cid, ':', detailText.substring(0, 300));
-              accessibleAccounts.push({
-                id: cid,
-                name: `Account ${cid}`,
-                isManager: false,
-              });
+        if (errText.includes('PERMISSION_DENIED') || errText.includes('USER_PERMISSION_DENIED')) {
+          // MCC doesn't have access yet — send client link invitation FROM MCC TO user's account
+          // Must use customerClientLinks:mutate (manager's perspective), NOT customerManagerLinks
+          console.log('[GoogleAds] Sending client link invite to customer', customerIdRaw);
+          const inviteRes = await fetch(
+            `${GOOGLE_ADS_API_BASE}customers/${GOOGLE_ADS_MCC_CUSTOMER_ID}/customerClientLinks:mutate`,
+            {
+              method: 'POST',
+              headers: getGoogleAdsHeaders(accessToken, GOOGLE_ADS_MCC_CUSTOMER_ID),
+              body: JSON.stringify({
+                operations: [{
+                  create: {
+                    clientCustomer: `customers/${customerIdRaw}`,
+                    status: 'PENDING',
+                  },
+                }],
+              }),
             }
-          } catch (detailErr) {
-            console.error('[GoogleAds] Customer detail error for', cid, ':', detailErr);
-            accessibleAccounts.push({
-              id: cid,
-              name: `Account ${cid}`,
-              isManager: false,
-            });
+          );
+
+          const inviteText = await inviteRes.text();
+          console.log('[GoogleAds] Invite response:', inviteRes.status, inviteText.substring(0, 400));
+
+          if (inviteRes.ok || inviteText.includes('ALREADY_INVITED') || inviteText.includes('ALREADY_MANAGED')) {
+            inviteSent = true;
+            console.log('[GoogleAds] Manager invite sent/already pending for customer', customerIdRaw);
+          } else {
+            console.error('[GoogleAds] Failed to send invite:', inviteText);
+            return c.json({
+              error: `Could not send invitation to Google Ads account ${customerIdRaw.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}. Please verify the Customer ID is correct and try again.`,
+              details: inviteText.substring(0, 200),
+            }, 400);
           }
         }
-
-        const clientAccounts = accessibleAccounts.filter(a => !a.isManager);
-        const managerAccounts = accessibleAccounts.filter(a => a.isManager);
-
-        if (clientAccounts.length > 0) {
-          customerId = clientAccounts[0].id;
-        } else if (managerAccounts.length > 0) {
-          customerId = managerAccounts[0].id;
-        }
-
-        if (managerAccounts.length > 0) {
-          loginCustomerId = managerAccounts[0].id;
-        }
-      } else {
-        console.error('[GoogleAds] listAccessibleCustomers failed - this usually means the developer token is not approved or in test mode');
       }
     } catch (err) {
-      console.error('[GoogleAds] Failed to fetch customer IDs:', err);
+      console.error('[GoogleAds] Error verifying/inviting customer:', err);
     }
-
-    console.log('[GoogleAds] Saving tokens - userId:', state.userId, 'customerId:', customerId, 'loginCustomerId:', loginCustomerId, 'accounts found:', accessibleAccounts.length);
 
     const existing = await db
       .select()
       .from(googleAdsTokens)
-      .where(eq(googleAdsTokens.userId, state.userId))
+      .where(eq(googleAdsTokens.userId, userId))
       .limit(1);
 
     const tokenValues = {
-      refreshToken: tokenData.refresh_token,
-      accessToken: tokenData.access_token,
-      accessTokenExpiry: expiry,
-      customerId,
-      loginCustomerId,
+      refreshToken: 'mcc_managed',
+      accessToken: null as string | null,
+      accessTokenExpiry: null as Date | null,
+      customerId: customerIdRaw,
+      loginCustomerId: GOOGLE_ADS_MCC_CUSTOMER_ID,
       updatedAt: new Date(),
     };
 
@@ -319,19 +165,94 @@ googleAds.get('/auth/callback', async (c) => {
       await db
         .update(googleAdsTokens)
         .set(tokenValues)
-        .where(eq(googleAdsTokens.userId, state.userId));
+        .where(eq(googleAdsTokens.userId, userId));
     } else {
       await db.insert(googleAdsTokens).values({
-        userId: state.userId,
+        userId,
         ...tokenValues,
       });
     }
 
-    console.log('[GoogleAds] Tokens saved successfully, redirecting...');
-    return c.redirect('/?google_ads_connected=true');
+    return c.json({
+      success: true,
+      customerId: customerIdRaw,
+      accountName,
+      verified,
+      inviteSent,
+    });
   } catch (error: any) {
-    console.error('[GoogleAds] Callback error:', error);
-    return c.redirect('/?google_ads_error=callback_failed');
+    console.error('[GoogleAds] Link account error:', error);
+    return c.json({ error: 'Failed to link Google Ads account', message: error.message }, 500);
+  }
+});
+
+googleAds.post('/unlink-account', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    await db
+      .delete(googleAdsTokens)
+      .where(eq(googleAdsTokens.userId, userId));
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('[GoogleAds] Unlink error:', error);
+    return c.json({ error: 'Failed to unlink account' }, 500);
+  }
+});
+
+googleAds.post('/check-link-status', async (c) => {
+  try {
+    const userId = await getUserIdFromToken(c);
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const tokens = await db
+      .select()
+      .from(googleAdsTokens)
+      .where(eq(googleAdsTokens.userId, userId))
+      .limit(1);
+
+    if (tokens.length === 0 || !tokens[0].customerId) {
+      return c.json({ linked: false, verified: false });
+    }
+
+    const customerIdRaw = tokens[0].customerId;
+    const accessToken = await getValidMCCAccessToken();
+    if (!accessToken) {
+      return c.json({ error: 'MCC not configured' }, 500);
+    }
+
+    const detailRes = await fetch(
+      `${GOOGLE_ADS_API_BASE}customers/${customerIdRaw}`,
+      { headers: getGoogleAdsHeaders(accessToken, GOOGLE_ADS_MCC_CUSTOMER_ID) }
+    );
+
+    if (detailRes.ok) {
+      const detail = await detailRes.json() as { descriptiveName?: string };
+      return c.json({
+        linked: true,
+        verified: true,
+        customerId: customerIdRaw,
+        accountName: detail.descriptiveName || `Account ${customerIdRaw}`,
+      });
+    } else {
+      const errText = await detailRes.text();
+      const isPending = errText.includes('PERMISSION_DENIED') || errText.includes('USER_PERMISSION_DENIED');
+      return c.json({
+        linked: true,
+        verified: false,
+        pending: isPending,
+        customerId: customerIdRaw,
+      });
+    }
+  } catch (error: any) {
+    console.error('[GoogleAds] Check link status error:', error);
+    return c.json({ error: 'Failed to check link status' }, 500);
   }
 });
 
@@ -348,14 +269,14 @@ googleAds.get('/auth/status', async (c) => {
       .where(eq(googleAdsTokens.userId, userId))
       .limit(1);
 
-    if (tokens.length === 0) {
+    if (tokens.length === 0 || !tokens[0].customerId) {
       return c.json({ connected: false });
     }
 
     return c.json({
       connected: true,
-      customerId: tokens[0].customerId || undefined,
-      loginCustomerId: tokens[0].loginCustomerId || undefined,
+      customerId: tokens[0].customerId,
+      loginCustomerId: tokens[0].loginCustomerId || GOOGLE_ADS_MCC_CUSTOMER_ID || undefined,
     });
   } catch (error: any) {
     console.error('[GoogleAds] Auth status error:', error);
@@ -370,129 +291,49 @@ googleAds.get('/auth/accounts', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const tokenInfo = await getValidAccessToken(userId);
-    if (!tokenInfo) {
-      return c.json({ error: 'Google Ads not connected' }, 401);
+    const accessToken = await getValidMCCAccessToken();
+    if (!accessToken) {
+      return c.json({ error: 'MCC not configured' }, 500);
     }
 
-    const customerResponse = await fetch(
-      `${GOOGLE_ADS_API_BASE}customers:listAccessibleCustomers`,
+    const queryRes = await fetch(
+      `${GOOGLE_ADS_API_BASE}customers/${GOOGLE_ADS_MCC_CUSTOMER_ID}/googleAds:searchStream`,
       {
-        headers: getGoogleAdsHeaders(tokenInfo.accessToken),
+        method: 'POST',
+        headers: getGoogleAdsHeaders(accessToken, GOOGLE_ADS_MCC_CUSTOMER_ID),
+        body: JSON.stringify({
+          query: `SELECT customer_client.id, customer_client.descriptive_name, customer_client.manager, customer_client.currency_code, customer_client.time_zone FROM customer_client WHERE customer_client.manager = false AND customer_client.status = 'ENABLED'`,
+        }),
       }
     );
 
-    if (!customerResponse.ok) {
-      const errText = await customerResponse.text();
-      console.error('[GoogleAds] List customers failed:', errText);
+    if (!queryRes.ok) {
+      const errText = await queryRes.text();
+      console.error('[GoogleAds] List MCC child accounts failed:', errText);
       return c.json({ error: 'Failed to list accounts', details: errText }, 500);
     }
 
-    const customerData = await customerResponse.json() as { resourceNames?: string[] };
-    const resourceNames = customerData.resourceNames || [];
-    console.log('[GoogleAds] /auth/accounts - found', resourceNames.length, 'accounts for user:', userId);
+    const queryData = await queryRes.json() as any[];
+    const results = queryData?.[0]?.results || [];
+    const accounts = results.map((r: any) => ({
+      id: String(r.customerClient.id),
+      name: r.customerClient.descriptiveName || `Account ${r.customerClient.id}`,
+      isManager: false,
+      managerId: GOOGLE_ADS_MCC_CUSTOMER_ID,
+      currencyCode: r.customerClient.currencyCode,
+      timezone: r.customerClient.timeZone,
+    }));
 
-    const accounts: Array<{ id: string; name: string; isManager: boolean; currencyCode?: string; timezone?: string }> = [];
-
-    for (const rn of resourceNames) {
-      const cid = rn.replace('customers/', '');
-      try {
-        const detailRes = await fetch(
-          `${GOOGLE_ADS_API_BASE}customers/${cid}`,
-          {
-            headers: getGoogleAdsHeaders(tokenInfo.accessToken, cid),
-          }
-        );
-        if (detailRes.ok) {
-          const detail = await detailRes.json() as {
-            descriptiveName?: string;
-            manager?: boolean;
-            currencyCode?: string;
-            timeZone?: string;
-          };
-          accounts.push({
-            id: cid,
-            name: detail.descriptiveName || `Account ${cid}`,
-            isManager: detail.manager === true,
-            currencyCode: detail.currencyCode,
-            timezone: detail.timeZone,
-          });
-        } else {
-          accounts.push({
-            id: cid,
-            name: `Account ${cid}`,
-            isManager: false,
-          });
-        }
-      } catch {
-        accounts.push({
-          id: cid,
-          name: `Account ${cid}`,
-          isManager: false,
-        });
-      }
-    }
-
-    const managerAccounts = accounts.filter(a => a.isManager);
-    let childAccounts: Array<{ id: string; name: string; isManager: boolean; managerId?: string; currencyCode?: string; timezone?: string }> = [];
-
-    for (const mgr of managerAccounts) {
-      try {
-        const queryRes = await fetch(
-          `${GOOGLE_ADS_API_BASE}customers/${mgr.id}/googleAds:searchStream`,
-          {
-            method: 'POST',
-            headers: getGoogleAdsHeaders(tokenInfo.accessToken, mgr.id),
-            body: JSON.stringify({
-              query: `SELECT customer_client.id, customer_client.descriptive_name, customer_client.manager, customer_client.currency_code, customer_client.time_zone FROM customer_client WHERE customer_client.manager = false AND customer_client.status = 'ENABLED'`,
-            }),
-          }
-        );
-
-        if (queryRes.ok) {
-          const queryData = await queryRes.json() as any[];
-          const results = queryData?.[0]?.results || [];
-          for (const r of results) {
-            const cc = r.customerClient;
-            if (cc && cc.id) {
-              const existsInAccounts = accounts.some(a => a.id === String(cc.id)) || childAccounts.some(a => a.id === String(cc.id));
-              if (!existsInAccounts) {
-                childAccounts.push({
-                  id: String(cc.id),
-                  name: cc.descriptiveName || `Account ${cc.id}`,
-                  isManager: false,
-                  managerId: mgr.id,
-                  currencyCode: cc.currencyCode,
-                  timezone: cc.timeZone,
-                });
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error(`[GoogleAds] Failed to fetch children for MCC ${mgr.id}:`, err);
-      }
-    }
-
-    const childMap = new Map<string, string>();
-    for (const child of childAccounts) {
-      if (child.managerId) {
-        childMap.set(child.id, child.managerId);
-      }
-    }
-
-    const allAccounts = [
-      ...accounts.map(a => ({
-        ...a,
-        managerId: childMap.get(a.id) || (a.isManager ? undefined : (managerAccounts.length > 0 ? managerAccounts[0].id : undefined)) as string | undefined,
-      })),
-      ...childAccounts.filter(c => !accounts.some(a => a.id === c.id)),
-    ];
+    const userToken = await db
+      .select()
+      .from(googleAdsTokens)
+      .where(eq(googleAdsTokens.userId, userId))
+      .limit(1);
 
     return c.json({
-      accounts: allAccounts,
-      selectedCustomerId: tokenInfo.customerId || undefined,
-      loginCustomerId: tokenInfo.loginCustomerId || undefined,
+      accounts,
+      selectedCustomerId: userToken.length > 0 ? userToken[0].customerId : undefined,
+      loginCustomerId: GOOGLE_ADS_MCC_CUSTOMER_ID,
     });
   } catch (error: any) {
     console.error('[GoogleAds] List accounts error:', error);
@@ -518,6 +359,43 @@ googleAds.post('/auth/disconnect', async (c) => {
   }
 });
 
+googleAds.get('/mcc/status', async (c) => {
+  try {
+    const configured = !!(GOOGLE_ADS_MCC_REFRESH_TOKEN && GOOGLE_ADS_MCC_CUSTOMER_ID);
+    if (!configured) {
+      return c.json({ configured: false, connected: false });
+    }
+
+    const accessToken = await getValidMCCAccessToken();
+    if (!accessToken) {
+      return c.json({ configured: true, connected: false, error: 'Failed to get access token' });
+    }
+
+    let mccName = '';
+    try {
+      const detailRes = await fetch(
+        `${GOOGLE_ADS_API_BASE}customers/${GOOGLE_ADS_MCC_CUSTOMER_ID}`,
+        {
+          headers: getGoogleAdsHeaders(accessToken, GOOGLE_ADS_MCC_CUSTOMER_ID),
+        }
+      );
+      if (detailRes.ok) {
+        const detail = await detailRes.json() as { descriptiveName?: string };
+        mccName = detail.descriptiveName || '';
+      }
+    } catch {}
+
+    return c.json({
+      configured: true,
+      connected: true,
+      mccCustomerId: GOOGLE_ADS_MCC_CUSTOMER_ID,
+      mccName,
+    });
+  } catch (error: any) {
+    return c.json({ configured: false, connected: false, error: error.message }, 500);
+  }
+});
+
 googleAds.post('/push', async (c) => {
   try {
     const userId = await getUserIdFromToken(c);
@@ -525,27 +403,33 @@ googleAds.post('/push', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const tokenInfo = await getValidAccessToken(userId);
-    if (!tokenInfo) {
-      return c.json({ error: 'Google Ads not connected. Please connect your account first.' }, 401);
+    const userToken = await db
+      .select()
+      .from(googleAdsTokens)
+      .where(eq(googleAdsTokens.userId, userId))
+      .limit(1);
+
+    if (userToken.length === 0 || !userToken[0].customerId) {
+      return c.json({ error: 'Google Ads account not linked. Please link your Customer ID first.' }, 401);
+    }
+
+    const accessToken = await getValidMCCAccessToken();
+    if (!accessToken) {
+      return c.json({ error: 'Google Ads MCC not configured. Please contact the administrator.' }, 500);
     }
 
     const body = await c.req.json();
     const name = body.name || body.campaignName;
     const budget = body.budget || body.dailyBudget;
-    const { keywords, ads, adGroups, headlines, descriptions, finalUrl, geoTargets, campaignHistoryId, customerId: bodyCustomerId, loginCustomerId: bodyLoginCustomerId } = body;
+    const { keywords, ads, adGroups, headlines, descriptions, finalUrl, geoTargets, campaignHistoryId } = body;
 
     if (!name || !budget) {
       return c.json({ error: 'Campaign name and budget are required' }, 400);
     }
 
-    const customerId = (bodyCustomerId || tokenInfo.customerId)?.replace(/-/g, '');
-    if (!customerId) {
-      return c.json({ error: 'No Google Ads customer ID found. Please reconnect your account.' }, 400);
-    }
-
-    const loginCid = (bodyLoginCustomerId || tokenInfo.loginCustomerId || customerId)?.replace(/-/g, '');
-    const headers = getGoogleAdsHeaders(tokenInfo.accessToken, loginCid);
+    const customerId = userToken[0].customerId.replace(/-/g, '');
+    const loginCid = GOOGLE_ADS_MCC_CUSTOMER_ID;
+    const headers = getGoogleAdsHeaders(accessToken, loginCid);
 
     const budgetResponse = await fetch(
       `${GOOGLE_ADS_API_BASE}customers/${customerId}/campaignBudgets:mutate`,
@@ -671,14 +555,14 @@ googleAds.post('/push', async (c) => {
 
     if (adGroupResourceName && ads && Array.isArray(ads) && ads.length > 0) {
       const adOperations = ads.map((ad: any) => {
-        const headlines = (ad.headlines || []).slice(0, 15).map((h: string) => ({ text: h.substring(0, 30) }));
-        const descriptions = (ad.descriptions || []).slice(0, 4).map((d: string) => ({ text: d.substring(0, 90) }));
+        const adHeadlines = (ad.headlines || []).slice(0, 15).map((h: string) => ({ text: h.substring(0, 30) }));
+        const adDescriptions = (ad.descriptions || []).slice(0, 4).map((d: string) => ({ text: d.substring(0, 90) }));
 
-        while (headlines.length < 3) {
-          headlines.push({ text: name.substring(0, 30) });
+        while (adHeadlines.length < 3) {
+          adHeadlines.push({ text: name.substring(0, 30) });
         }
-        while (descriptions.length < 2) {
-          descriptions.push({ text: `Learn more about ${name}`.substring(0, 90) });
+        while (adDescriptions.length < 2) {
+          adDescriptions.push({ text: `Learn more about ${name}`.substring(0, 90) });
         }
 
         return {
@@ -686,8 +570,8 @@ googleAds.post('/push', async (c) => {
             adGroup: adGroupResourceName,
             ad: {
               responsiveSearchAd: {
-                headlines,
-                descriptions,
+                headlines: adHeadlines,
+                descriptions: adDescriptions,
                 path1: ad.path1 || '',
                 path2: ad.path2 || '',
               },
@@ -747,6 +631,7 @@ googleAds.post('/push', async (c) => {
 
     return c.json({
       success: true,
+      campaignId: googleAdsCampaignId,
       googleAdsCampaignId,
       campaignResourceName,
     });
@@ -763,13 +648,23 @@ googleAds.post('/update', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const tokenInfo = await getValidAccessToken(userId);
-    if (!tokenInfo) {
-      return c.json({ error: 'Google Ads not connected' }, 401);
+    const userToken = await db
+      .select()
+      .from(googleAdsTokens)
+      .where(eq(googleAdsTokens.userId, userId))
+      .limit(1);
+
+    if (userToken.length === 0 || !userToken[0].customerId) {
+      return c.json({ error: 'Google Ads account not linked' }, 401);
+    }
+
+    const accessToken = await getValidMCCAccessToken();
+    if (!accessToken) {
+      return c.json({ error: 'MCC not configured' }, 500);
     }
 
     const updateBody = await c.req.json();
-    const { googleAdsCampaignId, keywords, ads, campaignHistoryId, customerId: updateBodyCustomerId, loginCustomerId: updateBodyLoginCustomerId } = updateBody;
+    const { googleAdsCampaignId, keywords, ads, campaignHistoryId } = updateBody;
     const name = updateBody.name || updateBody.campaignName;
     const budget = updateBody.budget || updateBody.dailyBudget;
 
@@ -777,13 +672,9 @@ googleAds.post('/update', async (c) => {
       return c.json({ error: 'Google Ads campaign ID is required' }, 400);
     }
 
-    const customerId = (updateBodyCustomerId || tokenInfo.customerId)?.replace(/-/g, '');
-    if (!customerId) {
-      return c.json({ error: 'No Google Ads customer ID found' }, 400);
-    }
-
-    const loginCid = (updateBodyLoginCustomerId || tokenInfo.loginCustomerId || customerId)?.replace(/-/g, '');
-    const headers = getGoogleAdsHeaders(tokenInfo.accessToken, loginCid);
+    const customerId = userToken[0].customerId.replace(/-/g, '');
+    const loginCid = GOOGLE_ADS_MCC_CUSTOMER_ID;
+    const headers = getGoogleAdsHeaders(accessToken, loginCid);
     const campaignResourceName = `customers/${customerId}/campaigns/${googleAdsCampaignId}`;
 
     const updateFields: any = {};
@@ -865,6 +756,7 @@ googleAds.post('/update', async (c) => {
 
     return c.json({
       success: true,
+      campaignId: googleAdsCampaignId,
       googleAdsCampaignId,
     });
   } catch (error: any) {
@@ -878,17 +770,21 @@ googleAds.get('/campaigns', async (c) => {
     const userId = await getUserIdFromToken(c);
     if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
-    const tokenInfo = await getValidAccessToken(userId);
-    if (!tokenInfo) return c.json({ error: 'Not connected to Google Ads' }, 401);
+    const userToken = await db
+      .select()
+      .from(googleAdsTokens)
+      .where(eq(googleAdsTokens.userId, userId))
+      .limit(1);
 
-    const customerId = (c.req.query('customerId') || tokenInfo.customerId || '').replace(/-/g, '');
-    const loginCustomerId = (c.req.query('loginCustomerId') || tokenInfo.loginCustomerId || '').replace(/-/g, '');
-
-    if (!customerId) {
-      return c.json({ error: 'No customer ID specified' }, 400);
+    if (userToken.length === 0 || !userToken[0].customerId) {
+      return c.json({ error: 'Google Ads account not linked' }, 401);
     }
 
-    const headers = getGoogleAdsHeaders(tokenInfo.accessToken, loginCustomerId || customerId);
+    const accessToken = await getValidMCCAccessToken();
+    if (!accessToken) return c.json({ error: 'MCC not configured' }, 500);
+
+    const customerId = userToken[0].customerId.replace(/-/g, '');
+    const headers = getGoogleAdsHeaders(accessToken, GOOGLE_ADS_MCC_CUSTOMER_ID);
 
     const response = await fetch(
       `${GOOGLE_ADS_API_BASE}customers/${customerId}/googleAds:searchStream`,
@@ -929,11 +825,21 @@ googleAds.post('/push-ip-exclusions', async (c) => {
     const userId = await getUserIdFromToken(c);
     if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
-    const tokenInfo = await getValidAccessToken(userId);
-    if (!tokenInfo) return c.json({ error: 'Not connected to Google Ads' }, 401);
+    const userToken = await db
+      .select()
+      .from(googleAdsTokens)
+      .where(eq(googleAdsTokens.userId, userId))
+      .limit(1);
+
+    if (userToken.length === 0 || !userToken[0].customerId) {
+      return c.json({ error: 'Google Ads account not linked' }, 401);
+    }
+
+    const accessToken = await getValidMCCAccessToken();
+    if (!accessToken) return c.json({ error: 'MCC not configured' }, 500);
 
     const body = await c.req.json();
-    const { ipAddresses, campaignIds, customerId: reqCustomerId, loginCustomerId: reqLoginCustomerId, siteId } = body;
+    const { ipAddresses, campaignIds, siteId } = body;
 
     if (!ipAddresses || !Array.isArray(ipAddresses) || ipAddresses.length === 0) {
       return c.json({ error: 'No IP addresses provided' }, 400);
@@ -942,14 +848,8 @@ googleAds.post('/push-ip-exclusions', async (c) => {
       return c.json({ error: 'No campaign IDs provided' }, 400);
     }
 
-    const customerId = (reqCustomerId || tokenInfo.customerId || '').replace(/-/g, '');
-    const loginCustomerId = (reqLoginCustomerId || tokenInfo.loginCustomerId || '').replace(/-/g, '');
-
-    if (!customerId) {
-      return c.json({ error: 'No customer ID specified' }, 400);
-    }
-
-    const headers = getGoogleAdsHeaders(tokenInfo.accessToken, loginCustomerId || customerId);
+    const customerId = userToken[0].customerId.replace(/-/g, '');
+    const headers = getGoogleAdsHeaders(accessToken, GOOGLE_ADS_MCC_CUSTOMER_ID);
 
     const results: any[] = [];
     const errors: any[] = [];

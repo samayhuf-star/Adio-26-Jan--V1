@@ -10,6 +10,7 @@ import { stripeService } from '../stripeService';
 import { getDatabaseUrl } from '../dbConfig';
 import { EmailService } from '../emailService';
 import pg from 'pg';
+import { logUserEvent } from '../services/userEventLogger';
 
 const { Pool: StripePool } = pg;
 const stripePool = new StripePool({ connectionString: getDatabaseUrl() });
@@ -690,25 +691,11 @@ stripe.post('/create-trial', async (c) => {
       console.error('[Stripe] Subscription record insert failed (non-fatal):', subInsertErr?.message);
     }
 
-    console.log(`[Stripe] Trial subscription created for ${email}, plan: ${planName}, sub: ${subscription.id}`);
+    await logUserEvent(userId, 'card_validated', 'Card validated', `Credit card validated for trial`, { email, planName });
+    await logUserEvent(userId, 'trial_started', 'Trial started', `7-day trial started for ${planName}`, { email, planName, subscriptionId: subscription.id });
+    await logUserEvent(userId, 'subscription_created', 'Subscription created', `Trial subscription created for ${planName}`, { email, planName, subscriptionId: subscription.id, status: 'trialing' });
 
-    try {
-      const verifyToken = crypto.randomUUID();
-      const verifyExpires = new Date();
-      verifyExpires.setHours(verifyExpires.getHours() + 24);
-      await stripePool.query(
-        `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
-         VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
-        [userId, verifyToken, verifyExpires]
-      );
-      const origin = c.req.header('origin') || c.req.header('x-forwarded-host') || 'https://adiology.io';
-      const emailBase = origin.startsWith('http') ? origin : `https://${origin}`;
-      const verificationUrl = `${emailBase}/verify-email?token=${verifyToken}&email=${encodeURIComponent(email.toLowerCase().trim())}`;
-      await EmailService.sendRaw(email.toLowerCase().trim(), 'emailVerification', { verification_url: verificationUrl });
-      console.log(`[Stripe] Verification email sent to ${email} after successful payment`);
-    } catch (emailErr: any) {
-      console.error(`[Stripe] Failed to send verification email (non-fatal):`, emailErr?.message);
-    }
+    console.log(`[Stripe] Trial subscription created for ${email}, plan: ${planName}, sub: ${subscription.id}`);
 
     return c.json({
       success: true,
@@ -1019,6 +1006,8 @@ stripe.post('/webhook', async (c) => {
 
             if (updateResult.rowCount && updateResult.rowCount > 0) {
               lifetimeUserId = updateResult.rows[0].id;
+              await logUserEvent(lifetimeUserId!, 'checkout_completed', 'Lifetime deal purchased', `Lifetime deal checkout completed`, { email: customerEmail, amount: session.amount_total });
+              await logUserEvent(lifetimeUserId!, 'subscription_created', 'Lifetime subscription activated', `Lifetime plan activated`, { email: customerEmail, plan: 'Lifetime' });
               console.log(`[Stripe Webhook] Upgraded existing user ${customerEmail} to Lifetime plan`);
             } else {
               const newUserId = crypto.randomUUID();
@@ -1028,6 +1017,9 @@ stripe.post('/webhook', async (c) => {
                 [newUserId, customerEmail, stripeCustomerId]
               );
               lifetimeUserId = newUserId;
+              await logUserEvent(newUserId, 'signup', 'Account created via lifetime deal', `Account auto-created from lifetime deal purchase`, { email: customerEmail });
+              await logUserEvent(newUserId, 'checkout_completed', 'Lifetime deal purchased', `Lifetime deal checkout completed`, { email: customerEmail, amount: session.amount_total });
+              await logUserEvent(newUserId, 'subscription_created', 'Lifetime subscription activated', `Lifetime plan activated`, { email: customerEmail, plan: 'Lifetime' });
               console.log(`[Stripe Webhook] Created new user ${customerEmail} with Lifetime plan`);
             }
           } catch (dbErr) {
@@ -1054,6 +1046,7 @@ stripe.post('/webhook', async (c) => {
                    ON CONFLICT (stripe_payment_intent_id) DO NOTHING`,
                   [lifetimeUserId, paymentIntentId, session.amount_total || 9900]
                 );
+                await logUserEvent(lifetimeUserId, 'payment_succeeded', 'Payment succeeded', `Lifetime deal payment of $${((session.amount_total || 9900) / 100).toFixed(2)}`, { amount: session.amount_total || 9900, currency: 'usd', paymentIntentId });
               }
             } catch (payErr: any) {
               console.error('[Stripe Webhook] Payment record insert error (non-fatal):', payErr?.message);
@@ -1128,6 +1121,8 @@ stripe.post('/webhook', async (c) => {
 
             if (updateResult.rows.length > 0) {
               const userId = updateResult.rows[0].id;
+              await logUserEvent(userId, 'checkout_completed', 'Checkout completed', `${planName} plan checkout completed`, { email: customerEmail, planName, amount: session.amount_total });
+              await logUserEvent(userId, 'subscription_created', 'Subscription created', `${planName} plan activated`, { email: customerEmail, planName });
               const paymentIntentId = session.payment_intent;
               if (paymentIntentId) {
                 try {
@@ -1137,6 +1132,7 @@ stripe.post('/webhook', async (c) => {
                      ON CONFLICT (stripe_payment_intent_id) DO NOTHING`,
                     [userId, paymentIntentId, session.amount_total || 0, `${planName} plan`]
                   );
+                  await logUserEvent(userId, 'payment_succeeded', 'Payment succeeded', `Payment of $${((session.amount_total || 0) / 100).toFixed(2)} for ${planName}`, { amount: session.amount_total || 0, currency: 'usd', paymentIntentId });
                 } catch (payErr: any) {
                   console.error('[Stripe Webhook] Payment record error (non-fatal):', payErr?.message);
                 }
@@ -1153,17 +1149,22 @@ stripe.post('/webhook', async (c) => {
       const subscription = event.data.object;
       const customerId = subscription.customer;
       try {
-        await stripePool.query(
+        const userResult = await stripePool.query(
           `UPDATE users 
            SET subscription_status = 'canceled',
                updated_at = NOW()
-           WHERE stripe_customer_id = $1`,
+           WHERE stripe_customer_id = $1
+           RETURNING id, email`,
           [customerId]
         );
         await stripePool.query(
           `UPDATE subscriptions SET status = 'canceled', canceled_at = NOW(), updated_at = NOW() WHERE stripe_customer_id = $1 AND status != 'canceled'`,
           [customerId]
         );
+        if (userResult.rows.length > 0) {
+          const user = userResult.rows[0];
+          await logUserEvent(user.id, 'subscription_canceled', 'Subscription canceled', `Subscription canceled via Stripe`, { email: user.email, stripeCustomerId: customerId });
+        }
         console.log(`[Stripe Webhook] Subscription canceled for customer ${customerId}`);
       } catch (dbErr) {
         console.error('[Stripe Webhook] DB update error:', dbErr);
@@ -1175,6 +1176,14 @@ stripe.post('/webhook', async (c) => {
       const customerEmail = invoice.customer_email;
       if (customerEmail) {
         console.log(`[Stripe Webhook] Payment failed for ${customerEmail}`);
+        try {
+          const userResult = await stripePool.query(`SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`, [customerEmail]);
+          if (userResult.rows.length > 0) {
+            await logUserEvent(userResult.rows[0].id, 'payment_failed', 'Payment failed', `Invoice payment failed`, { email: customerEmail, invoiceId: invoice.id, amount: invoice.amount_due });
+          }
+        } catch (logErr: any) {
+          console.error('[Stripe Webhook] Payment failed event log error (non-fatal):', logErr?.message);
+        }
         try {
           const { sendEmail: sendFailEmail } = await import('../resendClient');
           await sendFailEmail({

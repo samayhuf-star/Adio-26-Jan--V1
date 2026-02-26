@@ -11,6 +11,7 @@ import { generateMasterCSV, CampaignDataV5, AdGroupV5, KeywordV5, AdV5 } from '.
 import { historyService } from '../utils/historyService';
 import { GoogleAdsPushButton } from './GoogleAdsPushButton';
 import { GoogleAdsConnectionStatus } from './GoogleAdsConnectionStatus';
+import { GOOGLE_ADS_ENABLED } from '../utils/featureFlags';
 import { isSuperAdmin } from '../utils/auth';
 
 interface GeneratedCampaign {
@@ -713,7 +714,7 @@ export function OneClickCampaignBuilder() {
               </div>
             </div>
 
-            {isSuperAdmin() && (
+            {isSuperAdmin() && GOOGLE_ADS_ENABLED && (
             <div className="px-4 pt-3 border-t border-slate-700">
               <GoogleAdsConnectionStatus variant="compact" className="text-slate-300 [&_button]:text-slate-400 [&_button:hover]:text-red-400" />
             </div>
@@ -727,7 +728,7 @@ export function OneClickCampaignBuilder() {
                 Download CSV for Google Ads
               </Button>
 
-              {isSuperAdmin() && (
+              {isSuperAdmin() && GOOGLE_ADS_ENABLED && (
               <GoogleAdsPushButton
                 campaignData={{
                   campaignName: generatedCampaign.campaign_name,

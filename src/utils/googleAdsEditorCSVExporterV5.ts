@@ -395,6 +395,7 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
   if (campaign.callExtensions && campaign.callExtensions.length > 0) {
     const callExt = campaign.callExtensions[0];
     campaignRow[COLUMN_INDEX['PhoneNumber']] = callExt.phoneNumber || '';
+    campaignRow[COLUMN_INDEX['Country of Phone']] = callExt.countryCode || campaign.locations?.countryCode || 'US';
     campaignRow[COLUMN_INDEX['VerificationURL']] = callExt.verificationUrl || '';
     campaignRow[COLUMN_INDEX['Call Extension Status']] = callExt.status || 'Enabled';
     campaignRow[COLUMN_INDEX['Call Extension Scheduling']] = callExt.scheduling || '';

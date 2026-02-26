@@ -4,7 +4,7 @@ import {
   Ban, CheckCircle, Eye, TrendingUp, DollarSign, Activity,
   UserCheck, AlertTriangle, Calendar, Mail, ChevronRight,
   Edit, Trash2, X, Save, MoreHorizontal, MessageSquare,
-  Server, Tag, Brain, FileText, MessageCircle, Globe
+  Server, Tag, Brain, FileText, MessageCircle, Globe, Send
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -21,6 +21,7 @@ import { AuditLogsDashboard } from './AuditLogsDashboard';
 import { AIUsageDashboard } from './AIUsageDashboard';
 import { WhatsAppConfigPanel } from './WhatsAppConfigPanel';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import { UserLifecyclePanel } from './UserLifecyclePanel';
 const SEODirectoryGuide = lazy(() => import('./SEODirectoryGuide'));
 import {
   Dialog,
@@ -65,6 +66,23 @@ interface UserRecord {
   createdAt: string;
   updatedAt: string | null;
   lastSignIn: string | null;
+  emailVerified?: boolean;
+  cardValidated?: boolean;
+  stripeCustomerId?: string | null;
+  subscriptionId?: string | null;
+  subPlanName?: string | null;
+  subStatus?: string | null;
+  subPeriodStart?: string | null;
+  subPeriodEnd?: string | null;
+  subCancelAtPeriodEnd?: boolean;
+  subTrialStart?: string | null;
+  subTrialEnd?: string | null;
+  subCreatedAt?: string | null;
+  subUpdatedAt?: string | null;
+  totalPaidCents?: number;
+  lastPaymentDate?: string | null;
+  lastPaymentStatus?: string | null;
+  paymentCount?: number;
 }
 
 interface SubscriptionRecord {
@@ -80,7 +98,7 @@ interface SubscriptionRecord {
   paidAmountCents: number | string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'emails' | 'email-monitoring' | 'analytics' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo';
+type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -103,11 +121,16 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
   const [editForm, setEditForm] = useState({ displayName: '', email: '', newPassword: '' });
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserRecord | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [sendingCredentialsUserId, setSendingCredentialsUserId] = useState<string | null>(null);
   
   // CRUD state for subscriptions
   const [editingSub, setEditingSub] = useState<SubscriptionRecord | null>(null);
   const [subEditForm, setSubEditForm] = useState({ planName: '', status: '' });
   const [deleteConfirmSub, setDeleteConfirmSub] = useState<SubscriptionRecord | null>(null);
+
+  // User lifecycle panel
+  const [lifecycleUserId, setLifecycleUserId] = useState<string | null>(null);
+  const [planFilter, setPlanFilter] = useState<string>('all');
 
   const adminFetch = async (url: string, options: RequestInit = {}) => {
     return fetch(url, {
@@ -134,7 +157,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
 
   const loadUsers = async () => {
     try {
-      const response = await adminFetch('/api/superadmin/users');
+      const response = await adminFetch('/api/superadmin/users-unified');
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users || []);
@@ -263,6 +286,26 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     }
   };
 
+  const sendCredentials = async (user: UserRecord) => {
+    try {
+      setSendingCredentialsUserId(user.id);
+      const response = await adminFetch(`/api/superadmin/users/${user.id}/send-credentials`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        alert(`Login credentials email sent to ${user.email}`);
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to send credentials email');
+      }
+    } catch (error) {
+      console.error('Failed to send credentials:', error);
+      alert('Failed to send credentials email');
+    } finally {
+      setSendingCredentialsUserId(null);
+    }
+  };
+
   // Subscription CRUD functions
   const openSubEditModal = (sub: SubscriptionRecord) => {
     setEditingSub(sub);
@@ -383,8 +426,11 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     const matchesFilter = userFilter === 'all' ||
       (userFilter === 'blocked' && user.isBlocked) ||
       (userFilter === 'active' && !user.isBlocked);
+
+    const matchesPlan = planFilter === 'all' ||
+      (user.subscriptionPlan || 'free').toLowerCase() === planFilter.toLowerCase();
     
-    return matchesSearch && matchesFilter;
+    return matchesSearch && matchesFilter && matchesPlan;
   });
 
   const filteredSubscriptions = subscriptions.filter(sub => {
@@ -474,9 +520,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
         <div className="flex flex-wrap gap-2 mb-6">
           {[
             { id: 'overview', label: 'Overview', icon: Activity },
-            { id: 'users', label: 'Users', icon: Users },
-            { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
-            { id: 'payments', label: 'Payments', icon: DollarSign },
+            { id: 'users', label: 'Users & Billing', icon: Users },
             { id: 'emails', label: 'Email Flows', icon: Mail },
             { id: 'email-monitoring', label: 'Email Stats', icon: Mail },
             { id: 'promo-codes', label: 'Promo Codes', icon: Tag },
@@ -581,10 +625,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           </div>
         )}
 
-        {/* Users Tab */}
+        {/* Unified Users & Billing Tab */}
         {activeTab === 'users' && (
           <div className="space-y-4">
-            {/* Search and Filter */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -595,7 +638,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                   className="pl-10 bg-slate-700/50 border-slate-600 text-white"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {(['all', 'active', 'blocked'] as const).map(filter => (
                   <Button
                     key={filter}
@@ -610,93 +653,142 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                     {filter.charAt(0).toUpperCase() + filter.slice(1)}
                   </Button>
                 ))}
+                <span className="w-px bg-slate-600 mx-1" />
+                {['all', 'Free', 'Starter', 'Professional', 'Agency', 'Lifetime'].map(plan => (
+                  <Button
+                    key={plan}
+                    onClick={() => setPlanFilter(plan === 'all' ? 'all' : plan)}
+                    variant={planFilter === (plan === 'all' ? 'all' : plan) ? 'default' : 'outline'}
+                    size="sm"
+                    className={planFilter === (plan === 'all' ? 'all' : plan)
+                      ? 'bg-indigo-600 text-white'
+                      : 'border-slate-600 text-slate-400 hover:bg-slate-700'
+                    }
+                  >
+                    {plan === 'all' ? 'All Plans' : plan}
+                  </Button>
+                ))}
               </div>
             </div>
 
-            {/* Users Table */}
+            <div className="text-xs text-slate-500 mb-1">{filteredUsers.length} users found. Click a row to view full lifecycle.</div>
+
             <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead className="bg-slate-700/50">
                     <tr>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">User</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Plan</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Status</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Joined</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Last Login</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Updated</th>
-                      <th className="text-right px-4 py-3 text-sm font-medium text-slate-300">Actions</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400 w-10">#</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">User</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Plan</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Sub Status</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Joined</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Last Login</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Total Paid</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Last Payment</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Period End</th>
+                      <th className="text-right px-3 py-2.5 text-xs font-medium text-slate-400">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-700/50">
-                    {filteredUsers.map(user => (
-                      <tr key={user.id} className="hover:bg-slate-700/30">
-                        <td className="px-4 py-3">
+                  <tbody className="divide-y divide-slate-700/30">
+                    {filteredUsers.map((user, index) => (
+                      <tr 
+                        key={user.id} 
+                        className="hover:bg-slate-700/30 cursor-pointer transition-colors"
+                        onClick={() => setLifecycleUserId(user.id)}
+                      >
+                        <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{index + 1}</td>
+                        <td className="px-3 py-2.5">
                           <div>
-                            <p className="text-white font-medium">{user.email}</p>
-                            <p className="text-sm text-slate-400">{user.fullName || 'No name'}</p>
+                            <p className="text-white font-medium text-sm">{user.email}</p>
+                            <p className="text-xs text-slate-500">{user.fullName || 'No name'}</p>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <Badge className="bg-slate-600/50 text-slate-300">
-                            {user.subscriptionPlan}
+                        <td className="px-3 py-2.5">
+                          <Badge className={
+                            user.subscriptionPlan === 'Lifetime' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                            user.subscriptionPlan === 'Agency' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                            user.subscriptionPlan === 'Professional' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                            user.subscriptionPlan === 'Starter' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                            'bg-slate-600/50 text-slate-400'
+                          }>
+                            {user.subscriptionPlan || 'free'}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
-                          {getStatusBadge(user.subscriptionStatus, user.isBlocked)}
+                        <td className="px-3 py-2.5">
+                          {getStatusBadge(user.subStatus || user.subscriptionStatus, user.isBlocked)}
+                          {user.subCancelAtPeriodEnd && (
+                            <Badge className="ml-1 bg-yellow-500/20 text-yellow-400 text-[10px] px-1">Canceling</Badge>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
-                          {formatDate(user.createdAt)}
+                        <td className="px-3 py-2.5 text-slate-400 text-xs">{formatDate(user.createdAt)}</td>
+                        <td className="px-3 py-2.5 text-slate-400 text-xs">{user.lastSignIn ? formatDate(user.lastSignIn) : 'Never'}</td>
+                        <td className="px-3 py-2.5 text-xs font-medium">
+                          {Number(user.totalPaidCents || 0) > 0 ? (
+                            <span className="text-emerald-400">${(Number(user.totalPaidCents) / 100).toFixed(2)}</span>
+                          ) : (
+                            <span className="text-slate-600">$0.00</span>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
-                          {user.lastSignIn ? formatDate(user.lastSignIn) : 'Never'}
+                        <td className="px-3 py-2.5 text-xs">
+                          {user.lastPaymentDate ? (
+                            <div>
+                              <span className="text-slate-400">{formatDate(user.lastPaymentDate)}</span>
+                              {user.lastPaymentStatus && (
+                                <Badge className={`ml-1 text-[10px] px-1 ${user.lastPaymentStatus === 'succeeded' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                  {user.lastPaymentStatus}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-600">None</span>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
-                          {user.updatedAt ? formatDate(user.updatedAt) : '—'}
+                        <td className="px-3 py-2.5 text-slate-400 text-xs">
+                          {user.subPeriodEnd ? formatDate(user.subPeriodEnd) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               onClick={() => openEditModal(user)}
                               variant="outline"
                               size="sm"
                               disabled={actionLoading}
-                              className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+                              className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20 h-7 px-2 text-xs"
                             >
                               <Edit className="w-3 h-3 mr-1" />
                               Edit
+                            </Button>
+                            <Button
+                              onClick={() => sendCredentials(user)}
+                              variant="outline"
+                              size="sm"
+                              disabled={actionLoading || sendingCredentialsUserId === user.id}
+                              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20 h-7 px-2 text-xs"
+                              title="Send login credentials email"
+                            >
+                              <Send className="w-3 h-3" />
                             </Button>
                             <Button
                               onClick={() => toggleBlockUser(user.id, user.isBlocked)}
                               variant="outline"
                               size="sm"
                               disabled={actionLoading}
-                              className={user.isBlocked 
+                              className={`h-7 px-2 text-xs ${user.isBlocked 
                                 ? 'border-green-500/50 text-green-400 hover:bg-green-500/20'
                                 : 'border-orange-500/50 text-orange-400 hover:bg-orange-500/20'
-                              }
+                              }`}
                             >
-                              {user.isBlocked ? (
-                                <>
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Unblock
-                                </>
-                              ) : (
-                                <>
-                                  <Ban className="w-3 h-3 mr-1" />
-                                  Block
-                                </>
-                              )}
+                              {user.isBlocked ? <CheckCircle className="w-3 h-3" /> : <Ban className="w-3 h-3" />}
                             </Button>
                             <Button
                               onClick={() => setDeleteConfirmUser(user)}
                               variant="outline"
                               size="sm"
                               disabled={actionLoading}
-                              className="border-red-500/50 text-red-400 hover:bg-red-500/20"
+                              className="border-red-500/50 text-red-400 hover:bg-red-500/20 h-7 px-2 text-xs"
                             >
-                              <Trash2 className="w-3 h-3 mr-1" />
-                              Delete
+                              <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>
                         </td>
@@ -706,153 +798,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                 </table>
               </div>
               {filteredUsers.length === 0 && (
-                <div className="text-center py-8 text-slate-400">
-                  No users found
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Subscriptions Tab */}
-        {activeTab === 'subscriptions' && (
-          <div className="space-y-4">
-            {/* Search and Filter */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by email or plan..."
-                  className="pl-10 bg-slate-700/50 border-slate-600 text-white"
-                />
-              </div>
-              <div className="flex gap-2">
-                {(['all', 'active', 'trialing', 'canceled'] as const).map(filter => (
-                  <Button
-                    key={filter}
-                    onClick={() => setSubFilter(filter)}
-                    variant={subFilter === filter ? 'default' : 'outline'}
-                    size="sm"
-                    className={subFilter === filter 
-                      ? 'bg-slate-600 text-white'
-                      : 'border-slate-600 text-slate-400 hover:bg-slate-700'
-                    }
-                  >
-                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Subscriptions Table */}
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-700/50">
-                    <tr>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">User</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Plan</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Status</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Created</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Updated</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Period End</th>
-                      <th className="text-left px-4 py-3 text-sm font-medium text-slate-300">Paid Amount</th>
-                      <th className="text-right px-4 py-3 text-sm font-medium text-slate-300">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700/50">
-                    {filteredSubscriptions.map(sub => (
-                      <tr key={sub.id} className="hover:bg-slate-700/30">
-                        <td className="px-4 py-3">
-                          <p className="text-white font-medium">{sub.userEmail || 'Unknown'}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
-                            {sub.planName}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          {getStatusBadge(sub.status)}
-                          {sub.cancelAtPeriodEnd && (
-                            <Badge className="ml-2 bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                              Canceling
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
-                          {formatDate(sub.createdAt)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
-                          {sub.updatedAt ? formatDate(sub.updatedAt) : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
-                          {formatDate(sub.currentPeriodEnd)}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          {Number(sub.paidAmountCents) > 0 ? (
-                            <span className="text-green-400">${(Number(sub.paidAmountCents) / 100).toFixed(2)}</span>
-                          ) : (
-                            <span className="text-slate-500">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              onClick={() => openSubEditModal(sub)}
-                              variant="outline"
-                              size="sm"
-                              disabled={actionLoading}
-                              className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
-                            >
-                              <Edit className="w-3 h-3 mr-1" />
-                              Edit
-                            </Button>
-                            {sub.status === 'active' || sub.status === 'trialing' ? (
-                              <Button
-                                onClick={() => cancelSubscription(sub.id, true)}
-                                variant="outline"
-                                size="sm"
-                                disabled={actionLoading}
-                                className="border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
-                              >
-                                <Ban className="w-3 h-3 mr-1" />
-                                Cancel
-                              </Button>
-                            ) : (
-                              <Button
-                                onClick={() => reactivateSubscription(sub.id)}
-                                variant="outline"
-                                size="sm"
-                                disabled={actionLoading}
-                                className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-                              >
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Reactivate
-                              </Button>
-                            )}
-                            <Button
-                              onClick={() => setDeleteConfirmSub(sub)}
-                              variant="outline"
-                              size="sm"
-                              disabled={actionLoading}
-                              className="border-red-500/50 text-red-400 hover:bg-red-500/20"
-                            >
-                              <Trash2 className="w-3 h-3 mr-1" />
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {filteredSubscriptions.length === 0 && (
-                <div className="text-center py-8 text-slate-400">
-                  No subscriptions found
-                </div>
+                <div className="text-center py-8 text-slate-400">No users found</div>
               )}
             </div>
           </div>
@@ -863,9 +809,13 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           <EmailManagementSection token={token} />
         )}
 
-        {/* Payments Tab */}
-        {activeTab === 'payments' && (
-          <StripePaymentDashboard token={token} />
+        {/* Lifecycle Panel */}
+        {lifecycleUserId && (
+          <UserLifecyclePanel 
+            userId={lifecycleUserId} 
+            token={token} 
+            onClose={() => setLifecycleUserId(null)} 
+          />
         )}
 
         {/* Email Monitoring Tab */}
