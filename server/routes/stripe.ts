@@ -926,6 +926,121 @@ stripe.get('/payment-methods/:email', async (c) => {
   }
 });
 
+/** GET /api/stripe/session-status – Exchange Stripe session_id for JWT after successful checkout */
+stripe.get('/session-status', async (c) => {
+  try {
+    const sessionId = c.req.query('session_id');
+    if (!sessionId) {
+      return c.json({ success: false, error: 'session_id is required' }, 400);
+    }
+
+    const stripeClient = await getUncachableStripeClient();
+    if (!stripeClient) {
+      return c.json({ success: false, error: 'Payment system not configured' }, 503);
+    }
+
+    let session: any;
+    try {
+      session = await stripeClient.checkout.sessions.retrieve(sessionId, { expand: ['subscription'] });
+    } catch (err: any) {
+      console.error('[Stripe] session-status retrieve error:', err?.message);
+      return c.json({ success: false, error: 'Invalid or expired session' }, 400);
+    }
+
+    if (session.payment_status !== 'paid' && session.status !== 'complete' && session.status !== 'completed') {
+      return c.json({ success: false, error: 'Payment not completed' }, 402);
+    }
+
+    const metadata = session.metadata || {};
+    const metadataUserId = metadata.userId;
+    const customerEmail = session.customer_details?.email || session.customer_email;
+
+    let userRow: any = null;
+
+    if (metadataUserId) {
+      const result = await stripePool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [metadataUserId]);
+      if (result.rows.length > 0) userRow = result.rows[0];
+    }
+    if (!userRow && customerEmail) {
+      const result = await stripePool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [customerEmail]);
+      if (result.rows.length > 0) userRow = result.rows[0];
+    }
+
+    if (!userRow) {
+      return c.json({ success: false, error: 'User not found. Please contact support.' }, 404);
+    }
+
+    const plan = metadata.plan || 'monthly';
+    const isLifetime = plan === 'lifetime' || metadata.deal === 'lifetime-99';
+    const stripeCustomerId = typeof session.customer === 'string' ? session.customer : (session.customer as any)?.id || null;
+
+    let stripeSubscriptionId: string | null = null;
+    let currentPeriodEnd: Date | null = null;
+
+    if (!isLifetime && session.subscription) {
+      const sub = session.subscription;
+      stripeSubscriptionId = typeof sub === 'string' ? sub : (sub as any)?.id || null;
+      const periodEnd = typeof sub === 'object' && sub !== null ? (sub as any).current_period_end : null;
+      if (periodEnd) currentPeriodEnd = new Date(periodEnd * 1000);
+    }
+
+    try {
+      await stripePool.query(
+        `UPDATE users
+         SET subscription_status = 'active',
+             subscription_plan = COALESCE(NULLIF($1, ''), subscription_plan),
+             stripe_customer_id = COALESCE($2, stripe_customer_id),
+             stripe_subscription_id = COALESCE($3, stripe_subscription_id),
+             current_period_end = COALESCE($4, current_period_end),
+             card_validated = true,
+             updated_at = NOW()
+         WHERE id = $5`,
+        [plan, stripeCustomerId, stripeSubscriptionId, currentPeriodEnd, userRow.id]
+      );
+      userRow.subscription_status = 'active';
+      userRow.subscription_plan = plan || userRow.subscription_plan;
+      userRow.card_validated = true;
+      userRow.current_period_end = currentPeriodEnd || userRow.current_period_end;
+    } catch (updateErr: any) {
+      console.error('[Stripe] session-status eager update error (non-fatal):', updateErr?.message);
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'adiology-jwt-secret-key';
+    const jwtToken = (await import('jsonwebtoken')).default.sign(
+      { userId: userRow.id, email: userRow.email, role: userRow.role || 'user' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    await stripePool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [userRow.id]);
+
+    return c.json({
+      success: true,
+      token: jwtToken,
+      user: {
+        id: userRow.id,
+        email: userRow.email,
+        full_name: userRow.full_name,
+        avatar_url: userRow.avatar_url,
+        role: userRow.role || 'user',
+        subscription_plan: userRow.subscription_plan,
+        subscription_status: userRow.subscription_status,
+        stripe_customer_id: userRow.stripe_customer_id,
+        stripe_subscription_id: userRow.stripe_subscription_id,
+        ai_usage: userRow.ai_usage || 0,
+        email_verified: userRow.email_verified || false,
+        card_validated: userRow.card_validated || false,
+        selected_plan: userRow.selected_plan || null,
+        current_period_end: userRow.current_period_end || null,
+        created_at: userRow.created_at,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Stripe] session-status error:', error);
+    return c.json({ success: false, error: 'Failed to retrieve session status' }, 500);
+  }
+});
+
 /** POST /api/stripe/webhook – Stripe webhook handler for checkout events */
 stripe.post('/webhook', async (c) => {
   try {
@@ -985,15 +1100,31 @@ stripe.post('/webhook', async (c) => {
       const customerEmail = session.customer_details?.email || session.customer_email;
       const metadata = session.metadata || {};
       const stripeCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null;
+      const metadataUserId = metadata.userId || null;
 
-      if (metadata.deal === 'lifetime-99' || metadata.plan === 'lifetime') {
-        console.log(`[Stripe Webhook] Lifetime deal purchase by ${customerEmail}`);
+      const isLifetimePlan = metadata.deal === 'lifetime-99' || metadata.plan === 'lifetime';
 
-        if (customerEmail) {
-          let lifetimeUserId: string | null = null;
+      let activatedUserId: string | null = null;
 
-          try {
-            const updateResult = await stripePool.query(
+      if (isLifetimePlan) {
+        console.log(`[Stripe Webhook] Lifetime deal purchase by ${customerEmail} (userId: ${metadataUserId})`);
+
+        try {
+          let updateResult: any;
+          if (metadataUserId) {
+            updateResult = await stripePool.query(
+              `UPDATE users 
+               SET subscription_plan = 'Lifetime', 
+                   subscription_status = 'active',
+                   stripe_customer_id = COALESCE(stripe_customer_id, $2),
+                   updated_at = NOW()
+               WHERE id = $1
+               RETURNING id`,
+              [metadataUserId, stripeCustomerId]
+            );
+          }
+          if (!updateResult || updateResult.rowCount === 0) {
+            updateResult = await stripePool.query(
               `UPDATE users 
                SET subscription_plan = 'Lifetime', 
                    subscription_status = 'active',
@@ -1003,144 +1134,207 @@ stripe.post('/webhook', async (c) => {
                RETURNING id`,
               [customerEmail, stripeCustomerId]
             );
-
-            if (updateResult.rowCount && updateResult.rowCount > 0) {
-              lifetimeUserId = updateResult.rows[0].id;
-              await logUserEvent(lifetimeUserId!, 'checkout_completed', 'Lifetime deal purchased', `Lifetime deal checkout completed`, { email: customerEmail, amount: session.amount_total });
-              await logUserEvent(lifetimeUserId!, 'subscription_created', 'Lifetime subscription activated', `Lifetime plan activated`, { email: customerEmail, plan: 'Lifetime' });
-              console.log(`[Stripe Webhook] Upgraded existing user ${customerEmail} to Lifetime plan`);
-            } else {
-              const newUserId = crypto.randomUUID();
-              await stripePool.query(
-                `INSERT INTO users (id, email, role, subscription_plan, subscription_status, email_verified, stripe_customer_id, created_at, updated_at)
-                 VALUES ($1, LOWER($2), 'user', 'Lifetime', 'active', false, $3, NOW(), NOW())`,
-                [newUserId, customerEmail, stripeCustomerId]
-              );
-              lifetimeUserId = newUserId;
-              await logUserEvent(newUserId, 'signup', 'Account created via lifetime deal', `Account auto-created from lifetime deal purchase`, { email: customerEmail });
-              await logUserEvent(newUserId, 'checkout_completed', 'Lifetime deal purchased', `Lifetime deal checkout completed`, { email: customerEmail, amount: session.amount_total });
-              await logUserEvent(newUserId, 'subscription_created', 'Lifetime subscription activated', `Lifetime plan activated`, { email: customerEmail, plan: 'Lifetime' });
-              console.log(`[Stripe Webhook] Created new user ${customerEmail} with Lifetime plan`);
-            }
-          } catch (dbErr) {
-            console.error('[Stripe Webhook] DB update/create error:', dbErr);
           }
 
-          if (lifetimeUserId) {
-            try {
-              await stripePool.query(
-                `INSERT INTO subscriptions (id, user_id, stripe_customer_id, plan_name, status, current_period_end, created_at, updated_at)
-                 VALUES (gen_random_uuid(), $1, $2, 'Lifetime', 'active', '2099-12-31', NOW(), NOW())`,
-                [lifetimeUserId, stripeCustomerId]
-              );
-            } catch (subErr: any) {
-              console.error('[Stripe Webhook] Subscription record insert error (non-fatal):', subErr?.message);
-            }
+          if (updateResult.rowCount && updateResult.rowCount > 0) {
+            activatedUserId = updateResult.rows[0].id;
+            await logUserEvent(activatedUserId!, 'checkout_completed', 'Lifetime deal purchased', `Lifetime deal checkout completed`, { email: customerEmail, amount: session.amount_total });
+            await logUserEvent(activatedUserId!, 'subscription_created', 'Lifetime subscription activated', `Lifetime plan activated`, { email: customerEmail, plan: 'Lifetime' });
+            console.log(`[Stripe Webhook] Activated Lifetime plan for user ${activatedUserId}`);
+          } else if (customerEmail) {
+            const newUserId = crypto.randomUUID();
+            await stripePool.query(
+              `INSERT INTO users (id, email, role, subscription_plan, subscription_status, email_verified, stripe_customer_id, created_at, updated_at)
+               VALUES ($1, LOWER($2), 'user', 'Lifetime', 'active', false, $3, NOW(), NOW())`,
+              [newUserId, customerEmail, stripeCustomerId]
+            );
+            activatedUserId = newUserId;
+            await logUserEvent(newUserId, 'signup', 'Account created via lifetime deal', `Account auto-created from lifetime deal purchase`, { email: customerEmail });
+            await logUserEvent(newUserId, 'checkout_completed', 'Lifetime deal purchased', `Lifetime deal checkout completed`, { email: customerEmail, amount: session.amount_total });
+            console.log(`[Stripe Webhook] Created new user ${customerEmail} with Lifetime plan`);
+          }
+        } catch (dbErr) {
+          console.error('[Stripe Webhook] Lifetime DB update/create error:', dbErr);
+        }
 
-            try {
-              const paymentIntentId = session.payment_intent;
-              if (paymentIntentId) {
-                await stripePool.query(
-                  `INSERT INTO payments (id, user_id, stripe_payment_intent_id, amount_cents, currency, status, description, paid_at, created_at)
-                   VALUES (gen_random_uuid(), $1, $2, $3, 'usd', 'succeeded', 'Lifetime Deal', NOW(), NOW())
-                   ON CONFLICT (stripe_payment_intent_id) DO NOTHING`,
-                  [lifetimeUserId, paymentIntentId, session.amount_total || 9900]
-                );
-                await logUserEvent(lifetimeUserId, 'payment_succeeded', 'Payment succeeded', `Lifetime deal payment of $${((session.amount_total || 9900) / 100).toFixed(2)}`, { amount: session.amount_total || 9900, currency: 'usd', paymentIntentId });
-              }
-            } catch (payErr: any) {
-              console.error('[Stripe Webhook] Payment record insert error (non-fatal):', payErr?.message);
-            }
+        if (activatedUserId) {
+          try {
+            await stripePool.query(
+              `INSERT INTO subscriptions (id, user_id, stripe_customer_id, plan_name, status, current_period_end, created_at, updated_at)
+               VALUES (gen_random_uuid(), $1, $2, 'Lifetime', 'active', '2099-12-31', NOW(), NOW())
+               ON CONFLICT DO NOTHING`,
+              [activatedUserId, stripeCustomerId]
+            );
+          } catch (subErr: any) {
+            console.error('[Stripe Webhook] Subscription record insert error (non-fatal):', subErr?.message);
           }
 
           try {
-            const { sendEmail: sendResendEmail } = await import('../resendClient');
-            await sendResendEmail({
-              to: customerEmail,
-              subject: 'Your Adiology Lifetime Access is Active!',
-              html: buildLifetimeConfirmationEmail(customerEmail, session.amount_total),
-            });
-            console.log(`[Stripe Webhook] Lifetime confirmation email sent to ${customerEmail}`);
-          } catch (emailErr) {
-            console.error('[Stripe Webhook] Email send error:', emailErr);
+            const paymentIntentId = session.payment_intent;
+            if (paymentIntentId) {
+              await stripePool.query(
+                `INSERT INTO payments (id, user_id, stripe_payment_intent_id, amount_cents, currency, status, description, paid_at, created_at)
+                 VALUES (gen_random_uuid(), $1, $2, $3, 'usd', 'succeeded', 'Lifetime Deal', NOW(), NOW())
+                 ON CONFLICT (stripe_payment_intent_id) DO NOTHING`,
+                [activatedUserId, paymentIntentId, session.amount_total || 9900]
+              );
+            }
+          } catch (payErr: any) {
+            console.error('[Stripe Webhook] Payment record insert error (non-fatal):', payErr?.message);
           }
 
-          if (lifetimeUserId) {
+          if (customerEmail) {
             try {
-              const userResult = await stripePool.query(
-                `SELECT id FROM users WHERE id = $1 AND (email_verified IS NULL OR email_verified = false) LIMIT 1`,
-                [lifetimeUserId]
-              );
-              if (userResult.rows.length > 0) {
-                const userId = userResult.rows[0].id;
-                const verifyToken = crypto.randomUUID();
-                const verifyExpires = new Date();
-                verifyExpires.setHours(verifyExpires.getHours() + 24);
-                await stripePool.query(
-                  `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
-                   VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
-                  [userId, verifyToken, verifyExpires]
-                );
-                const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
-                const verificationUrl = `${PROD_URL}/verify-email?token=${verifyToken}&email=${encodeURIComponent(customerEmail.toLowerCase())}`;
-
-                const { sendEmail: sendVerifyEmail } = await import('../resendClient');
-                const { emailTemplates } = await import('../email-templates');
-                const template = emailTemplates.emailVerification;
-                let verifyHtml = template.html
-                  .replace(/\{\{verification_url\}\}/g, verificationUrl)
-                  .replace(/\{\{year\}\}/g, new Date().getFullYear().toString());
-
-                await sendVerifyEmail({
-                  to: customerEmail.toLowerCase(),
-                  subject: template.subject,
-                  html: verifyHtml,
-                });
-                console.log(`[Stripe Webhook] Verification email sent to ${customerEmail} after lifetime deal`);
-              }
-            } catch (verifyErr: any) {
-              console.error('[Stripe Webhook] Verification email error (non-fatal):', verifyErr?.message);
+              const { sendEmail: sendResendEmail } = await import('../resendClient');
+              await sendResendEmail({
+                to: customerEmail,
+                subject: 'Your Adiology Lifetime Access is Active!',
+                html: buildLifetimeConfirmationEmail(customerEmail, session.amount_total),
+              });
+              console.log(`[Stripe Webhook] Lifetime confirmation email sent to ${customerEmail}`);
+            } catch (emailErr) {
+              console.error('[Stripe Webhook] Email send error:', emailErr);
             }
           }
         }
       } else {
-        if (customerEmail) {
-          try {
-            const planName = metadata.planName || session.metadata?.planName || 'Professional';
-            const updateResult = await stripePool.query(
+        console.log(`[Stripe Webhook] Subscription checkout completed for ${customerEmail} (userId: ${metadataUserId})`);
+
+        let stripeSubscriptionId: string | null = null;
+        let currentPeriodEnd: Date | null = null;
+        const planName = metadata.plan || metadata.planName || 'monthly';
+
+        try {
+          if (session.subscription) {
+            const subId = typeof session.subscription === 'string' ? session.subscription : (session.subscription as any)?.id;
+            if (subId) {
+              stripeSubscriptionId = subId;
+              try {
+                const sub = await stripeClient.subscriptions.retrieve(subId);
+                currentPeriodEnd = new Date((sub as any).current_period_end * 1000);
+              } catch (subFetchErr: any) {
+                console.error('[Stripe Webhook] Subscription fetch error (non-fatal):', subFetchErr?.message);
+              }
+            }
+          }
+        } catch (subErr: any) {
+          console.error('[Stripe Webhook] Subscription ID extraction error (non-fatal):', subErr?.message);
+        }
+
+        try {
+          let updateResult: any;
+          if (metadataUserId) {
+            updateResult = await stripePool.query(
               `UPDATE users 
                SET subscription_plan = $1, 
                    subscription_status = 'active',
                    stripe_customer_id = COALESCE(stripe_customer_id, $3),
+                   stripe_subscription_id = COALESCE($4, stripe_subscription_id),
+                   current_period_end = COALESCE($5, current_period_end),
+                   card_validated = true,
+                   updated_at = NOW()
+               WHERE id = $2
+               RETURNING id, email`,
+              [planName, metadataUserId, stripeCustomerId, stripeSubscriptionId, currentPeriodEnd]
+            );
+          }
+          if (!updateResult || updateResult.rowCount === 0) {
+            updateResult = await stripePool.query(
+              `UPDATE users 
+               SET subscription_plan = $1, 
+                   subscription_status = 'active',
+                   stripe_customer_id = COALESCE(stripe_customer_id, $3),
+                   stripe_subscription_id = COALESCE($4, stripe_subscription_id),
+                   current_period_end = COALESCE($5, current_period_end),
+                   card_validated = true,
                    updated_at = NOW()
                WHERE LOWER(email) = LOWER($2)
-               RETURNING id`,
-              [planName, customerEmail, stripeCustomerId]
+               RETURNING id, email`,
+              [planName, customerEmail, stripeCustomerId, stripeSubscriptionId, currentPeriodEnd]
             );
-            console.log(`[Stripe Webhook] Activated ${planName} plan for ${customerEmail}`);
-
-            if (updateResult.rows.length > 0) {
-              const userId = updateResult.rows[0].id;
-              await logUserEvent(userId, 'checkout_completed', 'Checkout completed', `${planName} plan checkout completed`, { email: customerEmail, planName, amount: session.amount_total });
-              await logUserEvent(userId, 'subscription_created', 'Subscription created', `${planName} plan activated`, { email: customerEmail, planName });
-              const paymentIntentId = session.payment_intent;
-              if (paymentIntentId) {
-                try {
-                  await stripePool.query(
-                    `INSERT INTO payments (id, user_id, stripe_payment_intent_id, amount_cents, currency, status, description, paid_at, created_at)
-                     VALUES (gen_random_uuid(), $1, $2, $3, 'usd', 'succeeded', $4, NOW(), NOW())
-                     ON CONFLICT (stripe_payment_intent_id) DO NOTHING`,
-                    [userId, paymentIntentId, session.amount_total || 0, `${planName} plan`]
-                  );
-                  await logUserEvent(userId, 'payment_succeeded', 'Payment succeeded', `Payment of $${((session.amount_total || 0) / 100).toFixed(2)} for ${planName}`, { amount: session.amount_total || 0, currency: 'usd', paymentIntentId });
-                } catch (payErr: any) {
-                  console.error('[Stripe Webhook] Payment record error (non-fatal):', payErr?.message);
-                }
-              }
-            }
-          } catch (dbErr) {
-            console.error('[Stripe Webhook] DB update error:', dbErr);
           }
+
+          if (updateResult && updateResult.rows.length > 0) {
+            activatedUserId = updateResult.rows[0].id;
+            const activatedEmail = updateResult.rows[0].email || customerEmail;
+            await logUserEvent(activatedUserId!, 'checkout_completed', 'Checkout completed', `${planName} plan checkout completed`, { email: activatedEmail, planName, amount: session.amount_total });
+            await logUserEvent(activatedUserId!, 'subscription_created', 'Subscription created', `${planName} plan activated`, { email: activatedEmail, planName });
+            console.log(`[Stripe Webhook] Activated ${planName} plan for user ${activatedUserId}`);
+
+            try {
+              if (stripeSubscriptionId) {
+                await stripePool.query(
+                  `INSERT INTO subscriptions (id, user_id, stripe_customer_id, stripe_subscription_id, plan_name, status, current_period_end, created_at, updated_at)
+                   VALUES (gen_random_uuid(), $1, $2, $3, $4, 'active', $5, NOW(), NOW())
+                   ON CONFLICT DO NOTHING`,
+                  [activatedUserId, stripeCustomerId, stripeSubscriptionId, planName, currentPeriodEnd]
+                );
+              }
+            } catch (subErr: any) {
+              console.error('[Stripe Webhook] Subscription record insert error (non-fatal):', subErr?.message);
+            }
+          }
+        } catch (dbErr) {
+          console.error('[Stripe Webhook] DB update error:', dbErr);
+        }
+      }
+
+      if (activatedUserId && customerEmail) {
+        try {
+          const verifyCheck = await stripePool.query(
+            `SELECT id, email FROM users WHERE id = $1 AND (email_verified IS NULL OR email_verified = false) LIMIT 1`,
+            [activatedUserId]
+          );
+          if (verifyCheck.rows.length > 0) {
+            const verifyToken = crypto.randomUUID();
+            const verifyExpires = new Date();
+            verifyExpires.setHours(verifyExpires.getHours() + 48);
+            await stripePool.query(
+              `INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
+               VALUES (gen_random_uuid(), $1, $2, $3, NOW())`,
+              [activatedUserId, verifyToken, verifyExpires]
+            );
+            const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
+            const verificationUrl = `${PROD_URL}/verify-email?token=${verifyToken}&email=${encodeURIComponent(customerEmail.toLowerCase())}`;
+
+            const { sendEmail: sendVerifyEmail } = await import('../resendClient');
+            const { emailTemplates } = await import('../email-templates');
+            const template = emailTemplates.emailVerification;
+            const verifyHtml = template.html
+              .replace(/\{\{verification_url\}\}/g, verificationUrl)
+              .replace(/\{\{year\}\}/g, new Date().getFullYear().toString());
+
+            await sendVerifyEmail({
+              to: customerEmail.toLowerCase(),
+              subject: template.subject,
+              html: verifyHtml,
+            });
+            console.log(`[Stripe Webhook] Verification email sent to ${customerEmail}`);
+          }
+        } catch (verifyErr: any) {
+          console.error('[Stripe Webhook] Verification email error (non-fatal):', verifyErr?.message);
+        }
+      }
+    }
+
+    if (event.type === 'invoice.payment_succeeded') {
+      const invoice = event.data.object;
+      const customerId = invoice.customer;
+      const periodEnd = invoice.lines?.data?.[0]?.period?.end;
+      if (customerId && periodEnd) {
+        try {
+          const periodEndDate = new Date(periodEnd * 1000);
+          await stripePool.query(
+            `UPDATE users SET current_period_end = $1, updated_at = NOW() WHERE stripe_customer_id = $2`,
+            [periodEndDate, customerId]
+          );
+          await stripePool.query(
+            `UPDATE subscriptions SET current_period_end = $1, updated_at = NOW() WHERE stripe_customer_id = $2`,
+            [periodEndDate, customerId]
+          );
+          console.log(`[Stripe Webhook] Updated current_period_end for customer ${customerId}`);
+        } catch (dbErr: any) {
+          console.error('[Stripe Webhook] invoice.payment_succeeded DB update error (non-fatal):', dbErr?.message);
         }
       }
     }
@@ -1151,21 +1345,21 @@ stripe.post('/webhook', async (c) => {
       try {
         const userResult = await stripePool.query(
           `UPDATE users 
-           SET subscription_status = 'canceled',
+           SET subscription_status = 'cancelled',
                updated_at = NOW()
            WHERE stripe_customer_id = $1
            RETURNING id, email`,
           [customerId]
         );
         await stripePool.query(
-          `UPDATE subscriptions SET status = 'canceled', canceled_at = NOW(), updated_at = NOW() WHERE stripe_customer_id = $1 AND status != 'canceled'`,
+          `UPDATE subscriptions SET status = 'cancelled', canceled_at = NOW(), updated_at = NOW() WHERE stripe_customer_id = $1 AND status != 'cancelled'`,
           [customerId]
         );
         if (userResult.rows.length > 0) {
           const user = userResult.rows[0];
-          await logUserEvent(user.id, 'subscription_canceled', 'Subscription canceled', `Subscription canceled via Stripe`, { email: user.email, stripeCustomerId: customerId });
+          await logUserEvent(user.id, 'subscription_canceled', 'Subscription cancelled', `Subscription cancelled via Stripe`, { email: user.email, stripeCustomerId: customerId });
         }
-        console.log(`[Stripe Webhook] Subscription canceled for customer ${customerId}`);
+        console.log(`[Stripe Webhook] Subscription cancelled for customer ${customerId}`);
       } catch (dbErr) {
         console.error('[Stripe Webhook] DB update error:', dbErr);
       }
@@ -1174,22 +1368,39 @@ stripe.post('/webhook', async (c) => {
     if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object;
       const customerEmail = invoice.customer_email;
+      const customerId = invoice.customer;
+      const attemptCount = invoice.attempt_count || 1;
+
+      console.log(`[Stripe Webhook] Payment failed for ${customerEmail} (attempt ${attemptCount})`);
+
+      if (attemptCount >= 3 && customerId) {
+        try {
+          await stripePool.query(
+            `UPDATE users SET subscription_status = 'past_due', updated_at = NOW() WHERE stripe_customer_id = $1`,
+            [customerId]
+          );
+          console.log(`[Stripe Webhook] Marked user as past_due after ${attemptCount} failed attempts`);
+        } catch (pdErr: any) {
+          console.error('[Stripe Webhook] past_due update error (non-fatal):', pdErr?.message);
+        }
+      }
+
       if (customerEmail) {
-        console.log(`[Stripe Webhook] Payment failed for ${customerEmail}`);
         try {
           const userResult = await stripePool.query(`SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`, [customerEmail]);
           if (userResult.rows.length > 0) {
-            await logUserEvent(userResult.rows[0].id, 'payment_failed', 'Payment failed', `Invoice payment failed`, { email: customerEmail, invoiceId: invoice.id, amount: invoice.amount_due });
+            await logUserEvent(userResult.rows[0].id, 'payment_failed', 'Payment failed', `Invoice payment failed (attempt ${attemptCount})`, { email: customerEmail, invoiceId: invoice.id, amount: invoice.amount_due, attemptCount });
           }
         } catch (logErr: any) {
           console.error('[Stripe Webhook] Payment failed event log error (non-fatal):', logErr?.message);
         }
         try {
+          const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
           const { sendEmail: sendFailEmail } = await import('../resendClient');
           await sendFailEmail({
             to: customerEmail,
-            subject: 'Payment Failed - Action Required',
-            html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background-color:#0f172a;font-family:'Inter',system-ui,sans-serif;"><div style="max-width:600px;margin:0 auto;padding:40px 20px;"><div style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border-radius:16px;padding:40px;text-align:center;"><h1 style="color:#ffffff;font-size:24px;margin:0 0 16px;">Payment Failed</h1><p style="color:#fca5a5;font-size:16px;margin:0 0 24px;">We were unable to process your payment. Please update your payment method to continue using Adiology.</p><a href="${process.env.DOMAIN || 'https://adiology.io'}/billing" style="display:inline-block;background:#ef4444;color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;">Update Payment Method</a></div></div></body></html>`,
+            subject: `Payment Failed - Action Required${attemptCount >= 3 ? ' (Final Notice)' : ''}`,
+            html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background-color:#0f172a;font-family:'Inter',system-ui,sans-serif;"><div style="max-width:600px;margin:0 auto;padding:40px 20px;"><div style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border-radius:16px;padding:40px;text-align:center;"><h1 style="color:#ffffff;font-size:24px;margin:0 0 16px;">Payment Failed${attemptCount >= 3 ? ' — Final Notice' : ''}</h1><p style="color:#fca5a5;font-size:16px;margin:0 0 24px;">We were unable to process your payment (attempt ${attemptCount} of 3). Please update your payment method to continue using Adiology.${attemptCount >= 3 ? ' Your account has been restricted.' : ''}</p><a href="${PROD_URL}/billing" style="display:inline-block;background:#ef4444;color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;">Update Payment Method</a></div></div></body></html>`,
           });
         } catch (emailErr: any) {
           console.error('[Stripe Webhook] Failed to send payment failure email:', emailErr?.message);

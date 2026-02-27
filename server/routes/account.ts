@@ -6,6 +6,8 @@ import crypto from 'crypto';
 import { getDatabaseUrl } from '../dbConfig';
 import { EmailService } from '../emailService';
 import { logUserEvent } from '../services/userEventLogger';
+import { getUncachableStripeClient } from '../stripeClient';
+import { stripeService } from '../stripeService';
 
 const { Pool } = pg;
 const pool = new Pool({ connectionString: getDatabaseUrl() });
@@ -44,7 +46,7 @@ export const accountRoutes = new Hono();
 
 accountRoutes.post('/register', async (c) => {
   try {
-    const { email, password, name } = await c.req.json();
+    const { email, password, name, isLifetimeDeal, plan, priceId } = await c.req.json();
 
     if (!email || !password) {
       return c.json({ success: false, error: 'Email and password are required' }, 400);
@@ -101,13 +103,115 @@ accountRoutes.post('/register', async (c) => {
       return c.json({ success: false, error: 'An account with this email already exists' }, 409);
     }
 
+    const validPlans = ['monthly', 'annual', 'lifetime', 'starter', 'professional', 'agency'];
+    const isNewFlow = plan && validPlans.includes(plan);
+
+    if (isNewFlow) {
+      const userId = crypto.randomUUID();
+
+      try {
+        await pool.query(
+          `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, card_validated, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, false, 'user', $5, 'pending_payment', false, NOW(), NOW())`,
+          [userId, normalizedEmail, name || null, passwordHash, plan]
+        );
+      } catch (dbError: any) {
+        if (dbError.code === '23505') {
+          return c.json({ success: false, error: 'An account with this email already exists' }, 409);
+        }
+        throw dbError;
+      }
+
+      await logUserEvent(userId, 'signup', 'User registered', `New account created (pending payment)`, { email: normalizedEmail, plan });
+
+      const stripeClient = await getUncachableStripeClient();
+      if (!stripeClient) {
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        return c.json({ success: false, error: 'Payment system not configured. Please try again later.' }, 503);
+      }
+
+      let stripeCustomerId: string;
+      try {
+        const customer = await stripeClient.customers.create({ email: normalizedEmail, metadata: { userId } });
+        stripeCustomerId = customer.id;
+        await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [stripeCustomerId, userId]);
+      } catch (stripeErr: any) {
+        console.error('[Auth] Stripe customer creation error:', stripeErr);
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        return c.json({ success: false, error: 'Failed to set up payment. Please try again.' }, 500);
+      }
+
+      const baseUrl = getBaseUrl(c);
+      const successUrl = `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${baseUrl}/signup?cancelled=true`;
+
+      let sessionParams: any;
+
+      if (plan === 'lifetime') {
+        sessionParams = {
+          customer: stripeCustomerId,
+          mode: 'payment',
+          line_items: [{
+            price_data: {
+              currency: 'usd',
+              unit_amount: 9900,
+              product_data: {
+                name: 'Adiology Lifetime Deal',
+                description: 'Lifetime access to all Adiology features. Pay once, use forever.',
+              },
+            },
+            quantity: 1,
+          }],
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          allow_promotion_codes: true,
+          metadata: { userId, plan: 'lifetime', deal: 'lifetime-99' },
+        };
+      } else {
+        const resolvedPriceId = priceId || process.env[`STRIPE_${plan.toUpperCase()}_PRICE_ID`];
+        if (!resolvedPriceId) {
+          await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+          return c.json({ success: false, error: 'Plan price not configured. Please contact support.' }, 500);
+        }
+        sessionParams = {
+          customer: stripeCustomerId,
+          mode: 'subscription',
+          line_items: [{ price: resolvedPriceId, quantity: 1 }],
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          allow_promotion_codes: true,
+          metadata: { userId, plan },
+        };
+      }
+
+      let checkoutSession: any;
+      try {
+        checkoutSession = await stripeClient.checkout.sessions.create(sessionParams);
+      } catch (sessionErr: any) {
+        console.error('[Auth] Stripe session creation error:', sessionErr);
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        return c.json({ success: false, error: 'Failed to create payment session. Please try again.' }, 500);
+      }
+
+      console.log(`[Auth] User registered with pending payment: ${normalizedEmail} (plan: ${plan})`);
+      return c.json({
+        success: true,
+        message: 'Account created. Redirecting to payment...',
+        checkoutUrl: checkoutSession.url,
+      });
+    }
+
     const userId = crypto.randomUUID();
+
+    const newPlan = isLifetimeDeal ? 'Lifetime' : 'free';
+    const newStatus = isLifetimeDeal ? 'active' : 'active';
+    const cardValidated = isLifetimeDeal ? true : false;
 
     try {
       await pool.query(
-        `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, true, 'user', 'free', 'active', NOW(), NOW())`,
-        [userId, normalizedEmail, name || null, passwordHash]
+        `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, card_validated, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, true, 'user', $5, $6, $7, NOW(), NOW())`,
+        [userId, normalizedEmail, name || null, passwordHash, newPlan, newStatus, cardValidated]
       );
     } catch (dbError: any) {
       if (dbError.code === '23505') {
@@ -122,21 +226,24 @@ accountRoutes.post('/register', async (c) => {
       { expiresIn: '7d' }
     );
 
-    await logUserEvent(userId, 'signup', 'User registered', `New account created`, { email: normalizedEmail, name: name || null });
+    await logUserEvent(userId, 'signup', 'User registered', `New account created`, { email: normalizedEmail, name: name || null, isLifetimeDeal: !!isLifetimeDeal });
 
     EmailService.sendRaw(normalizedEmail, 'welcome', { name: name || 'there' }).catch(() => {});
 
-    console.log(`[Auth] User registered: ${email}`);
+    console.log(`[Auth] User registered: ${email} (plan: ${newPlan})`);
     return c.json({
       success: true,
       message: 'Account created successfully.',
       userId,
       token: jwtToken,
+      skipPayment: !!isLifetimeDeal,
+      isLifetimeDeal: !!isLifetimeDeal,
       user: {
         id: userId,
         email: normalizedEmail,
-        subscription_plan: 'free',
-        subscription_status: 'active',
+        subscription_plan: newPlan,
+        subscription_status: newStatus,
+        card_validated: cardValidated,
       },
     });
   } catch (error: any) {
@@ -205,7 +312,9 @@ accountRoutes.post('/login', async (c) => {
         ai_usage: user.ai_usage,
         created_at: user.created_at,
         card_validated: user.card_validated,
-        selected_plan: user.selected_plan
+        selected_plan: user.selected_plan,
+        email_verified: user.email_verified || false,
+        current_period_end: user.current_period_end || null,
       }
     });
   } catch (error: any) {
@@ -497,7 +606,9 @@ accountRoutes.get('/me', async (c) => {
         created_at: user.created_at,
         updated_at: user.updated_at,
         card_validated: user.card_validated || false,
-        selected_plan: user.selected_plan || null
+        selected_plan: user.selected_plan || null,
+        email_verified: user.email_verified || false,
+        current_period_end: user.current_period_end || null,
       }
     });
   } catch (error: any) {

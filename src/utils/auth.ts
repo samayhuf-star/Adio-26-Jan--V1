@@ -65,7 +65,8 @@ export async function signUpWithEmail(
   email: string,
   password: string,
   passwordConfirm?: string,
-  name?: string
+  name?: string,
+  isLifetimeDeal?: boolean
 ): Promise<{ data: User | null; error: { message: string } | null; needsEmailVerification?: boolean; message?: string; token?: string; skipPayment?: boolean; isLifetimeDeal?: boolean; user?: any }> {
   try {
     if (typeof window !== 'undefined') {
@@ -75,7 +76,7 @@ export async function signUpWithEmail(
 
     const result = await apiRequest('/register', {
       method: 'POST',
-      body: JSON.stringify({ email: email.trim().toLowerCase(), password, name: name || '' }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password, name: name || '', isLifetimeDeal: !!isLifetimeDeal }),
     });
 
     if (!result.success) {
@@ -145,7 +146,7 @@ export async function signInWithEmail(
       subscription_status: result.user.subscription_status || 'inactive',
       card_validated: result.user.card_validated || false,
       selected_plan: result.user.selected_plan || null,
-      email_confirmed_at: new Date().toISOString(),
+      email_confirmed_at: result.user.email_verified ? new Date().toISOString() : null,
       created: result.user.created_at,
     };
 

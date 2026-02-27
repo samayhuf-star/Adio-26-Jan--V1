@@ -206,7 +206,32 @@ export const MASTER_CSV_HEADERS = [
   'Description Line 2',
   'Callout Text',
   'Snippet Header',
-  'Snippet Values'
+  'Snippet Values',
+  'Price qualifier',
+  'Price type',
+  'Price item 1 header',
+  'Price item 1 description',
+  'Price item 1 price',
+  'Price item 1 unit',
+  'Price item 1 Final URL',
+  'Price item 2 header',
+  'Price item 2 description',
+  'Price item 2 price',
+  'Price item 2 unit',
+  'Price item 2 Final URL',
+  'Price item 3 header',
+  'Price item 3 description',
+  'Price item 3 price',
+  'Price item 3 unit',
+  'Price item 3 Final URL',
+  'Promotion occasion',
+  'Promotion language',
+  'Promotion target country',
+  'Promotion discount modifier',
+  'Promotion percent off',
+  'Promotion money amount off',
+  'Promotion item description',
+  'Promotion Final URL'
 ];
 
 // Column index map for quick access
@@ -249,6 +274,8 @@ export interface CampaignDataV5 {
   callouts?: CalloutV5[];
   snippets?: SnippetV5[];
   callExtensions?: CallExtensionV5[];
+  priceExtension?: PriceExtensionV5;
+  promotionExtension?: PromotionExtensionV5;
 }
 
 export interface AdGroupV5 {
@@ -326,6 +353,31 @@ export interface CallExtensionV5 {
   devicePreference?: 'All' | 'Mobile' | 'Desktop';
 }
 
+export interface PriceItemV5 {
+  header: string;
+  description: string;
+  price: string;
+  unit?: string;
+  finalUrl: string;
+}
+
+export interface PriceExtensionV5 {
+  qualifier?: string;
+  priceType?: string;
+  items: PriceItemV5[];
+}
+
+export interface PromotionExtensionV5 {
+  occasion?: string;
+  language?: string;
+  targetCountry?: string;
+  discountModifier?: string;
+  percentOff?: string;
+  moneyAmountOff?: string;
+  itemDescription: string;
+  finalUrl: string;
+}
+
 
 /**
  * Generate a complete CSV with all 183 columns from campaign data
@@ -352,46 +404,7 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
   campaignRow[COLUMN_INDEX['Campaign Status']] = campaign.status || 'Enabled';
   campaignRow[COLUMN_INDEX['Campaign Labels']] = campaign.labels || '';
 
-  // === ALL ASSETS GO DIRECTLY ON THE CAMPAIGN ROW (campaign-level) ===
-  // Google Ads Editor expects assets in the numbered columns on the campaign row itself.
-  // Sitelinks 1-4, Callouts 1-4, Structured Snippets 1-2, and Call Extensions
-  // all belong on this single campaign row for proper import.
-
-  // Sitelinks (up to 4) - directly on campaign row
-  if (campaign.sitelinks && campaign.sitelinks.length > 0) {
-    campaign.sitelinks.slice(0, 4).forEach((sl, idx) => {
-      const num = idx + 1;
-      campaignRow[COLUMN_INDEX[`Sitelink ${num} Text`]] = sl.text || '';
-      campaignRow[COLUMN_INDEX[`Sitelink ${num} Description 1`]] = sl.description1 || '';
-      campaignRow[COLUMN_INDEX[`Sitelink ${num} Description 2`]] = sl.description2 || '';
-      campaignRow[COLUMN_INDEX[`Sitelink ${num} Final URL`]] = sl.finalUrl || campaign.url || '';
-      campaignRow[COLUMN_INDEX[`Sitelink ${num} Status`]] = sl.status || 'Enabled';
-      campaignRow[COLUMN_INDEX[`Sitelink ${num} Start Date`]] = sl.startDate || '';
-      campaignRow[COLUMN_INDEX[`Sitelink ${num} End Date`]] = sl.endDate || '';
-    });
-  }
-
-  // Callouts (up to 4) - directly on campaign row
-  if (campaign.callouts && campaign.callouts.length > 0) {
-    campaign.callouts.slice(0, 4).forEach((co, idx) => {
-      const num = idx + 1;
-      campaignRow[COLUMN_INDEX[`Callout ${num} Text`]] = co.text || '';
-      campaignRow[COLUMN_INDEX[`Callout ${num} Status`]] = co.status || 'Enabled';
-      campaignRow[COLUMN_INDEX[`Callout ${num} Start Date`]] = co.startDate || '';
-      campaignRow[COLUMN_INDEX[`Callout ${num} End Date`]] = co.endDate || '';
-    });
-  }
-
-  // Structured Snippets (up to 2) - directly on campaign row
-  if (campaign.snippets && campaign.snippets.length > 0) {
-    campaign.snippets.slice(0, 2).forEach((sn, idx) => {
-      const num = idx + 1;
-      campaignRow[COLUMN_INDEX[`Structured Snippet ${num} Header`]] = sn.header || '';
-      campaignRow[COLUMN_INDEX[`Structured Snippet ${num} Values`]] = sn.values || '';
-    });
-  }
-
-  // Call Extension - directly on campaign row
+  // Call Extension - stays on the campaign row (campaign-level phone number)
   if (campaign.callExtensions && campaign.callExtensions.length > 0) {
     const callExt = campaign.callExtensions[0];
     campaignRow[COLUMN_INDEX['PhoneNumber']] = callExt.phoneNumber || '';
@@ -402,6 +415,79 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
   }
 
   rows.push(campaignRow);
+
+  // === SITELINK ROWS — one row per sitelink (Google Ads Editor format) ===
+  // Google Ads Editor imports sitelinks as separate rows using Link Text,
+  // Description Line 1, Description Line 2, and Final URL columns.
+  if (campaign.sitelinks && campaign.sitelinks.length > 0) {
+    campaign.sitelinks.forEach((sl) => {
+      const slRow = createEmptyRow();
+      slRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      slRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      slRow[COLUMN_INDEX['Link Text']] = sl.text || '';
+      slRow[COLUMN_INDEX['Description Line 1']] = sl.description1 || '';
+      slRow[COLUMN_INDEX['Description Line 2']] = sl.description2 || '';
+      slRow[COLUMN_INDEX['Final URL']] = sl.finalUrl || campaign.url || '';
+      rows.push(slRow);
+    });
+  }
+
+  // === CALLOUT ROWS — one row per callout (Google Ads Editor format) ===
+  if (campaign.callouts && campaign.callouts.length > 0) {
+    campaign.callouts.forEach((co) => {
+      const coRow = createEmptyRow();
+      coRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      coRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      coRow[COLUMN_INDEX['Callout Text']] = co.text || '';
+      rows.push(coRow);
+    });
+  }
+
+  // === SNIPPET ROWS — one row per structured snippet (Google Ads Editor format) ===
+  if (campaign.snippets && campaign.snippets.length > 0) {
+    campaign.snippets.forEach((sn) => {
+      const snRow = createEmptyRow();
+      snRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+      snRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+      snRow[COLUMN_INDEX['Snippet Header']] = sn.header || '';
+      snRow[COLUMN_INDEX['Snippet Values']] = sn.values || '';
+      rows.push(snRow);
+    });
+  }
+
+  // === PRICE EXTENSION ROW — one row with up to 3 price items (Google Ads Editor format) ===
+  if (campaign.priceExtension && campaign.priceExtension.items.length > 0) {
+    const prRow = createEmptyRow();
+    prRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+    prRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+    prRow[COLUMN_INDEX['Price qualifier']] = campaign.priceExtension.qualifier || 'From';
+    prRow[COLUMN_INDEX['Price type']] = campaign.priceExtension.priceType || 'services';
+    campaign.priceExtension.items.slice(0, 3).forEach((item, idx) => {
+      const num = idx + 1;
+      prRow[COLUMN_INDEX[`Price item ${num} header`]] = item.header || '';
+      prRow[COLUMN_INDEX[`Price item ${num} description`]] = item.description || '';
+      prRow[COLUMN_INDEX[`Price item ${num} price`]] = item.price || '';
+      prRow[COLUMN_INDEX[`Price item ${num} unit`]] = item.unit || '';
+      prRow[COLUMN_INDEX[`Price item ${num} Final URL`]] = item.finalUrl || campaign.url || '';
+    });
+    rows.push(prRow);
+  }
+
+  // === PROMOTION EXTENSION ROW — one row per promotion (Google Ads Editor format) ===
+  if (campaign.promotionExtension) {
+    const pmRow = createEmptyRow();
+    pmRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
+    pmRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
+    pmRow[COLUMN_INDEX['Promotion occasion']] = campaign.promotionExtension.occasion || '';
+    pmRow[COLUMN_INDEX['Promotion language']] = campaign.promotionExtension.language || 'English';
+    pmRow[COLUMN_INDEX['Promotion target country']] = campaign.promotionExtension.targetCountry || 'US';
+    pmRow[COLUMN_INDEX['Promotion discount modifier']] = campaign.promotionExtension.discountModifier || '';
+    pmRow[COLUMN_INDEX['Promotion percent off']] = campaign.promotionExtension.percentOff || '';
+    pmRow[COLUMN_INDEX['Promotion money amount off']] = campaign.promotionExtension.moneyAmountOff || '';
+    pmRow[COLUMN_INDEX['Promotion item description']] = campaign.promotionExtension.itemDescription || '';
+    pmRow[COLUMN_INDEX['Promotion Final URL']] = campaign.promotionExtension.finalUrl || campaign.url || '';
+    rows.push(pmRow);
+  }
 
   
   // Keyword rows - REQUIRED for Google Ads Editor

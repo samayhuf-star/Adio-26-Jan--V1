@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 
 import { initGA, trackPageView } from './lib/analytics';
+import { installGlobalErrorHandlers } from './utils/errorMonitor';
 import { useAnalytics } from './hooks/use-analytics';
 
 declare global {
@@ -40,6 +41,8 @@ import { setAuthGetToken } from './utils/historyService';
 import { DataSourceIndicator } from './components/DataSourceIndicator';
 import { useDataSource } from './hooks/useDataSource';
 import { initStorageManager, clearStorageNow } from './utils/storageManager';
+import { EmailVerificationBanner } from './components/EmailVerificationBanner';
+import { PastDueBanner } from './components/PastDueScreen';
 const Auth = lazy(() => import('./components/Auth').then(m => ({ default: m.Auth })));
 const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
 const EmailVerification = lazy(() => import('./components/EmailVerification').then(m => ({ default: m.EmailVerification })));
@@ -48,6 +51,8 @@ const PaymentPage = lazy(() => import('./components/PaymentPage').then(m => ({ d
 const PaymentSuccess = lazy(() => import('./components/PaymentSuccess').then(m => ({ default: m.PaymentSuccess })));
 const PlanSelection = lazy(() => import('./components/PlanSelection').then(m => ({ default: m.PlanSelection })));
 const SignupWizard = lazy(() => import('./components/SignupWizard').then(m => ({ default: m.SignupWizard })));
+const SignupPage = lazy(() => import('./components/SignupPage').then(m => ({ default: m.SignupPage })));
+const CancelledScreen = lazy(() => import('./components/CancelledScreen').then(m => ({ default: m.CancelledScreen })));
 const CreativeMinimalistHomepage = lazy(() => import('./components/CreativeMinimalistHomepage'));
 const MobileNavigation = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileNavigation })));
 const MobileQuickActions = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileQuickActions })));
@@ -111,7 +116,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article' | 'appsumo-redeem' | 'demo';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'signup' | 'cancelled' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article' | 'appsumo-redeem' | 'demo';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -137,11 +142,12 @@ const AppContent = () => {
     trackPageView(location);
   }, [appView, activeTab]);
 
-  // Initialize Google Analytics when app loads
+  // Initialize Google Analytics and global error monitoring when app loads
   useEffect(() => {
     if (import.meta.env.VITE_GA_MEASUREMENT_ID) {
       initGA();
     }
+    installGlobalErrorHandlers();
   }, []);
   
   // Initialize auth state
@@ -196,6 +202,55 @@ const AppContent = () => {
     };
   }, []);
   
+  // Handle session_id from Stripe redirect (e.g., /dashboard?session_id=xxx)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const path = window.location.pathname;
+
+    if (!sessionId) return;
+    if (path !== '/dashboard' && !path.startsWith('/dashboard')) return;
+
+    const exchangeSession = async () => {
+      try {
+        const res = await fetch(`/api/stripe/session-status?session_id=${encodeURIComponent(sessionId)}`);
+        const data = await res.json();
+
+        if (data.success && data.token && data.user) {
+          localStorage.setItem('auth_token', data.token);
+          const userObj = {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.full_name || '',
+            full_name: data.user.full_name || '',
+            avatar: data.user.avatar_url,
+            role: data.user.role || 'user',
+            subscription_plan: data.user.subscription_plan || 'free',
+            subscription_status: data.user.subscription_status || 'inactive',
+            card_validated: data.user.card_validated || false,
+            selected_plan: data.user.selected_plan || null,
+            email_confirmed_at: data.user.email_verified ? new Date().toISOString() : null,
+            created: data.user.created_at,
+          };
+          localStorage.setItem('user', JSON.stringify(userObj));
+          setUser(userObj);
+          setCurrentUserId(userObj.id);
+        }
+
+        window.history.replaceState({}, '', '/dashboard');
+        setAppView('user');
+        setActiveTab('dashboard');
+      } catch (err) {
+        console.error('[App] session-status exchange error:', err);
+        window.history.replaceState({}, '', '/dashboard');
+        setAppView('user');
+        setActiveTab('dashboard');
+      }
+    };
+
+    exchangeSession();
+  }, []);
+
   // Track if user has been synced to prevent infinite loops
   const userSyncedRef = useRef<string | null>(null);
   
@@ -709,10 +764,15 @@ const AppContent = () => {
 
       if (path === '/signup' || path.startsWith('/signup')) {
         if (!user) {
-          setView('signup-wizard');
+          setView('signup');
         } else {
           setView('user');
         }
+        return;
+      }
+
+      if (path === '/dashboard' || path.startsWith('/dashboard')) {
+        setView('user');
         return;
       }
 
@@ -936,10 +996,15 @@ const AppContent = () => {
       
       if (path === '/signup' || path.startsWith('/signup')) {
         if (!user) {
-          setAppView('signup-wizard');
+          setAppView('signup');
         } else {
           setAppView('user');
         }
+        return;
+      }
+
+      if (path === '/dashboard' || path.startsWith('/dashboard')) {
+        setAppView('user');
         return;
       }
 
@@ -1723,6 +1788,51 @@ const AppContent = () => {
   }
 
 
+  if (appView === 'signup') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const wasCancelled = urlParams.get('cancelled') === 'true';
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <SignupPage
+          cancelledMessage={wasCancelled}
+          onLogin={() => {
+            setAuthMode('sign-in');
+            window.history.pushState({}, '', '/login');
+            setAppView('auth');
+          }}
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'cancelled') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <CancelledScreen
+          onResubscribe={() => {
+            window.history.pushState({}, '', '/signup');
+            setAppView('signup');
+          }}
+          onLogin={() => {
+            signOut().then(() => {
+              setUser(null);
+              setAuthMode('sign-in');
+              window.history.pushState({}, '', '/login');
+              setAppView('auth');
+            }).catch(() => {
+              setAuthMode('sign-in');
+              setAppView('auth');
+            });
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   if (appView === 'accept-invite') {
     return (
       <Suspense fallback={<ComponentLoader />}>
@@ -1867,14 +1977,8 @@ const AppContent = () => {
     return (
       <CreativeMinimalistHomepage
         onGetStarted={() => {
-          if (!selectedPlan) {
-            const defaultPlan = JSON.stringify({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
-            sessionStorage.setItem('selectedPlan', defaultPlan);
-            localStorage.setItem('signup_pending_plan', defaultPlan);
-            setSelectedPlan({ name: 'Professional', priceId: '', amount: 9900, isSubscription: true });
-          }
           window.history.pushState({}, '', '/signup');
-          setAppView('signup-wizard');
+          setAppView('signup');
         }}
         onLogin={() => {
           setAuthMode('sign-in');
@@ -1954,12 +2058,18 @@ const AppContent = () => {
                 const isAdmin = profile.role === 'superadmin' || profile.role === 'super_admin' || adminEmails.includes(profile.email?.toLowerCase() || '');
 
                 // Check if user has access: admin OR card validated OR active subscription status
-                const hasAccess = isAdmin || profile.card_validated || profile.subscription_status === 'active' || profile.subscription_status === 'trialing';
+                const hasAccess = isAdmin || profile.card_validated || profile.subscription_status === 'active' || profile.subscription_status === 'trialing' || profile.subscription_status === 'past_due';
+
+                if (profile.subscription_status === 'cancelled' && !isAdmin) {
+                  setLoading(false);
+                  setAppView('cancelled');
+                  return;
+                }
 
                 if (!hasAccess) {
                   setLoading(false);
                   window.history.pushState({}, '', '/signup');
-                  setAppView('signup-wizard');
+                  setAppView('signup');
                   return;
                 }
               }
@@ -2061,7 +2171,7 @@ const AppContent = () => {
             }}
             onSignupRedirect={() => {
               window.history.pushState({}, '', '/signup');
-              setAppView('signup-wizard');
+              setAppView('signup');
             }}
             onBackToHome={() => {
               setAppView('homepage');
@@ -2069,6 +2179,52 @@ const AppContent = () => {
           />
         );
       }
+    }
+
+    // Status-based access control for logged-in users
+    const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+    const isAdmin = user?.role === 'superadmin' || user?.role === 'super_admin' || adminEmails.includes(user?.email?.toLowerCase() || '');
+
+    if (!isAdmin && user?.subscription_status === 'cancelled') {
+      return (
+        <Suspense fallback={<ComponentLoader />}>
+          <CancelledScreen
+            onResubscribe={() => {
+              window.history.pushState({}, '', '/signup');
+              setAppView('signup');
+            }}
+            onLogin={() => {
+              signOut().then(() => {
+                setUser(null);
+                setAuthMode('sign-in');
+                window.history.pushState({}, '', '/login');
+                setAppView('auth');
+              }).catch(() => {
+                setAuthMode('sign-in');
+                setAppView('auth');
+              });
+            }}
+          />
+        </Suspense>
+      );
+    }
+
+    if (!isAdmin && user?.subscription_status === 'pending_payment') {
+      return (
+        <Suspense fallback={<ComponentLoader />}>
+          <SignupPage
+            onLogin={() => {
+              setAuthMode('sign-in');
+              window.history.pushState({}, '', '/login');
+              setAppView('auth');
+            }}
+            onBack={() => {
+              window.history.pushState({}, '', '/');
+              setAppView('homepage');
+            }}
+          />
+        </Suspense>
+      );
     }
   }
 
@@ -2790,6 +2946,14 @@ const AppContent = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 w-full">
+        {/* Email verification banner - shown on every page until verified */}
+        {user && user.email_confirmed_at === null && user.email && (
+          <EmailVerificationBanner email={user.email} />
+        )}
+        {/* Past due payment banner */}
+        {user && user.subscription_status === 'past_due' && user.email && (
+          <PastDueBanner email={user.email} />
+        )}
         {/* Enhanced Header */}
         <header className="h-16 glass-card shadow-xl border-b border-white/30 flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0">
           <div className="flex items-center gap-2 md:gap-4">

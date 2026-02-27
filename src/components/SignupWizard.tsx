@@ -255,7 +255,7 @@ function Step1CreateAccount({
 
     setIsLoading(true);
     try {
-      const result = await signUpWithEmail(email, password, confirmPassword, name);
+      const result = await signUpWithEmail(email, password, confirmPassword, name, isLifetimeDeal);
 
       if (result.error) {
         throw new Error(result.error.message || 'Signup failed');

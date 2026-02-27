@@ -22,6 +22,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false),
   cardValidated: boolean("card_validated").default(false),
   selectedPlan: text("selected_plan"),
+  currentPeriodEnd: timestamp("current_period_end"),
 }, (table) => ({
   emailIdx: index("idx_users_email").on(table.email),
   roleIdx: index("idx_users_role").on(table.role),

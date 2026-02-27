@@ -1,0 +1,61 @@
+Complete Adiology Signup & Payment Flow
+
+Step 1: Landing Page
+User clicks “Get Started” or any CTA button → goes to Signup page.
+
+Step 2: Signup + Plan Page (Single Page)
+User fills one form:
+	∙	Plan (dropdown — Monthly / Annual)
+	∙	Full Name
+	∙	Email
+	∙	Password
+	∙	Click “Proceed to Payment”
+On submit → validate fields → create user in DB with status: pending_payment, is_verified: false → generate Stripe Checkout Session → redirect user to Stripe.
+
+Step 3: Stripe Checkout (Stripe-hosted page)
+User enters card details and pays. Two outcomes:
+	∙	Payment Success → Stripe redirects to your success_url (dashboard)
+	∙	Payment Failed / Abandoned → Stripe redirects to cancel_url (back to signup page with a message)
+
+Step 4: Stripe Webhook (Backend)
+Stripe fires checkout.session.completed to your server. Your server:
+	∙	Verifies the webhook signature
+	∙	Updates user in DB: status: active, stripe_customer_id, stripe_subscription_id, plan_id, current_period_end
+	∙	Sends verification email to user
+
+Step 5: Dashboard (Logged In)
+User lands on dashboard with full access to all features included in their plan. A persistent non-dismissible banner shows on every page:
+⚠️ “Your email is not verified. Please check your inbox and click the verification link.” [Resend Email]
+Banner shows on every page, every login — until email is verified.
+
+Step 6: Email Verification
+User clicks the link in their inbox → your server marks is_verified: true → banner disappears permanently → nothing else changes, user already had full access.
+
+Step 7: Subscription Renewal
+Stripe auto-charges on renewal date. Webhook fires invoice.payment_succeeded → update current_period_end in DB. If payment fails → invoice.payment_failed webhook fires → send dunning email → retry 3 times → if still fails, update status: past_due → restrict access → show “Update your payment method” screen.
+
+Step 8: Cancellation
+User cancels from billing settings → Stripe marks subscription as cancel_at_period_end: true → user keeps access till end of billing period → after that status: cancelled → access removed → show resubscribe page.
+
+DB Fields to Track
+
+
+
+|Field                   |Values                                         |
+|------------------------|-----------------------------------------------|
+|`status`                |pending_payment / active / past_due / cancelled|
+|`is_verified`           |true / false                                   |
+|`stripe_customer_id`    |cus_xxx                                        |
+|`stripe_subscription_id`|sub_xxx                                        |
+|`plan_id`               |monthly / annual                               |
+|`current_period_end`    |timestamp                                      |
+
+Access Control Logic (Simple)
+
+if status === 'active' or 'past_due'  → allow dashboard
+if status === 'pending_payment'       → redirect to payment
+if status === 'cancelled'             → redirect to resubscribe
+if is_verified === false              → show banner (but full access)
+
+
+That’s the complete flow. Ready to build it?​​​​​​​​​​​​​​​​

@@ -38,84 +38,70 @@ interface PlanDetails {
 }
 
 const PLAN_DETAILS: Record<string, PlanDetails> = {
-  'Basic': {
-    name: 'Basic',
-    price: '$69.99',
-    priceId: 'price_basic_monthly',
+  'Starter': {
+    name: 'Starter',
+    price: '$49.00',
+    priceId: 'price_1Sf7Z2AYv17Z995VOMSBG7GX',
     isSubscription: true,
-    amount: 6999,
+    amount: 4900,
     features: [
-      '10 Active Campaigns',
-      '5 Draft Campaigns',
-      '50 Campaign Exports/Month',
-      '500 Keyword Credits/Month',
-      '10 Landing Page Templates',
-      '2 User Seats',
+      '25 Campaigns/month',
+      'Campaign Builder 3.0',
+      'Keyword Planner & Mixer',
+      '10+ ad extension types',
+      'CSV export to Google Ads Editor',
+      'Community Forum',
       'Email Support'
     ]
   },
-  'Basic (Yearly)': {
-    name: 'Basic (Yearly)',
-    price: '$671.90',
-    priceId: 'price_basic_yearly',
+  'Professional': {
+    name: 'Professional',
+    price: '$99.00',
+    priceId: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN',
     isSubscription: true,
-    amount: 67190,
+    amount: 9900,
     features: [
-      '10 Active Campaigns',
-      '5 Draft Campaigns',
-      '50 Campaign Exports/Month',
-      '500 Keyword Credits/Month',
-      '10 Landing Page Templates',
-      '2 User Seats',
-      'Email Support'
+      '50 Campaigns/month',
+      'Campaign Builder 3.0',
+      'Keyword Planner, Mixer & Long Tail',
+      'Negative Keywords',
+      '10+ ad extension types',
+      'CSV export to Google Ads Editor',
+      'Click Guard, Domain Monitor, Proxy Mail',
+      'Community Forum & Email Support'
     ]
   },
-  'Pro': {
-    name: 'Pro',
-    price: '$129.99',
-    priceId: 'price_pro_monthly',
+  'Agency': {
+    name: 'Agency',
+    price: '$149.00',
+    priceId: 'price_1Sf7Z5AYv17Z995V7ROFNbzI',
     isSubscription: true,
-    amount: 12999,
+    amount: 14900,
     features: [
-      '50 Active Campaigns',
-      'Unlimited Draft Campaigns',
-      'Unlimited Campaign Exports',
-      '2,500 Keyword Credits/Month',
-      '50+ Landing Page Templates',
-      '5 User Seats',
-      'Email Support'
-    ]
-  },
-  'Pro (Yearly)': {
-    name: 'Pro (Yearly)',
-    price: '$1,247.90',
-    priceId: 'price_pro_yearly',
-    isSubscription: true,
-    amount: 124790,
-    features: [
-      '50 Active Campaigns',
-      'Unlimited Draft Campaigns',
-      'Unlimited Campaign Exports',
-      '2,500 Keyword Credits/Month',
-      '50+ Landing Page Templates',
-      '5 User Seats',
-      'Email Support'
+      'Unlimited campaigns',
+      'Campaign Builder 3.0',
+      'All Keyword Tools',
+      '10+ ad extension types',
+      'CSV export to Google Ads Editor',
+      'Click Guard – unlimited domains',
+      'Email Forwarding & Preset Campaigns',
+      'Dedicated account manager'
     ]
   },
   'Lifetime': {
     name: 'Lifetime',
-    price: '$99.99',
-    priceId: 'price_lifetime',
+    price: '$99.00',
+    priceId: '',
     isSubscription: false,
-    amount: 9999,
+    amount: 9900,
     features: [
-      '5 Active Campaigns',
-      '3 Draft Campaigns',
-      '25 Campaign Exports/Month',
-      '250 Keyword Credits/Month',
-      '5 Landing Page Templates',
-      '1 User Seat',
-      'Email Support'
+      'Unlimited campaigns',
+      'All Agency features included',
+      'No monthly fees ever',
+      'Lifetime updates',
+      '14-day money-back guarantee',
+      'Priority email support',
+      'All future features included'
     ]
   }
 };

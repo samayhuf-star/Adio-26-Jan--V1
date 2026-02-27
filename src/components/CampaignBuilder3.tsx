@@ -8,7 +8,7 @@ import {
   Phone, Mail, Calendar, Clock, Eye, FileSpreadsheet, Copy,
   MessageSquare, Gift, Image as ImageIcon, DollarSign, MapPin as MapPinIcon,
   Star, RefreshCw, Smartphone, Megaphone, FolderOpen, Film,
-  Type, ChevronUp, ChevronDown, ChevronRight, MousePointerClick, Briefcase, Info
+  Type, ChevronUp, ChevronDown, ChevronRight, MousePointerClick, Briefcase, Info, Tag
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { Button } from './ui/button';
@@ -2754,6 +2754,25 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             newExtension.countryCode = 'US';
             newExtension.text = newExtension.phone;
             break;
+          case 'price':
+            newExtension.qualifier = 'From';
+            newExtension.priceType = 'services';
+            newExtension.items = [
+              { header: 'Basic Service', description: 'Standard service tier', price: '$99', unit: '', finalUrl: campaignData.url || '' },
+              { header: 'Standard Package', description: 'Full service package', price: '$249', unit: '', finalUrl: campaignData.url || '' },
+              { header: 'Premium Solution', description: 'Complete solution', price: '$499', unit: '', finalUrl: campaignData.url || '' },
+            ];
+            newExtension.text = 'Price extension';
+            break;
+          case 'promotion':
+            newExtension.percentOff = '10';
+            newExtension.itemDescription = 'First-time customers';
+            newExtension.discountModifier = 'Up to';
+            newExtension.language = 'English';
+            newExtension.targetCountry = 'US';
+            newExtension.finalUrl = campaignData.url || '';
+            newExtension.text = '10% off first-time customers';
+            break;
           default:
             newExtension.text = newExtension.label;
         }
@@ -2796,6 +2815,8 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       const seenCallouts = new Set<string>();
       const seenSnippets = new Set<string>();
       let hasCallExt = false;
+      let priceExtension: any = null;
+      let promotionExtension: any = null;
       
       const processExtension = (ext: any) => {
         if (ext.type === 'sitelink') {
@@ -2865,6 +2886,31 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             countryCode: ext.countryCode || targetCountryCode,
             status: 'Enabled'
           });
+        } else if (ext.type === 'price' && ext.items && Array.isArray(ext.items)) {
+          if (!priceExtension) {
+            priceExtension = {
+              qualifier: ext.qualifier || 'From',
+              priceType: ext.priceType || 'services',
+              items: ext.items.map((item: any) => ({
+                header: item.header || '',
+                description: item.description || '',
+                price: item.price || '',
+                unit: item.unit || '',
+                finalUrl: item.finalUrl || item.url || campaignData.url || '',
+              })),
+            };
+          }
+        } else if (ext.type === 'promotion' && !promotionExtension) {
+          promotionExtension = {
+            occasion: ext.occasion || '',
+            language: 'English',
+            targetCountry: ext.targetCountry || 'US',
+            discountModifier: ext.discountModifier || '',
+            percentOff: ext.percentOff || '',
+            moneyAmountOff: ext.moneyAmountOff || '',
+            itemDescription: ext.itemDescription || ext.text || '',
+            finalUrl: ext.finalUrl || campaignData.url || '',
+          };
         }
       };
 
@@ -2886,6 +2932,37 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         snippets: snippets.length,
         callExtensions: callExtensions.length,
       });
+
+      // Fallback: if no extensions found (e.g. user skipped Step 4), auto-generate from campaign info
+      if (sitelinks.length === 0 && callouts.length === 0 && snippets.length === 0) {
+        try {
+          const { generateCampaignAssets, assetsToAdExtensions: toExtensions } = await import('../utils/campaignAssetGenerator');
+          const businessName = campaignData.campaignName || 'Business';
+          const industry = campaignData.vertical || campaignData.industry || 'general';
+          const keywordTexts = (campaignData.seedKeywords || []).map((kw: any) =>
+            typeof kw === 'string' ? kw : (kw.text || kw.keyword || '')
+          );
+          const fallbackAssets = generateCampaignAssets({
+            businessName,
+            industry,
+            keywords: keywordTexts,
+            url: campaignData.url || '',
+            uniqueValueProposition: campaignData.cta || undefined,
+            location: campaignData.locations?.cities?.[0] || campaignData.locations?.states?.[0] || undefined,
+            phoneNumber: campaignData.universalInput?.phoneNumber || undefined,
+          });
+          toExtensions(fallbackAssets).forEach(processExtension);
+          console.log('Used fallback asset generation — extensions added:', {
+            sitelinks: sitelinks.length,
+            callouts: callouts.length,
+            snippets: snippets.length,
+            price: !!priceExtension,
+            promotion: !!promotionExtension,
+          });
+        } catch (fbErr) {
+          console.warn('Fallback asset generation failed:', fbErr);
+        }
+      }
       
       // Build the V5 campaign data structure with all 183 columns
       const v5CampaignData: any = {
@@ -2932,10 +3009,12 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
                        campaignData.targetCountry === 'United Kingdom' ? 'GB' :
                        campaignData.targetCountry === 'Australia' ? 'AU' : 'US'
         },
-        sitelinks: sitelinks.slice(0, 4),
-        callouts: callouts.slice(0, 4),
-        snippets: snippets.slice(0, 2),
+        sitelinks: sitelinks.slice(0, 8),
+        callouts: callouts.slice(0, 10),
+        snippets: snippets.slice(0, 3),
         callExtensions: callExtensions.length > 0 ? callExtensions : undefined,
+        priceExtension: priceExtension || undefined,
+        promotionExtension: promotionExtension || undefined,
       };
       
       const extractHeadlines = (ad: any): string[] => {
@@ -4358,6 +4437,8 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       { id: 'callout', label: 'CALLOUT', icon: MessageSquare },
       { id: 'sitelink', label: 'SITELINK', icon: Link2 },
       { id: 'call', label: 'CALL', icon: Phone },
+      { id: 'price', label: 'PRICE', icon: DollarSign },
+      { id: 'promotion', label: 'PROMOTION', icon: Tag },
     ];
 
     return (

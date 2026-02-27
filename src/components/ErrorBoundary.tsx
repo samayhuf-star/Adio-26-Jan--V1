@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
 import { ErrorHandler } from '../utils/errorHandler';
+import { reportError } from '../utils/errorMonitor';
 
 interface Props {
   children: ReactNode;
@@ -44,6 +45,15 @@ export class ErrorBoundary extends Component<Props, State> {
         errorBoundary: true,
       },
     }, 'critical');
+
+    // Send screenshot + email alert to admin
+    reportError({
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack ?? undefined,
+      source: 'react-error-boundary',
+      severity: 'critical',
+    });
 
     this.setState({
       error,

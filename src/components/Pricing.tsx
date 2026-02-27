@@ -93,6 +93,21 @@ const plans: PricingPlan[] = [
     limits: { campaigns: '∞' },
     features: []
   },
+  {
+    name: 'Lifetime',
+    monthlyPrice: 99,
+    yearlyPrice: 99,
+    icon: Infinity,
+    color: 'emerald',
+    gradientFrom: 'from-emerald-500',
+    gradientTo: 'to-teal-500',
+    popular: false,
+    earlyBirdDiscount: 0,
+    tagline: 'Pay once, use forever',
+    isLifetime: true,
+    limits: { campaigns: '∞' },
+    features: []
+  },
 ];
 
 interface PricingProps {
@@ -113,11 +128,13 @@ export function Pricing({ onSelectPlan }: PricingProps) {
   };
 
   const getPriceId = (planName: string) => {
-    const priceIds: Record<string, { monthly: string; yearly: string }> = {
+    const priceIds: Record<string, { monthly: string; yearly: string; lifetime?: string }> = {
       'Starter': { monthly: 'price_1Sf7Z2AYv17Z995VOMSBG7GX', yearly: 'price_1Sf7Z2AYv17Z995VKDFZ119S' },
       'Professional': { monthly: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN', yearly: 'price_1Sf7Z4AYv17Z995VKY5BkfdB' },
       'Agency': { monthly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI', yearly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI' },
+      'Lifetime': { monthly: '', yearly: '', lifetime: '' },
     };
+    if (planName === 'Lifetime') return priceIds['Lifetime'].lifetime || '';
     return isYearly ? priceIds[planName]?.yearly : priceIds[planName]?.monthly;
   };
 
@@ -179,7 +196,7 @@ export function Pricing({ onSelectPlan }: PricingProps) {
         </motion.div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-6 mb-12">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             return (
@@ -230,14 +247,12 @@ export function Pricing({ onSelectPlan }: PricingProps) {
                   {/* Price */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-2">
+                      {plan.isLifetime && (
+                        <span className="text-gray-400 line-through text-2xl font-medium mr-1">$149</span>
+                      )}
                       <span className="text-4xl font-bold text-gray-900">${plan.isLifetime ? plan.monthlyPrice : getPrice(plan)}</span>
                       <span className="text-gray-500">{plan.isLifetime ? 'one-time' : `/${isYearly ? 'year' : 'month'}`}</span>
                     </div>
-                    {!plan.isLifetime && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-gray-400 line-through text-sm">${getOriginalPrice(plan)}/{isYearly ? 'year' : 'month'}</span>
-                    </div>
-                    )}
                     {plan.isLifetime && (
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-emerald-600 text-sm font-medium">No recurring fees ever</span>
