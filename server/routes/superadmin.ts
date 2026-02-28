@@ -1084,5 +1084,21 @@ app.post('/users/:id/send-credentials', authMiddleware, async (c) => {
   }
 });
 
+app.get('/leads', authMiddleware, async (c) => {
+  try {
+    const { emailLeads } = await import('../../shared/schema');
+    const { desc: descOrder } = await import('drizzle-orm');
+    const leads = await db
+      .select()
+      .from(emailLeads)
+      .orderBy(descOrder(emailLeads.createdAt))
+      .limit(500);
+    return c.json({ leads });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Leads fetch error:', error);
+    return c.json({ error: 'Failed to fetch leads' }, 500);
+  }
+});
+
 export { app as superadminRoutes };
 

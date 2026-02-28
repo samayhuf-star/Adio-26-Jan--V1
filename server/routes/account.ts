@@ -147,28 +147,28 @@ accountRoutes.post('/register', async (c) => {
 
       let sessionParams: any;
 
+      const LIFETIME_PRICE_ID = 'price_1T2uVCAYv17Z995V7g1xTSwN';
+      const PLAN_PRICE_IDS: Record<string, string> = {
+        starter: 'price_1SzLblAYv17Z995VcDMCe9T5',
+        professional: 'price_1SzLb1AYv17Z995VCc8X9AE6',
+        agency: 'price_1SzLcjAYv17Z995VngBfarg7',
+        monthly: process.env.STRIPE_MONTHLY_PRICE_ID || '',
+        annual: process.env.STRIPE_ANNUAL_PRICE_ID || '',
+      };
+
       if (plan === 'lifetime') {
+        const resolvedPriceId = priceId || LIFETIME_PRICE_ID;
         sessionParams = {
           customer: stripeCustomerId,
           mode: 'payment',
-          line_items: [{
-            price_data: {
-              currency: 'usd',
-              unit_amount: 9900,
-              product_data: {
-                name: 'Adiology Lifetime Deal',
-                description: 'Lifetime access to all Adiology features. Pay once, use forever.',
-              },
-            },
-            quantity: 1,
-          }],
+          line_items: [{ price: resolvedPriceId, quantity: 1 }],
           success_url: successUrl,
           cancel_url: cancelUrl,
           allow_promotion_codes: true,
-          metadata: { userId, plan: 'lifetime', deal: 'lifetime-99' },
+          metadata: { userId, plan: 'lifetime' },
         };
       } else {
-        const resolvedPriceId = priceId || process.env[`STRIPE_${plan.toUpperCase()}_PRICE_ID`];
+        const resolvedPriceId = priceId || PLAN_PRICE_IDS[plan] || process.env[`STRIPE_${plan.toUpperCase()}_PRICE_ID`];
         if (!resolvedPriceId) {
           await pool.query('DELETE FROM users WHERE id = $1', [userId]);
           return c.json({ success: false, error: 'Plan price not configured. Please contact support.' }, 500);

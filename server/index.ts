@@ -22,6 +22,7 @@ import { analyticsRoutes } from './routes/analytics';
 import { appsumoRoutes } from './routes/appsumo';
 import { affonsoRoutes } from './routes/affonso';
 import { errorsRoutes } from './routes/errors';
+import { leadsRoutes } from './routes/leads';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -129,6 +130,7 @@ app.route('/api/google-ads', googleAdsRoutes);
 app.route('/api/appsumo', appsumoRoutes);
 app.route('/api/affonso', affonsoRoutes);
 app.route('/api/errors', errorsRoutes);
+app.route('/api/leads', leadsRoutes);
 
 app.get('/googlebc7aae8bc89f46c1.html', async (c) => {
   try {

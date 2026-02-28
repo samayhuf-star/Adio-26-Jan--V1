@@ -21,7 +21,7 @@ interface SuperAdminPanelProps {
   onLogout: () => void;
 }
 
-type AdminSection = 'dashboard' | 'users' | 'subscriptions' | 'database' | 'logs' | 'emails' | 'security' | 'settings' | 'blogs' | 'analytics';
+type AdminSection = 'dashboard' | 'users' | 'subscriptions' | 'database' | 'logs' | 'emails' | 'security' | 'settings' | 'blogs' | 'analytics' | 'leads';
 
 interface DashboardStats {
   totalUsers: number;
@@ -134,6 +134,23 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
   
   // Recent activity
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  // Leads
+  const [leads, setLeads] = useState<any[]>([]);
+  const [leadsSearch, setLeadsSearch] = useState('');
+
+  const fetchLeads = async () => {
+    try {
+      const superToken = localStorage.getItem('superadmin_token');
+      const res = await fetch('/api/superadmin/leads', {
+        headers: { Authorization: `Bearer ${superToken}` },
+      });
+      const data = await res.json();
+      if (data.leads) setLeads(data.leads);
+    } catch (e) {
+      console.error('Failed to fetch leads', e);
+    }
+  };
   
   // Billing stats
   const [billingStats, setBillingStats] = useState<any>({
@@ -391,6 +408,7 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
     else if (activeSection === 'analytics') { /* Analytics view handles itself */ }
     else if (activeSection === 'subscriptions') fetchBillingStats();
     else if (activeSection === 'emails') fetchEmailStats();
+    else if (activeSection === 'leads') fetchLeads();
   }, [activeSection]);
 
   useEffect(() => {
@@ -399,6 +417,7 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'leads', label: 'Email Leads', icon: Inbox },
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'subscriptions', label: 'Billing', icon: CreditCard },
     { id: 'database', label: 'Database', icon: Database },
@@ -409,6 +428,104 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
     { id: 'analytics', label: 'Live Analytics', icon: BarChart },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+
+  const renderLeads = () => {
+    const SOURCE_LABELS: Record<string, string> = {
+      lifetime_deal: 'Lifetime Deal',
+      signup: 'Signup Page',
+      pricing: 'Pricing',
+      unknown: 'Unknown',
+    };
+    const filtered = leads.filter(l =>
+      !leadsSearch ||
+      l.email?.toLowerCase().includes(leadsSearch.toLowerCase()) ||
+      l.source?.toLowerCase().includes(leadsSearch.toLowerCase())
+    );
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <h2 className="text-lg sm:text-2xl font-bold text-white">Email Leads</h2>
+            <p className="text-gray-400 text-sm mt-1">{leads.length} total captured leads</p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={fetchLeads} variant="outline" size="sm">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const csv = ['Email,Source,Page,Referrer,Captured At']
+                  .concat(leads.map(l => `"${l.email}","${l.source}","${l.page || ''}","${l.referrer || ''}","${l.createdAt || ''}"` ))
+                  .join('\n');
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                a.download = 'email-leads.csv';
+                a.click();
+              }}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
+        </div>
+
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Search by email or source..."
+            className="pl-10 bg-slate-800 border-white/10"
+            value={leadsSearch}
+            onChange={(e) => setLeadsSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="bg-slate-800 border border-white/10 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left p-4 text-gray-400 font-medium">Email</th>
+                  <th className="text-left p-4 text-gray-400 font-medium">Source</th>
+                  <th className="text-left p-4 text-gray-400 font-medium">Page</th>
+                  <th className="text-left p-4 text-gray-400 font-medium">Captured</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-gray-500">
+                      {leadsSearch ? 'No leads match your search.' : 'No leads captured yet. Leads appear here when visitors enter their email on the site.'}
+                    </td>
+                  </tr>
+                )}
+                {filtered.map((lead) => (
+                  <tr key={lead.id} className="border-b border-white/5 hover:bg-slate-700/50">
+                    <td className="p-4 text-white font-medium">{lead.email}</td>
+                    <td className="p-4">
+                      <Badge className={
+                        lead.source === 'lifetime_deal' ? 'bg-amber-500/20 text-amber-300' :
+                        lead.source === 'signup' ? 'bg-blue-500/20 text-blue-300' :
+                        'bg-gray-500/20 text-gray-300'
+                      }>
+                        {SOURCE_LABELS[lead.source] || lead.source}
+                      </Badge>
+                    </td>
+                    <td className="p-4 text-gray-400 text-sm max-w-[200px] truncate">{lead.page || '—'}</td>
+                    <td className="p-4 text-gray-400 text-sm">
+                      {lead.createdAt ? new Date(lead.createdAt).toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderAnalytics = () => (
     <div className="space-y-6">
@@ -1182,6 +1299,7 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard': return renderDashboard();
+      case 'leads': return renderLeads();
       case 'analytics': return renderAnalytics();
       case 'users': return renderUsers();
       case 'subscriptions': return renderSubscriptions();

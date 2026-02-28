@@ -11,10 +11,10 @@ interface Plan {
 }
 
 const PLAN_PRICE_IDS: Record<string, string> = {
-  starter: 'price_1Sf7Z2AYv17Z995VOMSBG7GX',
-  professional: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN',
-  agency: 'price_1Sf7Z5AYv17Z995V7ROFNbzI',
-  lifetime: '',
+  starter: 'price_1SzLblAYv17Z995VcDMCe9T5',
+  professional: 'price_1SzLb1AYv17Z995VCc8X9AE6',
+  agency: 'price_1SzLcjAYv17Z995VngBfarg7',
+  lifetime: 'price_1T2uVCAYv17Z995V7g1xTSwN',
 };
 
 const FALLBACK_PLANS: Plan[] = [
@@ -47,21 +47,24 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
       .then(data => {
         if (!data.products || !Array.isArray(data.products)) return;
         const enriched = FALLBACK_PLANS.map(p => ({ ...p }));
+        const knownPriceIds = Object.values(PLAN_PRICE_IDS);
         for (const product of data.products) {
           if (!product.active) continue;
-          const productName = (product.name || '').toLowerCase();
+          const productName = (product.name || '').toLowerCase().trim();
           let planId: string | null = null;
-          if (productName.includes('starter')) planId = 'starter';
-          else if (productName.includes('professional') || productName.includes('pro')) planId = 'professional';
-          else if (productName.includes('agency') || productName.includes('enterprise')) planId = 'agency';
-          else if (productName.includes('lifetime')) planId = 'lifetime';
+          if (productName === 'starter') planId = 'starter';
+          else if (productName === 'professional') planId = 'professional';
+          else if (productName === 'agency') planId = 'agency';
+          else if (productName === 'lifetime') planId = 'lifetime';
           if (!planId) continue;
           const isLifetime = planId === 'lifetime';
           const prices = product.prices || [];
-          const match = prices.find((pr: any) => {
+          const knownMatch = prices.find((pr: any) => pr.active && knownPriceIds.includes(pr.id));
+          const fallbackMatch = prices.find((pr: any) => {
             if (!pr.active) return false;
             return isLifetime ? !pr.recurring : pr.recurring?.interval === 'month';
           });
+          const match = knownMatch || fallbackMatch;
           if (match) {
             const idx = enriched.findIndex(p => p.id === planId);
             if (idx >= 0) enriched[idx].priceId = match.id;
@@ -91,6 +94,18 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
     if (!selectedPlan) { setError('Please select a plan.'); return; }
 
     setLoading(true);
+
+    fetch('/api/leads/capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        source: 'signup',
+        page: window.location.pathname,
+        referrer: document.referrer,
+        metadata: { plan: selectedPlan?.id },
+      }),
+    }).catch(() => {});
 
     try {
       const res = await fetch('/api/account/register', {

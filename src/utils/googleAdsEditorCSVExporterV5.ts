@@ -417,16 +417,24 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
   rows.push(campaignRow);
 
   // === SITELINK ROWS — one row per sitelink (Google Ads Editor format) ===
-  // Google Ads Editor imports sitelinks as separate rows using Link Text,
-  // Description Line 1, Description Line 2, and Final URL columns.
+  // Google Ads Editor rule: Description Line 1 and Description Line 2 must BOTH be filled
+  // or BOTH be left blank. A row with only one description line causes a validation error.
   if (campaign.sitelinks && campaign.sitelinks.length > 0) {
     campaign.sitelinks.forEach((sl) => {
+      if (!sl.text?.trim()) return;
       const slRow = createEmptyRow();
       slRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
       slRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      slRow[COLUMN_INDEX['Link Text']] = sl.text || '';
-      slRow[COLUMN_INDEX['Description Line 1']] = sl.description1 || '';
-      slRow[COLUMN_INDEX['Description Line 2']] = sl.description2 || '';
+      slRow[COLUMN_INDEX['Link Text']] = sl.text.trim();
+      const d1 = sl.description1?.trim() || '';
+      const d2 = sl.description2?.trim() || '';
+      if (d1 && d2) {
+        slRow[COLUMN_INDEX['Description Line 1']] = d1;
+        slRow[COLUMN_INDEX['Description Line 2']] = d2;
+      } else {
+        slRow[COLUMN_INDEX['Description Line 1']] = '';
+        slRow[COLUMN_INDEX['Description Line 2']] = '';
+      }
       slRow[COLUMN_INDEX['Final URL']] = sl.finalUrl || campaign.url || '';
       rows.push(slRow);
     });
@@ -435,22 +443,54 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
   // === CALLOUT ROWS — one row per callout (Google Ads Editor format) ===
   if (campaign.callouts && campaign.callouts.length > 0) {
     campaign.callouts.forEach((co) => {
+      if (!co.text?.trim()) return;
       const coRow = createEmptyRow();
       coRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
       coRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      coRow[COLUMN_INDEX['Callout Text']] = co.text || '';
+      coRow[COLUMN_INDEX['Callout Text']] = co.text.trim();
       rows.push(coRow);
     });
   }
 
+  // Valid Google Ads Structured Snippet headers (exact accepted values)
+  const VALID_SNIPPET_HEADERS = new Set([
+    'Amenities', 'Brands', 'Courses', 'Degree programs', 'Destinations',
+    'Featured hotels', 'Insurance coverage', 'Models', 'Neighborhoods',
+    'Service catalog', 'Shows', 'Styles', 'Types',
+  ]);
+
+  function normalizeSnippetHeader(header: string): string {
+    if (!header) return 'Types';
+    const trimmed = header.trim();
+    if (VALID_SNIPPET_HEADERS.has(trimmed)) return trimmed;
+    const lower = trimmed.toLowerCase();
+    if (lower.includes('service') || lower.includes('catalog')) return 'Service catalog';
+    if (lower.includes('brand')) return 'Brands';
+    if (lower.includes('amenity') || lower.includes('amenitie') || lower.includes('feature')) return 'Amenities';
+    if (lower.includes('model')) return 'Models';
+    if (lower.includes('style')) return 'Styles';
+    if (lower.includes('course')) return 'Courses';
+    if (lower.includes('degree') || lower.includes('program')) return 'Degree programs';
+    if (lower.includes('destination')) return 'Destinations';
+    if (lower.includes('hotel')) return 'Featured hotels';
+    if (lower.includes('insurance')) return 'Insurance coverage';
+    if (lower.includes('neighborhood')) return 'Neighborhoods';
+    if (lower.includes('show')) return 'Shows';
+    return 'Types';
+  }
+
   // === SNIPPET ROWS — one row per structured snippet (Google Ads Editor format) ===
+  // Skip rows with empty header or empty values to avoid "Header can't be empty" errors.
   if (campaign.snippets && campaign.snippets.length > 0) {
     campaign.snippets.forEach((sn) => {
+      const rawHeader = sn.header?.trim() || '';
+      const rawValues = sn.values?.trim() || '';
+      if (!rawHeader || !rawValues) return;
       const snRow = createEmptyRow();
       snRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
       snRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
-      snRow[COLUMN_INDEX['Snippet Header']] = sn.header || '';
-      snRow[COLUMN_INDEX['Snippet Values']] = sn.values || '';
+      snRow[COLUMN_INDEX['Snippet Header']] = normalizeSnippetHeader(rawHeader);
+      snRow[COLUMN_INDEX['Snippet Values']] = rawValues;
       rows.push(snRow);
     });
   }

@@ -1030,3 +1030,20 @@ export const userEvents = pgTable("user_events", {
   createdAtIdx: index("idx_user_events_created_at").on(table.createdAt),
   userCreatedIdx: index("idx_user_events_user_created").on(table.userId, table.createdAt),
 }));
+
+export const emailLeads = pgTable("email_leads", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  source: text("source").notNull().default("unknown"),
+  page: text("page"),
+  referrer: text("referrer"),
+  userAgent: text("user_agent"),
+  ipAddress: text("ip_address"),
+  metadata: jsonb("metadata").default({}),
+  converted: boolean("converted").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  emailIdx: index("idx_email_leads_email").on(table.email),
+  sourceIdx: index("idx_email_leads_source").on(table.source),
+  createdAtIdx: index("idx_email_leads_created_at").on(table.createdAt),
+}));

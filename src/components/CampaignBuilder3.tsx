@@ -2933,8 +2933,9 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         callExtensions: callExtensions.length,
       });
 
-      // Fallback: if no extensions found (e.g. user skipped Step 4), auto-generate from campaign info
-      if (sitelinks.length === 0 && callouts.length === 0 && snippets.length === 0) {
+      // Fallback: if NO extensions at all found (user skipped Step 4), auto-generate from campaign info.
+      // Skip fallback if price or promotion extension was explicitly set.
+      if (sitelinks.length === 0 && callouts.length === 0 && snippets.length === 0 && !priceExtension && !promotionExtension) {
         try {
           const { generateCampaignAssets, assetsToAdExtensions: toExtensions } = await import('../utils/campaignAssetGenerator');
           const businessName = campaignData.campaignName || 'Business';
