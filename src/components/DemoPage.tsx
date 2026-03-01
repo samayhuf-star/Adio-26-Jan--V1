@@ -19,6 +19,8 @@ export default function DemoPage({ onGetStarted, onBack }: DemoPageProps) {
         <meta property="og:description" content="Watch Adiology in action. See how to build Google Ads campaigns, generate keywords, and protect your clicks." />
         <meta property="og:url" content="https://adiology.io/demo" />
         <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="See Adiology in Action - Interactive Demo | Adiology" />
         <meta name="twitter:description" content="Watch Adiology in action. See how to build Google Ads campaigns, generate keywords, and protect your clicks." />

@@ -140,6 +140,11 @@ export default function BlogArticle({ slug, onBack, onArticleClick }: BlogArticl
         <meta property="og:type" content="article" />
         <meta property="article:published_time" content={article.createdAt} />
         <meta property="article:section" content={article.category} />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={article.title} />
+        <meta name="twitter:description" content={article.excerpt || ''} />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
       </Helmet>
 
       <div className="min-h-screen bg-white">

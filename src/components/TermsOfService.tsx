@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Footer } from './Footer';
@@ -8,6 +9,13 @@ interface TermsOfServiceProps {
 
 export const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack }) => {
   return (
+      <Helmet>
+        <title>Terms of Service - Adiology</title>
+        <meta name="description" content="Terms and conditions for using Adiology Google Ads campaign builder." />
+        <link rel="canonical" href="https://adiology.io/terms-of-service" />
+        <meta property="og:title" content="Terms of Service - Adiology" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+      </Helmet>
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0f0d24] to-slate-950 text-slate-300">
       <div className="max-w-4xl mx-auto px-6 py-12">
         <button

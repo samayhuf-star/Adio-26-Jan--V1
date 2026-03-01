@@ -98,6 +98,8 @@ export const AppSumoRedeem = ({ user, onNavigate, onLogin }: AppSumoRedeemProps)
         <title>Redeem AppSumo License - Adiology</title>
         <meta name="description" content="Activate your AppSumo lifetime deal license for Adiology - the AI-powered Google Ads campaign builder." />
         <meta name="robots" content="noindex, nofollow" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">

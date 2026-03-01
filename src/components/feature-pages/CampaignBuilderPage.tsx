@@ -25,6 +25,7 @@ export default function CampaignBuilderPage({ onGetStarted, onBack }: CampaignBu
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Google Ads Campaign Builder - AI-Powered Campaign Creation | Adiology" />
         <meta name="twitter:description" content="Build Google Ads campaigns in minutes with 13 campaign structures including SKAG, STAG, Alpha-Beta." />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",

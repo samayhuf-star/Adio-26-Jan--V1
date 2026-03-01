@@ -24,6 +24,7 @@ export default function BlogGeneratorPage({ onGetStarted, onBack }: BlogGenerato
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="AI Blog Generator - SEO Content Creation | Adiology" />
         <meta name="twitter:description" content="Generate SEO-optimized blog posts for your Google Ads landing pages with AI." />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",

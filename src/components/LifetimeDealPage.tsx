@@ -186,9 +186,11 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         <meta property="og:description" content="Get lifetime access to all Adiology features for just $99. Campaign builder, keyword planner, click guard, and more." />
         <meta property="og:url" content="https://adiology.io/lifetime-deal" />
         <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Lifetime Deal - Adiology | $99 One-Time Payment" />
         <meta name="twitter:description" content="Get lifetime access to all Adiology features for just $99." />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Product",

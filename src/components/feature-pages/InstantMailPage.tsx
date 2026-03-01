@@ -27,6 +27,7 @@ export default function InstantMailPage({ onGetStarted, onBack }: InstantMailPag
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Proxy Mail - Anonymous Email for Competitive Intelligence | Adiology" />
         <meta name="twitter:description" content="Generate anonymous email addresses for competitive intelligence research." />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",

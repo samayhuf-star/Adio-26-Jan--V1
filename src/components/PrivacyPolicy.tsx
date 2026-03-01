@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Footer } from './Footer';
@@ -8,6 +9,13 @@ interface PrivacyPolicyProps {
 
 export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
   return (
+      <Helmet>
+        <title>Privacy Policy - Adiology</title>
+        <meta name="description" content="Adiology privacy policy. Learn how we collect, use, and protect your data." />
+        <link rel="canonical" href="https://adiology.io/privacy-policy" />
+        <meta property="og:title" content="Privacy Policy - Adiology" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+      </Helmet>
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0f0d24] to-slate-950 text-slate-300">
       <div className="max-w-4xl mx-auto px-6 py-12">
         <button

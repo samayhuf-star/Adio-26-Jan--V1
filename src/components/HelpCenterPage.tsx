@@ -443,6 +443,8 @@ export const HelpCenterPage: React.FC<HelpCenterPageProps> = ({ onBack }) => {
         <meta property="og:description" content="Find answers to common questions about Adiology and Google Ads campaign building." />
         <meta property="og:url" content="https://adiology.io/help-center" />
         <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content="Help Center - Adiology" />
         <meta name="twitter:description" content="Find answers to common questions about Adiology." />

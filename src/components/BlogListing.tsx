@@ -91,6 +91,9 @@ export default function BlogListing({ onBack, onArticleClick }: BlogListingProps
         <meta property="og:description" content="Expert Google Ads guides and strategies to optimize your campaigns." />
         <meta property="og:url" content="https://adiology.io/blog" />
         <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">

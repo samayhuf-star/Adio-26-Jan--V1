@@ -30,31 +30,49 @@ export default function CreativeMinimalistHomepage({
   return (
     <>
       <Helmet>
-        <title>Adiology - AI-Powered Google Ads Campaign Builder & Management Platform</title>
-        <meta name="description" content="Build, optimize, and manage Google Ads campaigns with AI-powered tools. Campaign builder, keyword planner, click fraud protection, ad research, and more. Start free." />
+        <title>Google Ads Campaign Builder — Build Campaigns in 2 Min | Adiology</title>
+        <meta name="description" content="Build Google Ads campaigns in 2 minutes, not 30. SKAG, STAG, Alpha-Beta & 9 more structures. AI-powered keyword gen + click fraud protection. Free plan available." />
         <link rel="canonical" href="https://adiology.io/" />
-        <meta property="og:title" content="Adiology - AI-Powered Google Ads Campaign Builder" />
-        <meta property="og:description" content="Build, optimize, and manage Google Ads campaigns with AI. Campaign builder, keyword planner, click fraud protection, and more." />
+        <meta property="og:title" content="Google Ads Campaign Builder — Build Campaigns in 2 Min | Adiology" />
+        <meta property="og:description" content="Build Google Ads campaigns in 2 minutes, not 30. 12 campaign structures. AI-powered keyword gen + click fraud protection." />
         <meta property="og:url" content="https://adiology.io/" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Adiology" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Adiology - AI-Powered Google Ads Campaign Builder" />
-        <meta name="twitter:description" content="Build, optimize, and manage Google Ads campaigns with AI-powered tools." />
+        <meta name="twitter:title" content="Google Ads Campaign Builder — Build Campaigns in 2 Min | Adiology" />
+        <meta name="twitter:description" content="Build Google Ads campaigns in 2 minutes, not 30. 12 campaign structures. AI-powered." />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Adiology",
+          "url": "https://adiology.io",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "description": "AI-Powered Google Ads Campaign Builder — build campaigns in 2 minutes with 12 campaign structures",
+          "offers": [
+            {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD"},
+            {"@type": "Offer", "name": "Solo", "price": "29", "priceCurrency": "USD"},
+            {"@type": "Offer", "name": "Growth", "price": "79", "priceCurrency": "USD"},
+            {"@type": "Offer", "name": "Scale", "price": "199", "priceCurrency": "USD"},
+            {"@type": "Offer", "name": "Lifetime Deal", "price": "99", "priceCurrency": "USD"}
+          ],
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "50"
+          }
+        })}</script>
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Organization",
           "name": "Adiology",
           "url": "https://adiology.io",
-          "description": "AI-Powered Google Ads Campaign Builder & Management Platform",
-          "sameAs": [],
-          "offers": {
-            "@type": "AggregateOffer",
-            "lowPrice": "0",
-            "highPrice": "99",
-            "priceCurrency": "USD",
-            "offerCount": "4"
-          }
+          "logo": "https://adiology.io/og-image.png",
+          "description": "AI-Powered Google Ads Campaign Builder & Management Platform"
         })}</script>
       </Helmet>
       <div id="main-content" className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">

@@ -25,6 +25,7 @@ export default function KeywordPlannerPage({ onGetStarted, onBack }: KeywordPlan
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="AI Keyword Planner - Discover High-Converting Keywords | Adiology" />
         <meta name="twitter:description" content="Find the best keywords for your Google Ads campaigns with Adiology's AI-powered Keyword Planner." />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",

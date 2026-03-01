@@ -27,6 +27,7 @@ export default function ClickGuardPage({ onGetStarted, onBack }: ClickGuardPageP
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Click Guard - Google Ads Click Fraud Protection | Adiology" />
         <meta name="twitter:description" content="Protect your Google Ads budget from click fraud with bot detection and IP blocking." />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",

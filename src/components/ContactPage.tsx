@@ -71,6 +71,9 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
         <meta property="og:description" content="Get in touch with Adiology support team." />
         <meta property="og:url" content="https://adiology.io/contact" />
         <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content="Contact Us - Adiology" />
         <meta name="twitter:description" content="Get in touch with Adiology support team." />
