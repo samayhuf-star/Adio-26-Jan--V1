@@ -3,7 +3,26 @@ import { db } from '../db';
 import { emailLeads } from '../../shared/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 
+const ADMIN_EMAILS = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+
 const app = new Hono();
+
+app.get('/', async (c) => {
+  try {
+    const adminEmail = (c.req.header('x-admin-email') || '').toLowerCase();
+    if (!ADMIN_EMAILS.includes(adminEmail)) {
+      return c.json({ success: false, error: 'Unauthorized' }, 401);
+    }
+    const allLeads = await db
+      .select()
+      .from(emailLeads)
+      .orderBy(desc(emailLeads.createdAt));
+    return c.json({ success: true, leads: allLeads, total: allLeads.length });
+  } catch (error: any) {
+    console.error('Leads fetch error:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 
 app.post('/capture', async (c) => {
   try {

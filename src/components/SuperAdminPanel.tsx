@@ -141,10 +141,8 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
 
   const fetchLeads = async () => {
     try {
-      const superToken = localStorage.getItem('superadmin_token');
-      const res = await fetch('/api/superadmin/leads', {
-        headers: { Authorization: `Bearer ${superToken}` },
-      });
+      const headers = await getAdminHeaders();
+      const res = await fetch('/api/leads', { headers });
       const data = await res.json();
       if (data.leads) setLeads(data.leads);
     } catch (e) {
@@ -168,10 +166,40 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
     templates: []
   });
 
+  // Email health (Resend status)
+  const [emailHealth, setEmailHealth] = useState<{ configured: boolean | null; adminEmail?: string }>({ configured: null });
+  const [testEmailStatus, setTestEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+
+  const fetchEmailHealth = async () => {
+    try {
+      const headers = await getAdminHeaders();
+      const res = await fetch('/api/errors/health', { headers });
+      const data = await res.json();
+      setEmailHealth({ configured: data.configured ?? false, adminEmail: data.adminEmail });
+    } catch {
+      setEmailHealth({ configured: false });
+    }
+  };
+
+  const sendTestEmail = async () => {
+    setTestEmailStatus('sending');
+    try {
+      const headers = await getAdminHeaders();
+      const res = await fetch('/api/errors/test-email', { method: 'POST', headers });
+      const data = await res.json();
+      setTestEmailStatus(data.success ? 'success' : 'error');
+      setTimeout(() => setTestEmailStatus('idle'), 4000);
+    } catch {
+      setTestEmailStatus('error');
+      setTimeout(() => setTestEmailStatus('idle'), 4000);
+    }
+  };
+
   // Fetch dashboard stats
   useEffect(() => {
     fetchDashboardStats();
     fetchRecentActivity();
+    fetchEmailHealth();
   }, []);
 
   const fetchDashboardStats = async () => {
@@ -1018,9 +1046,9 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Email Management</h2>
-        <Button variant="outline" size="sm">
-          <Send className="w-4 h-4 mr-2" />
-          Send Test Email
+        <Button onClick={sendTestEmail} disabled={testEmailStatus === 'sending'} variant="outline" size="sm">
+          {testEmailStatus === 'sending' ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : testEmailStatus === 'success' ? <CheckCircle className="w-4 h-4 mr-2 text-green-400" /> : <Send className="w-4 h-4 mr-2" />}
+          {testEmailStatus === 'sending' ? 'Sending...' : testEmailStatus === 'success' ? 'Sent!' : 'Send Test Email'}
         </Button>
       </div>
 
@@ -1252,6 +1280,62 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-white">Admin Settings</h2>
       
+      {/* Email Alerts Status */}
+      <div className="bg-slate-800 border border-white/10 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Bell className="w-5 h-5 text-purple-400" />
+            Email Alert Delivery (Resend)
+          </h3>
+          <Button onClick={fetchEmailHealth} variant="outline" size="sm">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {emailHealth.configured === null && (
+          <div className="flex items-center gap-2 text-gray-400 text-sm">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            Checking status...
+          </div>
+        )}
+        {emailHealth.configured === true && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <div>
+                <p className="text-green-300 font-medium">Resend is configured</p>
+                <p className="text-gray-500 text-sm">Error alerts will be delivered to {emailHealth.adminEmail}</p>
+              </div>
+            </div>
+            <Button
+              onClick={sendTestEmail}
+              disabled={testEmailStatus === 'sending'}
+              variant="outline"
+              size="sm"
+              className="sm:ml-auto"
+            >
+              {testEmailStatus === 'sending' && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
+              {testEmailStatus === 'success' && <CheckCircle className="w-4 h-4 mr-2 text-green-400" />}
+              {testEmailStatus === 'error' && <XCircle className="w-4 h-4 mr-2 text-red-400" />}
+              {testEmailStatus === 'idle' && <Send className="w-4 h-4 mr-2" />}
+              {testEmailStatus === 'sending' ? 'Sending...' : testEmailStatus === 'success' ? 'Sent!' : testEmailStatus === 'error' ? 'Failed' : 'Send Test Email'}
+            </Button>
+          </div>
+        )}
+        {emailHealth.configured === false && (
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-red-300 font-medium">Resend is NOT configured</p>
+                <p className="text-gray-400 text-sm mt-1">Error alert emails are being silently dropped. Users experiencing errors will not trigger admin notifications.</p>
+                <p className="text-gray-500 text-sm mt-2">To fix: Connect the Resend integration in Replit, or add a <code className="bg-slate-900 px-1 rounded text-amber-400">RESEND_API_KEY</code> environment variable.</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-slate-800 border border-white/10 rounded-xl p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Platform Settings</h3>

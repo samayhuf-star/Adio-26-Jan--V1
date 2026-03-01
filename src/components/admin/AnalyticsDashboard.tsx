@@ -349,11 +349,121 @@ function RealtimePanel({ token }: { token: string }) {
   );
 }
 
+const clarityProjectId = import.meta.env.VITE_CLARITY_PROJECT_ID;
+
+function HeatmapsPanel() {
+  if (!clarityProjectId) {
+    return (
+      <div className="space-y-5">
+        <div className="bg-slate-800/60 border border-amber-500/30 rounded-xl p-8 text-center">
+          <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <TrendingUp className="w-8 h-8 text-amber-400" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Heatmaps & Session Recordings</h3>
+          <p className="text-slate-400 mb-6 max-w-md mx-auto">
+            Connect Microsoft Clarity to see click heatmaps, scroll maps, session recordings, rage clicks, dead clicks, and exactly why users leave.
+          </p>
+          <ol className="text-left text-sm text-slate-400 space-y-3 max-w-sm mx-auto mb-6 bg-slate-900/50 rounded-xl p-5">
+            <li className="flex gap-2"><span className="text-amber-400 font-bold">1.</span> Go to <a href="https://clarity.microsoft.com/projects/new" target="_blank" rel="noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">clarity.microsoft.com/projects/new</a></li>
+            <li className="flex gap-2"><span className="text-amber-400 font-bold">2.</span> Create a free project and copy your Project ID</li>
+            <li className="flex gap-2"><span className="text-amber-400 font-bold">3.</span> Add <code className="bg-slate-800 px-1 rounded text-green-400">VITE_CLARITY_PROJECT_ID</code> as an environment variable in Replit</li>
+            <li className="flex gap-2"><span className="text-amber-400 font-bold">4.</span> Rebuild and redeploy — Clarity starts collecting data immediately</li>
+          </ol>
+          <a
+            href="https://clarity.microsoft.com/projects/new"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Create Free Clarity Account
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { icon: '🔥', title: 'Click Heatmaps', desc: 'See exactly where users click — including rage clicks and dead zones' },
+            { icon: '📜', title: 'Scroll Maps', desc: 'Understand how far users scroll on each page and where they drop off' },
+            { icon: '📹', title: 'Session Recordings', desc: 'Watch anonymized replays of real user sessions to spot friction' },
+          ].map((f, i) => (
+            <div key={i} className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5 text-center">
+              <div className="text-3xl mb-3">{f.icon}</div>
+              <h4 className="text-white font-semibold mb-1">{f.title}</h4>
+              <p className="text-slate-400 text-sm">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl px-5 py-4">
+        <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+        <div>
+          <span className="text-green-300 font-semibold">Microsoft Clarity is active</span>
+          <p className="text-green-400/70 text-xs mt-0.5">Project ID: {clarityProjectId} — Tracking heatmaps and session recordings</p>
+        </div>
+        <a
+          href={`https://clarity.microsoft.com/projects/view/${clarityProjectId}/dashboard`}
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Open Clarity Dashboard
+        </a>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { icon: '🔥', title: 'Heatmaps', desc: 'Click & scroll heatmaps per page', link: `https://clarity.microsoft.com/projects/view/${clarityProjectId}/heatmaps` },
+          { icon: '📹', title: 'Recordings', desc: 'Anonymized session replays', link: `https://clarity.microsoft.com/projects/view/${clarityProjectId}/recordings` },
+          { icon: '😤', title: 'Rage Clicks', desc: 'Pages where users click frantically', link: `https://clarity.microsoft.com/projects/view/${clarityProjectId}/insights` },
+          { icon: '🚪', title: 'Exit Analysis', desc: 'Where and why users leave', link: `https://clarity.microsoft.com/projects/view/${clarityProjectId}/insights` },
+        ].map((card, i) => (
+          <a
+            key={i}
+            href={card.link}
+            target="_blank"
+            rel="noreferrer"
+            className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-5 hover:border-indigo-500/40 hover:bg-slate-800 transition-all group"
+          >
+            <div className="text-2xl mb-2">{card.icon}</div>
+            <h4 className="text-white font-semibold mb-1 group-hover:text-indigo-300 transition-colors">{card.title}</h4>
+            <p className="text-slate-400 text-sm">{card.desc}</p>
+            <div className="flex items-center gap-1 mt-3 text-indigo-400 text-xs">
+              <ExternalLink className="w-3 h-3" />
+              Open in Clarity
+            </div>
+          </a>
+        ))}
+      </div>
+
+      <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl p-5">
+        <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-indigo-400" />
+          What Clarity tracks on your site
+        </h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-slate-400">
+          {['Click heatmaps per page', 'Scroll depth maps', 'Session recordings', 'Rage click detection', 'Dead click detection', 'JavaScript error tracking', 'Time spent per page', 'Exit page analysis', 'Device & browser breakdown'].map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+              {item}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AnalyticsDashboard({ token }: { token: string }) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState<string | number>(30);
-  const [activeTab, setActiveTab] = useState<'realtime' | 'overview' | 'pages' | 'live'>('realtime');
+  const [activeTab, setActiveTab] = useState<'realtime' | 'overview' | 'pages' | 'live' | 'heatmaps'>('realtime');
 
   const fetchData = async () => {
     setLoading(true);
@@ -425,8 +535,8 @@ export default function AnalyticsDashboard({ token }: { token: string }) {
         </div>
       )}
 
-      <div className="flex gap-2 border-b border-slate-700/50 pb-1">
-        {(['realtime', 'overview', 'pages', 'live'] as const).map((tab) => (
+      <div className="flex gap-2 border-b border-slate-700/50 pb-1 flex-wrap">
+        {(['realtime', 'overview', 'pages', 'live', 'heatmaps'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -436,15 +546,20 @@ export default function AnalyticsDashboard({ token }: { token: string }) {
             {tab === 'overview' && 'Overview'}
             {tab === 'pages' && 'Top Pages'}
             {tab === 'live' && 'Live Feed'}
+            {tab === 'heatmaps' && <><span>🔥</span> Heatmaps</>}
           </button>
         ))}
       </div>
+
+      {activeTab === 'heatmaps' && (
+        <HeatmapsPanel />
+      )}
 
       {activeTab === 'realtime' && (
         <RealtimePanel token={token} />
       )}
 
-      {activeTab !== 'realtime' && !data && (
+      {activeTab !== 'realtime' && activeTab !== 'heatmaps' && !data && (
         <div className="flex items-center justify-center py-20">
           <RefreshCw className="w-6 h-6 text-indigo-400 animate-spin" />
           <span className="ml-3 text-slate-400">Loading analytics...</span>

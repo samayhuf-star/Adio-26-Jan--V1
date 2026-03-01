@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { sendEmail } from '../resendClient';
+import { sendEmail, isResendConfigured } from '../resendClient';
 
 export const errorsRoutes = new Hono();
 
@@ -151,4 +151,33 @@ errorsRoutes.post('/report', async (c) => {
     console.error('[ErrorMonitor] Failed to send error report:', err);
     return c.json({ success: false, error: err.message }, 500);
   }
+});
+
+const ADMIN_EMAILS_LIST = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
+
+errorsRoutes.get('/health', async (c) => {
+  const adminEmail = (c.req.header('x-admin-email') || '').toLowerCase();
+  if (!ADMIN_EMAILS_LIST.includes(adminEmail)) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+  const configured = await isResendConfigured();
+  return c.json({ configured, adminEmail: ADMIN_EMAIL });
+});
+
+errorsRoutes.post('/test-email', async (c) => {
+  const adminEmail = (c.req.header('x-admin-email') || '').toLowerCase();
+  if (!ADMIN_EMAILS_LIST.includes(adminEmail)) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+  const result = await sendEmail({
+    to: ADMIN_EMAIL,
+    subject: 'Adiology — Test Email (Admin Panel)',
+    html: `<div style="font-family:sans-serif;padding:24px;background:#0f172a;color:#f1f5f9;border-radius:12px;max-width:500px">
+      <h2 style="color:#818cf8">Test Email from Adiology</h2>
+      <p style="color:#94a3b8">This is a test email sent from the Adiology Admin Panel to confirm that email delivery (Resend) is working correctly.</p>
+      <p style="color:#64748b;font-size:12px">Sent at: ${new Date().toUTCString()}</p>
+    </div>`,
+    from: 'Adiology Alerts <noreply@adiology.io>',
+  });
+  return c.json(result);
 });
