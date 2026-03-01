@@ -431,7 +431,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
       (user.subscriptionPlan || 'free').toLowerCase() === planFilter.toLowerCase();
     
     return matchesSearch && matchesFilter && matchesPlan;
-  });
+  }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   const filteredSubscriptions = subscriptions.filter(sub => {
     const matchesSearch = !searchTerm ||
@@ -448,13 +448,14 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleString('en-US', {
+    return new Date(dateStr).toLocaleString('en-IN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
     });
   };
 

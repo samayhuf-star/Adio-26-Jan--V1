@@ -206,7 +206,7 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
             <button onClick={() => onNavigateToPage?.('/features/click-guard')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Click Guard</button>
             <button onClick={() => onNavigateToPage?.('/features/proxy-mail')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Proxy Mail</button>
             <button onClick={() => onNavigateToPage?.('/features/domain-monitor')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Domain Monitor</button>
-            <button onClick={() => onNavigateToPage?.('/pricing')} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Pricing</button>
+            <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className={`text-sm font-medium transition-colors ${isScrolled ? 'text-gray-300 hover:text-violet-400' : 'text-indigo-200 hover:text-white'}`}>Pricing</button>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -239,7 +239,7 @@ function Navigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetStarted?
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/click-guard'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Click Guard</button>
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/proxy-mail'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Proxy Mail</button>
             <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/features/domain-monitor'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Domain Monitor</button>
-            <button onClick={() => { setMobileOpen(false); onNavigateToPage?.('/pricing'); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Pricing</button>
+            <button onClick={() => { setMobileOpen(false); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className={`block text-sm font-medium py-2 ${isScrolled ? 'text-gray-300' : 'text-indigo-200'}`}>Pricing</button>
             <button onClick={() => { setMobileOpen(false); onLogin?.(); }} className="w-full px-6 py-3 border border-white/20 text-white rounded-xl text-sm font-semibold hover:bg-white/10 transition-colors">
               Sign In
             </button>
@@ -1143,12 +1143,14 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
   const [isAnnual, setIsAnnual] = useState(false);
 
   const starterFeatures = [
-    '15 campaigns per month',
+    '10 campaigns per month',
     'Campaign Builder 3.0',
     'Keyword Planner',
     'Keyword Mixer',
     '10+ ad extension types',
     'CSV export to Google Ads Editor',
+    'Domain Monitor (5 Domains)',
+    'Click Guard (1 Domain)',
     'Community Forum',
     'Email support',
   ];
@@ -1191,13 +1193,13 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
   const plans = isAnnual ? [
     {
       name: 'Starter',
-      price: '$39',
-      originalPrice: '$49',
+      price: '$23.99',
+      originalPrice: '$29.99',
       period: '/mo billed annually',
       features: starterFeatures,
       gradient: 'from-blue-500 to-indigo-500',
       priceId: 'price_starter_annual',
-      amount: 46800,
+      amount: 28788,
     },
     {
       name: 'Professional',
@@ -1223,12 +1225,12 @@ function PricingSection({ onSelectPlan }: { onSelectPlan?: (planName: string, pr
   ] : [
     {
       name: 'Starter',
-      price: '$49',
+      price: '$29.99',
       period: '/month',
       features: starterFeatures,
       gradient: 'from-blue-500 to-indigo-500',
       priceId: 'price_starter_monthly',
-      amount: 4900,
+      amount: 2999,
     },
     {
       name: 'Professional',

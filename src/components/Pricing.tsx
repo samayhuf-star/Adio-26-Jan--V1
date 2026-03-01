@@ -26,7 +26,7 @@ interface PricingPlan {
 }
 
 const featureList = [
-  { name: 'Campaigns/month', starter: '25', professional: '∞', agency: '∞' },
+  { name: 'Campaigns/month', starter: '10', professional: '∞', agency: '∞' },
   { name: 'Dashboard', starter: true, professional: true, agency: true },
   { name: '1-Click Builder', starter: true, professional: true, agency: true },
   { name: 'Builder 3.0', starter: true, professional: true, agency: true },
@@ -36,6 +36,8 @@ const featureList = [
   { name: 'Keyword Mixer', starter: true, professional: true, agency: true },
   { name: 'Negative Keywords', starter: true, professional: true, agency: true },
   { name: 'Long-Tail Keywords', starter: true, professional: true, agency: true },
+  { name: 'Domain Monitor', starter: '5 Domains', professional: 'Unlimited', agency: 'Unlimited' },
+  { name: 'Click Guard', starter: '1 Domain', professional: 'Unlimited', agency: 'Unlimited' },
   { name: 'Email Support', starter: true, professional: true, agency: true },
   { name: 'Support Response Time', starter: '24-48h', professional: '12h', agency: '1h Priority' },
   { name: 'Priority Queue', starter: false, professional: true, agency: true },
@@ -53,8 +55,8 @@ const comingSoonFeatures = [
 const plans: PricingPlan[] = [
   {
     name: 'Starter',
-    monthlyPrice: 49,
-    yearlyPrice: 470.40,
+    monthlyPrice: 29.99,
+    yearlyPrice: 287.90,
     icon: Zap,
     color: 'blue',
     gradientFrom: 'from-blue-500',
@@ -62,7 +64,7 @@ const plans: PricingPlan[] = [
     popular: false,
     earlyBirdDiscount: 0,
     tagline: 'Perfect for solo marketers',
-    limits: { campaigns: '25' },
+    limits: { campaigns: '10' },
     features: []
   },
   {

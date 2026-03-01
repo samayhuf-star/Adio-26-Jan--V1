@@ -40,16 +40,18 @@ interface PlanDetails {
 const PLAN_DETAILS: Record<string, PlanDetails> = {
   'Starter': {
     name: 'Starter',
-    price: '$49.00',
+    price: '$29.99',
     priceId: 'price_1Sf7Z2AYv17Z995VOMSBG7GX',
     isSubscription: true,
-    amount: 4900,
+    amount: 2999,
     features: [
-      '25 Campaigns/month',
+      '10 Campaigns/month',
       'Campaign Builder 3.0',
       'Keyword Planner & Mixer',
       '10+ ad extension types',
       'CSV export to Google Ads Editor',
+      'Domain Monitor (5 Domains)',
+      'Click Guard (1 Domain)',
       'Community Forum',
       'Email Support'
     ]

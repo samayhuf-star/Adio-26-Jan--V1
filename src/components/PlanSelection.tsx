@@ -59,11 +59,13 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     period: 'per month',
     isSubscription: true,
     features: [
-      '25 Campaigns/month',
+      '10 Campaigns/month',
       'Dashboard & 1-Click Builder',
       'Builder 3.0 & Preset Campaigns',
       'Full Draft/Custom Campaigns',
       'Keyword Planner & Mixer',
+      'Domain Monitor (5 Domains)',
+      'Click Guard (1 Domain)',
       'Email Support (24-48h)',
       '7-day free trial'
     ],

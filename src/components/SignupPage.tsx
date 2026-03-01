@@ -18,7 +18,7 @@ const PLAN_PRICE_IDS: Record<string, string> = {
 };
 
 const FALLBACK_PLANS: Plan[] = [
-  { id: 'starter', name: 'Starter', priceId: PLAN_PRICE_IDS.starter, amount: 4900, interval: 'month', description: '$49/mo — 25 campaigns, cancel anytime' },
+  { id: 'starter', name: 'Starter', priceId: PLAN_PRICE_IDS.starter, amount: 2999, interval: 'month', description: '$29.99/mo — 10 campaigns, cancel anytime' },
   { id: 'professional', name: 'Professional', priceId: PLAN_PRICE_IDS.professional, amount: 9900, interval: 'month', description: '$99/mo — Unlimited campaigns, all features' },
   { id: 'agency', name: 'Agency', priceId: PLAN_PRICE_IDS.agency, amount: 14900, interval: 'month', description: '$149/mo — All features + dedicated support' },
   { id: 'lifetime', name: 'Lifetime', priceId: PLAN_PRICE_IDS.lifetime, amount: 9900, interval: 'once', description: '$99 one-time — Pay once, use forever' },

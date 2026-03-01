@@ -543,7 +543,7 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
                     </td>
                     <td className="p-4 text-gray-400 text-sm max-w-[200px] truncate">{lead.page || '—'}</td>
                     <td className="p-4 text-gray-400 text-sm">
-                      {lead.createdAt ? new Date(lead.createdAt).toLocaleString() : '—'}
+                      {lead.createdAt ? new Date(lead.createdAt).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : '—'}
                     </td>
                   </tr>
                 ))}
@@ -792,7 +792,7 @@ export function SuperAdminPanel({ user, onLogout }: SuperAdminPanelProps) {
                     )}
                   </td>
                   <td className="p-4 text-gray-400 text-sm">
-                    {new Date(u.created_at).toLocaleDateString()}
+                    {new Date(u.created_at).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">

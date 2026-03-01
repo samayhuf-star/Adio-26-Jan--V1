@@ -349,7 +349,7 @@ const categories: DocCategory[] = [
                 tags: ['pricing', 'subscription', 'plans', 'billing', 'stripe'],
                 content: [
                     { type: 'text', body: 'Adiology offers three pricing tiers designed for different needs. All plans include a 7-day free trial and a 14-day money-back guarantee.' },
-                    { type: 'text', heading: 'Starter Plan - $49/month', body: 'Perfect for individuals getting started. Includes 15 campaigns and access to core features. Currently offered at a 25% early adopter discount.' },
+                    { type: 'text', heading: 'Starter Plan - $29.99/month', body: 'Perfect for individuals getting started. Includes 10 campaigns, Domain Monitor (5 domains), Click Guard (1 domain), and access to core features.' },
                     { type: 'text', heading: 'Professional Plan - $99/month (Most Popular)', body: 'Ideal for growing businesses. Includes 50 campaigns and all features. Currently offered at a 45% early adopter discount.' },
                     { type: 'text', heading: 'Agency Plan - $149/month', body: 'Built for agencies and power users. Unlimited campaigns with all features. Currently offered at a 65% early adopter discount.' },
                     { type: 'tip', body: 'Save 20% on any plan by choosing annual billing. All plans come with a 7-day free trial so you can try everything before committing.' }
@@ -422,7 +422,7 @@ const faqItems = [
     },
     {
         question: 'What subscription plans are available?',
-        answer: 'There are three plans: Starter ($49/month, 15 campaigns), Professional ($99/month, 50 campaigns, most popular), and Agency ($149/month, unlimited). All plans include a 7-day free trial and 14-day money-back guarantee. Save 20% with annual billing.',
+        answer: 'There are three plans: Starter ($29.99/month, 10 campaigns + Domain Monitor 5 domains + Click Guard 1 domain), Professional ($99/month, 50 campaigns, most popular), and Agency ($149/month, unlimited). All plans include a 7-day free trial and 14-day money-back guarantee. Save 20% with annual billing.',
         category: 'Account & Billing'
     },
     {

@@ -227,7 +227,7 @@ export const HelpCenterPage: React.FC<HelpCenterPageProps> = ({ onBack }) => {
           description: 'Compare features across different pricing tiers',
           content: [
             { type: 'text', body: 'Adiology offers four pricing tiers to fit different needs, from individual marketers to agencies managing multiple clients.' },
-            { type: 'list', heading: 'Available Plans', body: 'Starter ($49/month): Essential campaign building tools, up to 10 campaigns per month, basic keyword generation\nProfessional ($99/month): Unlimited campaigns, advanced AI features, priority support, all keyword tools\nAgency ($149/month): Everything in Professional plus white-label exports, bulk campaign management, dedicated support\nLifetime ($99 one-time): Full access to all features with a single payment, no recurring charges' },
+            { type: 'list', heading: 'Available Plans', body: 'Starter ($29.99/month): 10 campaigns/month, Domain Monitor (5 domains), Click Guard (1 domain), keyword tools, CSV export\nProfessional ($99/month): Unlimited campaigns, advanced AI features, priority support, all keyword tools\nAgency ($149/month): Everything in Professional plus white-label exports, bulk campaign management, dedicated support\nLifetime ($99 one-time): Full access to all features with a single payment, no recurring charges' },
             { type: 'tip', body: 'All paid plans include a 7-day free trial and a 14-day money-back guarantee. The Lifetime plan is the best value for long-term users.' }
           ]
         },

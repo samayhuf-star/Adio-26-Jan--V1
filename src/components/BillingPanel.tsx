@@ -647,7 +647,7 @@ Generated on ${new Date().toLocaleDateString()}`;
                                     <div className="text-center">
                                         <Badge className="mb-2 bg-blue-100 text-blue-700 border-blue-200 text-xs">Monthly</Badge>
                                         <CardTitle className="text-lg mb-2">Starter</CardTitle>
-                                        <div className="text-2xl font-bold text-slate-800 mb-1">$49</div>
+                                        <div className="text-2xl font-bold text-slate-800 mb-1">$29.99</div>
                                         <div className="text-xs text-slate-600">per month</div>
                                     </div>
                                 </CardHeader>
@@ -655,15 +655,15 @@ Generated on ${new Date().toLocaleDateString()}`;
                                     <ul className="space-y-2">
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">15 Active Campaigns</span>
+                                            <span className="text-xs text-slate-700">10 Campaigns/month</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">Basic Analytics</span>
+                                            <span className="text-xs text-slate-700">Domain Monitor (5 Domains)</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-xs text-slate-700">Email Support</span>
+                                            <span className="text-xs text-slate-700">Click Guard (1 Domain)</span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
@@ -672,6 +672,10 @@ Generated on ${new Date().toLocaleDateString()}`;
                                         <li className="flex items-start gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                                             <span className="text-xs text-slate-700">CSV Export</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-xs text-slate-700">Email Support</span>
                                         </li>
                                     </ul>
                                 </CardContent>
