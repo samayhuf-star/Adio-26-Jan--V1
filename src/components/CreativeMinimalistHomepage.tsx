@@ -316,22 +316,12 @@ function HeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: () => 
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <span className="text-white">Search Ads Intelligence</span>
+              <span className="text-white">Launch optimized campaigns. Block click fraud.</span>
               <br />
               <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-                What the Top 1% Know That You Don't !
+                Monitor domains. Secure communications — All Inside Adiology.
               </span>
             </motion.h1>
-
-            <motion.p
-              className="text-lg md:text-xl text-indigo-200/80 mb-10 max-w-2xl mx-auto leading-relaxed"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              Launch faster. Research deeper. Protect smarter. Monitor everything. 
-              Win consistently — all inside Adiology.
-            </motion.p>
 
             <motion.div
               className="flex flex-wrap justify-center gap-4 mb-10"
@@ -347,20 +337,6 @@ function HeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: () => 
               >
                 See It In Action
               </motion.button>
-            </motion.div>
-
-            <motion.div
-              className="flex flex-wrap justify-center items-center gap-4 mb-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <a href="https://microlaunch.net/p/adiology?utm_source=badge-winner-microlaunch&utm_medium=badge" target="_blank" rel="noopener noreferrer">
-                <img src="https://wild-dust-0517.microlaunch.workers.dev/microlaunch-challenger-badges/ml_challenger_v5.svg" alt="Microlaunch Challenger Badge" width="200" height="63" style={{ width: '200px', height: '63px' }} />
-              </a>
-              <a href="https://microlaunch.net/p/adiology?utm_source=badge-winner-microlaunch&utm_medium=badge" target="_blank" rel="noopener noreferrer">
-                <img src="https://wild-dust-0517.microlaunch.workers.dev/badges/potd/ml_potd_badge_v4.svg" alt="Microlaunch Product of the Day Badge" width="200" height="63" style={{ width: '200px', height: '63px' }} />
-              </a>
             </motion.div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl mx-auto mt-10">

@@ -47,7 +47,7 @@
 2. **Environment Variables** (Required)
    ```env
    VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
-   VITE_GEMINI_API_KEY=AIzaSyBYyBnc99JTLGvUY3qdGFksUlf7roGUdao
+   VITE_GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
    ```
 
 3. **Stripe Price IDs** (Required)

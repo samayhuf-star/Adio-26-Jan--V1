@@ -21,7 +21,7 @@
 |---|------------|---------|--------|---------------|-------|
 | 1 | **Stripe** | Payment processing, subscriptions, billing | ✅ **Working** | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | Endpoints implemented at `/api/products`, `/api/checkout`, `/api/portal`. Frontend uses `/api/stripe/*` paths (path mismatch exists but functional) |
 | 2 | **Nhost** | Authentication, database (PostgreSQL), storage | ✅ **Working** | `VITE_NHOST_SUBDOMAIN`, `VITE_NHOST_REGION`, `NHOST_ADMIN_SECRET` | Primary auth/database system. Migrated from Clerk/Supabase. Some 401 token refresh errors (expected behavior) |
-| 3 | **Google Gemini AI** | Keyword generation fallback, AI content generation | ✅ **Working** | `VITE_GEMINI_API_KEY` (hardcoded: `AIzaSyBYyBnc99JTLGvUY3qdGFksUlf7roGUdao`) | Used as fallback when Google Ads API fails. Model: `gemini-1.5-flash` |
+| 3 | **Google Gemini AI** | Keyword generation fallback, AI content generation | ✅ **Working** | `VITE_GEMINI_API_KEY` (hardcoded: `YOUR_GEMINI_API_KEY_HERE`) | Used as fallback when Google Ads API fails. Model: `gemini-1.5-flash` |
 | 4 | **Resend** | Email service (transactional emails) | ✅ **Working** | `RESEND_API_KEY` (via Replit connectors or env) | Configured in `server/resendClient.ts`. Falls back to simulation if not configured |
 | 5 | **LambdaTest** | Browser testing platform (Super Admin) | ✅ **Working** | `VITE_LAMBDATEST_USERNAME`, `VITE_LAMBDATEST_ACCESS_KEY` | Used for automated testing. API client in `src/utils/api/lambdatest.ts` |
 | 6 | **Vercel** | Deployment platform, hosting | ✅ **Working** | `VERCEL_TOKEN` (for API calls) | Deployment platform. API integration in `src/utils/vercel.ts` for website deployments |

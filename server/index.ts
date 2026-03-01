@@ -2643,12 +2643,12 @@ app.delete('/api/long-tail-keywords/lists/:id', async (c) => {
   }
 });
 
-// Serve static files in production
+// Serve static files
 const isProduction = process.env.NODE_ENV === 'production';
 const buildPath = path.resolve(process.cwd(), 'build');
 
-if (isProduction && fs.existsSync(buildPath)) {
-  console.log('Production mode: Serving static files from build directory');
+if (fs.existsSync(buildPath)) {
+  console.log('Serving static files from build directory');
   
   // Serve static assets
   app.use('/assets/*', serveStatic({ root: './build' }));
@@ -2659,8 +2659,8 @@ if (isProduction && fs.existsSync(buildPath)) {
   // SPA fallback - serve index.html for all non-API routes
   app.get('*', async (c) => {
     const requestPath = c.req.path;
-    // Don't serve index.html for API routes
-    if (requestPath.startsWith('/api')) {
+    // Don't serve index.html for API routes or file requests
+    if (requestPath.startsWith('/api') || requestPath.includes('.')) {
       return c.json({ error: 'Not found' }, 404);
     }
     
@@ -2669,7 +2669,7 @@ if (isProduction && fs.existsSync(buildPath)) {
       const html = fs.readFileSync(indexPath, 'utf-8');
       return c.html(html);
     }
-    return c.json({ error: 'Not found' }, 404);
+    return c.text('Not found', 404);
   });
 }
 

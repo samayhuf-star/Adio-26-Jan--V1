@@ -1,9 +1,9 @@
 import { captureError } from '../errorTracking';
 
 // Google Ads API Configuration
-const GOOGLE_ADS_API_TOKEN = 'UzifgEs9SwOBo5bP_vmi2A';
+const GOOGLE_ADS_API_TOKEN = import.meta.env.VITE_GOOGLE_ADS_API_TOKEN || '';
 const GOOGLE_ADS_API_BASE = 'https://googleads.googleapis.com/v16/customers';
-const AI_API_KEY = 'AIzaSyBYyBnc99JTLGvUY3qdGFksUlf7roGUdao';
+const AI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 // Use gemini-1.5-flash (gemini-pro is deprecated)
 const AI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 

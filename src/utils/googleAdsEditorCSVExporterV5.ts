@@ -426,8 +426,12 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
       slRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
       slRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';
       slRow[COLUMN_INDEX['Link Text']] = sl.text.trim();
+      
       const d1 = sl.description1?.trim() || '';
       const d2 = sl.description2?.trim() || '';
+      
+      // Enforce both-or-neither rule for descriptions: Google Ads Editor requires
+      // either both lines to be filled or both to be blank.
       if (d1 && d2) {
         slRow[COLUMN_INDEX['Description Line 1']] = d1;
         slRow[COLUMN_INDEX['Description Line 2']] = d2;
@@ -435,6 +439,7 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
         slRow[COLUMN_INDEX['Description Line 1']] = '';
         slRow[COLUMN_INDEX['Description Line 2']] = '';
       }
+      
       slRow[COLUMN_INDEX['Final URL']] = sl.finalUrl || campaign.url || '';
       rows.push(slRow);
     });

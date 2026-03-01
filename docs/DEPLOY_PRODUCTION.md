@@ -11,7 +11,7 @@ Add these to Vercel Dashboard → Settings → Environment Variables:
 VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
 # Required for Keyword Generation (AI Fallback)
-VITE_GEMINI_API_KEY=AIzaSyBYyBnc99JTLGvUY3qdGFksUlf7roGUdao
+VITE_GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
 
 # Optional - Google Ads API (has AI fallback)
 GOOGLE_ADS_API_TOKEN=UzifgEs9SwOBo5bP_vmi2A

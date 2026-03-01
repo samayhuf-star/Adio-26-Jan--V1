@@ -20,7 +20,7 @@ const envConfig: EnvConfig = {
   defaults: {
     NODE_ENV: 'development',
     PORT: '3001',
-    VITE_API_URL: 'http://localhost:3001',
+    VITE_API_URL: '',
   },
 };
 

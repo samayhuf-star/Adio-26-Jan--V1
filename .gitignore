@@ -80,3 +80,6 @@ NHOST_DATABASE_SETUP.md
 *_PASSWORD*.md
 *_SECRET*.md
 .local/
+
+# Pasted/uploaded assets (may contain sensitive tokens or credentials)
+attached_assets/

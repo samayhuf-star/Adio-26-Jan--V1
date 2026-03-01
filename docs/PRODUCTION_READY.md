@@ -52,7 +52,7 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
 GOOGLE_ADS_API_TOKEN=UzifgEs9SwOBo5bP_vmi2A
 
 # Google Gemini AI (Required for keyword generation fallback)
-VITE_GEMINI_API_KEY=AIzaSyBYyBnc99JTLGvUY3qdGFksUlf7roGUdao
+VITE_GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
 
 # Supabase (Already configured)
 VITE_SUPABASE_URL=https://...
