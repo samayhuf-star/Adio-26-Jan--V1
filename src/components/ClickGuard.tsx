@@ -269,7 +269,7 @@ function DomainSelector({
 export default function ClickGuard({ defaultTab = 'domains' }: { defaultTab?: TabId }) {
   const [activeTab, setActiveTab] = useState<TabId>(defaultTab);
   const [domains, setDomains] = useState<Domain[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [newDomain, setNewDomain] = useState('');
   const [addingDomain, setAddingDomain] = useState(false);
   const [snippetModal, setSnippetModal] = useState<{ open: boolean; snippet: string; wordpressSnippet?: string; wordpressPluginSnippet?: string; domain: string }>({

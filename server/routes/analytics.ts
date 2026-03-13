@@ -18,10 +18,22 @@ interface ActiveUser {
   lastSeen: number;
   firstSeen: number;
   country: string | null;
+  city: string | null;
+  region: string | null;
+  isp: string | null;
+  org: string | null;
+}
+
+interface GeoData {
+  country: string | null;
+  city: string | null;
+  region: string | null;
+  isp: string | null;
+  org: string | null;
 }
 
 const activeUsers = new Map<string, ActiveUser>();
-
+const geoCache = new Map<string, GeoData>();
 const ACTIVE_TIMEOUT = 60000;
 
 function pruneInactiveUsers() {
@@ -34,6 +46,48 @@ function pruneInactiveUsers() {
 }
 
 setInterval(pruneInactiveUsers, 30000);
+
+function isPrivateIp(ip: string): boolean {
+  if (!ip || ip === 'unknown' || ip === '127.0.0.1' || ip === '::1') return true;
+  if (/^10\./.test(ip)) return true;
+  if (/^192\.168\./.test(ip)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  if (/^169\.254\./.test(ip)) return true;
+  return false;
+}
+
+async function lookupGeo(ip: string): Promise<GeoData> {
+  if (isPrivateIp(ip)) {
+    return { country: null, city: null, region: null, isp: null, org: null };
+  }
+  if (geoCache.has(ip)) {
+    return geoCache.get(ip)!;
+  }
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,isp,org`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json() as any;
+    const geo: GeoData = data.status === 'success' ? {
+      country: data.country || null,
+      city: data.city || null,
+      region: data.regionName || null,
+      isp: data.isp || null,
+      org: data.org || null,
+    } : { country: null, city: null, region: null, isp: null, org: null };
+    geoCache.set(ip, geo);
+    if (geoCache.size > 5000) {
+      const firstKey = geoCache.keys().next().value;
+      if (firstKey) geoCache.delete(firstKey);
+    }
+    return geo;
+  } catch {
+    const fallback: GeoData = { country: null, city: null, region: null, isp: null, org: null };
+    geoCache.set(ip, fallback);
+    return fallback;
+  }
+}
 
 function normalizeReferrer(referrer: string | null | undefined, requestHost?: string): string | null {
   if (!referrer || referrer.trim() === '') return null;
@@ -101,23 +155,35 @@ analyticsRoutes.post('/track', async (c) => {
     const normalizedReferrer = normalizeReferrer(body.referrer, requestHost);
 
     const db = getDb();
-    await db.insert(pageViews).values({
-      path: body.path || '/',
-      referrer: normalizedReferrer,
-      userAgent: ua,
-      ip,
-      sessionId: body.sessionId || null,
-      country: null,
-      deviceType,
-      browser,
-      os,
-      screenWidth: body.screenWidth || null,
-      screenHeight: body.screenHeight || null,
+
+    lookupGeo(ip).then(async (geo) => {
+      try {
+        await db.insert(pageViews).values({
+          path: body.path || '/',
+          referrer: normalizedReferrer,
+          userAgent: ua,
+          ip,
+          sessionId: body.sessionId || null,
+          country: geo.country,
+          city: geo.city,
+          region: geo.region,
+          isp: geo.isp,
+          org: geo.org,
+          deviceType,
+          browser,
+          os,
+          screenWidth: body.screenWidth || null,
+          screenHeight: body.screenHeight || null,
+        });
+      } catch (dbErr) {
+        console.error('[Analytics] DB insert error:', dbErr);
+      }
     });
 
     if (body.sessionId) {
       const now = Date.now();
       const existing = activeUsers.get(body.sessionId);
+      const cachedGeo = geoCache.get(ip);
       activeUsers.set(body.sessionId, {
         sessionId: body.sessionId,
         path: body.path || '/',
@@ -130,7 +196,11 @@ analyticsRoutes.post('/track', async (c) => {
         screenHeight: body.screenHeight || null,
         lastSeen: now,
         firstSeen: existing?.firstSeen || now,
-        country: null,
+        country: cachedGeo?.country || existing?.country || null,
+        city: cachedGeo?.city || existing?.city || null,
+        region: cachedGeo?.region || existing?.region || null,
+        isp: cachedGeo?.isp || existing?.isp || null,
+        org: cachedGeo?.org || existing?.org || null,
       });
     }
 
@@ -173,6 +243,7 @@ analyticsRoutes.post('/heartbeat', async (c) => {
 
     const now = Date.now();
     const existing = activeUsers.get(body.sessionId);
+    const cachedGeo = geoCache.get(ip);
     activeUsers.set(body.sessionId, {
       sessionId: body.sessionId,
       path: body.path || existing?.path || '/',
@@ -185,8 +256,25 @@ analyticsRoutes.post('/heartbeat', async (c) => {
       screenHeight: body.screenHeight || existing?.screenHeight || null,
       lastSeen: now,
       firstSeen: existing?.firstSeen || now,
-      country: null,
+      country: cachedGeo?.country || existing?.country || null,
+      city: cachedGeo?.city || existing?.city || null,
+      region: cachedGeo?.region || existing?.region || null,
+      isp: cachedGeo?.isp || existing?.isp || null,
+      org: cachedGeo?.org || existing?.org || null,
     });
+
+    // Update the last page view for this session to extend duration
+    const db = getDb();
+    db.execute(sql`
+      UPDATE page_views 
+      SET created_at = NOW() 
+      WHERE id = (
+        SELECT id FROM page_views 
+        WHERE session_id = ${body.sessionId} 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      )
+    `).catch(err => console.error('[Analytics] Heartbeat DB update error:', err));
 
     return c.json({ ok: true });
   } catch (error) {
@@ -218,6 +306,10 @@ analyticsRoutes.get('/realtime', async (c) => {
         duration: Math.round((Date.now() - u.firstSeen) / 1000),
         lastActivity: Math.round((Date.now() - u.lastSeen) / 1000),
         country: u.country,
+        city: u.city,
+        region: u.region,
+        isp: u.isp,
+        org: u.org,
       }));
 
     const pageCounts: Record<string, number> = {};
@@ -288,7 +380,7 @@ analyticsRoutes.get('/stats', async (c) => {
       startDate.setDate(startDate.getDate() - days);
     }
 
-    const dateFilter = endDate 
+    const dateFilter = endDate
       ? and(gte(pageViews.createdAt, startDate), lte(pageViews.createdAt, endDate))
       : gte(pageViews.createdAt, startDate);
 

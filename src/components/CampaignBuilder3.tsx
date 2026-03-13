@@ -683,30 +683,30 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
             addAnalysisLog('Page loaded successfully', 'success');
             addAnalysisLog('Extracting DOM elements...', 'step');
             
-            if (data.seoSignals?.title) {
+            if (data?.seoSignals?.title) {
               addAnalysisLog(`Title: "${data.seoSignals.title}"`, 'data');
             }
-            if (data.headings?.length > 0) {
+            if (data?.headings?.length > 0) {
               addAnalysisLog(`Found ${data.headings.length} headings`, 'data');
               const h1 = data.headings.find((h: any) => h.level === 'h1');
               if (h1) addAnalysisLog(`H1: "${h1.text}"`, 'data');
             }
-            if (data.ctaElements?.length > 0) {
+            if (data?.ctaElements?.length > 0) {
               addAnalysisLog(`Found ${data.ctaElements.length} call-to-action elements`, 'data');
             }
-            if (data.forms?.length > 0) {
+            if (data?.forms?.length > 0) {
               addAnalysisLog(`Found ${data.forms.length} forms`, 'data');
             }
-            if (data.services?.length > 0) {
+            if (data?.services?.length > 0) {
               addAnalysisLog(`Detected ${data.services.length} services/products`, 'data');
             }
-            if (data.contactInfo?.phones?.length > 0) {
+            if (data?.contactInfo?.phones?.length > 0) {
               addAnalysisLog(`Found ${data.contactInfo.phones.length} phone numbers`, 'data');
             }
-            if (data.contactInfo?.emails?.length > 0) {
+            if (data?.contactInfo?.emails?.length > 0) {
               addAnalysisLog(`Found ${data.contactInfo.emails.length} email addresses`, 'data');
             }
-            if (data.seoSignals?.wordCount) {
+            if (data?.seoSignals?.wordCount) {
               addAnalysisLog(`Page content: ${data.seoSignals.wordCount} words`, 'data');
             }
             
@@ -1599,9 +1599,36 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
   };
 
   // Generate ad groups based on campaign structure
-  const generateAdGroupsFromKeywords = (keywords: any[], structureType: string): AdGroup[] => {
+  const generateAdGroupsFromKeywords = (rawKeywords: any[], structureType: string): AdGroup[] => {
     const groups: AdGroup[] = [];
-    
+
+    // Deduplicate input keywords by base text (case-insensitive)
+    const seenBaseTexts = new Set<string>();
+    const keywords = rawKeywords.filter((kw) => {
+      const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+      const key = baseText.toLowerCase();
+      if (!key || seenBaseTexts.has(key)) return false;
+      seenBaseTexts.add(key);
+      return true;
+    });
+
+    // Quality filter: remove single-letter-prefix keywords (e.g. "k delta", "z delta") and
+    // off-topic terms (delta-8 THC, fraternity chants, etc.)
+    const OFF_TOPIC_PATTERNS = /\bdelta.?8\b|\bthc\b|\bidelta\b|\bchant\b|\bsong\b|\bfraternity\b|\bsorority\b|\br delta llc\b|\by delta inc\b/i;
+    const SINGLE_LETTER_PREFIX = /^[a-z]\s+/i;
+
+    const qualityKeywords = keywords.filter((kw) => {
+      const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
+      if (OFF_TOPIC_PATTERNS.test(baseText)) return false;
+      if (SINGLE_LETTER_PREFIX.test(baseText)) return false;
+      return true;
+    });
+
+    // Use quality-filtered keywords for alpha_beta and brand_split; original deduped list for others
+    const filteredKeywords = (structureType === 'alpha_beta' || structureType === 'brand_split')
+      ? qualityKeywords
+      : keywords;
+
     if (structureType === 'skag') {
       const enabledMatchTypes = Object.entries(campaignData.keywordTypes || { broad: true, phrase: true, exact: true })
         .filter(([key, val]) => val && key !== 'negative')
@@ -1620,7 +1647,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         const kwVariants = enabledMatchTypes.map(mt => ({ ...kw, matchType: mt }));
         groups.push({
           id: `ag-${agIdx}`,
-          name: baseText.substring(0, 50) || `Ad Group ${agIdx}`,
+          name: baseText || `Ad Group ${agIdx}`,
           keywords: kwVariants,
         });
       });
@@ -1637,7 +1664,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
           agIdx++;
           groups.push({
             id: `ag-${agIdx}`,
-            name: `${baseText} - ${matchTypeLabels[mt] || mt}`.substring(0, 50),
+            name: `${baseText} - ${matchTypeLabels[mt] || mt}`,
             keywords: [{ ...kw, matchType: mt }],
           });
         });
@@ -1666,7 +1693,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
     } else if (structureType === 'alpha_beta') {
       const alphaKeywords: any[] = [];
       const betaKeywords: any[] = [];
-      keywords.forEach(kw => {
+      filteredKeywords.forEach(kw => {
         const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim();
         const wordCount = baseText.split(/\s+/).filter(Boolean).length;
         if (wordCount <= 3) {
@@ -1738,7 +1765,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         const titleTheme = theme.replace(/\w\S*/g, (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
         groups.push({
           id: `ag-${idx + 1}`,
-          name: `Long-Tail - ${titleTheme}`.substring(0, 50),
+          name: `Long-Tail - ${titleTheme}`,
           keywords: kwList,
         });
       });
@@ -1755,7 +1782,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         const titleTheme = theme.charAt(0).toUpperCase() + theme.slice(1);
         groups.push({
           id: `ag-${idx + 1}`,
-          name: `Seasonal - ${titleTheme}`.substring(0, 50),
+          name: `Seasonal - ${titleTheme}`,
           keywords: kwList,
         });
       });
@@ -1807,7 +1834,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         selectedCountries.forEach((country: string, idx: number) => {
           groups.push({
             id: `ag-${idx + 1}`,
-            name: `${country}`.substring(0, 50),
+            name: `${country}`,
             keywords: keywords.map(kw => ({ ...kw })),
           });
         });
@@ -1851,7 +1878,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
       const brandedKws: any[] = [];
       const nonBrandedKws: any[] = [];
       const brandTerms = (campaignData.campaignName || '').toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
-      keywords.forEach(kw => {
+      filteredKeywords.forEach(kw => {
         const baseText = (kw.text || kw.keyword || '').replace(/^["\[\]]|["\[\]]$/g, '').trim().toLowerCase();
         const isBranded = brandTerms.some((bt: string) => baseText.includes(bt));
         if (isBranded) {
@@ -1861,10 +1888,10 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         }
       });
       if (brandedKws.length === 0) {
-        const half = Math.ceil(keywords.length / 2);
-        brandedKws.push(...keywords.slice(0, half).map(kw => ({ ...kw, matchType: 'exact' })));
+        const half = Math.ceil(filteredKeywords.length / 2);
+        brandedKws.push(...filteredKeywords.slice(0, half).map(kw => ({ ...kw, matchType: 'exact' })));
         nonBrandedKws.length = 0;
-        nonBrandedKws.push(...keywords.slice(half));
+        nonBrandedKws.push(...filteredKeywords.slice(half));
       }
       if (brandedKws.length > 0) {
         groups.push({ id: 'ag-1', name: 'Branded Keywords', keywords: brandedKws });
@@ -1888,7 +1915,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         const titleTheme = theme.replace(/\w\S*/g, (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
         groups.push({
           id: `ag-${idx + 1}`,
-          name: `${titleTheme}`.substring(0, 50),
+          name: `${titleTheme}`,
           keywords: kwList,
         });
       });
@@ -1913,7 +1940,7 @@ export const CampaignBuilder3: React.FC<CampaignBuilder3Props> = ({ initialData 
         const titleTheme = theme.charAt(0).toUpperCase() + theme.slice(1);
         groups.push({
           id: `ag-${idx + 1}`,
-          name: `Mixed - ${titleTheme}`.substring(0, 50),
+          name: `Mixed - ${titleTheme}`,
           keywords: kwList,
         });
       });

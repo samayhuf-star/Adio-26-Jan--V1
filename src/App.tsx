@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import CreativeMinimalistHomepageComponent from './components/CreativeMinimalistHomepage';
 import { 
   LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare, Globe, Mail, Plus, Minus, Circle, Keyboard, BarChart3, Activity, Lock, Ticket, FileText
 } from 'lucide-react';
@@ -53,7 +54,7 @@ const PlanSelection = lazy(() => import('./components/PlanSelection').then(m => 
 const SignupWizard = lazy(() => import('./components/SignupWizard').then(m => ({ default: m.SignupWizard })));
 const SignupPage = lazy(() => import('./components/SignupPage').then(m => ({ default: m.SignupPage })));
 const CancelledScreen = lazy(() => import('./components/CancelledScreen').then(m => ({ default: m.CancelledScreen })));
-const CreativeMinimalistHomepage = lazy(() => import('./components/CreativeMinimalistHomepage'));
+const CreativeMinimalistHomepage = CreativeMinimalistHomepageComponent;
 const MobileNavigation = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileNavigation })));
 const MobileQuickActions = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileQuickActions })));
 const FloatingFeedback = lazy(() => import('./components/FloatingFeedback').then(m => ({ default: m.FloatingFeedback })));
@@ -162,8 +163,8 @@ const AppContent = () => {
     // Initialize historyService with token getter so it can use database storage
     setAuthGetToken(getSessionToken);
     
-    const initAuth = async () => {
-      setLoading(true);
+    const initAuth = async (silent = false) => {
+      if (!silent) setLoading(true);
       
       // Check for test admin mode first
       const testAdminMode = sessionStorage.getItem('test_admin_mode');
@@ -174,7 +175,7 @@ const AppContent = () => {
           const mockUser = JSON.parse(testAdminUser);
           setUser(mockUser);
           setCurrentUserId(mockUser.id);
-          setLoading(false);
+          if (!silent) setLoading(false);
           return;
         } catch (e) {
           console.error('Failed to parse test admin user:', e);
@@ -190,15 +191,16 @@ const AppContent = () => {
         setUser(null);
         setCurrentUserId(null);
       }
-      setLoading(false);
+      if (!silent) setLoading(false);
     };
     
     initAuth();
     
-    // Listen for auth changes via storage events
+    // Listen for auth changes via storage events (fires from OTHER tabs only)
+    // Use silent=true so we don't flash the loading screen for background syncs
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'auth_token' || e.key === 'user') {
-        initAuth();
+        initAuth(true);
       }
     };
     
@@ -2421,7 +2423,7 @@ const AppContent = () => {
 
   return (
     <div 
-      className="flex h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 overflow-hidden w-full max-w-full"
+      className="flex h-screen bg-gray-50 overflow-hidden w-full max-w-full"
       style={{
         '--user-spacing-multiplier': userPrefs.spacing,
         '--user-font-size-multiplier': userPrefs.fontSize
@@ -2436,9 +2438,9 @@ const AppContent = () => {
         data-collapsed={!(sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? "true" : "false"}
         style={{
           background: (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered))
-            ? 'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(245, 243, 255, 0.97) 100%)'
-            : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-          borderRight: (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? '1px solid rgba(226, 232, 240, 0.6)' : 'none'
+            ? '#ffffff'
+            : '#7c3aed',
+          borderRight: (sidebarOpen || (userPrefs.sidebarAutoClose && sidebarHovered)) ? '1px solid #e5e7eb' : 'none'
         }}
         onMouseEnter={() => {
           if (userPrefs.sidebarAutoClose) {
@@ -2462,13 +2464,12 @@ const AppContent = () => {
               <div className="flex items-center gap-3">
                 <div 
                   className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
-                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                  style={{ background: '#7c3aed' }}
                 >
                   <span className="text-white font-bold text-lg">A</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Adiology.</span>
-                  <span className="text-[9px] font-semibold text-indigo-500 tracking-wider uppercase">Beta</span>
+                  <span className="font-bold text-lg text-violet-600 tracking-tight">Adiology.</span>
                 </div>
               </div>
               <button
@@ -2584,8 +2585,8 @@ const AppContent = () => {
                         ? ''
                         : 'hover:bg-white/20'
                       : (isActive || hasActiveSubmenu)
-                        ? 'bg-indigo-50 border-l-3 border-indigo-600'
-                        : 'hover:bg-slate-50'
+                        ? 'bg-violet-50 border-l-3 border-violet-600'
+                        : 'hover:bg-gray-50'
                   }`}
                   style={isCollapsed ? {
                     background: (isActive || hasActiveSubmenu) ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
@@ -2599,10 +2600,10 @@ const AppContent = () => {
                     ) : (
                       <>
                         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                          (isActive || hasActiveSubmenu) ? 'bg-indigo-600' : 'bg-slate-300 group-hover:bg-indigo-400'
+                          (isActive || hasActiveSubmenu) ? 'bg-violet-600' : 'bg-slate-300 group-hover:bg-violet-400'
                         }`} />
                         <span className={`whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left text-[13.5px] ${
-                          (isActive || hasActiveSubmenu) ? 'font-bold text-indigo-700' : 'font-medium text-slate-600 group-hover:text-slate-800'
+                          (isActive || hasActiveSubmenu) ? 'font-bold text-violet-700' : 'font-medium text-slate-600 group-hover:text-slate-800'
                         }`}>
                           {item.label}
                         </span>
@@ -2616,14 +2617,14 @@ const AppContent = () => {
                   </div>
                   {!isCollapsed && hasSubmenu && (
                     <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
-                      (isActive || hasActiveSubmenu) ? 'text-indigo-500' : 'text-slate-400'
+                      (isActive || hasActiveSubmenu) ? 'text-violet-500' : 'text-slate-400'
                     }`}>
                       {isExpanded ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                     </div>
                   )}
                 </button>
                 {hasSubmenu && isExpanded && (
-                  <div className={`space-y-0.5 ${!isCollapsed ? 'ml-5 mt-1 mb-1 pl-3 border-l border-indigo-100' : 'mt-0.5'}`}>
+                  <div className={`space-y-0.5 ${!isCollapsed ? 'ml-5 mt-1 mb-1 pl-3 border-l border-violet-100' : 'mt-0.5'}`}>
                     {item.submenu?.map((subItem) => {
                       const SubIcon = subItem.icon;
                       const isSubActive = activeTab === subItem.id;
@@ -2641,8 +2642,8 @@ const AppContent = () => {
                             isCollapsed
                               ? isSubActive ? '' : 'hover:bg-white/20'
                               : isSubActive
-                                ? 'bg-indigo-50/80'
-                                : 'hover:bg-slate-50'
+                                ? 'bg-violet-50/80'
+                                : 'hover:bg-gray-50'
                           }`}
                           style={isCollapsed ? {
                             background: isSubActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
@@ -2655,10 +2656,10 @@ const AppContent = () => {
                           ) : (
                             <>
                               <div className={`w-1 h-1 rounded-full shrink-0 ${
-                                isSubActive ? 'bg-indigo-500' : 'bg-slate-300'
+                                isSubActive ? 'bg-violet-500' : 'bg-slate-300'
                               }`} />
                               <span className={`whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left text-[12.5px] ${
-                                isSubActive ? 'font-semibold text-indigo-700' : 'font-normal text-slate-500 hover:text-slate-700'
+                                isSubActive ? 'font-semibold text-violet-700' : 'font-normal text-slate-500 hover:text-slate-700'
                               }`}>
                                 {subItem.label}
                               </span>
@@ -2686,14 +2687,14 @@ const AppContent = () => {
                 onClick={() => setActiveTabSafe('billing')}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                   activeTab === 'billing'
-                    ? 'bg-indigo-50 border-l-3 border-indigo-600'
-                    : 'hover:bg-slate-50'
+                    ? 'bg-violet-50 border-l-3 border-violet-600'
+                    : 'hover:bg-gray-50'
                 }`}
               >
-                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeTab === 'billing' ? 'bg-indigo-600' : 'bg-slate-300'}`} />
-                <CreditCard className={`w-4 h-4 shrink-0 ${activeTab === 'billing' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeTab === 'billing' ? 'bg-violet-600' : 'bg-slate-300'}`} />
+                <CreditCard className={`w-4 h-4 shrink-0 ${activeTab === 'billing' ? 'text-violet-600' : 'text-slate-400'}`} />
                 <span className={`text-[13px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left ${
-                  activeTab === 'billing' ? 'font-bold text-indigo-700' : 'font-medium text-slate-600'
+                  activeTab === 'billing' ? 'font-bold text-violet-700' : 'font-medium text-slate-600'
                 }`}>
                   Billing
                 </span>
@@ -2705,7 +2706,7 @@ const AppContent = () => {
                   <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-all duration-200 cursor-pointer">
                     <div 
                       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-sm font-semibold shadow-sm"
-                      style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                      style={{ background: '#7c3aed' }}
                     >
                       {user?.name ? user.name.charAt(0).toUpperCase() : user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
                     </div>
@@ -2810,13 +2811,12 @@ const AppContent = () => {
             <div className="flex items-center gap-3">
               <div 
                 className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md"
-                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                style={{ background: '#7c3aed' }}
               >
                 <span className="text-white font-bold text-lg">A</span>
               </div>
               <div className="flex flex-col">
-                <SheetTitle className="font-bold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Adiology.</SheetTitle>
-                <span className="text-[9px] font-semibold text-indigo-500 tracking-wider uppercase">Beta</span>
+                <SheetTitle className="font-bold text-lg text-violet-600 tracking-tight">Adiology.</SheetTitle>
               </div>
             </div>
           </SheetHeader>
@@ -2862,24 +2862,24 @@ const AppContent = () => {
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 group cursor-pointer ${
                       (isActive || hasActiveSubmenu)
-                        ? 'bg-indigo-50 border-l-3 border-indigo-600'
-                        : 'hover:bg-slate-50'
+                        ? 'bg-violet-50 border-l-3 border-violet-600'
+                        : 'hover:bg-gray-50'
                     }`}
                     style={{ minWidth: 0 }}
                   >
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
                       <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        (isActive || hasActiveSubmenu) ? 'bg-indigo-600' : 'bg-slate-300 group-hover:bg-indigo-400'
+                        (isActive || hasActiveSubmenu) ? 'bg-violet-600' : 'bg-slate-300 group-hover:bg-violet-400'
                       }`} />
                       <span className={`whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left text-[13.5px] ${
-                        (isActive || hasActiveSubmenu) ? 'font-bold text-indigo-700' : 'font-medium text-slate-600 group-hover:text-slate-800'
+                        (isActive || hasActiveSubmenu) ? 'font-bold text-violet-700' : 'font-medium text-slate-600 group-hover:text-slate-800'
                       }`}>
                         {item.label}
                       </span>
                     </div>
                     {hasSubmenu && (
                       <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
-                        (isActive || hasActiveSubmenu) ? 'text-indigo-500' : 'text-slate-400'
+                        (isActive || hasActiveSubmenu) ? 'text-violet-500' : 'text-slate-400'
                       }`}>
                         {isExpanded ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                       </div>
@@ -2887,7 +2887,7 @@ const AppContent = () => {
                   </button>
                   
                   {hasSubmenu && isExpanded && (
-                    <div className="ml-5 mt-1 mb-1 pl-3 border-l border-indigo-100 space-y-0.5">
+                    <div className="ml-5 mt-1 mb-1 pl-3 border-l border-violet-100 space-y-0.5">
                       {item.submenu!.map((subItem) => {
                         const isSubActive = activeTab === subItem.id;
                         return (
@@ -2896,16 +2896,16 @@ const AppContent = () => {
                             onClick={() => setActiveTabSafe(subItem.id)}
                             className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all duration-200 cursor-pointer ${
                               isSubActive
-                                ? 'bg-indigo-50/80'
-                                : 'hover:bg-slate-50'
+                                ? 'bg-violet-50/80'
+                                : 'hover:bg-gray-50'
                             }`}
                             style={{ minWidth: 0 }}
                           >
                             <div className={`w-1 h-1 rounded-full shrink-0 ${
-                              isSubActive ? 'bg-indigo-500' : 'bg-slate-300'
+                              isSubActive ? 'bg-violet-500' : 'bg-slate-300'
                             }`} />
                             <span className={`whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left text-[12.5px] ${
-                              isSubActive ? 'font-semibold text-indigo-700' : 'font-normal text-slate-500 hover:text-slate-700'
+                              isSubActive ? 'font-semibold text-violet-700' : 'font-normal text-slate-500 hover:text-slate-700'
                             }`}>
                               {subItem.label}
                             </span>
@@ -2924,14 +2924,14 @@ const AppContent = () => {
                 onClick={() => setActiveTabSafe('billing')}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                   activeTab === 'billing'
-                    ? 'bg-indigo-50 border-l-3 border-indigo-600'
-                    : 'hover:bg-slate-50'
+                    ? 'bg-violet-50 border-l-3 border-violet-600'
+                    : 'hover:bg-gray-50'
                 }`}
               >
-                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeTab === 'billing' ? 'bg-indigo-600' : 'bg-slate-300'}`} />
-                <CreditCard className={`w-4 h-4 shrink-0 ${activeTab === 'billing' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeTab === 'billing' ? 'bg-violet-600' : 'bg-slate-300'}`} />
+                <CreditCard className={`w-4 h-4 shrink-0 ${activeTab === 'billing' ? 'text-violet-600' : 'text-slate-400'}`} />
                 <span className={`text-[13px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left ${
-                  activeTab === 'billing' ? 'font-bold text-indigo-700' : 'font-medium text-slate-600'
+                  activeTab === 'billing' ? 'font-bold text-violet-700' : 'font-medium text-slate-600'
                 }`}>
                   Billing
                 </span>
@@ -2962,19 +2962,19 @@ const AppContent = () => {
           <PastDueBanner email={user.email} />
         )}
         {/* Enhanced Header */}
-        <header className="h-16 glass-card shadow-xl border-b border-white/30 flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0">
+        <header className="h-16 bg-white shadow-sm border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0">
           <div className="flex items-center gap-2 md:gap-4">
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-xl hover:bg-indigo-50 transition-all duration-200 modern-button"
+              className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-all duration-200"
             >
               <Menu className="w-5 h-5 text-slate-600" />
             </button>
           </div>
           
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden lg:block">
+            <h2 className="text-xl font-bold text-violet-600 hidden lg:block">
               {getCurrentPageTitle()}
             </h2>
             
@@ -2984,10 +2984,10 @@ const AppContent = () => {
             {/* Enhanced Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="relative p-3 rounded-xl glass-effect hover:shadow-lg transition-all duration-200 border border-white/30">
+                <button className="relative p-3 rounded-xl hover:bg-gray-100 transition-all duration-200 border border-gray-200">
                   <Bell className="w-5 h-5 text-slate-600" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full flex items-center justify-center font-semibold shadow-lg">
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -3039,10 +3039,10 @@ const AppContent = () => {
             {/* Notifications Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-xl hover:bg-indigo-50 transition-colors cursor-pointer">
+                <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
                   <Bell className="w-5 h-5 text-slate-600" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-purple-500 rounded-full"></span>
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-violet-500 rounded-full"></span>
                   )}
                 </button>
               </DropdownMenuTrigger>
@@ -3052,7 +3052,7 @@ const AppContent = () => {
                   {unreadCount > 0 && (
                     <button
                       onClick={handleMarkAllAsRead}
-                      className="text-xs text-indigo-600 hover:text-indigo-700 cursor-pointer"
+                      className="text-xs text-violet-600 hover:text-violet-700 cursor-pointer"
                     >
                       Mark all as read
             </button>
@@ -3068,8 +3068,8 @@ const AppContent = () => {
                     notifications.map((notification) => (
                       <DropdownMenuItem
                         key={notification.id}
-                        className={`flex flex-col items-start p-3 cursor-pointer hover:bg-indigo-50 ${
-                          !notification.read ? 'bg-purple-50/50' : ''
+                        className={`flex flex-col items-start p-3 cursor-pointer hover:bg-violet-50 ${
+                          !notification.read ? 'bg-violet-50/30' : ''
                         }`}
                         onClick={() => handleNotificationClick(notification)}
                       >
@@ -3077,7 +3077,7 @@ const AppContent = () => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               {!notification.read && (
-                                <span className="w-2 h-2 bg-indigo-600 rounded-full shrink-0"></span>
+                                <span className="w-2 h-2 bg-violet-600 rounded-full shrink-0"></span>
                               )}
                               <span className="font-medium text-sm text-slate-800">
                                 {notification.title}
@@ -3099,7 +3099,7 @@ const AppContent = () => {
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
-                      className="text-center justify-center text-sm text-indigo-600 hover:text-indigo-700 cursor-pointer"
+                      className="text-center justify-center text-sm text-violet-600 hover:text-violet-700 cursor-pointer"
                       onClick={handleViewAllNotifications}
                     >
                       View all notifications
@@ -3112,7 +3112,7 @@ const AppContent = () => {
             {/* Enhanced Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+                <button className="w-12 h-12 rounded-2xl bg-violet-600 hover:bg-violet-700 flex items-center justify-center text-white font-bold shadow-sm transition-all duration-300 hover:scale-105 cursor-pointer">
                   {user 
                     ? (() => {
                         const name = user.full_name || user.email || 'U';
@@ -3175,7 +3175,7 @@ const AppContent = () => {
         </header>
 
         {/* Enhanced Content Area */}
-        <main id="main-content" className="flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-20 md:pb-6 w-full min-w-0 relative bg-gradient-to-br from-slate-50/50 via-indigo-50/30 to-purple-50/50">
+        <main id="main-content" className="flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-20 md:pb-6 w-full min-w-0 relative bg-gray-50">
           <div className="slide-in-up">
             {renderContent()}
           </div>

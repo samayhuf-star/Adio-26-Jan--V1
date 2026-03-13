@@ -59,10 +59,15 @@ externalPort = 3001
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 5904
+externalPort = 3002
+
 [deployment]
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
-run = ["npx", "tsx", "server/index.ts"]
+run = ["bash", "-c", "NODE_ENV=production npx tsx server/index.ts"]
+publicDir = "dist/public"
 
 [userenv]
 

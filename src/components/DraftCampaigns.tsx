@@ -57,7 +57,7 @@ interface CampaignItem {
 export function DraftCampaigns({ onLoadCampaign }: DraftCampaignsProps) {
   const { getToken } = useAuthCompat();
   const [campaigns, setCampaigns] = useState<CampaignItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [builderFilter, setBuilderFilter] = useState<string>('all');

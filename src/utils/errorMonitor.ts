@@ -33,6 +33,12 @@ const IGNORED_PATTERNS = [
   /Failed to fetch.*heartbeat/i,
   /Network request failed/i,
   /Load failed/i,
+  // Browser extension errors — not our code
+  /chrome-extension:\/\//i,
+  /moz-extension:\/\//i,
+  /func sseError not found/i,
+  /Failed to connect TON bridge/i,
+  /wallet\.binance\.com/i,
 ];
 
 // Dedup tracker: errorKey → last reported timestamp

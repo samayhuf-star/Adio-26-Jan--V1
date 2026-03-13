@@ -536,8 +536,12 @@ export function generateMasterCSV(campaign: CampaignDataV5): string {
 
   
   // Keyword rows - REQUIRED for Google Ads Editor
+  const seenKeywords = new Set<string>();
   campaign.adGroups.forEach(adGroup => {
     adGroup.keywords.forEach(keyword => {
+      const dedupKey = `${adGroup.name}|${keyword.text.toLowerCase().trim()}|${keyword.matchType}`;
+      if (seenKeywords.has(dedupKey)) return;
+      seenKeywords.add(dedupKey);
       const kwRow = createEmptyRow();
       kwRow[COLUMN_INDEX['Campaign']] = campaign.campaignName;
       kwRow[COLUMN_INDEX['Campaign Status']] = 'Enabled';

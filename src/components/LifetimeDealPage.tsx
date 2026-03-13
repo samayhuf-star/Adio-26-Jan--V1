@@ -30,6 +30,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
   const [promoApplied, setPromoApplied] = useState<{ valid: boolean; discount?: string; newAmount?: number } | null>(null);
   const [promoError, setPromoError] = useState('');
   const [checkoutEmail, setCheckoutEmail] = useState('');
+  const [countdown, setCountdown] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -39,6 +40,22 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
       setShowSuccess(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
+  }, []);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setCountdown(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const processCheckout = async (userEmail: string) => {
@@ -198,6 +215,18 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
           "offers": { "@type": "Offer", "price": "99", "priceCurrency": "USD", "availability": "https://schema.org/InStock" },
           "brand": { "@type": "Organization", "name": "Adiology" }
         })}</script>
+        <script type="text/javascript">{`
+          window._tfa = window._tfa || [];
+          window._tfa.push({notify: 'event', name: 'page_view', id: 2006301});
+          !function (t, f, a, x) {
+            if (!document.getElementById(x)) {
+              t.async = 1; t.src = a; t.id = x; f.parentNode.insertBefore(t, f);
+            }
+          }(document.createElement('script'),
+          document.getElementsByTagName('script')[0],
+          '//cdn.taboola.com/libtrc/unip/2006301/tfa.js',
+          'tb_tfa_script');
+        `}</script>
       </Helmet>
 
       <div className="min-h-screen bg-slate-950 text-white">
@@ -252,33 +281,42 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         )}
 
         {/* Hero Section */}
-        <section className="relative pt-16 pb-12 px-4 sm:px-6 overflow-hidden">
+        <section className="relative pt-6 sm:pt-16 pb-6 sm:pb-12 px-4 sm:px-6 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(16,185,129,0.15),transparent)]" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="max-w-4xl mx-auto relative z-10 text-center">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <motion.div initial={{ y: 10 }} animate={{ y: 0 }} transition={{ duration: 0.4 }}>
 
               {/* Urgency Badge */}
-              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-4 py-1.5 mb-6">
+              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-4 py-1.5 mb-2 sm:mb-4">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
                 <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wider">Limited Time — Lifetime Deal</span>
               </div>
 
-              <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold mb-5 leading-[1.1] tracking-tight">
+              {/* Countdown Timer */}
+              {countdown && (
+                <div className="flex items-center justify-center gap-2 mb-2 sm:mb-5">
+                  <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <span className="text-sm font-mono font-bold text-amber-400">Offer ends in {countdown}</span>
+                </div>
+              )}
+
+              <h1 className="text-3xl sm:text-6xl md:text-7xl font-extrabold mb-2 sm:mb-5 leading-[1.1] tracking-tight">
                 Pay Once.{' '}
                 <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
                   Use Forever.
                 </span>
               </h1>
 
-              <p className="text-base sm:text-xl text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+              <p className="hidden sm:block text-base sm:text-xl text-slate-300 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed">
                 The complete Google Ads campaign builder — no subscriptions, no renewals.
                 <span className="text-white font-medium"> One payment, lifetime access.</span>
               </p>
+              <p className="sm:hidden text-sm text-slate-400 mb-4">No subscriptions. One payment, full access forever.</p>
 
               {/* Price Card */}
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="max-w-sm mx-auto mb-10">
+              <div className="max-w-sm mx-auto mb-4 sm:mb-10">
                 <div className="relative">
                   <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-2xl blur-sm opacity-70" />
                   <div className="relative bg-slate-900 rounded-2xl p-6 sm:p-8">
@@ -320,16 +358,21 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
                       )}
                     </Button>
 
+                    <div className="flex items-center justify-center gap-1.5 mb-3 text-xs text-orange-300">
+                      <Flame className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
+                      <span>47 marketers grabbed this today</span>
+                    </div>
+
                     <div className="flex items-center justify-center gap-4 mt-4 text-xs text-slate-500">
-                      <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Secure checkout</span>
-                      <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> 14-day guarantee</span>
+                      <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5 flex-shrink-0" /> Secure checkout</span>
+                      <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5 flex-shrink-0" /> 14-day guarantee</span>
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
               {/* Trust Pills */}
-              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-400">
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-sm text-slate-400">
                 {['No monthly fees', 'Lifetime updates', '14-day money-back', 'All features included'].map((t) => (
                   <span key={t} className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
@@ -345,7 +388,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         <section className="border-y border-white/5 bg-slate-900/40 py-8 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
             {stats.map((s, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
+              <motion.div key={i} initial={{ y: 6 }} whileInView={{ y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
                 <div className="text-2xl sm:text-3xl font-extrabold text-white mb-0.5">{s.value}</div>
                 <div className="text-xs sm:text-sm text-slate-400">{s.label}</div>
               </motion.div>
@@ -356,7 +399,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         {/* Features Section */}
         <section className="py-16 sm:py-20 px-4 sm:px-6">
           <div className="max-w-5xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+            <motion.div initial={{ y: 10 }} whileInView={{ y: 0 }} viewport={{ once: true }} className="text-center mb-12">
               <h2 className="text-2xl sm:text-4xl font-bold mb-3">Everything You Need. Nothing You Don't.</h2>
               <p className="text-base sm:text-lg text-slate-400 max-w-xl mx-auto">All features included. No upsells. No hidden tiers.</p>
             </motion.div>
@@ -387,7 +430,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         {/* Comparison Section */}
         <section className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-900/40">
           <div className="max-w-3xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+            <motion.div initial={{ y: 10 }} whileInView={{ y: 0 }} viewport={{ once: true }} className="text-center mb-12">
               <h2 className="text-2xl sm:text-4xl font-bold mb-3">See How It Compares</h2>
               <p className="text-base sm:text-lg text-slate-400">The smartest investment for your Google Ads workflow.</p>
             </motion.div>
@@ -418,7 +461,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
             </div>
 
             {/* Savings callout */}
-            <motion.div initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
+            <motion.div initial={{ y: 8 }} whileInView={{ y: 0 }} viewport={{ once: true }} className="mt-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
               <p className="text-sm sm:text-base text-emerald-300 font-medium">
                 💰 At $99 once vs. ~$150/mo for alternatives — you break even in <strong className="text-white">under 1 month</strong> and save <strong className="text-white">$1,700+</strong> over 2 years.
               </p>
@@ -429,7 +472,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         {/* Testimonials */}
         <section className="py-16 sm:py-20 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+            <motion.div initial={{ y: 10 }} whileInView={{ y: 0 }} viewport={{ once: true }} className="text-center mb-12">
               <h2 className="text-2xl sm:text-4xl font-bold mb-2">Trusted by Marketers & Agencies</h2>
               <div className="flex items-center justify-center gap-1 mt-3">
                 {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 fill-amber-400" />)}
@@ -469,7 +512,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         {/* FAQ */}
         <section className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-900/40">
           <div className="max-w-2xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
+            <motion.div initial={{ y: 10 }} whileInView={{ y: 0 }} viewport={{ once: true }} className="text-center mb-10">
               <h2 className="text-2xl sm:text-4xl font-bold mb-2">Frequently Asked Questions</h2>
               <p className="text-slate-400 text-sm sm:text-base">Everything you need to know before you buy.</p>
             </motion.div>
@@ -500,7 +543,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         {/* Final CTA */}
         <section className="py-16 sm:py-20 px-4 sm:px-6 pb-28 sm:pb-20">
           <div className="max-w-2xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <motion.div initial={{ y: 10 }} whileInView={{ y: 0 }} viewport={{ once: true }}>
               <div className="relative">
                 <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 rounded-2xl blur opacity-50" />
                 <div className="relative bg-slate-900 border border-white/10 rounded-2xl p-8 sm:p-10 text-center">

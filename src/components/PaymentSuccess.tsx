@@ -22,16 +22,35 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
       title: 'Welcome to Adiology!',
       description: `You've successfully subscribed to ${planName}. Start building your campaigns now!`,
     });
-  }, [planName]);
+
+    // Google Ads conversion tracking
+    try {
+      const numericAmount = parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
+      if (typeof (window as any).gtag === 'function') {
+        (window as any).gtag('event', 'purchase', {
+          value: numericAmount,
+          currency: 'USD',
+          transaction_id: `${Date.now()}`,
+          items: [{ item_name: planName }],
+        });
+      }
+    } catch (e) {
+      // silently ignore if gtag not loaded
+    }
+
+    // Quora Pixel — Purchase event
+    try {
+      if (typeof (window as any).qp === 'function') {
+        (window as any).qp('track', 'Purchase');
+      }
+    } catch (e) {
+      // silently ignore if qp not loaded
+    }
+  }, [planName, amount]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
-      </div>
-
-      <div className="relative z-10 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-md">
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center mb-4">
@@ -40,7 +59,7 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
               </div>
             </div>
             <div className="flex flex-col items-center justify-center mb-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg mb-3">
+              <div className="w-16 h-16 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg mb-3">
                 <Sparkle className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
@@ -54,7 +73,7 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Success Details */}
-            <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+            <div className="p-6 bg-violet-50 rounded-lg border border-violet-200">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-700">Plan</span>
@@ -98,7 +117,7 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
             {/* Action Button */}
             <Button
               onClick={onGoToDashboard}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white h-12 text-lg font-semibold"
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white h-12 text-lg font-semibold"
             >
               Go to Dashboard
               <ArrowRight className="w-5 h-5 ml-2" />

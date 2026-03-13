@@ -32,7 +32,7 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
   const currentUser = getCurrentUser();
   const getToken = async () => getSessionTokenSync();
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -46,7 +46,7 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
   const [activeSection, setActiveSection] = useState<SettingsSection>(defaultTab === 'billing' ? 'billing' : 'profile');
   
   const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
-  const [googleAdsLoading, setGoogleAdsLoading] = useState(true);
+  const [googleAdsLoading, setGoogleAdsLoading] = useState(false);
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<GoogleAdsAccount[]>([]);
   const [defaultAccount, setDefaultAccount] = useState<string>('');
   
@@ -55,7 +55,6 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
   useEffect(() => {
     const loadData = async () => {
       try {
-        setLoading(true);
         const userProfile = await getCurrentUserProfile();
         if (userProfile) {
           setUser(userProfile);
@@ -290,17 +289,6 @@ export const SettingsPanel = ({ defaultTab = 'settings' }: SettingsPanelProps) =
       setIsSaving(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="p-8 lg:p-10 max-w-7xl mx-auto w-full flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
-          <p className="text-slate-600">Loading settings...</p>
-        </div>
-      </div>
-    );
-  }
 
   const navItems: { id: SettingsSection; label: string; icon: React.ReactNode; description: string }[] = [
     { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" />, description: 'Personal info' },

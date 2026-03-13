@@ -52,6 +52,18 @@ interface PlanData {
   savings?: string;
 }
 
+const PLAN_PRODUCT_IDS: Record<string, string> = {
+  'Starter': 'prod_U4bQK1vEjvkIhf',
+  'Professional': 'prod_U4bUGTZL6SN8Wv',
+  'Agency': 'prod_U4bXeDJyDlCp5z',
+};
+
+const KNOWN_PRICE_IDS: Record<string, string> = {
+  'Starter': 'price_1T6SDuAYv17Z995Vind8Ze6S',
+  'Professional': 'price_1T6SHkAYv17Z995VkD5WcTc7',
+  'Agency': 'price_1T6SKQAYv17Z995VKvkd6lbN',
+};
+
 const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>> = {
   'Starter': {
     name: 'Starter',
@@ -72,7 +84,7 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     icon: Rocket,
     color: 'from-blue-500 to-cyan-500',
     borderColor: 'border-blue-200',
-    buttonStyle: 'bg-gray-900 text-white hover:bg-gray-800',
+    buttonStyle: 'bg-amber-500 text-white hover:bg-amber-600',
     popular: false
   },
   'Professional': {
@@ -92,7 +104,7 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     icon: Zap,
     color: 'from-purple-500 to-pink-500',
     borderColor: 'border-purple-300',
-    buttonStyle: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-xl',
+    buttonStyle: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm',
     popular: true
   },
   'Agency': {
@@ -112,7 +124,7 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     icon: Crown,
     color: 'from-amber-500 to-orange-500',
     borderColor: 'border-amber-200',
-    buttonStyle: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-xl',
+    buttonStyle: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm',
     popular: false
   },
   'Lifetime': {
@@ -132,7 +144,7 @@ const planConfig: Record<string, Omit<PlanData, 'price' | 'priceId' | 'amount'>>
     icon: Crown,
     color: 'from-emerald-500 to-teal-500',
     borderColor: 'border-emerald-300',
-    buttonStyle: 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-xl',
+    buttonStyle: 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm',
     popular: false,
     savings: 'Pay once, use forever'
   }
@@ -176,9 +188,15 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
         const config = planConfig[productName];
         if (!config) continue;
         
-        const product = products.find(p => p.name === productName);
+        const targetProductId = PLAN_PRODUCT_IDS[productName];
+        const product = targetProductId
+          ? products.find(p => p.id === targetProductId)
+          : products.find(p => p.name === productName);
           if (product && product.prices && product.prices.length > 0) {
-          const price = product.prices[0];
+          const knownPriceId = KNOWN_PRICE_IDS[productName];
+          const price = (knownPriceId && product.prices.find((p: any) => p.id === knownPriceId))
+            || product.prices.find((p: any) => (p.recurring?.interval || p.recurring?.interval) === 'month')
+            || product.prices[0];
           // Support both snake_case and camelCase
           const unitAmount = (price as any).unitAmount || (price as any).unit_amount;
           loadedPlans.push({
@@ -194,26 +212,26 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
         const fallbackPlans: PlanData[] = [
           {
             ...planConfig['Starter'],
-            price: '$49.00',
-            priceId: 'price_1Sf7Z2AYv17Z995VOMSBG7GX',
-            amount: 4900
+            price: '$29.99',
+            priceId: 'price_1T6SDuAYv17Z995Vind8Ze6S',
+            amount: 2999
           },
           {
             ...planConfig['Professional'],
             price: '$99.00',
-            priceId: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN',
+            priceId: 'price_1T6SHkAYv17Z995VkD5WcTc7',
             amount: 9900
           },
           {
             ...planConfig['Agency'],
             price: '$149.00',
-            priceId: 'price_1Sf7Z5AYv17Z995V7ROFNbzI',
+            priceId: 'price_1T6SKQAYv17Z995VKvkd6lbN',
             amount: 14900
           },
           {
             ...planConfig['Lifetime'],
             price: '$99.00',
-            priceId: 'price_lifetime',
+            priceId: 'price_1T2uVCAYv17Z995V7g1xTSwN',
             amount: 9900
           }
         ];
@@ -234,8 +252,8 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
-          <p className="text-white text-lg">Loading plans...</p>
+          <Loader2 className="w-12 h-12 text-violet-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 text-lg">Loading plans...</p>
         </div>
       </div>
     );
@@ -245,7 +263,7 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-white text-lg mb-4">{error}</p>
+          <p className="text-gray-800 text-lg mb-4">{error}</p>
           <Button onClick={fetchPrices} className="bg-white text-gray-900">
             Retry
           </Button>
@@ -256,18 +274,13 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4 md:p-8">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {onBack && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="text-white/80 hover:text-white hover:bg-white/10 mb-6"
+            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 mb-6"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
@@ -285,13 +298,13 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
             </div>
           </div>
           
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
             {userName ? `Welcome, ${userName}!` : 'Welcome to Adiology!'}
           </h1>
-          <p className="text-xl text-indigo-200 mb-2">
+          <p className="text-xl text-gray-500 mb-2">
             Choose your plan to get started
           </p>
-          <p className="text-sm text-indigo-300/80">
+          <p className="text-sm text-gray-400">
             All plans include 14-day money back guarantee
           </p>
         </MotionDiv>
@@ -309,7 +322,7 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                    <div className="px-4 py-1 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-full text-xs shadow-lg font-semibold">
+                    <div className="px-4 py-1 bg-gradient-to-r bg-violet-600 text-white rounded-full text-xs shadow-lg font-semibold">
                       Most Popular
                     </div>
                   </div>
@@ -317,11 +330,11 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
 
                 <div className={`
                   bg-white rounded-2xl p-6 border-2 ${plan.borderColor}
-                  ${plan.popular ? 'shadow-2xl scale-105 ring-4 ring-purple-300/50' : 'shadow-lg hover:shadow-xl'}
+                  ${plan.popular ? 'shadow-2xl scale-105 ring-4 ring-violet-300/50' : 'shadow-lg hover:shadow-xl'}
                   transition-all duration-300 h-full flex flex-col
                 `}>
-                  <div className={`w-full h-20 bg-gradient-to-r ${plan.color} rounded-xl flex items-center justify-center mb-6 shadow-md`}>
-                    <Icon className="w-10 h-10 text-white" />
+                  <div className={`w-full h-20 bg-violet-50 rounded-xl flex items-center justify-center mb-6 border border-violet-100`}>
+                    <Icon className="w-10 h-10 text-violet-600" />
                   </div>
 
                   <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
@@ -331,15 +344,22 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
                   <div className="text-center mb-2">
                     <span className="text-gray-900 text-3xl font-bold">{plan.price}</span>
                   </div>
-                  <div className="text-gray-500 text-sm text-center mb-6">
+                  <div className="text-gray-500 text-sm text-center mb-3">
                     {plan.period}
                   </div>
+
+                  {plan.isSubscription && (
+                    <div className="flex items-center justify-center gap-1.5 mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-xl">
+                      <svg className="w-3.5 h-3.5 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span className="text-green-700 text-xs font-semibold">You won't be charged for 7 days</span>
+                    </div>
+                  )}
 
                   <div className="space-y-3 mb-6 flex-grow">
                     {plan.features.map((feature, idx) => (
                       <div key={idx} className="flex items-start gap-3">
-                        <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${plan.color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                        <div className={"w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 mt-0.5"}>
+                          <Check className="w-3 h-3 text-violet-600" strokeWidth={3} />
                         </div>
                         <span className="text-gray-700 text-sm">{feature}</span>
                       </div>
@@ -362,16 +382,16 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="flex flex-wrap items-center justify-center gap-8 text-sm text-indigo-200"
+          className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-500"
         >
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-              <Check className="w-3 h-3 text-white" strokeWidth={3} />
+            <div className="w-5 h-5 bg-gradient-to-br bg-green-100 rounded-full flex items-center justify-center">
+              <Check className="w-3 h-3 text-violet-600" strokeWidth={3} />
             </div>
             <span>14-day money back</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center">
+            <div className="w-5 h-5 bg-gradient-to-br bg-blue-100 rounded-full flex items-center justify-center">
               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
@@ -379,7 +399,7 @@ export const PlanSelection: React.FC<PlanSelectionProps> = ({
             <span>Secure payments</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+            <div className="w-5 h-5 bg-gradient-to-br bg-violet-100 rounded-full flex items-center justify-center">
               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>

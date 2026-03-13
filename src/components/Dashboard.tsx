@@ -55,7 +55,7 @@ interface RecentActivity {
 export function Dashboard({ user, onNavigate }: DashboardProps) {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState(getUserPreferences());
   const [keywordListCount, setKeywordListCount] = useState(0);
   const screenSize = useScreenSize();
@@ -108,7 +108,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
     }
     fetchInProgress.current = true;
     
-    setLoading(true);
     try {
       // Use consolidated endpoint - ONE API call for everything
       const response = await fetch(`/api/dashboard/all/${user.id}`);
@@ -249,21 +248,6 @@ export function Dashboard({ user, onNavigate }: DashboardProps) {
     if (action.includes('validate')) return 'text-indigo-600 bg-indigo-50';
     return 'text-slate-600 bg-slate-50';
   };
-
-  if (loading) {
-    return (
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-slate-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-slate-200 rounded-2xl"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const quickActions = [
     { id: 'builder-3', title: 'Campaign Builder', icon: Sparkles },

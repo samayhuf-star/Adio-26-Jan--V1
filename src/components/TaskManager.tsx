@@ -57,7 +57,7 @@ export function TaskManager() {
   const { getToken } = useAuthCompat();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'today' | 'done' | 'allProjects'>('all');
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -389,13 +389,6 @@ export function TaskManager() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
 
   const handleSidebarItemClick = (callback: () => void) => {
     callback();

@@ -32,7 +32,7 @@ interface HistoryPanelProps {
 
 export const HistoryPanel = ({ onLoadItem }: HistoryPanelProps) => {
     const [history, setHistory] = useState<HistoryItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [filter, setFilter] = useState('');
     const [activeTab, setActiveTab] = useState('all');
     const [error, setError] = useState<string | null>(null);

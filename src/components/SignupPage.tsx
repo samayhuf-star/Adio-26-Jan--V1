@@ -11,9 +11,9 @@ interface Plan {
 }
 
 const PLAN_PRICE_IDS: Record<string, string> = {
-  starter: 'price_1SzLblAYv17Z995VcDMCe9T5',
-  professional: 'price_1SzLb1AYv17Z995VCc8X9AE6',
-  agency: 'price_1SzLcjAYv17Z995VngBfarg7',
+  starter: 'price_1T6SDuAYv17Z995Vind8Ze6S',
+  professional: 'price_1T6SHkAYv17Z995VkD5WcTc7',
+  agency: 'price_1T6SKQAYv17Z995VKvkd6lbN',
   lifetime: 'price_1T2uVCAYv17Z995V7g1xTSwN',
 };
 
@@ -148,65 +148,65 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors mb-8 text-sm"
+          className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors mb-8 text-sm"
         >
           <ArrowLeft size={16} />
           Back to home
         </button>
 
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 mb-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-600 mb-4">
             <span className="text-white font-bold text-xl">A</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Create your account</h1>
-          <p className="text-slate-400 mt-1 text-sm">Start building better campaigns today</p>
+          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
+          <p className="text-gray-500 mt-1 text-sm">Start building better campaigns today</p>
         </div>
 
         {cancelledMessage && (
-          <div className="mb-5 flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
-            <AlertCircle size={18} className="text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-amber-300 text-sm">Payment was cancelled. Please try again when you're ready.</p>
+          <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <AlertCircle size={18} className="text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-amber-700 text-sm">Payment was cancelled. Please try again when you're ready.</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-2xl p-8 space-y-5 shadow-sm">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Plan</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Plan</label>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setPlanDropdownOpen(!planDropdownOpen)}
-                className="w-full flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white hover:border-indigo-500/50 transition-colors"
+                className="w-full flex items-center justify-between bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 hover:border-violet-400 transition-colors"
               >
                 <div className="text-left">
                   <div className="font-medium">{selectedPlan?.name}</div>
-                  <div className="text-xs text-slate-400">{selectedPlan ? formatPrice(selectedPlan) : ''}</div>
+                  <div className="text-xs text-gray-500">{selectedPlan ? formatPrice(selectedPlan) : ''}</div>
                 </div>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${planDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${planDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {planDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden z-50 shadow-xl">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl overflow-hidden z-50 shadow-xl">
                   {plans.map(plan => (
                     <button
                       key={plan.id}
                       type="button"
                       onClick={() => { setSelectedPlanId(plan.id); setPlanDropdownOpen(false); }}
-                      className={`w-full flex items-center justify-between px-4 py-3 hover:bg-slate-700 transition-colors text-left ${selectedPlanId === plan.id ? 'bg-indigo-600/20 text-indigo-300' : 'text-slate-200'}`}
+                      className={`w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left ${selectedPlanId === plan.id ? 'bg-violet-50 text-violet-700' : 'text-gray-800'}`}
                     >
                       <div>
                         <div className="font-medium text-sm">{plan.name}</div>
-                        <div className="text-xs text-slate-400">{plan.description}</div>
+                        <div className="text-xs text-gray-500">{plan.description}</div>
                       </div>
                       {plan.interval === 'once' && (
-                        <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30 ml-2 shrink-0">Best value</span>
+                        <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-200 ml-2 shrink-0">Best value</span>
                       )}
                       {plan.id === 'professional' && (
-                        <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/30 ml-2 shrink-0">Most popular</span>
+                        <span className="text-xs bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full border border-violet-200 ml-2 shrink-0">Most popular</span>
                       )}
                     </button>
                   ))}
@@ -216,31 +216,31 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Jane Smith"
               required
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-violet-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="jane@company.com"
               required
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-violet-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -249,12 +249,12 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
                 placeholder="Min. 8 characters"
                 required
                 minLength={8}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-violet-500 transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -262,16 +262,16 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-              <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
-              <p className="text-red-300 text-sm">{error}</p>
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+              <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
+              <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all"
+            className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all shadow-sm"
           >
             {loading ? (
               <>
@@ -283,17 +283,17 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
             )}
           </button>
 
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-gray-400">
             By continuing, you agree to our{' '}
-            <a href="/terms-of-service" className="text-slate-400 hover:text-slate-200 underline">Terms</a>
+            <a href="/terms-of-service" className="text-gray-600 hover:text-gray-900 underline">Terms</a>
             {' '}and{' '}
-            <a href="/privacy-policy" className="text-slate-400 hover:text-slate-200 underline">Privacy Policy</a>.
+            <a href="/privacy-policy" className="text-gray-600 hover:text-gray-900 underline">Privacy Policy</a>.
           </p>
         </form>
 
-        <p className="text-center mt-6 text-slate-400 text-sm">
+        <p className="text-center mt-6 text-gray-500 text-sm">
           Already have an account?{' '}
-          <button onClick={onLogin} className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+          <button onClick={onLogin} className="text-violet-600 hover:text-violet-700 font-medium transition-colors">
             Sign in
           </button>
         </p>

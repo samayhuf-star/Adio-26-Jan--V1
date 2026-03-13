@@ -51,7 +51,7 @@ const safePriority = (priority: string) =>
 
 export const SupportPanel = () => {
     const [tickets, setTickets] = useState<Ticket[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);

@@ -120,7 +120,7 @@ export default defineConfig({
       dedupe: ['react', 'react-dom'],
     },
   build: {
-    target: 'es2015',
+    target: 'es2020',
     outDir: 'build',
     minify: 'esbuild',
     sourcemap: process.env.NODE_ENV === 'production' ? false : true, // Only sourcemaps in dev
@@ -223,6 +223,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/robots.txt': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/blog': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },

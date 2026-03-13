@@ -771,7 +771,7 @@ const pricingPlans = [
     features: ['25 campaigns/month', 'AI keyword generation', 'All campaign structures', 'CSV export', 'Email support'],
     buttonStyle: 'bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-300',
     popular: false,
-    priceId: 'price_1Sf7Z2AYv17Z995VOMSBG7GX'
+    priceId: 'price_1T6SDuAYv17Z995Vind8Ze6S'
   },
   {
     name: 'Pro',
@@ -783,7 +783,7 @@ const pricingPlans = [
     features: ['Unlimited campaigns', 'AI keyword generation', 'All campaign structures', 'CSV export', '24/7 priority support'],
     buttonStyle: 'bg-gradient-to-r from-purple-500 to-purple-700 text-white hover:shadow-xl',
     popular: true,
-    priceId: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN'
+    priceId: 'price_1T6SHkAYv17Z995VkD5WcTc7'
   },
   {
     name: 'Lifetime',
@@ -795,7 +795,7 @@ const pricingPlans = [
     features: ['Unlimited campaigns forever', 'AI keyword generation', 'All campaign structures', 'CSV export', 'Priority support'],
     buttonStyle: 'bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-300',
     popular: false,
-    priceId: 'price_1Sf7Z5AYv17Z995V7ROFNbzI'
+    priceId: 'price_1T6SKQAYv17Z995VKvkd6lbN'
   }
 ];
 

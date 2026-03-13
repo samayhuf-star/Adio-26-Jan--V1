@@ -27,7 +27,7 @@ export const KeywordSavedLists = () => {
   const [plannerHistory, setPlannerHistory] = useState<HistoryItem[]>([]);
   const [mixerHistory, setMixerHistory] = useState<HistoryItem[]>([]);
   const [negativeHistory, setNegativeHistory] = useState<HistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {

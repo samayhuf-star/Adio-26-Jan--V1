@@ -127,11 +127,11 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
 
   if (isVerifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl max-w-md w-full">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
             </div>
             <CardTitle className="text-2xl font-bold text-slate-900">
               Verifying Email...
@@ -147,7 +147,7 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
 
   if (isVerified) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl max-w-md w-full">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -168,17 +168,12 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-      </div>
-
-      <div className="relative z-10 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-md">
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl">
           <CardHeader className="space-y-1 pb-4">
             <div className="flex flex-col items-center justify-center mb-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg mb-3">
+              <div className="w-16 h-16 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg mb-3">
                 <Mail className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
@@ -201,8 +196,8 @@ export const EmailVerification: React.FC<EmailVerificationProps> = ({
             )}
 
             {email && (
-              <div className="text-center p-4 bg-slate-50 rounded-lg space-y-3">
-                <p className="text-sm text-slate-700 mb-2">
+              <div className="text-center p-4 bg-gray-50 rounded-lg space-y-3">
+                <p className="text-sm text-gray-700 mb-2">
                   <strong>Email:</strong> {email}
                 </p>
                 <p className="text-xs text-slate-500">

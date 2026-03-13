@@ -77,6 +77,7 @@ if (typeof window !== 'undefined') {
   // Handle unhandled promise rejections
   window.addEventListener('unhandledrejection', async (event) => {
     const errorMessage = String(event.reason || '');
+    const errorStack = (event.reason instanceof Error ? event.reason.stack : '') || '';
     
     // Ignore browser extension errors and expected token refresh failures
     if (
@@ -85,7 +86,12 @@ if (typeof window !== 'undefined') {
       errorMessage.includes('setDetectedLibs') ||
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
-      errorMessage.includes('tabId not found')
+      errorMessage.includes('tabId not found') ||
+      // Browser extension errors (e.g. Binance wallet, MetaMask, etc.)
+      errorMessage.includes('func sseError not found') ||
+      errorMessage.includes('Failed to connect TON bridge') ||
+      errorStack.includes('chrome-extension://') ||
+      errorStack.includes('moz-extension://')
     ) {
       event.preventDefault();
       return;

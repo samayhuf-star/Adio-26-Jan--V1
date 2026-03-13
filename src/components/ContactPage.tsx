@@ -76,7 +76,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
         <meta name="twitter:description" content="Get in touch with Adiology support team." />
       </Helmet>
       <div className="min-h-screen bg-white">
-        <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white">
+        <div className="bg-violet-600 text-white">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <button
             onClick={onBack}
@@ -98,13 +98,13 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
             <a
               key={info.title}
               href={info.link}
-              className="block bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
+              className="block bg-white rounded-2xl p-6 border border-gray-200 hover:border-violet-300 hover:shadow-lg transition-all group"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center mb-4 text-white">
+              <div className="w-14 h-14 bg-violet-600 rounded-xl flex items-center justify-center mb-4 text-white">
                 {info.icon}
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">{info.title}</h3>
-              <p className="text-indigo-600 font-medium mb-1">{info.content}</p>
+              <p className="text-violet-600 font-medium mb-1">{info.content}</p>
               <p className="text-gray-500 text-sm">{info.description}</p>
             </a>
           ))}
@@ -125,7 +125,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
-                  className="text-indigo-600 hover:text-indigo-700 font-medium"
+                  className="text-violet-600 hover:text-violet-700 font-medium"
                 >
                   Send another message
                 </button>
@@ -144,7 +144,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none transition-colors"
                       placeholder="John Doe"
                     />
                   </div>
@@ -159,7 +159,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none transition-colors"
                       placeholder="john@company.com"
                     />
                   </div>
@@ -176,7 +176,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
                       name="company"
                       value={formData.company}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none transition-colors"
                       placeholder="Your Company"
                     />
                   </div>
@@ -190,7 +190,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none transition-colors"
                       placeholder="+1 (555) 123-4567"
                     />
                   </div>
@@ -206,7 +206,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
                     value={formData.subject}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-colors bg-white"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none transition-colors bg-white"
                   >
                     <option value="">Select a subject</option>
                     <option value="general">General Inquiry</option>
@@ -229,7 +229,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
                     onChange={handleChange}
                     required
                     rows={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-colors resize-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none transition-colors resize-none"
                     placeholder="Tell us about your project or questions..."
                   />
                 </div>

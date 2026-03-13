@@ -5,7 +5,7 @@ import { getSessionToken } from '../utils/auth';
 
 export function ReferralsDashboard() {
   const [embedToken, setEmbedToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fetchedRef = useRef(false);
 
@@ -42,17 +42,6 @@ export function ReferralsDashboard() {
     fetchEmbedToken();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-3" />
-          <p className="text-slate-400 text-sm">Loading referral dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -87,14 +76,20 @@ export function ReferralsDashboard() {
         </div>
       </div>
 
-      <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
-        <iframe
-          id="affonso-embed"
-          src={`https://affonso.io/embed/referrals?token=${embedToken}&theme=light&lang=en`}
-          style={{ width: '100%', height: '680px', border: 'none', display: 'block' }}
-          allow="clipboard-write"
-          title="Referral Dashboard"
-        />
+      <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white min-h-[680px]">
+        {embedToken ? (
+          <iframe
+            id="affonso-embed"
+            src={`https://affonso.io/embed/referrals?token=${embedToken}&theme=light&lang=en`}
+            style={{ width: '100%', height: '680px', border: 'none', display: 'block' }}
+            allow="clipboard-write"
+            title="Referral Dashboard"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-[680px]">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          </div>
+        )}
       </div>
     </div>
   );

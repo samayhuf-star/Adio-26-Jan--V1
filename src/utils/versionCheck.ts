@@ -170,9 +170,8 @@ export function handleChunkLoadError(error: Error | string): boolean {
     errorMessage.includes('ChunkLoadError') ||
     errorMessage.includes('ERR_ABORTED 404') ||
     errorMessage.includes('net::ERR_ABORTED') ||
-    errorMessage.includes('Failed to fetch') ||
-    errorName === 'ChunkLoadError' ||
-    errorName === 'TypeError';
+    errorMessage.includes('Failed to fetch dynamically') ||
+    errorName === 'ChunkLoadError';
 
   if (isChunkError) {
     // Check if it's specifically a 404 for a JS asset (likely stale cache)

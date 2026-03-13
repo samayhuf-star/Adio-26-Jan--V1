@@ -32,7 +32,7 @@ import { useNotification } from '../contexts/NotificationContext';
 export const FeedbackManagement: React.FC = () => {
   const [feedback, setFeedback] = useState<FeedbackRecord[]>([]);
   const [filteredFeedback, setFilteredFeedback] = useState<FeedbackRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackRecord | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showResponse, setShowResponse] = useState(false);
@@ -186,14 +186,6 @@ export const FeedbackManagement: React.FC = () => {
   };
 
   const analytics = getAnalytics();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

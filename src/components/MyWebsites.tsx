@@ -17,7 +17,7 @@ import { notifications } from '../utils/notifications';
 
 export const MyWebsites: React.FC = () => {
   const [websites, setWebsites] = useState<PublishedWebsite[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -353,16 +353,6 @@ export const MyWebsites: React.FC = () => {
         );
     }
   };
-
-  if (loading) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

@@ -1003,6 +1003,10 @@ export const pageViews = pgTable("page_views", {
   ip: text("ip"),
   sessionId: text("session_id"),
   country: text("country"),
+  city: text("city"),
+  region: text("region"),
+  isp: text("isp"),
+  org: text("org"),
   deviceType: text("device_type"),
   browser: text("browser"),
   os: text("os"),
@@ -1014,6 +1018,7 @@ export const pageViews = pgTable("page_views", {
   sessionIdx: index("idx_page_views_session").on(table.sessionId),
   createdAtIdx: index("idx_page_views_created_at").on(table.createdAt),
   deviceTypeIdx: index("idx_page_views_device_type").on(table.deviceType),
+  ipIdx: index("idx_page_views_ip").on(table.ip),
 }));
 
 export const userEvents = pgTable("user_events", {

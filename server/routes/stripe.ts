@@ -977,17 +977,34 @@ stripe.get('/session-status', async (c) => {
     let stripeSubscriptionId: string | null = null;
     let currentPeriodEnd: Date | null = null;
 
+    let sessionSubStatus = 'active';
+
     if (!isLifetime && session.subscription) {
       const sub = session.subscription;
       stripeSubscriptionId = typeof sub === 'string' ? sub : (sub as any)?.id || null;
       const periodEnd = typeof sub === 'object' && sub !== null ? (sub as any).current_period_end : null;
       if (periodEnd) currentPeriodEnd = new Date(periodEnd * 1000);
+
+      if (stripeSubscriptionId) {
+        try {
+          const stripeClient = await getUncachableStripeClient();
+          const fullSub = await stripeClient.subscriptions.retrieve(stripeSubscriptionId);
+          sessionSubStatus = (fullSub as any).status === 'trialing' ? 'trialing' : 'active';
+          if ((fullSub as any).trial_end && sessionSubStatus === 'trialing') {
+            currentPeriodEnd = new Date((fullSub as any).trial_end * 1000);
+          } else if ((fullSub as any).current_period_end) {
+            currentPeriodEnd = new Date((fullSub as any).current_period_end * 1000);
+          }
+        } catch (subFetchErr: any) {
+          console.error('[Stripe] session-status subscription fetch error (non-fatal):', subFetchErr?.message);
+        }
+      }
     }
 
     try {
       await stripePool.query(
         `UPDATE users
-         SET subscription_status = 'active',
+         SET subscription_status = $6,
              subscription_plan = COALESCE(NULLIF($1, ''), subscription_plan),
              stripe_customer_id = COALESCE($2, stripe_customer_id),
              stripe_subscription_id = COALESCE($3, stripe_subscription_id),
@@ -995,9 +1012,9 @@ stripe.get('/session-status', async (c) => {
              card_validated = true,
              updated_at = NOW()
          WHERE id = $5`,
-        [plan, stripeCustomerId, stripeSubscriptionId, currentPeriodEnd, userRow.id]
+        [plan, stripeCustomerId, stripeSubscriptionId, currentPeriodEnd, userRow.id, sessionSubStatus]
       );
-      userRow.subscription_status = 'active';
+      userRow.subscription_status = sessionSubStatus;
       userRow.subscription_plan = plan || userRow.subscription_plan;
       userRow.card_validated = true;
       userRow.current_period_end = currentPeriodEnd || userRow.current_period_end;
@@ -1202,6 +1219,8 @@ stripe.post('/webhook', async (c) => {
 
         let stripeSubscriptionId: string | null = null;
         let currentPeriodEnd: Date | null = null;
+        let trialEnd: Date | null = null;
+        let subStatus: string = 'active';
         const planName = metadata.plan || metadata.planName || 'monthly';
 
         try {
@@ -1212,6 +1231,10 @@ stripe.post('/webhook', async (c) => {
               try {
                 const sub = await stripeClient.subscriptions.retrieve(subId);
                 currentPeriodEnd = new Date((sub as any).current_period_end * 1000);
+                subStatus = (sub as any).status || 'active';
+                if ((sub as any).trial_end) {
+                  trialEnd = new Date((sub as any).trial_end * 1000);
+                }
               } catch (subFetchErr: any) {
                 console.error('[Stripe Webhook] Subscription fetch error (non-fatal):', subFetchErr?.message);
               }
@@ -1221,13 +1244,16 @@ stripe.post('/webhook', async (c) => {
           console.error('[Stripe Webhook] Subscription ID extraction error (non-fatal):', subErr?.message);
         }
 
+        const resolvedStatus = (subStatus === 'trialing' || trialEnd) ? 'trialing' : 'active';
+        const periodEndForDb = resolvedStatus === 'trialing' && trialEnd ? trialEnd : currentPeriodEnd;
+
         try {
           let updateResult: any;
           if (metadataUserId) {
             updateResult = await stripePool.query(
               `UPDATE users 
                SET subscription_plan = $1, 
-                   subscription_status = 'active',
+                   subscription_status = $6,
                    stripe_customer_id = COALESCE(stripe_customer_id, $3),
                    stripe_subscription_id = COALESCE($4, stripe_subscription_id),
                    current_period_end = COALESCE($5, current_period_end),
@@ -1235,14 +1261,14 @@ stripe.post('/webhook', async (c) => {
                    updated_at = NOW()
                WHERE id = $2
                RETURNING id, email`,
-              [planName, metadataUserId, stripeCustomerId, stripeSubscriptionId, currentPeriodEnd]
+              [planName, metadataUserId, stripeCustomerId, stripeSubscriptionId, periodEndForDb, resolvedStatus]
             );
           }
           if (!updateResult || updateResult.rowCount === 0) {
             updateResult = await stripePool.query(
               `UPDATE users 
                SET subscription_plan = $1, 
-                   subscription_status = 'active',
+                   subscription_status = $6,
                    stripe_customer_id = COALESCE(stripe_customer_id, $3),
                    stripe_subscription_id = COALESCE($4, stripe_subscription_id),
                    current_period_end = COALESCE($5, current_period_end),
@@ -1250,7 +1276,7 @@ stripe.post('/webhook', async (c) => {
                    updated_at = NOW()
                WHERE LOWER(email) = LOWER($2)
                RETURNING id, email`,
-              [planName, customerEmail, stripeCustomerId, stripeSubscriptionId, currentPeriodEnd]
+              [planName, customerEmail, stripeCustomerId, stripeSubscriptionId, periodEndForDb, resolvedStatus]
             );
           }
 
@@ -1258,16 +1284,20 @@ stripe.post('/webhook', async (c) => {
             activatedUserId = updateResult.rows[0].id;
             const activatedEmail = updateResult.rows[0].email || customerEmail;
             await logUserEvent(activatedUserId!, 'checkout_completed', 'Checkout completed', `${planName} plan checkout completed`, { email: activatedEmail, planName, amount: session.amount_total });
-            await logUserEvent(activatedUserId!, 'subscription_created', 'Subscription created', `${planName} plan activated`, { email: activatedEmail, planName });
-            console.log(`[Stripe Webhook] Activated ${planName} plan for user ${activatedUserId}`);
+            if (resolvedStatus === 'trialing') {
+              await logUserEvent(activatedUserId!, 'trial_started', 'Trial started', `7-day trial started for ${planName}`, { email: activatedEmail, planName, trialEnd: trialEnd?.toISOString() });
+            } else {
+              await logUserEvent(activatedUserId!, 'subscription_created', 'Subscription created', `${planName} plan activated`, { email: activatedEmail, planName });
+            }
+            console.log(`[Stripe Webhook] ${resolvedStatus === 'trialing' ? 'Trial started' : 'Activated'} ${planName} plan for user ${activatedUserId}`);
 
             try {
               if (stripeSubscriptionId) {
                 await stripePool.query(
-                  `INSERT INTO subscriptions (id, user_id, stripe_customer_id, stripe_subscription_id, plan_name, status, current_period_end, created_at, updated_at)
-                   VALUES (gen_random_uuid(), $1, $2, $3, $4, 'active', $5, NOW(), NOW())
+                  `INSERT INTO subscriptions (id, user_id, stripe_customer_id, stripe_subscription_id, plan_name, status, trial_end, current_period_end, created_at, updated_at)
+                   VALUES (gen_random_uuid(), $1, $2, $3, $4, $7, $5, $6, NOW(), NOW())
                    ON CONFLICT DO NOTHING`,
-                  [activatedUserId, stripeCustomerId, stripeSubscriptionId, planName, currentPeriodEnd]
+                  [activatedUserId, stripeCustomerId, stripeSubscriptionId, planName, trialEnd, currentPeriodEnd, resolvedStatus]
                 );
               }
             } catch (subErr: any) {
@@ -1405,6 +1435,82 @@ stripe.post('/webhook', async (c) => {
         } catch (emailErr: any) {
           console.error('[Stripe Webhook] Failed to send payment failure email:', emailErr?.message);
         }
+      }
+    }
+
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object;
+      const prevAttributes = (event.data as any).previous_attributes || {};
+      const customerId = typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id;
+      const newStatus = (subscription as any).status;
+      const prevStatus = prevAttributes.status;
+
+      if (prevStatus === 'trialing' && newStatus === 'active') {
+        const periodEnd = (subscription as any).current_period_end ? new Date((subscription as any).current_period_end * 1000) : null;
+        try {
+          const userResult = await stripePool.query(
+            `UPDATE users
+             SET subscription_status = 'active',
+                 current_period_end = COALESCE($2, current_period_end),
+                 updated_at = NOW()
+             WHERE stripe_customer_id = $1
+             RETURNING id, email, subscription_plan`,
+            [customerId, periodEnd]
+          );
+          if (userResult.rows.length > 0) {
+            const user = userResult.rows[0];
+            await stripePool.query(
+              `UPDATE subscriptions SET status = 'active', trial_end = NULL, current_period_end = COALESCE($2, current_period_end), updated_at = NOW() WHERE stripe_customer_id = $1`,
+              [customerId, periodEnd]
+            );
+            await logUserEvent(user.id, 'trial_converted', 'Trial converted to paid', `7-day trial ended, subscription is now active for ${user.subscription_plan}`, { email: user.email, plan: user.subscription_plan });
+            console.log(`[Stripe Webhook] Trial converted to active for user ${user.id} (${user.email})`);
+            try {
+              const { sendEmail: sendTrialEmail } = await import('../resendClient');
+              const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
+              await sendTrialEmail({
+                to: user.email,
+                subject: 'Your Adiology Trial Has Ended — Welcome to the Full Plan!',
+                html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background-color:#0f172a;font-family:'Inter',system-ui,sans-serif;"><div style="max-width:600px;margin:0 auto;padding:40px 20px;"><div style="background:linear-gradient(135deg,#4c1d95,#312e81);border-radius:16px;padding:40px;text-align:center;"><h1 style="color:#ffffff;font-size:24px;margin:0 0 16px;">Your Trial Has Ended</h1><p style="color:#c4b5fd;font-size:16px;margin:0 0 8px;">Your 7-day free trial of the <strong style="color:#fff;">${user.subscription_plan}</strong> plan has ended and your subscription is now active.</p><p style="color:#c4b5fd;font-size:14px;margin:0 0 24px;">Your card on file has been charged for the first billing cycle. You can manage your subscription anytime from your billing settings.</p><a href="${PROD_URL}/dashboard" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;">Go to Dashboard</a></div></div></body></html>`,
+              });
+            } catch (emailErr: any) {
+              console.error('[Stripe Webhook] Trial converted email error (non-fatal):', emailErr?.message);
+            }
+          }
+        } catch (dbErr: any) {
+          console.error('[Stripe Webhook] customer.subscription.updated DB error:', dbErr?.message);
+        }
+      }
+    }
+
+    if (event.type === 'customer.subscription.trial_will_end') {
+      const subscription = event.data.object;
+      const customerId = typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id;
+      const trialEnd = (subscription as any).trial_end ? new Date((subscription as any).trial_end * 1000) : null;
+      try {
+        const userResult = await stripePool.query(
+          `SELECT id, email, subscription_plan FROM users WHERE stripe_customer_id = $1 LIMIT 1`,
+          [customerId]
+        );
+        if (userResult.rows.length > 0) {
+          const user = userResult.rows[0];
+          const trialEndStr = trialEnd ? trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'soon';
+          await logUserEvent(user.id, 'trial_ending_soon', 'Trial ending soon', `Trial ends on ${trialEndStr}`, { email: user.email, trialEnd: trialEnd?.toISOString() });
+          try {
+            const { sendEmail: sendReminderEmail } = await import('../resendClient');
+            const PROD_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
+            await sendReminderEmail({
+              to: user.email,
+              subject: 'Your Adiology Trial Ends in 3 Days',
+              html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background-color:#0f172a;font-family:'Inter',system-ui,sans-serif;"><div style="max-width:600px;margin:0 auto;padding:40px 20px;"><div style="background:linear-gradient(135deg,#4c1d95,#312e81);border-radius:16px;padding:40px;text-align:center;"><h1 style="color:#ffffff;font-size:24px;margin:0 0 16px;">Your Trial Ends in 3 Days</h1><p style="color:#c4b5fd;font-size:16px;margin:0 0 8px;">Your free trial of the <strong style="color:#fff;">${user.subscription_plan}</strong> plan ends on <strong style="color:#fff;">${trialEndStr}</strong>.</p><p style="color:#c4b5fd;font-size:14px;margin:0 0 24px;">After that, your card on file will be charged automatically. If you'd like to cancel before being charged, you can do so from your billing settings.</p><a href="${PROD_URL}/billing" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;">Manage Subscription</a></div></div></body></html>`,
+            });
+            console.log(`[Stripe Webhook] Trial ending reminder sent to ${user.email}`);
+          } catch (emailErr: any) {
+            console.error('[Stripe Webhook] Trial ending reminder email error (non-fatal):', emailErr?.message);
+          }
+        }
+      } catch (dbErr: any) {
+        console.error('[Stripe Webhook] customer.subscription.trial_will_end DB error:', dbErr?.message);
       }
     }
 

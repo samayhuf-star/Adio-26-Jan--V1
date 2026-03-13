@@ -41,7 +41,7 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
   'Starter': {
     name: 'Starter',
     price: '$29.99',
-    priceId: 'price_1Sf7Z2AYv17Z995VOMSBG7GX',
+    priceId: 'price_1T6SDuAYv17Z995Vind8Ze6S',
     isSubscription: true,
     amount: 2999,
     features: [
@@ -59,7 +59,7 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
   'Professional': {
     name: 'Professional',
     price: '$99.00',
-    priceId: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN',
+    priceId: 'price_1T6SHkAYv17Z995VkD5WcTc7',
     isSubscription: true,
     amount: 9900,
     features: [
@@ -76,7 +76,7 @@ const PLAN_DETAILS: Record<string, PlanDetails> = {
   'Agency': {
     name: 'Agency',
     price: '$149.00',
-    priceId: 'price_1Sf7Z5AYv17Z995V7ROFNbzI',
+    priceId: 'price_1T6SKQAYv17Z995VKvkd6lbN',
     isSubscription: true,
     amount: 14900,
     features: [
@@ -428,9 +428,19 @@ const PaymentForm: React.FC<{
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-slate-700">Amount</span>
-          <span className="text-lg font-bold text-indigo-600">{plan.price}{plan.isSubscription ? '/month' : ''}</span>
+          <span className="text-lg font-bold text-violet-600">{plan.price}{plan.isSubscription ? '/month' : ''}</span>
         </div>
       </div>
+
+      {plan.isSubscription && (
+        <div className="flex items-start gap-2.5 p-3.5 bg-green-50 border border-green-200 rounded-xl">
+          <svg className="w-4 h-4 text-green-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div>
+            <p className="text-green-800 text-sm font-semibold">7-day free trial — no charge today</p>
+            <p className="text-green-700 text-xs mt-0.5">Your card will be saved but you won't be billed until your trial ends.</p>
+          </div>
+        </div>
+      )}
 
       {/* Card Element */}
       <div className="space-y-2">
@@ -472,18 +482,22 @@ const PaymentForm: React.FC<{
       <Button
         type="submit"
         disabled={!stripe || !cardComplete || isProcessing}
-        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white h-12 text-lg font-semibold"
+        className="w-full bg-amber-500 hover:bg-amber-600 text-white h-12 text-lg font-semibold"
       >
         {isProcessing ? (
           <span className="flex items-center">
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Processing Payment...
+            Processing...
+          </span>
+        ) : plan.isSubscription ? (
+          <span className="flex items-center justify-center">
+            <Lock className="w-4 h-4 mr-2" />
+            Start 7-Day Free Trial
           </span>
         ) : (
           <span className="flex items-center justify-center">
             <Lock className="w-4 h-4 mr-2" />
             Pay {plan.price}
-            {plan.isSubscription && ' / month'}
           </span>
         )}
       </Button>
@@ -539,13 +553,8 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
-      </div>
-
-      <div className="relative z-10 w-full max-w-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-2xl">
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl">
           <CardHeader className="space-y-1 pb-4">
             <div className="flex items-center justify-between mb-4">
@@ -557,14 +566,14 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({
                   sessionStorage.removeItem('pending_payment');
                   onBack();
                 }}
-                className="text-slate-700 hover:text-indigo-600 font-medium"
+                className="text-gray-700 hover:text-violet-600 font-medium"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Pricing
               </Button>
             </div>
             <div className="flex flex-col items-center justify-center mb-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg mb-3">
+              <div className="w-16 h-16 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg mb-3">
                 <CreditCard className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
@@ -583,7 +592,7 @@ export const PaymentPage: React.FC<PaymentPageProps> = ({
               </Elements>
             ) : (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
               </div>
             )}
           </CardContent>

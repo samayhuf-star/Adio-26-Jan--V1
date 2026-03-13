@@ -65,7 +65,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({ onBack }) => {
   const { user, isLoaded: isUserLoaded } = useUserCompat();
   const { getToken } = useAuthCompat();
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [currentPlan, setCurrentPlan] = useState<string>('free');

@@ -6,6 +6,7 @@ import {
   Edit, Trash2, X, Save, MoreHorizontal, MessageSquare,
   Server, Tag, Brain, FileText, MessageCircle, Globe, Send
 } from 'lucide-react';
+import { VisitorsDashboard } from './VisitorsDashboard';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -98,7 +99,7 @@ interface SubscriptionRecord {
   paidAmountCents: number | string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo';
+type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -530,6 +531,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             { id: 'ai-usage', label: 'AI Usage', icon: Brain },
             { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
             { id: 'analytics', label: 'Analytics', icon: Activity },
+            { id: 'visitors', label: 'Visitors', icon: Eye },
             { id: 'seo', label: 'SEO & Directories', icon: Globe },
             { id: 'feedback', label: 'Feedback', icon: MessageSquare }
           ].map(tab => (
@@ -849,6 +851,11 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
           <AnalyticsDashboard token={token} />
+        )}
+
+        {/* Visitors Tab */}
+        {activeTab === 'visitors' && (
+          <VisitorsDashboard adminToken={token} />
         )}
 
         {/* SEO & Directories Tab */}

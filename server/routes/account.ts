@@ -149,9 +149,9 @@ accountRoutes.post('/register', async (c) => {
 
       const LIFETIME_PRICE_ID = 'price_1T2uVCAYv17Z995V7g1xTSwN';
       const PLAN_PRICE_IDS: Record<string, string> = {
-        starter: 'price_1SzLblAYv17Z995VcDMCe9T5',
-        professional: 'price_1SzLb1AYv17Z995VCc8X9AE6',
-        agency: 'price_1SzLcjAYv17Z995VngBfarg7',
+        starter: 'price_1T6SDuAYv17Z995Vind8Ze6S',
+        professional: 'price_1T6SHkAYv17Z995VkD5WcTc7',
+        agency: 'price_1T6SKQAYv17Z995VKvkd6lbN',
         monthly: process.env.STRIPE_MONTHLY_PRICE_ID || '',
         annual: process.env.STRIPE_ANNUAL_PRICE_ID || '',
       };
@@ -180,6 +180,8 @@ accountRoutes.post('/register', async (c) => {
           success_url: successUrl,
           cancel_url: cancelUrl,
           allow_promotion_codes: true,
+          payment_method_collection: 'always',
+          subscription_data: { trial_period_days: 7 },
           metadata: { userId, plan },
         };
       }

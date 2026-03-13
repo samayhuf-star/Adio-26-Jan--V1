@@ -167,30 +167,35 @@ export async function fetchProducts() {
   }
 }
 
+const PLAN_PRODUCT_IDS: Record<string, string> = {
+  'starter': 'prod_U4bQK1vEjvkIhf',
+  'professional': 'prod_U4bUGTZL6SN8Wv',
+  'agency': 'prod_U4bXeDJyDlCp5z',
+  'lifetime': 'prod_TzP1o6S0fYE0FS',
+};
+
 /**
  * Get price ID for a plan by name and billing interval
  */
 export async function getPriceIdForPlan(planName: string, interval: 'month' | 'year' = 'month'): Promise<string | null> {
   const products = await fetchProducts();
   
-  const aliasMap: Record<string, string[]> = {
-    'starter': ['starter'],
-    'professional': ['pro', 'professional'],
-    'agency': ['enterprise', 'agency'],
-    'lifetime': ['lifetime'],
-  };
-  
   const normalizedPlan = planName.toLowerCase().replace('adiology ', '').trim();
-  const aliases = aliasMap[normalizedPlan] || [normalizedPlan];
   
-  const product = products.find((p: any) => {
-    const normalizedProduct = p.name.toLowerCase().replace('adiology ', '').trim();
-    return aliases.some(alias => 
-      normalizedProduct === alias
-      || normalizedProduct.includes(alias)
-      || alias.includes(normalizedProduct)
-    );
-  });
+  const aliasMap: Record<string, string> = {
+    'pro': 'professional',
+    'enterprise': 'agency',
+  };
+  const resolvedPlan = aliasMap[normalizedPlan] || normalizedPlan;
+  
+  const targetProductId = PLAN_PRODUCT_IDS[resolvedPlan];
+  
+  const product = targetProductId
+    ? products.find((p: any) => p.id === targetProductId)
+    : products.find((p: any) => {
+        const normalizedProduct = p.name.toLowerCase().replace('adiology ', '').trim();
+        return normalizedProduct === resolvedPlan || normalizedProduct.includes(resolvedPlan);
+      });
   
   if (!product) return null;
   
@@ -203,7 +208,6 @@ export async function getPriceIdForPlan(planName: string, interval: 'month' | 'y
     return p.recurring.interval === interval;
   });
   
-  const unitAmount = price?.unitAmount || price?.unit_amount;
   return price?.id || null;
 }
 

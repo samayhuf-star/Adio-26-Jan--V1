@@ -226,23 +226,23 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
       {/* Right Panel - Form */}
       <div className={`flex-1 flex items-center justify-center p-6 sm:p-8 ${
         isAdminLogin
-          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-          : 'bg-gradient-to-br from-slate-950 via-[#0f0d24] to-slate-950'
+          ? 'bg-gray-50'
+          : 'bg-white'
       }`}>
         <div className="w-full max-w-md">
           {/* Mobile Back Button & Logo */}
           <div className="lg:hidden mb-8">
-            <button onClick={onBackToHome} className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm mb-6">
+            <button onClick={onBackToHome} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm mb-6">
               <ArrowLeft className="w-4 h-4" />
               Back to home
             </button>
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isAdminLogin ? 'bg-gradient-to-br from-red-500 to-orange-600' : 'bg-gradient-to-br from-violet-500 to-indigo-600'
+                isAdminLogin ? 'bg-gradient-to-br from-red-500 to-orange-600' : 'bg-violet-600'
               }`}>
                 {isAdminLogin ? <Shield className="w-5 h-5 text-white" /> : <Sparkle className="w-5 h-5 text-white" />}
               </div>
-              <span className="text-xl font-bold text-white">Adiology</span>
+              <span className="text-xl font-bold text-gray-900">Adiology</span>
             </div>
           </div>
 
@@ -258,7 +258,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
           )}
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-1">
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">
               {isForgotPassword
                 ? 'Reset Password'
                 : isLogin
@@ -267,7 +267,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
                     ? 'Sign Up Disabled'
                     : 'Create your account'}
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-500 text-sm">
               {isForgotPassword
                 ? 'Enter your email to receive a reset link'
                 : isLogin
@@ -351,7 +351,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
                   className={`w-full h-12 text-base font-semibold rounded-xl transition-all text-white ${
                     isAdminLogin
                       ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500'
-                      : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500'
+                      : 'bg-amber-500 hover:bg-amber-600'
                   }`}
                 >
                   Back to Login
@@ -369,14 +369,14 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
 
               {!isLogin && !SIGNUP_DISABLED && (
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-gray-300 font-medium text-sm">Full Name</Label>
+                  <Label htmlFor="name" className="text-gray-700 font-medium text-sm">Full Name</Label>
                   <Input
                     id="name"
                     type="text"
                     placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-indigo-500/50 focus:ring-indigo-500/20"
+                    className="h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:border-violet-500 focus:ring-violet-500/20"
                     required={!isLogin}
                     disabled={SIGNUP_DISABLED}
                   />
@@ -384,21 +384,21 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-300 font-medium text-sm">Email</Label>
+                <Label htmlFor="email" className="text-gray-700 font-medium text-sm">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-indigo-500/50 focus:ring-indigo-500/20"
+                  className="h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:border-violet-500 focus:ring-violet-500/20"
                   required
                 />
               </div>
 
               {!isForgotPassword && (
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-300 font-medium text-sm">Password</Label>
+                  <Label htmlFor="password" className="text-gray-700 font-medium text-sm">Password</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -412,7 +412,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -422,7 +422,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
 
               {!isLogin && !SIGNUP_DISABLED && !isForgotPassword && (
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-gray-300 font-medium text-sm">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword" className="text-gray-700 font-medium text-sm">Confirm Password</Label>
                   <div className="relative">
                     <Input
                       id="confirmPassword"
@@ -437,7 +437,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -448,8 +448,8 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
               {isLogin && !isForgotPassword && (
                 <div className="flex items-center justify-between text-sm">
                   <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" className="rounded border-white/20 bg-white/5" />
-                    <span className="text-gray-400 font-medium">Remember me</span>
+                    <input type="checkbox" className="rounded border-gray-300 bg-white" />
+                    <span className="text-gray-600 font-medium">Remember me</span>
                   </label>
                   <button
                     type="button"
@@ -457,7 +457,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
                       setError('');
                       setIsForgotPassword(true);
                     }}
-                    className="text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
+                    className="text-violet-600 hover:text-violet-700 font-medium cursor-pointer"
                   >
                     Forgot password?
                   </button>
@@ -465,8 +465,8 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
               )}
 
               {isForgotPassword && (
-                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                  <p className="text-sm text-blue-300 mb-3">
+                <div className="p-4 bg-violet-50 border border-violet-200 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-3">
                     Enter your email and we'll send you a link to reset your password.
                   </p>
                   <button
@@ -476,7 +476,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
                       setIsForgotPassword(false);
                       setEmail('');
                     }}
-                    className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                    className="text-sm text-violet-600 hover:text-violet-700 font-medium"
                   >
                     ← Back to login
                   </button>
@@ -485,10 +485,10 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
 
               <Button
                 type="submit"
-                className={`w-full text-white h-12 text-base font-semibold rounded-xl shadow-lg transition-all ${
+                className={`w-full text-white h-12 text-base font-semibold rounded-xl shadow-sm transition-all ${
                   isAdminLogin
-                    ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 shadow-red-900/30'
-                    : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-indigo-900/30'
+                    ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500'
+                    : 'bg-amber-500 hover:bg-amber-600'
                 }`}
                 disabled={isLoading || (!isLogin && SIGNUP_DISABLED)}
               >

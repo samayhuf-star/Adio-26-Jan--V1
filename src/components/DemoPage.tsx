@@ -23,7 +23,7 @@ export default function DemoPage({ onGetStarted, onBack }: DemoPageProps) {
         <meta name="twitter:title" content="See Adiology in Action - Interactive Demo | Adiology" />
         <meta name="twitter:description" content="Watch Adiology in action. See how to build Google Ads campaigns, generate keywords, and protect your clicks." />
       </Helmet>
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 text-white overflow-hidden">
+      <div className="min-h-screen bg-white text-gray-900 overflow-hidden">
         <Navigation onGetStarted={onGetStarted} onBack={onBack} />
         <DemoSection />
         <AboutSection />
@@ -36,19 +36,19 @@ export default function DemoPage({ onGetStarted, onBack }: DemoPageProps) {
 
 function Navigation({ onGetStarted, onBack }: { onGetStarted?: () => void; onBack?: () => void }) {
   return (
-    <nav className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-xl border-b border-white/10">
+    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 cursor-pointer" onClick={onBack}>
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center shadow-sm">
                 <span className="text-white font-black text-xl">A</span>
               </div>
-              <span className="font-bold text-xl text-white">adiology</span>
+              <span className="font-bold text-xl text-gray-900">adiology</span>
             </div>
             <button
               onClick={onBack}
-              className="hidden sm:flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors ml-4"
+              className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors ml-4"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Home
@@ -57,7 +57,7 @@ function Navigation({ onGetStarted, onBack }: { onGetStarted?: () => void; onBac
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="sm:hidden flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
+              className="sm:hidden flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -65,7 +65,7 @@ function Navigation({ onGetStarted, onBack }: { onGetStarted?: () => void; onBac
               onClick={onGetStarted}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/40 transition-all"
+              className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold shadow-sm transition-all"
             >
               Get Started Free
             </motion.button>
@@ -90,12 +90,7 @@ function DemoSection() {
   }, []);
 
   return (
-    <section className="relative pt-16 md:pt-24 pb-16 px-6">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      </div>
-
+    <section className="relative pt-16 md:pt-24 pb-16 px-6 bg-white">
       <div className="max-w-6xl mx-auto relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -103,13 +98,13 @@ function DemoSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
-          <h1 className="text-3xl md:text-5xl font-bold mb-4">
+          <h1 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">
             See Adiology{' '}
-            <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+            <span className="text-violet-600">
               in Action
             </span>
           </h1>
-          <p className="text-lg text-indigo-200/80 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
             Watch how Adiology helps you build Google Ads campaigns faster, smarter, and more efficiently. Follow along with our interactive walkthrough below.
           </p>
         </motion.div>
@@ -118,7 +113,7 @@ function DemoSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-violet-500/10"
+          className="rounded-2xl overflow-hidden border border-gray-200 shadow-lg"
         >
           <div style={{ position: 'relative', paddingBottom: 'calc(52.33550979407333% + 47px)', height: 0 }}>
             <iframe
@@ -173,7 +168,7 @@ function AboutSection() {
   ];
 
   return (
-    <section className="py-20 px-6">
+    <section className="py-20 px-6 bg-gray-50">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -181,13 +176,11 @@ function AboutSection() {
           viewport={{ once: true }}
           className="text-center mb-14"
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
             Everything You Need to{' '}
-            <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-              Win with Google Ads
-            </span>
+            <span className="text-violet-600">Win with Google Ads</span>
           </h2>
-          <p className="text-lg text-indigo-200/70 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
             Adiology brings together campaign building, keyword research, fraud protection, and monitoring tools into one platform built for marketers who want results.
           </p>
         </motion.div>
@@ -200,13 +193,13 @@ function AboutSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-violet-400/30 transition-all"
+              className="p-6 rounded-2xl bg-white border border-gray-200 hover:border-violet-200 hover:shadow-md transition-all"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 flex items-center justify-center mb-4">
-                <feature.icon className="w-6 h-6 text-violet-400" />
+              <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center mb-4">
+                <feature.icon className="w-6 h-6 text-violet-600" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-              <p className="text-sm text-gray-400 leading-relaxed">{feature.description}</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </div>
@@ -217,28 +210,25 @@ function AboutSection() {
 
 function CTASection({ onGetStarted }: { onGetStarted?: () => void }) {
   return (
-    <section className="py-20 px-6">
+    <section className="py-20 px-6 bg-white">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center p-12 rounded-3xl bg-gradient-to-br from-violet-600/10 to-indigo-600/10 border border-violet-500/20"
+          className="text-center p-12 rounded-3xl bg-violet-600"
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to Build Better{' '}
-            <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-              Google Ads Campaigns?
-            </span>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+            Ready to Build Better Google Ads Campaigns?
           </h2>
-          <p className="text-lg text-indigo-200/80 mb-8 max-w-xl mx-auto">
+          <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto">
             Join thousands of marketers using Adiology to build campaigns faster, protect their clicks, and maximize ROI.
           </p>
           <motion.button
             onClick={onGetStarted}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="px-10 py-4 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-2xl font-semibold text-lg shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/50 transition-all inline-flex items-center gap-3"
+            className="px-10 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-semibold text-lg shadow-lg transition-all inline-flex items-center gap-3"
           >
             Get Started Free
             <ArrowRight className="w-5 h-5" />
@@ -251,9 +241,9 @@ function CTASection({ onGetStarted }: { onGetStarted?: () => void }) {
 
 function Footer() {
   return (
-    <footer className="py-8 px-6 border-t border-white/10">
+    <footer className="py-8 px-6 border-t border-gray-200 bg-gray-50">
       <div className="max-w-7xl mx-auto text-center">
-        <p className="text-sm text-gray-500">&copy; 2026 Adiology. All rights reserved.</p>
+        <p className="text-sm text-gray-400">&copy; 2026 Adiology. All rights reserved.</p>
       </div>
     </footer>
   );

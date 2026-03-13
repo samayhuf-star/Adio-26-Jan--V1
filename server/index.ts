@@ -23,6 +23,7 @@ import { appsumoRoutes } from './routes/appsumo';
 import { affonsoRoutes } from './routes/affonso';
 import { errorsRoutes } from './routes/errors';
 import { leadsRoutes } from './routes/leads';
+import { skyvernRoutes } from './routes/skyvern';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -57,12 +58,32 @@ app.onError((err, c) => {
   return c.json({ error: err.message || 'Internal Server Error' }, 500);
 });
 
-app.get('/sitemap.xml', (c) => {
+app.get('/sitemap.xml', async (c) => {
   const currentDir = path.dirname(new URL(import.meta.url).pathname);
   const sitemapPath = path.resolve(currentDir, '../public/sitemap.xml');
   try {
-    const content = fs.readFileSync(sitemapPath, 'utf-8');
-    return c.text(content, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
+    const staticXml = fs.readFileSync(sitemapPath, 'utf-8');
+    // Dynamically inject all published blog posts from the database
+    let blogXml = '';
+    try {
+      const posts = await db
+        .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, createdAt: blogPosts.createdAt })
+        .from(blogPosts)
+        .where(eq(blogPosts.published, true))
+        .orderBy(desc(blogPosts.createdAt));
+      const today = new Date().toISOString().slice(0, 10);
+      for (const post of posts) {
+        const lastmod = (post.updatedAt || post.createdAt || new Date()).toISOString().slice(0, 10);
+        blogXml += `  <url>\n    <loc>https://adiology.io/blog/${post.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+      }
+      // Remove hardcoded blog post entries from static file and append fresh ones
+      const strippedXml = staticXml.replace(/<url>\s*<loc>https:\/\/adiology\.io\/blog\/[^<]+<\/loc>[\s\S]*?<\/url>\n?/g, '');
+      const finalXml = strippedXml.replace('</urlset>', blogXml + '</urlset>');
+      return c.text(finalXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
+    } catch (dbErr) {
+      console.error('[Sitemap] DB error, falling back to static:', dbErr);
+      return c.text(staticXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
+    }
   } catch {
     return c.text('Not found', 404);
   }
@@ -131,6 +152,170 @@ app.route('/api/appsumo', appsumoRoutes);
 app.route('/api/affonso', affonsoRoutes);
 app.route('/api/errors', errorsRoutes);
 app.route('/api/leads', leadsRoutes);
+app.route('/api/skyvern', skyvernRoutes);
+
+// SSR meta injection for blog pages — lets Googlebot see per-post title/description
+function readIndexHtml(): string {
+  const possiblePaths = [
+    path.resolve(process.cwd(), 'build/index.html'),
+    path.resolve(process.cwd(), 'index.html'),
+    path.resolve(path.dirname(new URL(import.meta.url).pathname), '../build/index.html'),
+    path.resolve(path.dirname(new URL(import.meta.url).pathname), '../index.html'),
+  ];
+  for (const p of possiblePaths) {
+    try { return fs.readFileSync(p, 'utf-8'); } catch {}
+  }
+  return '';
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function injectBlogMeta(html: string, meta: {
+  title: string; description: string; canonical: string;
+  ogTitle?: string; ogDesc?: string; ogImage?: string;
+  jsonLd?: string; articleHtml?: string;
+}): string {
+  const escaped = (s: string) => s.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let result = html
+    .replace(/<title>[^<]*<\/title>/, `<title>${escaped(meta.title)}</title>`)
+    .replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${escaped(meta.description)}"`)
+    .replace(/<link rel="canonical" href="[^"]*"/, `<link rel="canonical" href="${meta.canonical}"`)
+    .replace(/<meta property="og:title" content="[^"]*"/, `<meta property="og:title" content="${escaped(meta.ogTitle || meta.title)}"`)
+    .replace(/<meta property="og:description" content="[^"]*"/, `<meta property="og:description" content="${escaped(meta.ogDesc || meta.description)}"`)
+    .replace(/<meta property="og:url" content="[^"]*"/, `<meta property="og:url" content="${meta.canonical}"`);
+
+  if (meta.ogImage) {
+    result = result.replace(/<meta property="og:image" content="[^"]*"/, `<meta property="og:image" content="${meta.ogImage}"`);
+  }
+
+  // Inject JSON-LD schema into <head>
+  if (meta.jsonLd) {
+    result = result.replace('</head>', `${meta.jsonLd}\n</head>`);
+  }
+
+  // Inject crawlable article content before <div id="root"> so Google sees real text
+  if (meta.articleHtml) {
+    result = result.replace('<div id="root"', `${meta.articleHtml}\n<div id="root" style="position:relative"`);
+  }
+
+  return result;
+}
+
+app.get('/blog', async (c) => {
+  const html = readIndexHtml();
+  if (!html) return c.text('Not found', 404);
+
+  // Fetch recent posts to show in SSR for /blog index page
+  let recentPostsHtml = '';
+  try {
+    const recent = await db
+      .select({ title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt, category: blogPosts.category })
+      .from(blogPosts)
+      .where(eq(blogPosts.published, true))
+      .orderBy(desc(blogPosts.createdAt))
+      .limit(10);
+    if (recent.length > 0) {
+      const items = recent.map(p =>
+        `<li><a href="/blog/${p.slug}"><strong>${p.title}</strong></a>${p.excerpt ? ` — ${p.excerpt}` : ''}</li>`
+      ).join('\n');
+      recentPostsHtml = `<div id="ssr-blog-index" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;" aria-hidden="true"><h1>Google Ads Blog — Adiology</h1><ul>${items}</ul></div>`;
+    }
+  } catch {}
+
+  const jsonLd = `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Blog","name":"Adiology Blog","url":"https://adiology.io/blog","description":"Expert Google Ads tips, guides and PPC strategies."}</script>`;
+
+  const injected = injectBlogMeta(html, {
+    title: 'Google Ads Blog — Tips, Guides & Strategies | Adiology',
+    description: 'Expert Google Ads tips, step-by-step guides and PPC strategies to help you build better campaigns and lower costs.',
+    canonical: 'https://adiology.io/blog',
+    ogTitle: 'Google Ads Blog — Adiology',
+    ogDesc: 'Expert guides and tips for Google Ads professionals.',
+    jsonLd,
+    articleHtml: recentPostsHtml,
+  });
+  return c.html(injected);
+});
+
+app.get('/blog/:slug', async (c) => {
+  const slug = c.req.param('slug');
+  const html = readIndexHtml();
+  if (!html) return c.text('Not found', 404);
+  try {
+    const results = await db
+      .select({
+        title: blogPosts.title,
+        excerpt: blogPosts.excerpt,
+        content: blogPosts.content,
+        metaTitle: blogPosts.metaTitle,
+        metaDescription: blogPosts.metaDescription,
+        imageUrl: blogPosts.imageUrl,
+        author: blogPosts.author,
+        category: blogPosts.category,
+        slug: blogPosts.slug,
+        published: blogPosts.published,
+        createdAt: blogPosts.createdAt,
+        updatedAt: blogPosts.updatedAt,
+      })
+      .from(blogPosts)
+      .where(and(eq(blogPosts.slug, slug), eq(blogPosts.published, true)))
+      .limit(1);
+
+    if (results.length === 0) {
+      return c.html(html);
+    }
+
+    const post = results[0];
+    const pageTitle = post.metaTitle || `${post.title} | Adiology Blog`;
+    const pageDesc = post.metaDescription || post.excerpt || 'Read this article on the Adiology blog.';
+    const canonical = `https://adiology.io/blog/${post.slug}`;
+    const datePublished = (post.createdAt || new Date()).toISOString();
+    const dateModified = (post.updatedAt || post.createdAt || new Date()).toISOString();
+    const ogImage = post.imageUrl || 'https://adiology.io/og-image.png';
+
+    // JSON-LD Article schema — Google uses this to understand and rank articles
+    const jsonLd = `<script type="application/ld+json">${JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": post.title,
+      "description": pageDesc,
+      "url": canonical,
+      "image": ogImage,
+      "author": { "@type": "Person", "name": post.author || "Adiology Team" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Adiology",
+        "logo": { "@type": "ImageObject", "url": "https://adiology.io/og-image.png" }
+      },
+      "datePublished": datePublished,
+      "dateModified": dateModified,
+      "mainEntityOfPage": { "@type": "WebPage", "@id": canonical }
+    })}</script>`;
+
+    // Extract plain text from content for Googlebot to read
+    const plainText = stripHtml(post.content || '').slice(0, 5000);
+    const articleHtml = `<article id="ssr-article-content" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+  <h1>${post.title}</h1>
+  ${post.category ? `<p>Category: ${post.category}</p>` : ''}
+  ${post.excerpt ? `<p>${post.excerpt}</p>` : ''}
+  <div>${plainText}</div>
+</article>`;
+
+    const injected = injectBlogMeta(html, {
+      title: pageTitle,
+      description: pageDesc,
+      canonical,
+      ogImage,
+      jsonLd,
+      articleHtml,
+    });
+    return c.html(injected);
+  } catch (err) {
+    console.error('[Blog SSR] Error fetching post meta:', err);
+    return c.html(html);
+  }
+});
 
 app.get('/googlebc7aae8bc89f46c1.html', async (c) => {
   try {

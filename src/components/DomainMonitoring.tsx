@@ -60,7 +60,7 @@ export default function DomainMonitoring() {
   const isAuthenticated = checkIsAuthenticated();
   const userData = getCurrentUser();
   const [domains, setDomains] = useState<MonitoredDomain[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -523,25 +523,6 @@ export default function DomainMonitoring() {
   const filteredDomains = domains.filter(d => 
     d.domain.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  if (loading) {
-    return (
-      <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 min-h-screen">
-        <div className="flex items-center justify-center min-h-[400px] flex-1">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center gap-4"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-xl shadow-indigo-200">
-              <RefreshCw className="w-8 h-8 animate-spin text-white" />
-            </div>
-            <p className="text-sm text-gray-500 font-medium">Loading domains...</p>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 min-h-screen">

@@ -50,6 +50,13 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Custom JWT-based authentication.
 - **Authorization**: Role-based access control (users, paid users, super admins).
 
+## Design System (Light Theme)
+- **Color Palette**: White/gray-50 alternating section backgrounds, near-black (`text-gray-900`) headings, medium gray (`text-gray-500`) body text, `border-gray-200` card borders.
+- **CTA Buttons**: Amber (`bg-amber-500 hover:bg-amber-600 text-white`) for all primary actions.
+- **Brand Accent**: Violet-600 for logo, headings accent, icon backgrounds (`bg-violet-50`), links (`text-violet-600`).
+- **Navigation**: White background with `border-b border-gray-200`, dark text links.
+- **Applied to**: HomepageLight.tsx, Auth.tsx, SignupPage.tsx, PlanSelection.tsx, PaymentPage.tsx, PaymentSuccess.tsx, EmailVerification.tsx, ResetPassword.tsx, DemoPage.tsx, ContactPage.tsx, Pricing.tsx, PrivacyPolicy.tsx, TermsOfService.tsx, RefundPolicy.tsx, CookiePolicy.tsx, GDPRCompliance.tsx.
+
 ## Payment & Signup Flow
 - **Stripe Checkout Integration**: Unified signup page, handles registration, Stripe customer creation, and checkout session management. Supports lifetime, monthly, and annual plans.
 - **Webhook Processing**: Stripe webhooks manage subscription statuses (completed, payment succeeded/failed, deleted) and email verification.

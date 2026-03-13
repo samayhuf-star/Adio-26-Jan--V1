@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* iOS Safe Area Support */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 12px);
+}
+
 /* Enhanced Custom Animations */
 @keyframes pulse-glow {
   0%, 100% {

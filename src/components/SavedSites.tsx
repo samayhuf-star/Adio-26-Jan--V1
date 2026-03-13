@@ -39,7 +39,7 @@ import { logActivity } from '../utils/savedSites';
 
 export const SavedSites: React.FC = () => {
   const [savedSites, setSavedSites] = useState<SavedSite[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [duplicatingSite, setDuplicatingSite] = useState<SavedSite | null>(null);
   const [newSlug, setNewSlug] = useState('');
@@ -291,13 +291,7 @@ export const SavedSites: React.FC = () => {
     </Card>
   );
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

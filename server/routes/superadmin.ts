@@ -1100,5 +1100,173 @@ app.get('/leads', authMiddleware, async (c) => {
   }
 });
 
+app.get('/visitors', authMiddleware, async (c) => {
+  try {
+    const { pageViews, emailLeads, users } = await import('../../shared/schema');
+    const { getDb } = await import('../db');
+    const { sql: drizzleSql, desc: descOrder, gte: gteOp, count: countFn } = await import('drizzle-orm');
+    const dbInst = getDb();
+
+    const daysParam = c.req.query('days') || '30';
+    const pageParam = parseInt(c.req.query('page') || '1');
+    const limitParam = Math.min(parseInt(c.req.query('limit') || '50'), 200);
+    const deviceFilter = c.req.query('device') || '';
+    const countryFilter = c.req.query('country') || '';
+    const offset = (pageParam - 1) * limitParam;
+
+    let startDate = new Date();
+    if (daysParam === 'today') {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (daysParam === 'all') {
+      startDate = new Date('2020-01-01');
+    } else {
+      const days = Math.min(Math.max(parseInt(daysParam) || 30, 1), 365);
+      startDate.setDate(startDate.getDate() - days);
+    }
+
+    const startIso = startDate.toISOString();
+    const deviceClause = deviceFilter ? `AND pv_first.device_type = '${deviceFilter.replace(/'/g, "''")}'` : '';
+    const countryClause = countryFilter ? `AND pv_first.country = '${countryFilter.replace(/'/g, "''")}'` : '';
+    // Session-grouped query: one row per session_id with aggregated data
+    const sessionsQuery = `
+      SELECT
+        s.session_id,
+        pv_first.ip,
+        pv_first.country,
+        pv_first.city,
+        pv_first.region,
+        pv_first.isp,
+        pv_first.org,
+        pv_first.device_type,
+        pv_first.browser,
+        pv_first.os,
+        pv_first.screen_width,
+        pv_first.screen_height,
+        pv_first.referrer,
+        s.first_seen,
+        s.last_seen,
+        s.page_count,
+        s.pages_visited,
+        el.email AS captured_email,
+        u.email AS registered_email
+      FROM (
+        SELECT
+          session_id,
+          MIN(id) AS first_id,
+          MIN(created_at) AS first_seen,
+          MAX(created_at) AS last_seen,
+          COUNT(*) AS page_count,
+          array_agg(DISTINCT path ORDER BY path) AS pages_visited
+        FROM page_views
+        WHERE session_id IS NOT NULL
+          AND created_at >= '${startIso}'
+        GROUP BY session_id
+      ) s
+      JOIN page_views pv_first ON pv_first.id = s.first_id
+        ${deviceClause}
+        ${countryClause}
+      LEFT JOIN email_leads el ON el.ip_address = pv_first.ip
+      LEFT JOIN users u ON u.created_at BETWEEN s.first_seen - INTERVAL '5 minutes' AND s.last_seen + INTERVAL '10 minutes'
+        AND (u.email IS NOT NULL)
+      ORDER BY s.first_seen DESC
+      LIMIT ${limitParam} OFFSET ${offset}
+    `;
+
+    const countQuery = `
+      SELECT COUNT(DISTINCT session_id) AS total
+      FROM page_views
+      WHERE session_id IS NOT NULL
+        AND created_at >= '${startIso}'
+        ${deviceFilter ? `AND device_type = '${deviceFilter.replace(/'/g, "''")}'` : ''}
+        ${countryFilter ? `AND country = '${countryFilter.replace(/'/g, "''")}'` : ''}
+    `;
+
+    const summaryQuery = `
+      SELECT
+        COUNT(DISTINCT session_id) AS unique_sessions,
+        COUNT(*) AS total_page_views,
+        COUNT(DISTINCT CASE WHEN device_type = 'mobile' THEN session_id END) AS mobile_sessions,
+        COUNT(DISTINCT CASE WHEN device_type = 'desktop' THEN session_id END) AS desktop_sessions,
+        COUNT(DISTINCT CASE WHEN device_type = 'tablet' THEN session_id END) AS tablet_sessions,
+        COUNT(DISTINCT country) AS unique_countries
+      FROM page_views
+      WHERE session_id IS NOT NULL
+        AND created_at >= '${startIso}'
+    `;
+
+    const topCountriesQuery = `
+      SELECT country, COUNT(DISTINCT session_id) AS sessions
+      FROM page_views
+      WHERE session_id IS NOT NULL AND country IS NOT NULL
+        AND created_at >= '${startIso}'
+      GROUP BY country
+      ORDER BY sessions DESC
+      LIMIT 15
+    `;
+
+    const [sessionsResult, countResult, summaryResult, topCountriesResult] = await Promise.all([
+      dbInst.execute(drizzleSql.raw(sessionsQuery)),
+      dbInst.execute(drizzleSql.raw(countQuery)),
+      dbInst.execute(drizzleSql.raw(summaryQuery)),
+      dbInst.execute(drizzleSql.raw(topCountriesQuery)),
+    ]);
+
+    const sessions = (sessionsResult.rows || []).map((row: any) => ({
+      sessionId: row.session_id,
+      ip: row.ip,
+      country: row.country,
+      city: row.city,
+      region: row.region,
+      isp: row.isp,
+      org: row.org,
+      deviceType: row.device_type,
+      browser: row.browser,
+      os: row.os,
+      screenWidth: row.screen_width,
+      screenHeight: row.screen_height,
+      referrer: row.referrer,
+      firstSeen: row.first_seen,
+      lastSeen: row.last_seen,
+      pageCount: parseInt(row.page_count),
+      pagesVisited: row.pages_visited || [],
+      capturedEmail: row.captured_email || null,
+      registeredEmail: row.registered_email || null,
+      converted: !!(row.captured_email || row.registered_email),
+      durationSeconds: row.last_seen && row.first_seen
+        ? Math.max(Math.round((new Date(row.last_seen).getTime() - new Date(row.first_seen).getTime()) / 1000), row.page_count > 1 ? 1 : 0)
+        : 0,
+    }));
+
+    const total = parseInt((countResult.rows?.[0] as any)?.total || '0');
+    const summary = summaryResult.rows?.[0] as any || {};
+    const topCountries = (topCountriesResult.rows || []).map((r: any) => ({
+      country: r.country,
+      sessions: parseInt(r.sessions),
+    }));
+
+    return c.json({
+      sessions,
+      pagination: {
+        total,
+        page: pageParam,
+        limit: limitParam,
+        totalPages: Math.ceil(total / limitParam),
+      },
+      summary: {
+        uniqueSessions: parseInt(summary.unique_sessions || '0'),
+        totalPageViews: parseInt(summary.total_page_views || '0'),
+        mobileSessions: parseInt(summary.mobile_sessions || '0'),
+        desktopSessions: parseInt(summary.desktop_sessions || '0'),
+        tabletSessions: parseInt(summary.tablet_sessions || '0'),
+        uniqueCountries: parseInt(summary.unique_countries || '0'),
+      },
+      topCountries,
+    });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Visitors fetch error:', error);
+    return c.json({ error: 'Failed to fetch visitors', detail: error.message }, 500);
+  }
+});
+
 export { app as superadminRoutes };
 

@@ -101,7 +101,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl max-w-md w-full">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -123,7 +123,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
 
   if (!isValidSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <Card className="border border-slate-200 shadow-2xl bg-white backdrop-blur-xl max-w-md w-full">
           <CardHeader className="space-y-1 pb-4">
             <div className="flex items-center justify-between mb-4">
@@ -131,14 +131,14 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
                 variant="ghost"
                 size="sm"
                 onClick={onBackToHome}
-                className="text-slate-700 hover:text-indigo-600 font-medium"
+                className="text-gray-700 hover:text-violet-600 font-medium"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
             </div>
             <div className="flex flex-col items-center justify-center mb-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg mb-3">
+              <div className="w-16 h-16 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg mb-3">
                 <Lock className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
@@ -155,7 +155,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
             </Alert>
             <Button
               onClick={onBackToHome}
-              className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+              className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-white"
             >
               Go to Homepage
             </Button>
@@ -166,7 +166,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-indigo-800 to-purple-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
@@ -180,14 +180,14 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
                 variant="ghost"
                 size="sm"
                 onClick={onBackToHome}
-                className="text-slate-700 hover:text-indigo-600 font-medium"
+                className="text-gray-700 hover:text-violet-600 font-medium"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
             </div>
             <div className="flex flex-col items-center justify-center mb-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg mb-3">
+              <div className="w-16 h-16 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg mb-3">
                 <Lock className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Adiology</h2>
@@ -259,7 +259,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccess, onBackT
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 h-11"
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white h-11"
                 disabled={isLoading}
               >
                 {isLoading ? (

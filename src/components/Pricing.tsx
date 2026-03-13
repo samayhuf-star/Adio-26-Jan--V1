@@ -131,9 +131,9 @@ export function Pricing({ onSelectPlan }: PricingProps) {
 
   const getPriceId = (planName: string) => {
     const priceIds: Record<string, { monthly: string; yearly: string; lifetime?: string }> = {
-      'Starter': { monthly: 'price_1Sf7Z2AYv17Z995VOMSBG7GX', yearly: 'price_1Sf7Z2AYv17Z995VKDFZ119S' },
-      'Professional': { monthly: 'price_1Sf7Z3AYv17Z995Vp8o2xgAN', yearly: 'price_1Sf7Z4AYv17Z995VKY5BkfdB' },
-      'Agency': { monthly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI', yearly: 'price_1Sf7Z5AYv17Z995V7ROFNbzI' },
+      'Starter': { monthly: 'price_1T6SDuAYv17Z995Vind8Ze6S', yearly: 'price_1T2uVCAYv17Z995V7g1xTSwN' },
+      'Professional': { monthly: 'price_1T6SHkAYv17Z995VkD5WcTc7', yearly: 'price_1T6SHkAYv17Z995VkD5WcTc7' },
+      'Agency': { monthly: 'price_1T6SKQAYv17Z995VKvkd6lbN', yearly: 'price_1T6SKQAYv17Z995VKvkd6lbN' },
       'Lifetime': { monthly: '', yearly: '', lifetime: '' },
     };
     if (planName === 'Lifetime') return priceIds['Lifetime'].lifetime || '';
