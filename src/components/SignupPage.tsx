@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, ChevronDown, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { AlertCircle, ChevronDown, Loader2, Eye, EyeOff, ArrowLeft, RefreshCw, CheckCircle } from 'lucide-react';
 
 interface Plan {
   id: string;
@@ -39,6 +39,7 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const [planDropdownOpen, setPlanDropdownOpen] = useState(false);
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
 
     if (!name.trim()) { setError('Please enter your full name.'); return; }
     if (!email.trim()) { setError('Please enter your email address.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Please enter a valid email address.'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (!selectedPlan) { setError('Please select a plan.'); return; }
 
@@ -108,6 +110,9 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
     }).catch(() => {});
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const res = await fetch('/api/account/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -118,12 +123,22 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
           plan: selectedPlan.id,
           priceId: selectedPlan.priceId || undefined,
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error || 'Registration failed. Please try again.');
+        const msg = data.error || '';
+        if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exists')) {
+          setError('An account with this email already exists. Try signing in instead.');
+        } else if (msg.toLowerCase().includes('password')) {
+          setError('Password is too weak. Use at least 8 characters with a mix of letters and numbers.');
+        } else {
+          setError(msg || 'Registration failed. Please try again.');
+        }
+        setRetryCount(c => c + 1);
         return;
       }
 
@@ -140,8 +155,16 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
       }
 
       setError('Unexpected response. Please try again.');
+      setRetryCount(c => c + 1);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.');
+      if (err.name === 'AbortError') {
+        setError('Request timed out. Please check your connection and try again.');
+      } else if (!navigator.onLine) {
+        setError('You appear to be offline. Please check your connection and try again.');
+      } else {
+        setError('Something went wrong. Please try again in a moment.');
+      }
+      setRetryCount(c => c + 1);
     } finally {
       setLoading(false);
     }
@@ -262,26 +285,51 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
-              <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+              {error.toLowerCase().includes('already exists') && (
+                <button
+                  type="button"
+                  onClick={onLogin}
+                  className="w-full mt-1 py-2 px-4 bg-white border border-red-200 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  Sign in to existing account →
+                </button>
+              )}
+              {retryCount >= 2 && !error.toLowerCase().includes('already exists') && (
+                <p className="text-xs text-red-500">Still having trouble? <a href="mailto:support@adiology.io" className="underline">Contact support</a></p>
+              )}
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all shadow-sm"
+            className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all shadow-sm text-base"
           >
             {loading ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                Creating account...
+                Creating account…
+              </>
+            ) : retryCount > 0 ? (
+              <>
+                <RefreshCw size={18} />
+                Try Again — {selectedPlan ? formatPrice(selectedPlan) : ''}
               </>
             ) : (
-              `Proceed to Payment — ${selectedPlan ? formatPrice(selectedPlan) : ''}`
+              `Continue to Payment — ${selectedPlan ? formatPrice(selectedPlan) : ''}`
             )}
           </button>
+
+          <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+            <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Secure checkout</span>
+            <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Cancel anytime</span>
+            <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> 30-day refund</span>
+          </div>
 
           <p className="text-center text-xs text-gray-400">
             By continuing, you agree to our{' '}

@@ -22,6 +22,7 @@ import { analyticsRoutes } from './routes/analytics';
 import { appsumoRoutes } from './routes/appsumo';
 import { affonsoRoutes } from './routes/affonso';
 import { errorsRoutes } from './routes/errors';
+import { adPlatformsRoutes } from './routes/adplatforms';
 import { leadsRoutes } from './routes/leads';
 import { skyvernRoutes } from './routes/skyvern';
 import { stripeService } from './stripeService';
@@ -153,6 +154,7 @@ app.route('/api/affonso', affonsoRoutes);
 app.route('/api/errors', errorsRoutes);
 app.route('/api/leads', leadsRoutes);
 app.route('/api/skyvern', skyvernRoutes);
+app.route('/api/superadmin', adPlatformsRoutes);
 
 // SSR meta injection for blog pages — lets Googlebot see per-post title/description
 function readIndexHtml(): string {
@@ -3095,6 +3097,44 @@ serve({
   await seedClickGuardDomains();
   startHourlyReporting();
   startUptimeMonitoring();
+
+  // Ensure stripe_invoice_id unique index exists for payment deduplication
+  try {
+    const { Pool: StartupPool } = (await import('pg')).default;
+    const startupPool = new StartupPool({ connectionString: (await import('./dbConfig')).getDatabaseUrl() });
+    await startupPool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS payments_stripe_invoice_id_unique
+      ON payments (stripe_invoice_id)
+      WHERE stripe_invoice_id IS NOT NULL
+    `);
+    // Add is_internal column if not exists
+    await startupPool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_internal boolean NOT NULL DEFAULT false
+    `);
+    // Add signup_ip column if not exists (for tracking registration IP)
+    await startupPool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_ip text
+    `);
+    // Create ad_platform_connections table
+    await startupPool.query(`
+      CREATE TABLE IF NOT EXISTS ad_platform_connections (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        platform text NOT NULL UNIQUE,
+        account_id text,
+        account_name text,
+        credentials jsonb,
+        status text DEFAULT 'disconnected',
+        last_error text,
+        last_synced timestamp,
+        created_at timestamp DEFAULT NOW(),
+        updated_at timestamp DEFAULT NOW()
+      )
+    `);
+    await startupPool.end();
+    console.log('[Startup] DB schema ensured (payments index, is_internal, signup_ip, ad_platform_connections)');
+  } catch (e: any) {
+    console.log('[Startup] DB schema check (non-fatal):', e?.message);
+  }
 });
 
 // Export for Vercel serverless functions

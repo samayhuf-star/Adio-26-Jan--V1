@@ -74,6 +74,7 @@ Preferred communication style: Simple, everyday language.
 - **Dashboards**: Payments Dashboard for revenue and subscription metrics, System Health for server diagnostics.
 - **Promo Codes**: Full CRUD for creating and managing Stripe coupons.
 - **Email Logs**: Provides a view of all system-sent emails.
+- **Internal User Tagging**: Admins can mark any user as "Internal" (test/team account) via the Edit User modal dropdown. When a user is marked internal, all other users from the same signup IP are automatically bulk-marked internal too (using `signup_ip` column and `user_events.ip_address` fallback). Internal users are hidden from the Users tab by default, excluded from dashboard stats, and can be revealed with a "Show Internal Users" toggle. Internal users show an amber "Internal" badge in the list. `is_internal` (boolean) and `signup_ip` (text) columns are added to the `users` table at server startup via `ALTER TABLE IF NOT EXISTS`.
 
 # External Dependencies
 

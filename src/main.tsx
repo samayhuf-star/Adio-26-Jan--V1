@@ -87,11 +87,19 @@ if (typeof window !== 'undefined') {
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
       errorMessage.includes('tabId not found') ||
+      // Leadsy / vtag script errors — third-party, not actionable
+      errorMessage.includes('__jsinseta__') ||
+      errorMessage.includes('leadsy') ||
+      errorMessage.includes('vtag') ||
+      // removeListener errors from third-party libs
+      errorMessage.toLowerCase().includes('removelistener') ||
       // Browser extension errors (e.g. Binance wallet, MetaMask, etc.)
       errorMessage.includes('func sseError not found') ||
       errorMessage.includes('Failed to connect TON bridge') ||
       errorStack.includes('chrome-extension://') ||
-      errorStack.includes('moz-extension://')
+      errorStack.includes('moz-extension://') ||
+      errorStack.includes('r2.leadsy.ai') ||
+      errorStack.includes('cdn.affonso.io')
     ) {
       event.preventDefault();
       return;
@@ -133,7 +141,13 @@ if (typeof window !== 'undefined') {
       errorMessage.includes('installHook.js') ||
       errorMessage.includes('host-additional-hooks.js') ||
       (errorMessage.includes('service worker') && errorMessage.includes('extension')) ||
-      errorMessage.includes('tabId not found')
+      errorMessage.includes('tabId not found') ||
+      errorMessage.includes('__jsinseta__') ||
+      errorMessage.toLowerCase().includes('removelistener') ||
+      errorMessage.includes('leadsy') ||
+      errorMessage.includes('vtag') ||
+      errorMessage.includes('r2.leadsy.ai') ||
+      errorMessage.includes('cdn.affonso.io')
     ) {
       return;
     }

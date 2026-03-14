@@ -158,79 +158,52 @@ function LightHeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: (
 
   return (
     <section className="relative bg-white pt-28 md:pt-36 pb-16 px-6">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-violet-100 rounded-full blur-3xl opacity-50" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-100 rounded-full blur-3xl opacity-40" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
+        <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-violet-100 rounded-full blur-3xl opacity-40" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-100 rounded-full blur-3xl opacity-30" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="text-center max-w-4xl mx-auto mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-medium mb-6 border border-violet-200"
-          >
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-medium mb-6 border border-violet-200">
             <Zap className="w-4 h-4" />
             AI-Powered Google Ads Platform
-          </motion.div>
+          </div>
 
-          <motion.h1
-            className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6 text-gray-900"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6 text-gray-900">
             Launch optimized campaigns.
             <br />
             <span className="text-violet-600">Block click fraud. Monitor All Domains.</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
+          <p className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
             Build, optimize, and protect Google Ads campaigns with AI — all in one place.
             Campaign builder, keyword tools, click fraud protection, domain monitoring & more.
-          </motion.p>
+          </p>
 
-          <motion.div
-            className="flex flex-wrap justify-center gap-4 mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            <motion.button
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            <button
               onClick={onGetStarted}
-              className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-semibold text-lg shadow-md transition-all flex items-center gap-2"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
+              className="px-8 py-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-2xl font-semibold text-lg shadow-md transition-all flex items-center gap-2"
             >
               Start Free Trial
               <ArrowRight className="w-5 h-5" />
-            </motion.button>
-            <motion.button
+            </button>
+            <button
               onClick={() => onNavigateToPage?.('/demo')}
-              className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl font-semibold text-lg hover:bg-gray-50 transition-all"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
+              className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl font-semibold text-lg hover:bg-gray-50 active:bg-gray-100 transition-all"
             >
               See It In Action
-            </motion.button>
-          </motion.div>
+            </button>
+          </div>
+          <p className="text-sm text-gray-400 mb-10">No credit card required · Cancel anytime</p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl mx-auto">
-          {heroFeatures.map((feature, i) => (
-            <motion.div
+          {heroFeatures.map((feature) => (
+            <div
               key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 + i * 0.06 }}
-              whileHover={{ y: -3, shadow: 'lg' }}
-              className="group flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm hover:shadow-md hover:border-violet-200 transition-all cursor-default"
+              className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm"
             >
               <div className={`shrink-0 w-9 h-9 rounded-lg ${feature.iconBg} flex items-center justify-center`}>
                 <feature.icon className={`w-5 h-5 ${feature.iconColor}`} />
@@ -239,7 +212,7 @@ function LightHeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: (
                 <h3 className="font-bold text-gray-900 text-[13px] leading-tight">{feature.title}</h3>
                 <p className="text-[11px] text-gray-500 leading-snug mt-0.5">{feature.desc}</p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
@@ -1129,7 +1102,7 @@ function LightFinalCTA({ onGetStarted }: { onGetStarted?: () => void }) {
           viewport={{ once: true }}
           className="relative bg-violet-600 rounded-3xl p-12 md:p-16 text-center overflow-hidden"
         >
-          <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 opacity-10 hidden md:block">
             <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl" />
             <div className="absolute bottom-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl" />
           </div>

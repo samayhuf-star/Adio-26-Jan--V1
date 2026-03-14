@@ -129,10 +129,10 @@ async function logAuditAction(data: {
 
 app.get('/stats', authMiddleware, async (c) => {
   try {
-    const totalUsers = await db.execute(sql`SELECT COUNT(*) as count FROM users`).catch(() => ({ rows: [{ count: 0 }] }));
-    const activeSubscriptions = await db.execute(sql`SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'`).catch(() => ({ rows: [{ count: 0 }] }));
-    const trialUsers = await db.execute(sql`SELECT COUNT(*) as count FROM subscriptions WHERE status = 'trialing'`).catch(() => ({ rows: [{ count: 0 }] }));
-    const blockedUsers = await db.execute(sql`SELECT COUNT(*) as count FROM users WHERE is_blocked = true`).catch(() => ({ rows: [{ count: 0 }] }));
+    const totalUsers = await db.execute(sql`SELECT COUNT(*) as count FROM users WHERE COALESCE(is_internal, false) = false`).catch(() => ({ rows: [{ count: 0 }] }));
+    const activeSubscriptions = await db.execute(sql`SELECT COUNT(*) as count FROM subscriptions s JOIN users u ON u.id = s.user_id WHERE s.status = 'active' AND COALESCE(u.is_internal, false) = false`).catch(() => ({ rows: [{ count: 0 }] }));
+    const trialUsers = await db.execute(sql`SELECT COUNT(*) as count FROM subscriptions s JOIN users u ON u.id = s.user_id WHERE s.status = 'trialing' AND COALESCE(u.is_internal, false) = false`).catch(() => ({ rows: [{ count: 0 }] }));
+    const blockedUsers = await db.execute(sql`SELECT COUNT(*) as count FROM users WHERE is_blocked = true AND COALESCE(is_internal, false) = false`).catch(() => ({ rows: [{ count: 0 }] }));
     const revenueResult = await db.execute(sql`
       SELECT COALESCE(SUM(CASE 
         WHEN plan_name = 'Starter' THEN 2900
@@ -202,7 +202,7 @@ app.post('/users/:id/block', authMiddleware, async (c) => {
 app.put('/users/:id', authMiddleware, async (c) => {
   try {
     const userId = c.req.param('id');
-    const { displayName, email } = await c.req.json();
+    const { displayName, email, isInternal } = await c.req.json();
 
     const existing = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (existing.length === 0) {
@@ -212,6 +212,7 @@ app.put('/users/:id', authMiddleware, async (c) => {
     const updates: any = { updatedAt: new Date() };
     if (displayName !== undefined) updates.fullName = displayName;
     if (email !== undefined) updates.email = email;
+    if (isInternal !== undefined) updates.isInternal = !!isInternal;
 
     await db.update(users).set(updates).where(eq(users.id, userId));
     await logAuditAction({ action: 'user_updated', resourceType: 'user', resourceId: userId, oldValues: { fullName: existing[0].fullName, email: existing[0].email }, newValues: updates });
@@ -221,6 +222,83 @@ app.put('/users/:id', authMiddleware, async (c) => {
   } catch (error: any) {
     console.error('[SuperAdmin] Update user error:', error);
     return c.json({ error: 'Failed to update user' }, 500);
+  }
+});
+
+// Mark a user (and all users from the same signup IP) as internal or real
+app.post('/users/:id/set-internal', authMiddleware, async (c) => {
+  try {
+    const userId = c.req.param('id');
+    const { isInternal } = await c.req.json();
+    const flag = !!isInternal;
+
+    const existing = await db.execute(sql`SELECT id, email, signup_ip FROM users WHERE id = ${userId} LIMIT 1`);
+    if (existing.rows.length === 0) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    const targetUser = existing.rows[0] as any;
+
+    // Always mark the target user
+    await db.execute(sql`UPDATE users SET is_internal = ${flag}, updated_at = NOW() WHERE id = ${userId}`);
+
+    let affectedCount = 1;
+    let matchedByIp: string[] = [];
+
+    // If marking internal AND the user has a signup_ip, also mark all users from that same IP
+    if (flag && targetUser.signup_ip) {
+      const sameIpUsers = await db.execute(sql`
+        SELECT id, email FROM users
+        WHERE signup_ip = ${targetUser.signup_ip}
+          AND id != ${userId}
+          AND is_internal = false
+      `);
+      if (sameIpUsers.rows.length > 0) {
+        const ids = sameIpUsers.rows.map((r: any) => r.id);
+        matchedByIp = sameIpUsers.rows.map((r: any) => r.email);
+        // Bulk update using raw SQL with IN clause
+        await db.execute(sql`
+          UPDATE users SET is_internal = true, updated_at = NOW()
+          WHERE signup_ip = ${targetUser.signup_ip}
+            AND id != ${userId}
+        `);
+        affectedCount += ids.length;
+      }
+    }
+
+    // Also check user_events table for IP-based matches (for users who registered before signup_ip was added)
+    if (flag && targetUser.signup_ip) {
+      const eventIpUsers = await db.execute(sql`
+        SELECT DISTINCT u.id, u.email
+        FROM users u
+        JOIN user_events ue ON ue.user_id = u.id
+        WHERE ue.ip_address::text = ${targetUser.signup_ip}
+          AND u.id != ${userId}
+          AND u.is_internal = false
+      `);
+      if (eventIpUsers.rows.length > 0) {
+        const eventIds = eventIpUsers.rows.map((r: any) => r.id);
+        const eventEmails = eventIpUsers.rows.map((r: any) => r.email as string);
+        matchedByIp = [...new Set([...matchedByIp, ...eventEmails])];
+        await db.execute(sql`
+          UPDATE users SET is_internal = true, updated_at = NOW()
+          WHERE id IN (SELECT DISTINCT u2.id FROM users u2 JOIN user_events ue2 ON ue2.user_id = u2.id WHERE ue2.ip_address::text = ${targetUser.signup_ip} AND u2.id != ${userId})
+        `);
+        affectedCount += eventIds.length;
+      }
+    }
+
+    await logAuditAction({
+      action: flag ? 'user_marked_internal' : 'user_marked_real',
+      resourceType: 'user',
+      resourceId: userId,
+      details: { email: targetUser.email, affectedCount, matchedByIp: matchedByIp.slice(0, 20) },
+    });
+    await logUserEvent(userId, 'admin_edit', flag ? 'Marked as internal user' : 'Marked as real user', `User type changed by superadmin`, { isInternal: flag, affectedCount });
+
+    return c.json({ success: true, affectedCount, matchedByIp });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Set internal error:', error);
+    return c.json({ error: 'Failed to update user type' }, 500);
   }
 });
 
@@ -854,6 +932,8 @@ app.get('/email-logs', authMiddleware, async (c) => {
 
 app.get('/users-unified', authMiddleware, async (c) => {
   try {
+    const showInternal = c.req.query('showInternal') === 'true';
+
     const result = await db.execute(sql`
       SELECT 
         u.id,
@@ -863,6 +943,8 @@ app.get('/users-unified', authMiddleware, async (c) => {
         u.subscription_plan as "subscriptionPlan",
         u.subscription_status as "subscriptionStatus",
         u.is_blocked as "isBlocked",
+        COALESCE(u.is_internal, false) as "isInternal",
+        u.signup_ip as "signupIp",
         u.created_at as "createdAt",
         u.updated_at as "updatedAt",
         u.last_sign_in as "lastSignIn",
@@ -899,6 +981,7 @@ app.get('/users-unified', authMiddleware, async (c) => {
         FROM payments
         GROUP BY user_id
       ) p ON p.user_id = u.id
+      WHERE (${showInternal} = true OR COALESCE(u.is_internal, false) = false)
       ORDER BY u.created_at DESC
     `);
 
@@ -1265,6 +1348,159 @@ app.get('/visitors', authMiddleware, async (c) => {
   } catch (error: any) {
     console.error('[SuperAdmin] Visitors fetch error:', error);
     return c.json({ error: 'Failed to fetch visitors', detail: error.message }, 500);
+  }
+});
+
+app.get('/journeys', authMiddleware, async (c) => {
+  try {
+    const { getDb } = await import('../db');
+    const { sql: drizzleSql } = await import('drizzle-orm');
+    const dbInst = getDb();
+
+    const daysParam = c.req.query('days') || '30';
+    const days = Math.min(Math.max(parseInt(daysParam) || 30, 1), 365);
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const startIso = startDate.toISOString();
+
+    // Fetch individual page views with LEAD to compute per-step duration
+    const pageViewsQuery = `
+      SELECT
+        pv.session_id,
+        pv.id,
+        pv.path,
+        pv.created_at,
+        pv.referrer,
+        pv.device_type,
+        pv.country,
+        pv.browser,
+        COALESCE(
+          EXTRACT(EPOCH FROM (
+            LEAD(pv.created_at) OVER (PARTITION BY pv.session_id ORDER BY pv.created_at)
+            - pv.created_at
+          ))::int,
+          30
+        ) AS step_duration,
+        ROW_NUMBER() OVER (PARTITION BY pv.session_id ORDER BY pv.created_at) AS step_num,
+        COUNT(*) OVER (PARTITION BY pv.session_id) AS total_steps,
+        MIN(pv.created_at) OVER (PARTITION BY pv.session_id) AS session_start,
+        MAX(pv.created_at) OVER (PARTITION BY pv.session_id) AS session_end
+      FROM page_views pv
+      WHERE pv.session_id IS NOT NULL
+        AND pv.created_at >= '${startIso}'
+      ORDER BY pv.session_id, pv.created_at
+    `;
+
+    // Fetch conversion data (email captures and registrations near sessions)
+    const conversionQuery = `
+      SELECT DISTINCT pv.session_id
+      FROM page_views pv
+      LEFT JOIN email_leads el ON el.ip_address = pv.ip AND el.created_at BETWEEN pv.created_at - INTERVAL '10 minutes' AND pv.created_at + INTERVAL '30 minutes'
+      LEFT JOIN users u ON u.created_at BETWEEN
+        (SELECT MIN(pv2.created_at) FROM page_views pv2 WHERE pv2.session_id = pv.session_id)
+        AND
+        (SELECT MAX(pv3.created_at) FROM page_views pv3 WHERE pv3.session_id = pv.session_id) + INTERVAL '10 minutes'
+      WHERE pv.session_id IS NOT NULL
+        AND pv.created_at >= '${startIso}'
+        AND (el.email IS NOT NULL OR u.email IS NOT NULL)
+    `;
+
+    const [pvResult, convResult] = await Promise.all([
+      dbInst.execute(drizzleSql.raw(pageViewsQuery)),
+      dbInst.execute(drizzleSql.raw(conversionQuery)),
+    ]);
+
+    const convertedSessions = new Set((convResult.rows || []).map((r: any) => r.session_id));
+
+    // Group page views by session
+    const sessionMap: Record<string, any[]> = {};
+    for (const row of (pvResult.rows || []) as any[]) {
+      if (!sessionMap[row.session_id]) sessionMap[row.session_id] = [];
+      sessionMap[row.session_id].push(row);
+    }
+
+    function deriveSource(referrer: string | null): string {
+      if (!referrer) return "Direct";
+      const r = referrer.toLowerCase();
+      if (r.includes("google") && (r.includes("cpc") || r.includes("gclid") || r.includes("ads"))) return "Google Ads";
+      if (r.includes("google.com") || r.includes("google.co")) return "Google Organic";
+      if (r.includes("producthunt.com")) return "ProductHunt";
+      if (r.includes("reddit.com")) return "Reddit";
+      if (r.includes("linkedin.com")) return "LinkedIn";
+      if (r.includes("twitter.com") || r.includes("t.co") || r.includes("x.com")) return "Twitter/X";
+      if (r.includes("facebook.com") || r.includes("fb.com")) return "Facebook";
+      if (r.includes("instagram.com")) return "Instagram";
+      if (r.includes("email") || r.includes("newsletter") || r.includes("mailchimp") || r.includes("sendgrid")) return "Email Campaign";
+      if (r.includes("bing.com")) return "Bing";
+      if (r.includes("yahoo.com")) return "Yahoo";
+      return "Referral";
+    }
+
+    function deriveDevice(deviceType: string | null): string {
+      if (!deviceType) return "Desktop";
+      const d = deviceType.toLowerCase();
+      if (d === "mobile") return "Mobile";
+      if (d === "tablet") return "Tablet";
+      return "Desktop";
+    }
+
+    const journeys = Object.entries(sessionMap).map(([sessionId, rows], idx) => {
+      const sorted = rows.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+
+      const source = deriveSource(first.referrer);
+      const device = deriveDevice(first.device_type);
+      const country = first.country || "";
+      const landingPage = first.path || "/";
+      const converted = convertedSessions.has(sessionId);
+
+      const sessionStartMs = new Date(first.session_start || first.created_at).getTime();
+      const sessionEndMs = new Date(last.session_end || last.created_at).getTime();
+      const totalTime = Math.max(Math.round((sessionEndMs - sessionStartMs) / 1000), sorted.length > 1 ? 1 : 0);
+
+      const steps = sorted.map((row, i) => {
+        const isFirst = i === 0;
+        const isLast = i === sorted.length - 1;
+        const duration = Math.min(Math.max(parseInt(row.step_duration) || 10, 1), 600);
+        return {
+          page: row.path || "/",
+          duration,
+          isError: false,
+          errorMsg: null as string | null,
+          event: isFirst ? "Landing" : isLast && converted ? "Conversion" : "Page View",
+        };
+      });
+
+      const isBounce = sorted.length === 1;
+      const exitReason = converted ? "Converted" : isBounce ? "Bounced" : totalTime < 10 ? "Bounced" : "Closed Tab";
+
+      return {
+        id: `SID-${sessionId.slice(-8).toUpperCase()}`,
+        source,
+        landingPage,
+        steps,
+        totalTime,
+        device,
+        country,
+        converted,
+        hasError: false,
+        error: null as string | null,
+        exitReason,
+        pageCount: sorted.length,
+        startTs: sessionStartMs,
+      };
+    });
+
+    // Sort by most recent first, limit to 500
+    journeys.sort((a, b) => b.startTs - a.startTs);
+    const limited = journeys.slice(0, 500);
+
+    return c.json({ journeys: limited, total: journeys.length });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Journeys fetch error:', error);
+    return c.json({ error: 'Failed to fetch journeys', detail: error.message }, 500);
   }
 });
 

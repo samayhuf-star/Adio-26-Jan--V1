@@ -4,9 +4,10 @@ import {
   Ban, CheckCircle, Eye, TrendingUp, DollarSign, Activity,
   UserCheck, AlertTriangle, Calendar, Mail, ChevronRight,
   Edit, Trash2, X, Save, MoreHorizontal, MessageSquare,
-  Server, Tag, Brain, FileText, MessageCircle, Globe, Send
+  Server, Tag, Brain, FileText, MessageCircle, Globe, Send, Route
 } from 'lucide-react';
 import { VisitorsDashboard } from './VisitorsDashboard';
+import { UserJourneyDashboard } from './UserJourneyDashboard';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -23,6 +24,7 @@ import { AIUsageDashboard } from './AIUsageDashboard';
 import { WhatsAppConfigPanel } from './WhatsAppConfigPanel';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import { UserLifecyclePanel } from './UserLifecyclePanel';
+import { AdSpendDashboard } from './AdSpendDashboard';
 const SEODirectoryGuide = lazy(() => import('./SEODirectoryGuide'));
 import {
   Dialog,
@@ -64,6 +66,8 @@ interface UserRecord {
   subscriptionPlan: string;
   subscriptionStatus: string;
   isBlocked: boolean;
+  isInternal: boolean;
+  signupIp?: string | null;
   createdAt: string;
   updatedAt: string | null;
   lastSignIn: string | null;
@@ -99,7 +103,7 @@ interface SubscriptionRecord {
   paidAmountCents: number | string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo';
+type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -117,9 +121,12 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
   const [userFilter, setUserFilter] = useState<'all' | 'active' | 'blocked'>('all');
   const [subFilter, setSubFilter] = useState<'all' | 'active' | 'trialing' | 'canceled'>('all');
   
+  // Internal user toggle
+  const [showInternalUsers, setShowInternalUsers] = useState(false);
+
   // CRUD state for users
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
-  const [editForm, setEditForm] = useState({ displayName: '', email: '', newPassword: '' });
+  const [editForm, setEditForm] = useState({ displayName: '', email: '', newPassword: '', isInternal: false });
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserRecord | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [sendingCredentialsUserId, setSendingCredentialsUserId] = useState<string | null>(null);
@@ -156,9 +163,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     }
   };
 
-  const loadUsers = async () => {
+  const loadUsers = async (showInternal = false) => {
     try {
-      const response = await adminFetch('/api/superadmin/users-unified');
+      const response = await adminFetch(`/api/superadmin/users-unified?showInternal=${showInternal}`);
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users || []);
@@ -215,7 +222,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     setEditForm({
       displayName: user.fullName || '',
       email: user.email,
-      newPassword: ''
+      newPassword: '',
+      isInternal: user.isInternal ?? false,
     });
   };
 
@@ -224,6 +232,22 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     
     try {
       setActionLoading(true);
+
+      // Handle user type (internal/real) change via dedicated endpoint
+      const internalChanged = editForm.isInternal !== (editingUser.isInternal ?? false);
+      if (internalChanged) {
+        const intRes = await adminFetch(`/api/superadmin/users/${editingUser.id}/set-internal`, {
+          method: 'POST',
+          body: JSON.stringify({ isInternal: editForm.isInternal })
+        });
+        if (intRes.ok) {
+          const intData = await intRes.json();
+          if (editForm.isInternal && intData.affectedCount > 1) {
+            alert(`Marked as Internal. Also automatically marked ${intData.affectedCount - 1} other user(s) from the same IP as internal.`);
+          }
+        }
+      }
+
       const response = await adminFetch(`/api/superadmin/users/${editingUser.id}`, {
         method: 'PUT',
         body: JSON.stringify({
@@ -244,11 +268,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           }
         }
 
-        setUsers(users.map(u => 
-          u.id === editingUser.id 
-            ? { ...u, fullName: editForm.displayName, email: editForm.email } 
-            : u
-        ));
+        // Reload users to reflect any bulk internal changes
+        await loadUsers(showInternalUsers);
         setEditingUser(null);
       } else {
         const error = await response.json();
@@ -533,7 +554,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             { id: 'analytics', label: 'Analytics', icon: Activity },
             { id: 'visitors', label: 'Visitors', icon: Eye },
             { id: 'seo', label: 'SEO & Directories', icon: Globe },
-            { id: 'feedback', label: 'Feedback', icon: MessageSquare }
+            { id: 'feedback', label: 'Feedback', icon: MessageSquare },
+            { id: 'user-journey', label: 'User Journey', icon: Route },
+            { id: 'ad-spend', label: 'Ad Spend', icon: TrendingUp }
           ].map(tab => (
             <Button
               key={tab.id}
@@ -674,7 +697,24 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
               </div>
             </div>
 
-            <div className="text-xs text-slate-500 mb-1">{filteredUsers.length} users found. Click a row to view full lifecycle.</div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-slate-500">{filteredUsers.length} users found. Click a row to view full lifecycle.</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const next = !showInternalUsers;
+                  setShowInternalUsers(next);
+                  loadUsers(next);
+                }}
+                className={showInternalUsers
+                  ? 'border-amber-500/50 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+                  : 'border-slate-600 text-slate-500 hover:bg-slate-700'
+                }
+              >
+                {showInternalUsers ? 'Hide Internal Users' : 'Show Internal Users'}
+              </Button>
+            </div>
 
             <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
@@ -683,6 +723,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                     <tr>
                       <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400 w-10">#</th>
                       <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">User</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">IP Address</th>
                       <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Plan</th>
                       <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Sub Status</th>
                       <th className="text-left px-3 py-2.5 text-xs font-medium text-slate-400">Joined</th>
@@ -703,9 +744,23 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
                         <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{index + 1}</td>
                         <td className="px-3 py-2.5">
                           <div>
-                            <p className="text-white font-medium text-sm">{user.email}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-white font-medium text-sm">{user.email}</p>
+                              {user.isInternal && (
+                                <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 font-medium">
+                                  Internal
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-slate-500">{user.fullName || 'No name'}</p>
                           </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {user.signupIp ? (
+                            <span className="font-mono text-xs text-slate-400">{user.signupIp}</span>
+                          ) : (
+                            <span className="text-xs text-slate-600">—</span>
+                          )}
                         </td>
                         <td className="px-3 py-2.5">
                           <Badge className={
@@ -848,6 +903,11 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           <WhatsAppConfigPanel token={token} />
         )}
 
+        {/* Ad Spend Tab */}
+        {activeTab === 'ad-spend' && (
+          <AdSpendDashboard token={token} />
+        )}
+
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
           <AnalyticsDashboard token={token} />
@@ -870,6 +930,11 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           <NotificationProvider>
             <FeedbackManagement />
           </NotificationProvider>
+        )}
+
+        {/* User Journey Tab */}
+        {activeTab === 'user-journey' && (
+          <UserJourneyDashboard token={token} />
         )}
       </div>
 
@@ -913,11 +978,33 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
               />
               <p className="text-xs text-slate-500">Minimum 6 characters. Leave empty to keep existing password.</p>
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">User Type</label>
+              <select
+                value={editForm.isInternal ? 'internal' : 'real'}
+                onChange={(e) => setEditForm({ ...editForm, isInternal: e.target.value === 'internal' })}
+                className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white"
+              >
+                <option value="real">Real (default)</option>
+                <option value="internal">Internal (test / team account)</option>
+              </select>
+              {editForm.isInternal && !editingUser?.isInternal && editingUser?.signupIp && (
+                <p className="text-xs text-amber-400">
+                  All users registered from the same IP address will also be marked as Internal.
+                </p>
+              )}
+              {editForm.isInternal && !editingUser?.isInternal && !editingUser?.signupIp && (
+                <p className="text-xs text-slate-500">
+                  No signup IP on record — only this user will be marked Internal.
+                </p>
+              )}
+            </div>
             {editingUser && (
-              <div className="p-3 bg-slate-700/30 rounded-lg text-sm text-slate-400">
+              <div className="p-3 bg-slate-700/30 rounded-lg text-sm text-slate-400 space-y-0.5">
                 <p>User ID: {editingUser.id}</p>
                 <p>Created: {formatDate(editingUser.createdAt)}</p>
                 <p>Last Sign In: {editingUser.lastSignIn ? formatDate(editingUser.lastSignIn) : 'Never'}</p>
+                {editingUser.signupIp && <p>Signup IP: {editingUser.signupIp}</p>}
               </div>
             )}
           </div>

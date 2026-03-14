@@ -108,12 +108,13 @@ accountRoutes.post('/register', async (c) => {
 
     if (isNewFlow) {
       const userId = crypto.randomUUID();
+      const signupIp = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || null;
 
       try {
         await pool.query(
-          `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, card_validated, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, false, 'user', $5, 'pending_payment', false, NOW(), NOW())`,
-          [userId, normalizedEmail, name || null, passwordHash, plan]
+          `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, card_validated, signup_ip, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, false, 'user', $5, 'pending_payment', false, $6, NOW(), NOW())`,
+          [userId, normalizedEmail, name || null, passwordHash, plan, signupIp]
         );
       } catch (dbError: any) {
         if (dbError.code === '23505') {
@@ -204,6 +205,7 @@ accountRoutes.post('/register', async (c) => {
     }
 
     const userId = crypto.randomUUID();
+    const signupIpFree = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || null;
 
     const newPlan = isLifetimeDeal ? 'Lifetime' : 'free';
     const newStatus = isLifetimeDeal ? 'active' : 'active';
@@ -211,9 +213,9 @@ accountRoutes.post('/register', async (c) => {
 
     try {
       await pool.query(
-        `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, card_validated, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, true, 'user', $5, $6, $7, NOW(), NOW())`,
-        [userId, normalizedEmail, name || null, passwordHash, newPlan, newStatus, cardValidated]
+        `INSERT INTO users (id, email, full_name, password_hash, email_verified, role, subscription_plan, subscription_status, card_validated, signup_ip, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, true, 'user', $5, $6, $7, $8, NOW(), NOW())`,
+        [userId, normalizedEmail, name || null, passwordHash, newPlan, newStatus, cardValidated, signupIpFree]
       );
     } catch (dbError: any) {
       if (dbError.code === '23505') {

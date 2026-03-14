@@ -15,6 +15,8 @@ export const users = pgTable("users", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   aiUsage: integer("ai_usage").default(0),
   isBlocked: boolean("is_blocked").default(false),
+  isInternal: boolean("is_internal").default(false),
+  signupIp: text("signup_ip"),
   lastSignIn: timestamp("last_sign_in"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -32,6 +34,19 @@ export const users = pgTable("users", {
   createdAtIdx: index("idx_users_created_at").on(table.createdAt),
   isBlockedIdx: index("idx_users_is_blocked").on(table.isBlocked),
 }));
+
+export const adPlatformConnections = pgTable("ad_platform_connections", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  platform: text("platform").notNull().unique(),
+  accountId: text("account_id"),
+  accountName: text("account_name"),
+  credentials: jsonb("credentials").$type<Record<string, string>>(),
+  status: text("status").default("disconnected"),
+  lastError: text("last_error"),
+  lastSynced: timestamp("last_synced"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 export const workspaces = pgTable("workspaces", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

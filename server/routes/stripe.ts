@@ -1293,11 +1293,17 @@ stripe.post('/webhook', async (c) => {
 
             try {
               if (stripeSubscriptionId) {
+                const safeDate = (d: Date | null | undefined): Date | null => {
+                  if (!d) return null;
+                  const t = d.getTime();
+                  if (isNaN(t) || t <= 0) return null;
+                  return d;
+                };
                 await stripePool.query(
                   `INSERT INTO subscriptions (id, user_id, stripe_customer_id, stripe_subscription_id, plan_name, status, trial_end, current_period_end, created_at, updated_at)
                    VALUES (gen_random_uuid(), $1, $2, $3, $4, $7, $5, $6, NOW(), NOW())
                    ON CONFLICT DO NOTHING`,
-                  [activatedUserId, stripeCustomerId, stripeSubscriptionId, planName, trialEnd, currentPeriodEnd, resolvedStatus]
+                  [activatedUserId, stripeCustomerId, stripeSubscriptionId, planName, safeDate(trialEnd), safeDate(currentPeriodEnd), resolvedStatus]
                 );
               }
             } catch (subErr: any) {
@@ -1349,19 +1355,88 @@ stripe.post('/webhook', async (c) => {
 
     if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object;
-      const customerId = invoice.customer;
+      const customerId = typeof invoice.customer === 'string' ? invoice.customer : (invoice.customer as any)?.id;
       const periodEnd = invoice.lines?.data?.[0]?.period?.end;
-      if (customerId && periodEnd) {
+      const amountPaid = (invoice as any).amount_paid || 0;
+      const invoiceId = invoice.id;
+      const currency = (invoice as any).currency || 'usd';
+      const paymentIntentId = typeof (invoice as any).payment_intent === 'string'
+        ? (invoice as any).payment_intent
+        : (invoice as any).payment_intent?.id || null;
+      const receiptUrl = (invoice as any).hosted_invoice_url || null;
+      const subscriptionId = typeof (invoice as any).subscription === 'string'
+        ? (invoice as any).subscription
+        : (invoice as any).subscription?.id || null;
+
+      if (customerId) {
         try {
-          const periodEndDate = new Date(periodEnd * 1000);
-          await stripePool.query(
-            `UPDATE users SET current_period_end = $1, updated_at = NOW() WHERE stripe_customer_id = $2`,
-            [periodEndDate, customerId]
-          );
-          await stripePool.query(
-            `UPDATE subscriptions SET current_period_end = $1, updated_at = NOW() WHERE stripe_customer_id = $2`,
-            [periodEndDate, customerId]
-          );
+          // Update period end on users and subscriptions tables
+          if (periodEnd) {
+            const periodEndDate = new Date(periodEnd * 1000);
+            await stripePool.query(
+              `UPDATE users SET current_period_end = $1, updated_at = NOW() WHERE stripe_customer_id = $2`,
+              [periodEndDate, customerId]
+            );
+            await stripePool.query(
+              `UPDATE subscriptions SET current_period_end = $1, status = 'active', updated_at = NOW() WHERE stripe_customer_id = $2`,
+              [periodEndDate, customerId]
+            );
+          }
+
+          // Record the payment (skip $0 trial invoices)
+          if (amountPaid > 0 && invoiceId) {
+            const userResult = await stripePool.query(
+              `SELECT id FROM users WHERE stripe_customer_id = $1 LIMIT 1`,
+              [customerId]
+            );
+            const userId = userResult.rows[0]?.id || null;
+
+            // Find subscription record id for linking
+            let subRecordId: string | null = null;
+            if (subscriptionId) {
+              const subResult = await stripePool.query(
+                `SELECT id FROM subscriptions WHERE stripe_subscription_id = $1 OR stripe_customer_id = $2 LIMIT 1`,
+                [subscriptionId, customerId]
+              );
+              subRecordId = subResult.rows[0]?.id || null;
+            }
+
+            // Determine plan description from subscription
+            let description = 'Subscription payment';
+            if (userId) {
+              const planResult = await stripePool.query(
+                `SELECT subscription_plan FROM users WHERE id = $1 LIMIT 1`,
+                [userId]
+              );
+              const plan = planResult.rows[0]?.subscription_plan;
+              if (plan) description = `${plan} plan – recurring payment`;
+            }
+
+            await stripePool.query(
+              `INSERT INTO payments (
+                id, user_id, subscription_id, stripe_payment_intent_id, stripe_invoice_id,
+                amount_cents, currency, status, description, receipt_url, paid_at, created_at
+              ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, 'succeeded', $7, $8, NOW(), NOW()
+              )
+              ON CONFLICT (stripe_invoice_id) WHERE stripe_invoice_id IS NOT NULL DO NOTHING`,
+              [userId, subRecordId, paymentIntentId, invoiceId, amountPaid, currency, description, receiptUrl]
+            );
+
+            if (userId) {
+              await logUserEvent(userId, 'payment_received', 'Payment received', description, {
+                amountCents: amountPaid,
+                currency,
+                invoiceId,
+                stripeCustomerId: customerId,
+              });
+            }
+
+            console.log(`[Stripe Webhook] Recorded payment of ${amountPaid} ${currency} for customer ${customerId} (invoice: ${invoiceId})`);
+          } else {
+            console.log(`[Stripe Webhook] Skipping $0 invoice ${invoiceId} for customer ${customerId}`);
+          }
+
           console.log(`[Stripe Webhook] Updated current_period_end for customer ${customerId}`);
         } catch (dbErr: any) {
           console.error('[Stripe Webhook] invoice.payment_succeeded DB update error (non-fatal):', dbErr?.message);
