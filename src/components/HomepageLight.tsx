@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { LTDProductDemo } from './LTDProductDemo';
 import {
   ArrowRight, Zap, Layers, Sparkles, Check, Mail,
   Twitter, Linkedin, Youtube, TrendingUp, Target, Shield, Smartphone,
@@ -157,63 +158,98 @@ function LightHeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: (
   ];
 
   return (
-    <section className="relative bg-white pt-28 md:pt-36 pb-16 px-6">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
-        <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-violet-100 rounded-full blur-3xl opacity-40" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-100 rounded-full blur-3xl opacity-30" />
+    <section className="relative bg-white pt-28 md:pt-32 pb-16 px-6 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-full" style={{ background: 'radial-gradient(ellipse 70% 60% at 0% 40%, rgba(139,92,246,0.06) 0%, transparent 60%)' }} />
+        <div className="absolute top-0 right-0 w-full h-full" style={{ background: 'radial-gradient(ellipse 60% 50% at 100% 20%, rgba(99,102,241,0.05) 0%, transparent 60%)' }} />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-64 bg-violet-50 rounded-full blur-3xl opacity-40" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="text-center max-w-4xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-medium mb-6 border border-violet-200">
-            <Zap className="w-4 h-4" />
-            AI-Powered Google Ads Platform
-          </div>
+        <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6 text-gray-900">
-            Launch optimized campaigns.
-            <br />
-            <span className="text-violet-600">Block click fraud. Monitor All Domains.</span>
-          </h1>
-
-          <p className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Build, optimize, and protect Google Ads campaigns with AI — all in one place.
-            Campaign builder, keyword tools, click fraud protection, domain monitoring & more.
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-4 mb-4">
-            <button
-              onClick={onGetStarted}
-              className="px-8 py-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-2xl font-semibold text-lg shadow-md transition-all flex items-center gap-2"
+          {/* ── LEFT: copy + feature pills ── */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+            className="flex-1 text-center lg:text-left max-w-xl mx-auto lg:mx-0"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-medium mb-6 border border-violet-200"
             >
-              Start Free Trial
-              <ArrowRight className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => onNavigateToPage?.('/demo')}
-              className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl font-semibold text-lg hover:bg-gray-50 active:bg-gray-100 transition-all"
-            >
-              See It In Action
-            </button>
-          </div>
-          <p className="text-sm text-gray-400 mb-10">No credit card required · Cancel anytime</p>
-        </div>
+              <Zap className="w-4 h-4" />
+              AI-Powered Google Ads Platform
+            </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl mx-auto">
-          {heroFeatures.map((feature) => (
-            <div
-              key={feature.title}
-              className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm"
-            >
-              <div className={`shrink-0 w-9 h-9 rounded-lg ${feature.iconBg} flex items-center justify-center`}>
-                <feature.icon className={`w-5 h-5 ${feature.iconColor}`} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-gray-900 text-[13px] leading-tight">{feature.title}</h3>
-                <p className="text-[11px] text-gray-500 leading-snug mt-0.5">{feature.desc}</p>
+            <h1 className="text-4xl md:text-5xl lg:text-[3.2rem] xl:text-6xl font-black leading-tight mb-6 text-gray-900">
+              Launch optimized campaigns.
+              <br />
+              <span className="text-violet-600">Block click fraud. Monitor All Domains.</span>
+            </h1>
+
+            <p className="text-lg text-gray-500 mb-8 leading-relaxed">
+              Build, optimize, and protect Google Ads campaigns with AI — all in one place.
+              Campaign builder, keyword tools, click fraud protection, domain monitoring & more.
+            </p>
+
+            <div className="flex flex-wrap justify-center lg:justify-start gap-4 mb-3">
+              <button
+                onClick={onGetStarted}
+                className="px-8 py-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-2xl font-semibold text-lg shadow-md transition-all flex items-center gap-2"
+              >
+                Start Free Trial
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => onNavigateToPage?.('/demo')}
+                className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl font-semibold text-lg hover:bg-gray-50 active:bg-gray-100 transition-all"
+              >
+                See It In Action
+              </button>
+            </div>
+            <p className="text-sm text-gray-400 mb-8">No credit card required · Cancel anytime</p>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {heroFeatures.map((feature, i) => (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.07, duration: 0.4 }}
+                  className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 shadow-sm"
+                >
+                  <div className={`shrink-0 w-8 h-8 rounded-lg ${feature.iconBg} flex items-center justify-center`}>
+                    <feature.icon className={`w-4 h-4 ${feature.iconColor}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-gray-900 text-[12px] leading-tight">{feature.title}</h3>
+                    <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{feature.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* ── RIGHT: animated product demo ── */}
+          <motion.div
+            initial={{ opacity: 0, x: 30, y: 10 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut', delay: 0.15 }}
+            className="flex-1 w-full max-w-2xl mx-auto lg:mx-0"
+          >
+            <div className="relative">
+              {/* Soft glow behind the demo */}
+              <div className="absolute -inset-4 bg-gradient-to-br from-violet-100 via-indigo-50 to-blue-100 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
+              <div className="relative">
+                <LTDProductDemo theme="light" />
               </div>
             </div>
-          ))}
+          </motion.div>
+
         </div>
       </div>
     </section>

@@ -87,7 +87,7 @@ const CookiePolicy = lazy(() => import('./components/CookiePolicy').then(m => ({
 const GDPRCompliance = lazy(() => import('./components/GDPRCompliance').then(m => ({ default: m.GDPRCompliance })));
 const RefundPolicy = lazy(() => import('./components/RefundPolicy').then(m => ({ default: m.RefundPolicy })));
 const PromoLandingPage = lazy(() => import('./components/PromoLandingPage').then(m => ({ default: m.PromoLandingPage })));
-const LifetimeDealPage = lazy(() => import('./components/LifetimeDealPage').then(m => ({ default: m.LifetimeDealPage })));
+const LifetimeDealABTest = lazy(() => import('./components/LifetimeDealABTest').then(m => ({ default: m.LifetimeDealABTest })));
 const TaskManager = lazy(() => import('./components/TaskManager').then(m => ({ default: m.TaskManager })));
 const CommunityPage = lazy(() => import('./modules/community').then(m => ({ default: m.CommunityPage })));
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then(m => ({ default: m.AcceptInvite })));
@@ -1884,7 +1884,7 @@ const AppContent = () => {
   if (appView === 'lifetime-deal') {
     return (
       <Suspense fallback={<ComponentLoader />}>
-        <LifetimeDealPage
+        <LifetimeDealABTest
           onNavigate={(page) => {
             if (page === 'home') {
               setAppView('homepage');
