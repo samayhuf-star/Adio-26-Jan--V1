@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { ArrowLeft } from 'lucide-react';
 import { Footer } from './Footer';
 
@@ -9,6 +10,24 @@ interface PrivacyPolicyProps {
 export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-white text-gray-600">
+      <Helmet>
+        <title>Privacy Policy - Adiology | How We Handle Your Data</title>
+        <meta name="description" content="Read Adiology's privacy policy to understand how we collect, use, and protect your personal data when you use our Google Ads management platform." />
+        <link rel="canonical" href="https://adiology.io/privacy-policy" />
+        <meta property="og:title" content="Privacy Policy - Adiology" />
+        <meta property="og:description" content="How Adiology collects, uses, and protects your personal data." />
+        <meta property="og:url" content="https://adiology.io/privacy-policy" />
+        <meta property="og:type" content="website" />
+        <meta name="robots" content="index, follow" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "Privacy Policy - Adiology",
+          "description": "Adiology privacy policy covering data collection, use, and protection.",
+          "url": "https://adiology.io/privacy-policy",
+          "isPartOf": { "@type": "WebSite", "name": "Adiology", "url": "https://adiology.io" }
+        })}</script>
+      </Helmet>
       <div className="max-w-4xl mx-auto px-6 py-12">
         <button
           onClick={onBack}

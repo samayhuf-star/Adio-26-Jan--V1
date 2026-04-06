@@ -91,6 +91,27 @@ export default function BlogListing({ onBack, onArticleClick }: BlogListingProps
         <meta property="og:description" content="Expert Google Ads guides and strategies to optimize your campaigns." />
         <meta property="og:url" content="https://adiology.io/blog" />
         <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Blog",
+          "name": "Adiology Blog - Google Ads Tips & Strategies",
+          "description": "Expert Google Ads guides, tips, and strategies to help you optimize campaigns, reduce costs, and increase conversions.",
+          "url": "https://adiology.io/blog",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io",
+            "logo": { "@type": "ImageObject", "url": "https://adiology.io/og-image.png" }
+          },
+          "inLanguage": "en-US",
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://adiology.io" },
+              { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://adiology.io/blog" }
+            ]
+          }
+        })}</script>
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">

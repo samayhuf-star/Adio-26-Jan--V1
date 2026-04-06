@@ -27,6 +27,77 @@
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://a.quora.com" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Reditus affiliate tracking — must be in <head> for installation verification -->
+    <script>(function (w, d, s, p, t) { w.gr = w.gr || function () { w.gr.ce = 60; w.gr.q = w.gr.q || []; w.gr.q.push(arguments); }; p = d.getElementsByTagName(s)[0]; t = d.createElement(s); t.async = true; t.src = "https://script.getreditus.com/v2.js"; p.parentNode.insertBefore(t, p); })(window, document, "script"); gr("initCustomer", "c67e2950-03e1-4d87-8c1d-f1c22451f7ae"); gr("track", "pageview");</script>
+    <!-- Global structured data — visible to all crawlers on every page -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://adiology.io/#organization",
+          "name": "Adiology",
+          "url": "https://adiology.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://adiology.io/og-image.png",
+            "width": 1200,
+            "height": 630
+          },
+          "description": "AI-powered Google Ads campaign management platform. Build, launch and optimise campaigns in minutes with AI-generated keywords, ad copy, click fraud protection and real-time analytics.",
+          "sameAs": [
+            "https://twitter.com/adiology_io",
+            "https://www.linkedin.com/company/adiology"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "url": "https://adiology.io/contact"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://adiology.io/#website",
+          "url": "https://adiology.io",
+          "name": "Adiology",
+          "publisher": { "@id": "https://adiology.io/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": { "@type": "EntryPoint", "urlTemplate": "https://adiology.io/blog?q={search_term_string}" },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://adiology.io/#app",
+          "name": "Adiology",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://adiology.io",
+          "description": "AI-powered Google Ads campaign builder with keyword planner, click fraud protection, domain monitoring, and proxy mail — 8 tools in one platform for PPC professionals.",
+          "publisher": { "@id": "https://adiology.io/#organization" },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "7-day free trial, no credit card required"
+          },
+          "featureList": [
+            "AI Campaign Builder with 13 campaign structures",
+            "Keyword Planner with 1,600+ keyword suggestions",
+            "Click Fraud Protection",
+            "Domain Monitoring with SSL and DNS alerts",
+            "Proxy Mail for anonymous competitor intelligence",
+            "Negative Keyword Manager",
+            "Long-tail Keyword Generator",
+            "Google Ads direct integration"
+          ]
+        }
+      ]
+    }
+    </script>
     <style>
       #root-loader{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);color:#fff;font-family:system-ui,-apple-system,sans-serif}
       #root-loader .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:#818cf8;border-radius:50%;animation:spin .8s linear infinite}
@@ -66,15 +137,6 @@
           affonsoScript.setAttribute('data-cookie_duration', '30');
           document.body.appendChild(affonsoScript);
 
-          // Leadsy — error handled to suppress console noise from missing functions
-          var leadsyScript = document.createElement('script');
-          leadsyScript.async = true;
-          leadsyScript.src = 'https://r2.leadsy.ai/tag.js';
-          leadsyScript.setAttribute('data-pid', 'Vu3b1BtBvDtTny5n');
-          leadsyScript.setAttribute('data-version', '062024');
-          leadsyScript.onerror = function() {};
-          document.body.appendChild(leadsyScript);
-
           // Quora pixel
           (function(q,e,v,n,t,s){
             if(q.qp) return;
@@ -83,8 +145,16 @@
             t=document.createElement(e);t.async=true;t.src=v;
             s=document.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s);
+            t.onload = function() {
+              qp('init','6e638d2afdc441888935886b8f85597f');
+              qp('track','ViewContent');
+              // Fire Purchase event if customer just completed payment
+              if(sessionStorage.getItem('qp_purchase_pending') === '1') {
+                sessionStorage.removeItem('qp_purchase_pending');
+                qp('track','Purchase');
+              }
+            };
           })(window,'script','https://a.quora.com/qevents.js');
-          if(window.qp){qp('init','6e638d2afdc441888935886b8f85597f');qp('track','ViewContent');}
         }
 
         if (document.readyState === 'complete') {

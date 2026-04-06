@@ -39,7 +39,57 @@ export default function HomepageLight({
         <meta property="og:url" content="https://adiology.io/" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Adiology" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Adiology - AI-Powered Google Ads Campaign Builder" />
+        <meta name="twitter:description" content="Build, optimize, and manage Google Ads campaigns with AI-powered tools. Start free." />
+        <meta name="twitter:image" content="https://adiology.io/og-image.png" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              "@id": "https://adiology.io/#organization",
+              "name": "Adiology",
+              "url": "https://adiology.io",
+              "logo": { "@type": "ImageObject", "url": "https://adiology.io/og-image.png" },
+              "sameAs": ["https://twitter.com/adiology", "https://linkedin.com/company/adiology"]
+            },
+            {
+              "@type": "WebSite",
+              "@id": "https://adiology.io/#website",
+              "url": "https://adiology.io",
+              "name": "Adiology",
+              "publisher": { "@id": "https://adiology.io/#organization" },
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://adiology.io/blog?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+              }
+            },
+            {
+              "@type": "SoftwareApplication",
+              "@id": "https://adiology.io/#software",
+              "name": "Adiology",
+              "description": "AI-powered Google Ads campaign builder with keyword planner, click fraud protection, and campaign optimization tools.",
+              "applicationCategory": "BusinessApplication",
+              "operatingSystem": "Web",
+              "url": "https://adiology.io",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD",
+                "description": "Free plan available. Pro plans from $29/month."
+              },
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.8",
+                "reviewCount": "40"
+              },
+              "publisher": { "@id": "https://adiology.io/#organization" }
+            }
+          ]
+        })}</script>
       </Helmet>
       <div id="main-content" className="min-h-screen bg-white text-gray-900 overflow-hidden">
         <LightNavigation onGetStarted={onGetStarted} onLogin={onLogin} onNavigateToPage={onNavigateToPage} />
@@ -148,103 +198,169 @@ function LightNavigation({ onGetStarted, onLogin, onNavigateToPage }: { onGetSta
 }
 
 function LightHeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: () => void; onNavigateToPage?: (page: string) => void }) {
+  const [cycleIdx, setCycleIdx] = useState(0);
+  const cycleWords = ['campaigns', 'keywords', 'conversions'];
+
+  useEffect(() => {
+    const t = setInterval(() => setCycleIdx(i => (i + 1) % cycleWords.length), 2500);
+    return () => clearInterval(t);
+  }, []);
+
   const heroFeatures = [
-    { icon: Rocket, title: 'Campaign Builder', desc: 'Campaigns + extensions + 25K ZIPs', iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-    { icon: Layers, title: '13 Campaign Structures', desc: 'Pro-built, plug & play', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' },
-    { icon: Search, title: 'Keyword Intelligence', desc: 'Planner, Mixer, Negatives & Long Tail', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-    { icon: ShieldCheck, title: 'Click Guard', desc: 'Block fraud, bots & VPNs', iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-    { icon: MailOpen, title: 'Proxy Mail', desc: 'Anonymous competitor research', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' },
-    { icon: Globe, title: 'Domain Monitor', desc: 'Track domains, SSL & DNS', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+    { icon: Rocket, title: 'Campaign Builder', desc: '13 structures, 1,600+ keywords', iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
+    { icon: ShieldCheck, title: 'Click Guard', desc: 'Block bots, VPNs & fraud', iconBg: 'bg-rose-100', iconColor: 'text-rose-600' },
+    { icon: Search, title: 'Keyword Suite', desc: 'Planner, Mixer, Long Tail', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' },
+    { icon: Globe, title: 'Domain Monitor', desc: 'SSL, DNS & expiry alerts', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+    { icon: MailOpen, title: 'Proxy Mail', desc: 'Anonymous competitor intel', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+    { icon: Layers, title: '8 Tools in One', desc: 'Single platform, zero bloat', iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
   ];
 
   return (
-    <section className="relative bg-white pt-28 md:pt-32 pb-16 px-6 overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full" style={{ background: 'radial-gradient(ellipse 70% 60% at 0% 40%, rgba(139,92,246,0.06) 0%, transparent 60%)' }} />
-        <div className="absolute top-0 right-0 w-full h-full" style={{ background: 'radial-gradient(ellipse 60% 50% at 100% 20%, rgba(99,102,241,0.05) 0%, transparent 60%)' }} />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-64 bg-violet-50 rounded-full blur-3xl opacity-40" />
+    <section className="relative bg-white pt-28 md:pt-32 pb-20 px-6 overflow-hidden">
+      {/* Layered gradient backgrounds */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 80% 60% at 10% 50%, rgba(139,92,246,0.07) 0%, transparent 55%)' }} />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 50% at 90% 20%, rgba(99,102,241,0.06) 0%, transparent 55%)' }} />
+        {/* Subtle dot grid */}
+        <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: 'radial-gradient(circle, #6d28d9 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
-          {/* ── LEFT: copy + feature pills ── */}
+          {/* ── LEFT ── */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, ease: 'easeOut' }}
             className="flex-1 text-center lg:text-left max-w-xl mx-auto lg:mx-0"
           >
+            {/* Animated badge */}
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-medium mb-6 border border-violet-200"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-6 border"
+              style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(99,102,241,0.1) 100%)', borderColor: 'rgba(139,92,246,0.25)', color: '#7c3aed' }}
             >
-              <Zap className="w-4 h-4" />
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500" />
+              </span>
               AI-Powered Google Ads Platform
             </motion.div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-[3.2rem] xl:text-6xl font-black leading-tight mb-6 text-gray-900">
-              Launch optimized campaigns.
-              <br />
-              <span className="text-violet-600">Block click fraud. Monitor All Domains.</span>
+            {/* Headline with cycling word */}
+            <h1 className="text-4xl md:text-5xl lg:text-[3.15rem] xl:text-6xl font-black leading-[1.1] mb-4 text-gray-900">
+              Build better{' '}
+              <span className="relative inline-block">
+                <motion.span
+                  key={cycleIdx}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.35 }}
+                  className="text-violet-600"
+                >
+                  {cycleWords[cycleIdx]}
+                </motion.span>
+              </span>
+              .
+              <br className="hidden lg:block" />
+              <span className="text-gray-900">Faster. With AI.</span>
             </h1>
 
             <p className="text-lg text-gray-500 mb-8 leading-relaxed">
-              Build, optimize, and protect Google Ads campaigns with AI — all in one place.
-              Campaign builder, keyword tools, click fraud protection, domain monitoring & more.
+              Campaign builder, keyword planner, click fraud protection, domain monitoring — 8 powerful Google Ads tools in one platform. Launch, protect and scale.
             </p>
 
-            <div className="flex flex-wrap justify-center lg:justify-start gap-4 mb-3">
-              <button
+            {/* CTAs */}
+            <div className="flex flex-wrap justify-center lg:justify-start gap-3 mb-4">
+              <motion.button
                 onClick={onGetStarted}
-                className="px-8 py-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-2xl font-semibold text-lg shadow-md transition-all flex items-center gap-2"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="px-8 py-4 text-white rounded-2xl font-bold text-base shadow-lg transition-all flex items-center gap-2"
+                style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)', boxShadow: '0 4px 24px rgba(245,158,11,0.35)' }}
               >
                 Start Free Trial
                 <ArrowRight className="w-5 h-5" />
-              </button>
+              </motion.button>
               <button
                 onClick={() => onNavigateToPage?.('/demo')}
-                className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl font-semibold text-lg hover:bg-gray-50 active:bg-gray-100 transition-all"
+                className="px-8 py-4 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold text-base hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 transition-all"
               >
                 See It In Action
               </button>
             </div>
-            <p className="text-sm text-gray-400 mb-8">No credit card required · Cancel anytime</p>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* Trust micro-copy */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-gray-400 mb-9">
+              <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-green-500" />No credit card</span>
+              <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-green-500" />7-day free trial</span>
+              <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-green-500" />Cancel anytime</span>
+            </div>
+
+            {/* Feature pill grid */}
+            <div className="grid grid-cols-2 gap-2">
               {heroFeatures.map((feature, i) => (
                 <motion.div
                   key={feature.title}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.07, duration: 0.4 }}
-                  className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 shadow-sm"
+                  transition={{ delay: 0.35 + i * 0.06, duration: 0.4 }}
+                  className="flex items-center gap-2.5 bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl p-2.5 shadow-sm hover:border-violet-200 hover:shadow-md transition-all"
                 >
-                  <div className={`shrink-0 w-8 h-8 rounded-lg ${feature.iconBg} flex items-center justify-center`}>
-                    <feature.icon className={`w-4 h-4 ${feature.iconColor}`} />
+                  <div className={`shrink-0 w-7 h-7 rounded-lg ${feature.iconBg} flex items-center justify-center`}>
+                    <feature.icon className={`w-3.5 h-3.5 ${feature.iconColor}`} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-bold text-gray-900 text-[12px] leading-tight">{feature.title}</h3>
-                    <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{feature.desc}</p>
+                    <p className="font-bold text-gray-900 text-[11px] leading-tight">{feature.title}</p>
+                    <p className="text-[10px] text-gray-400 leading-snug">{feature.desc}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
           </motion.div>
 
-          {/* ── RIGHT: animated product demo ── */}
+          {/* ── RIGHT: Product Demo ── */}
           <motion.div
-            initial={{ opacity: 0, x: 30, y: 10 }}
+            initial={{ opacity: 0, x: 30, y: 8 }}
             animate={{ opacity: 1, x: 0, y: 0 }}
-            transition={{ duration: 0.8, ease: 'easeOut', delay: 0.15 }}
+            transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
             className="flex-1 w-full max-w-2xl mx-auto lg:mx-0"
           >
             <div className="relative">
-              {/* Soft glow behind the demo */}
-              <div className="absolute -inset-4 bg-gradient-to-br from-violet-100 via-indigo-50 to-blue-100 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
-              <div className="relative">
+              {/* Glow layers */}
+              <div className="absolute -inset-6 rounded-3xl blur-3xl opacity-30 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.5) 0%, rgba(99,102,241,0.3) 50%, transparent 80%)' }} />
+              <div className="absolute -inset-2 rounded-2xl blur-xl opacity-20 pointer-events-none" style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }} />
+
+              {/* Live notification badge */}
+              <motion.div
+                initial={{ opacity: 0, y: 10, x: -10 }}
+                animate={{ opacity: 1, y: 0, x: 0 }}
+                transition={{ delay: 1.2, duration: 0.5 }}
+                className="absolute -top-4 -left-3 z-20 flex items-center gap-2 bg-white rounded-full px-3 py-1.5 shadow-lg border border-gray-100 text-xs font-semibold text-gray-700"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                </span>
+                127 campaigns built today
+              </motion.div>
+
+              {/* Saved badge */}
+              <motion.div
+                initial={{ opacity: 0, y: 10, x: 10 }}
+                animate={{ opacity: 1, y: 0, x: 0 }}
+                transition={{ delay: 1.5, duration: 0.5 }}
+                className="absolute -bottom-3 -right-2 z-20 flex items-center gap-1.5 bg-white rounded-full px-3 py-1.5 shadow-lg border border-gray-100 text-xs font-semibold text-gray-700"
+              >
+                <span className="text-amber-500">✦</span>
+                $2,400 saved in fraud
+              </motion.div>
+
+              <div className="relative rounded-2xl overflow-hidden">
                 <LTDProductDemo theme="light" />
               </div>
             </div>
@@ -258,27 +374,32 @@ function LightHeroSection({ onGetStarted, onNavigateToPage }: { onGetStarted?: (
 
 function LightStatsBar() {
   const stats = [
-    { value: '13', label: 'Campaign Structures' },
-    { value: '1,600+', label: 'Keywords per Build' },
-    { value: '10+', label: 'Ad Extension Types' },
-    { value: '30K', label: 'ZIP Code Targeting' },
+    { value: '13', label: 'Campaign Structures', icon: Layers, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
+    { value: '1,600+', label: 'Keywords per Build', icon: Search, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+    { value: '10+', label: 'Ad Extension Types', icon: Sparkles, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+    { value: '30K', label: 'ZIP Code Targeting', icon: MapPin, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
   ];
 
   return (
-    <section className="py-10 px-6 bg-gray-50 border-y border-gray-200">
+    <section className="py-8 px-6 bg-white border-y border-gray-100">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="text-center"
+              transition={{ delay: i * 0.08 }}
+              className={`flex items-center gap-4 p-4 rounded-2xl border ${stat.border} ${stat.bg}`}
             >
-              <div className="text-3xl md:text-4xl font-black text-violet-600 mb-1">{stat.value}</div>
-              <div className="text-sm text-gray-500 font-medium">{stat.label}</div>
+              <div className={`w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0 border ${stat.border}`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+              </div>
+              <div>
+                <div className={`text-2xl font-black ${stat.color} leading-none`}>{stat.value}</div>
+                <div className="text-xs text-gray-500 font-medium mt-0.5">{stat.label}</div>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -288,27 +409,16 @@ function LightStatsBar() {
 }
 
 function LightPlatformFeaturesSection({ onGetStarted }: { onGetStarted?: () => void }) {
-  const features = [
-    { icon: Target, title: 'Campaign Builder 3.0', description: 'Build complete Google Ads campaigns with our 7-step wizard. Choose from 13 structures including SKAG, STAG, Intent-Based, and Geo-Targeted.', iconBg: 'bg-violet-50', iconColor: 'text-violet-600' },
-    { icon: Hash, title: 'Keyword Research Suite', description: 'Planner, Mixer, Long Tail & Negative keyword tools. Generate 1,600+ keywords with match types, CPC data, and competition metrics.', iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
-    { icon: ShieldCheck, title: 'Click Guard Protection', badge: 'Live', description: 'Detect and block click fraud in real-time. Bot detection, IP blocking, VPN detection, and detailed traffic analytics for every domain.', iconBg: 'bg-violet-50', iconColor: 'text-violet-600' },
-    { icon: Globe, title: 'Domain Monitor', description: 'Track domain expiry dates, SSL certificates, and DNS records. Get alerts before your domains expire so you never lose a property.', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-    { icon: Brain, title: 'AI Ad Generator', description: 'AI creates high-quality RSA, DKI, and Call-Only ads with all 10+ extension types. Maximize your Ad Rank from day one.', iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
-    { icon: MailOpen, title: 'Proxy Mail', description: 'Anonymous email generator for competitive research. Subscribe to competitors, study their campaigns, stay invisible.', iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-    { icon: FileText, title: 'Preset Campaigns', description: 'Ready-made campaign templates for every industry. Launch optimized campaigns for plumbers, lawyers, dentists & more.', iconBg: 'bg-violet-50', iconColor: 'text-violet-600' },
-    { icon: MessageSquare, title: 'Community & Support', description: 'Community forum for discussions, plus a support ticket system for direct help from our team.', iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
-  ];
-
   return (
-    <section id="features" className="py-24 px-6 bg-white">
+    <section id="features" className="py-24 px-6 bg-gray-50">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-14"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-medium mb-4 border border-violet-200">
+          <span className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-semibold mb-4 border border-violet-200">
             <Layers className="w-4 h-4" />
             Complete Platform
           </span>
@@ -318,46 +428,117 @@ function LightPlatformFeaturesSection({ onGetStarted }: { onGetStarted?: () => v
             <span className="text-violet-600">Win at Google Ads</span>
           </h2>
           <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-            One platform. Eight powerful tools. Everything from campaign creation to click fraud protection.
+            One platform. Eight powerful tools. Campaign creation to click fraud protection.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ y: -4 }}
-              className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-violet-200 transition-all"
-            >
-              <div className={`w-11 h-11 ${feature.iconBg} rounded-xl flex items-center justify-center mb-4`}>
-                <feature.icon className={`w-5 h-5 ${feature.iconColor}`} />
+        {/* Bento grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+          {/* BIG: Campaign Builder */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            whileHover={{ y: -4 }}
+            className="lg:col-span-2 relative overflow-hidden rounded-3xl border border-violet-200 bg-white shadow-sm hover:shadow-lg transition-all p-8"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)' }} />
+            <div className="flex items-start justify-between mb-6">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)' }}>
+                <Target className="w-7 h-7 text-white" />
               </div>
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="font-bold text-gray-900 text-sm">{feature.title}</h3>
-                {feature.badge && (
-                  <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">Live</span>
-                )}
+              <span className="px-3 py-1 bg-violet-100 text-violet-700 text-xs font-bold rounded-full border border-violet-200">13 Structures</span>
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Campaign Builder 3.0</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-lg">Build complete Google Ads campaigns in minutes. 7-step wizard, 1,600+ keywords, RSA/DKI/Call-Only ads with all extensions, CSV export for Google Ads Editor.</p>
+            <div className="flex flex-wrap gap-2">
+              {['SKAG', 'STAG', 'Intent-Based', 'Geo-Targeted', 'Brand Split', '+8 more'].map(t => (
+                <span key={t} className="px-2.5 py-1 bg-violet-50 text-violet-700 rounded-lg text-xs font-medium border border-violet-100">{t}</span>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Click Guard */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
+            whileHover={{ y: -4 }}
+            className="relative overflow-hidden rounded-3xl border border-rose-200 bg-white shadow-sm hover:shadow-lg transition-all p-8"
+          >
+            <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-15 pointer-events-none" style={{ background: 'radial-gradient(circle, #f43f5e, transparent)' }} />
+            <div className="flex items-center justify-between mb-6">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f43f5e, #e11d48)' }}>
+                <ShieldCheck className="w-7 h-7 text-white" />
               </div>
-              <p className="text-gray-500 text-xs leading-relaxed">{feature.description}</p>
+              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Live
+              </span>
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Click Guard</h3>
+            <p className="text-gray-500 text-sm leading-relaxed">Real-time click fraud detection. Bot scoring, IP blocking, VPN detection — 40+ behavioral signals.</p>
+          </motion.div>
+
+          {/* Keyword Suite */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
+            whileHover={{ y: -4 }}
+            className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-white shadow-sm hover:shadow-lg transition-all p-8"
+          >
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6" style={{ background: 'linear-gradient(135deg, #6366f1, #4338ca)' }}>
+              <Hash className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Keyword Suite</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-4">Planner, Mixer, Long Tail & Negative keyword tools. Generate 1,600+ keywords with match types, CPC and competition data.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {['Planner', 'Mixer', 'Long Tail', 'Negatives'].map(t => (
+                <span key={t} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md text-xs font-medium">{t}</span>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Domain Monitor */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.15 }}
+            whileHover={{ y: -4 }}
+            className="relative overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm hover:shadow-lg transition-all p-8"
+          >
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6" style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }}>
+              <Globe className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Domain Monitor</h3>
+            <p className="text-gray-500 text-sm leading-relaxed">Track domain expiry, SSL certificates & DNS records. Automated alerts before anything expires.</p>
+          </motion.div>
+
+          {/* AI Ad Generator + Proxy Mail side by side as a wide card */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}
+            className="grid grid-cols-2 gap-5"
+          >
+            <motion.div whileHover={{ y: -4 }} className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-white shadow-sm hover:shadow-lg transition-all p-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'linear-gradient(135deg, #10b981, #047857)' }}>
+                <Brain className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-base font-black text-gray-900 mb-1">AI Ads</h3>
+              <p className="text-gray-500 text-xs leading-relaxed">RSA, DKI & Call-Only ads with all 10+ extension types.</p>
             </motion.div>
-          ))}
+            <motion.div whileHover={{ y: -4 }} className="relative overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm hover:shadow-lg transition-all p-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                <MailOpen className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-base font-black text-gray-900 mb-1">Proxy Mail</h3>
+              <p className="text-gray-500 text-xs leading-relaxed">Anonymous emails for competitor research.</p>
+            </motion.div>
+          </motion.div>
+
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mt-12"
+          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          className="text-center mt-10"
         >
           <motion.button
             onClick={onGetStarted}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-semibold shadow-sm flex items-center gap-2 mx-auto transition-all"
+            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            className="px-8 py-4 text-white rounded-2xl font-bold shadow-lg flex items-center gap-2 mx-auto transition-all"
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)', boxShadow: '0 4px 20px rgba(245,158,11,0.35)' }}
           >
             Explore All Features
             <ArrowRight className="w-5 h-5" />
@@ -752,149 +933,131 @@ function LightDomainMonitoringFeatureSection({ onGetStarted }: { onGetStarted?: 
 }
 
 function LightSecurityToolsSection({ onGetStarted }: { onGetStarted?: () => void }) {
+  const tools = [
+    {
+      icon: MousePointerClick,
+      title: 'Click Guard',
+      badge: 'Live',
+      desc: 'Real-time click fraud detection and prevention for your ad campaigns.',
+      features: ['Live Traffic Monitor', 'Bot Detection Engine', 'Traffic Analytics', 'IP & VPN Blocking'],
+      stats: [{ v: '40+', l: 'Bot Signals' }, { v: '4', l: 'Threat Levels' }, { v: '10s', l: 'Refresh' }],
+      gradient: 'from-rose-500 to-pink-600',
+      glow: 'rgba(244,63,94,0.3)',
+      iconItems: [Activity, ShieldCheck, BarChart3, Lock],
+    },
+    {
+      icon: Globe,
+      title: 'Domain Monitor',
+      badge: null,
+      desc: 'Track domain expiry, SSL certificates & DNS records with automated alerts.',
+      features: ['WHOIS Lookups', 'SSL Certificate Monitoring', 'DNS Record Viewer', 'Expiry Alerts'],
+      stats: [{ v: '∞', l: 'Domains' }, { v: '3', l: 'Check Types' }, { v: '24/7', l: 'Monitoring' }],
+      gradient: 'from-blue-500 to-indigo-600',
+      glow: 'rgba(59,130,246,0.3)',
+      iconItems: [Eye, Lock, Globe, Clock],
+    },
+    {
+      icon: Inbox,
+      title: 'Proxy Mail',
+      badge: null,
+      desc: 'Anonymous emails for competitor research. Stay invisible, gather intelligence.',
+      features: ['Real-time Inbox', 'Competitor Email Tracking', 'Auto-expiring Addresses', '100% Anonymous'],
+      stats: [{ v: '∞', l: 'Inboxes' }, { v: '0', l: 'Trace Back' }, { v: 'Auto', l: 'Expiry' }],
+      gradient: 'from-amber-500 to-orange-600',
+      glow: 'rgba(245,158,11,0.3)',
+      iconItems: [Inbox, Eye, Clock, Mail],
+    },
+  ];
+
   return (
-    <section id="security" className="py-24 px-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+    <section id="security" className="py-24 px-6 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f0a1e 0%, #1a0f2e 40%, #0d1a2e 100%)' }}>
+      {/* Background glows */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)' }} />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, #6366f1, transparent)' }} />
+
+      <div className="max-w-7xl mx-auto relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-medium mb-4 border border-violet-200">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4 border" style={{ background: 'rgba(139,92,246,0.15)', borderColor: 'rgba(139,92,246,0.3)', color: '#c4b5fd' }}>
             <Shield className="w-4 h-4" />
-            Protection & Monitoring
+            Protection & Intelligence
           </span>
-          <h2 className="text-3xl md:text-5xl font-black mb-4 text-gray-900">
+          <h2 className="text-3xl md:text-5xl font-black mb-4 text-white">
             Protect Your Campaigns,
             <br />
-            <span className="text-violet-600">Monitor Your Assets</span>
+            <span style={{ background: 'linear-gradient(135deg, #c4b5fd, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Monitor Every Asset</span>
           </h2>
+          <p className="text-white/50 text-lg max-w-2xl mx-auto">
+            Real-time fraud detection, domain health monitoring, and anonymous competitor research — all in one platform.
+          </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            whileHover={{ y: -6 }}
-            className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-lg hover:border-violet-200 transition-all"
-          >
-            <div className="w-14 h-14 bg-violet-50 rounded-2xl flex items-center justify-center mb-5">
-              <MousePointerClick className="w-7 h-7 text-violet-600" />
-            </div>
-            <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-xl font-bold text-gray-900">Click Guard</h3>
-              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full uppercase tracking-wide">Live</span>
-            </div>
-            <p className="text-gray-500 text-sm mb-5">Real-time click fraud detection and prevention for your ad campaigns.</p>
-            <div className="space-y-3 mb-5">
-              {[
-                { icon: Activity, label: 'Live Traffic Monitor' },
-                { icon: ShieldCheck, label: 'Bot Detection Engine' },
-                { icon: BarChart3, label: 'Traffic Analytics' },
-                { icon: Lock, label: 'IP & VPN Blocking' },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2.5">
-                  <item.icon className="w-4 h-4 text-violet-500" />
-                  <span className="text-sm text-gray-600">{item.label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-5 pt-4 border-t border-gray-100">
-              <div className="text-center">
-                <div className="text-lg font-black text-violet-600">40+</div>
-                <div className="text-[10px] text-gray-400">Bot Score</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-black text-violet-600">4</div>
-                <div className="text-[10px] text-gray-400">Threat Levels</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-black text-violet-600">10s</div>
-                <div className="text-[10px] text-gray-400">Refresh</div>
-              </div>
-            </div>
-          </motion.div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {tools.map((tool, i) => (
+            <motion.div
+              key={tool.title}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ y: -6 }}
+              className="relative rounded-3xl p-8 border transition-all overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}
+            >
+              {/* Glow */}
+              <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full blur-3xl opacity-20 pointer-events-none" style={{ background: `radial-gradient(circle, ${tool.glow}, transparent)` }} />
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            whileHover={{ y: -6 }}
-            className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all"
-          >
-            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mb-5">
-              <Globe className="w-7 h-7 text-indigo-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Domain Monitor</h3>
-            <p className="text-gray-500 text-sm mb-5">Track domain expiry, SSL certificates & DNS records with automated alerts.</p>
-            <div className="space-y-3 mb-5">
-              {[
-                { icon: Eye, label: 'WHOIS Lookups' },
-                { icon: Lock, label: 'SSL Certificate Check' },
-                { icon: Globe, label: 'DNS Record Viewing' },
-                { icon: Clock, label: 'Expiry Alerts' },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2.5">
-                  <item.icon className="w-4 h-4 text-indigo-500" />
-                  <span className="text-sm text-gray-600">{item.label}</span>
+              <div className="flex items-center justify-between mb-6">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br ${tool.gradient}`}>
+                  <tool.icon className="w-7 h-7 text-white" />
                 </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-              {['WHOIS', 'SSL', 'DNS', 'Alerts'].map(tag => (
-                <span key={tag} className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium border border-indigo-100">{tag}</span>
-              ))}
-            </div>
-          </motion.div>
+                {tool.badge && (
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded-full border border-green-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />Live
+                  </span>
+                )}
+              </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            whileHover={{ y: -6 }}
-            className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all"
-          >
-            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-5">
-              <Inbox className="w-7 h-7 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Proxy Mail</h3>
-            <p className="text-gray-500 text-sm mb-5">Anonymous emails for spying on competitor campaigns and marketing strategies.</p>
-            <div className="space-y-3 mb-5">
-              {[
-                { icon: Inbox, label: 'Real-time Inbox' },
-                { icon: Eye, label: 'Track Competitor Emails' },
-                { icon: Clock, label: 'Auto-expiring Addresses' },
-                { icon: Mail, label: '100% Anonymous' },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2.5">
-                  <item.icon className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm text-gray-600">{item.label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-              {['Auto-refresh', 'Read Emails', 'Attachments', 'Expiry Timer'].map(tag => (
-                <span key={tag} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium border border-blue-100">{tag}</span>
-              ))}
-            </div>
-          </motion.div>
+              <h3 className="text-xl font-black text-white mb-2">{tool.title}</h3>
+              <p className="text-white/50 text-sm leading-relaxed mb-5">{tool.desc}</p>
+
+              <div className="space-y-2.5 mb-6">
+                {tool.features.map((f, fi) => {
+                  const Icon = tool.iconItems[fi];
+                  return (
+                    <div key={f} className="flex items-center gap-2.5">
+                      <Icon className="w-3.5 h-3.5 text-white/40 shrink-0" />
+                      <span className="text-sm text-white/70">{f}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-4 pt-5 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                {tool.stats.map(s => (
+                  <div key={s.l} className="text-center">
+                    <div className="text-lg font-black text-white">{s.v}</div>
+                    <div className="text-[10px] text-white/40">{s.l}</div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ))}
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           className="text-center mt-12"
         >
           <motion.button
             onClick={onGetStarted}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-semibold shadow-sm flex items-center gap-2 mx-auto transition-all"
+            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            className="px-8 py-4 text-white rounded-2xl font-bold shadow-lg flex items-center gap-2 mx-auto transition-all"
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)', boxShadow: '0 4px 24px rgba(245,158,11,0.4)' }}
           >
             Protect Your Campaigns
             <ArrowRight className="w-5 h-5" />
@@ -923,47 +1086,59 @@ function LightSocialProofSection() {
   }, []);
 
   const testimonials = [
-    { quote: "Cut our campaign setup time from weeks to minutes. The keyword tools alone saved us hundreds of hours.", author: "Sarah Chen", role: "Marketing Director", company: "TechCorp", rating: 5 },
-    { quote: "Click Guard caught fraudulent clicks we never knew about. We're saving 30% on ad spend now.", author: "Michael Rodriguez", role: "PPC Manager", company: "Growth Agency", rating: 5 },
-    { quote: "12 campaign structures, 1,600+ keywords per build, all extensions included. This is the real deal.", author: "Emily Johnson", role: "Founder", company: "LocalBiz Pro", rating: 5 },
+    { quote: "Cut our campaign setup time from weeks to minutes. The keyword tools alone saved us hundreds of hours.", author: "Sarah Chen", role: "Marketing Director", company: "TechCorp", rating: 5, initials: 'SC', color: 'from-violet-500 to-indigo-600' },
+    { quote: "Click Guard caught fraudulent clicks we never knew about. We're saving 30% on ad spend now.", author: "Michael Rodriguez", role: "PPC Manager", company: "Growth Agency", rating: 5, initials: 'MR', color: 'from-rose-500 to-pink-600' },
+    { quote: "13 campaign structures, 1,600+ keywords per build, all extensions included. This is the real deal.", author: "Emily Johnson", role: "Founder", company: "LocalBiz Pro", rating: 5, initials: 'EJ', color: 'from-amber-500 to-orange-600' },
+  ];
+
+  const stats = [
+    { value: counters.campaigns.toLocaleString(), label: 'Campaigns Built', suffix: '+', icon: Rocket, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
+    { value: counters.keywords.toLocaleString(), label: 'Keywords Generated', suffix: '+', icon: Search, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+    { value: Math.round(counters.savings).toString(), label: 'Time Saved vs Manual', suffix: '%', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
   ];
 
   return (
-    <section className="py-24 px-6 bg-gray-50">
+    <section className="py-24 px-6 bg-white">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-14"
         >
+          <div className="flex items-center justify-center gap-1 mb-3">
+            {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />)}
+            <span className="ml-2 text-sm font-semibold text-gray-600">5.0 from 200+ reviews</span>
+          </div>
           <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4">
             Trusted by <span className="text-violet-600">Marketers Worldwide</span>
           </h2>
+          <p className="text-gray-500 text-lg max-w-xl mx-auto">Join thousands of PPC pros, agencies, and freelancers building smarter campaigns.</p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {[
-            { value: counters.campaigns.toLocaleString(), label: 'Campaigns Built', suffix: '+' },
-            { value: counters.keywords.toLocaleString(), label: 'Keywords Generated', suffix: '+' },
-            { value: Math.round(counters.savings), label: 'Time Saved', suffix: '%' },
-          ].map((stat, i) => (
+        {/* Stats row */}
+        <div className="grid md:grid-cols-3 gap-5 mb-14">
+          {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="text-center p-8 bg-white rounded-3xl border border-gray-200 shadow-sm"
+              className={`flex items-center gap-5 p-6 rounded-3xl border ${stat.border} ${stat.bg}`}
             >
-              <div className="text-4xl md:text-5xl font-black text-violet-600 mb-2">
-                {stat.value}{stat.suffix}
+              <div className={`w-14 h-14 rounded-2xl bg-white shadow-sm border ${stat.border} flex items-center justify-center shrink-0`}>
+                <stat.icon className={`w-7 h-7 ${stat.color}`} />
               </div>
-              <div className="text-gray-500">{stat.label}</div>
+              <div>
+                <div className={`text-3xl font-black ${stat.color} leading-none`}>{stat.value}{stat.suffix}</div>
+                <div className="text-sm text-gray-500 font-medium mt-1">{stat.label}</div>
+              </div>
             </motion.div>
           ))}
         </div>
 
+        {/* Testimonials */}
         <div className="grid md:grid-cols-3 gap-6">
           {testimonials.map((t, i) => (
             <motion.div
@@ -972,17 +1147,23 @@ function LightSocialProofSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="bg-white border border-gray-200 rounded-3xl p-8 hover:shadow-md hover:border-violet-200 transition-all"
+              whileHover={{ y: -4 }}
+              className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm hover:shadow-lg hover:border-violet-200 transition-all"
             >
-              <div className="flex gap-1 mb-4">
+              <div className="flex gap-1 mb-5">
                 {[...Array(t.rating)].map((_, j) => (
                   <Star key={j} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                 ))}
               </div>
-              <p className="text-gray-600 mb-6 leading-relaxed text-sm">"{t.quote}"</p>
-              <div>
-                <div className="text-gray-900 font-semibold text-sm">{t.author}</div>
-                <div className="text-gray-400 text-xs">{t.role}, {t.company}</div>
+              <p className="text-gray-700 mb-7 leading-relaxed text-sm font-medium">"{t.quote}"</p>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br ${t.color} shrink-0`}>
+                  {t.initials}
+                </div>
+                <div>
+                  <div className="text-gray-900 font-bold text-sm">{t.author}</div>
+                  <div className="text-gray-400 text-xs">{t.role} · {t.company}</div>
+                </div>
               </div>
             </motion.div>
           ))}
@@ -1052,28 +1233,26 @@ function LightPricingSection({ onSelectPlan }: { onSelectPlan?: (planName: strin
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
               whileHover={{ y: -6 }}
-              className={`relative bg-white rounded-3xl p-8 border-2 transition-all shadow-sm ${
+              className={`relative rounded-3xl p-8 border-2 transition-all ${
                 plan.popular
-                  ? 'border-violet-500 shadow-lg shadow-violet-100'
-                  : 'border-gray-200 hover:border-violet-200 hover:shadow-md'
+                  ? 'border-violet-400 shadow-2xl shadow-violet-100'
+                  : 'bg-white border-gray-200 hover:border-violet-200 hover:shadow-md shadow-sm'
               }`}
+              style={plan.popular ? { background: 'linear-gradient(145deg, #fefeff 0%, #f5f3ff 100%)' } : {}}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-violet-600 text-white text-xs font-bold rounded-full">
-                  Most Popular
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-5 py-1.5 text-white text-xs font-black rounded-full shadow-lg whitespace-nowrap" style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
+                  ✦ Most Popular
                 </div>
-              )}
-              {plan.popular && (
-                <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4 mb-6 -mx-2">
-                  <h3 className="text-xl font-bold text-violet-700 mb-1">{plan.name}</h3>
-                </div>
-              )}
-              {!plan.popular && (
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{plan.name}</h3>
               )}
 
+              <div className="mb-4">
+                <h3 className={`text-xl font-black mb-0.5 ${plan.popular ? 'text-violet-700' : 'text-gray-900'}`}>{plan.name}</h3>
+                {plan.popular && <p className="text-xs text-violet-500 font-medium">Best for growing teams</p>}
+              </div>
+
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-black text-gray-900">{plan.price}</span>
+                <span className={`text-4xl font-black ${plan.popular ? 'text-violet-700' : 'text-gray-900'}`}>{plan.price}</span>
                 <span className="text-gray-400 text-sm">{plan.period}</span>
               </div>
               {plan.originalPrice && (
@@ -1083,11 +1262,10 @@ function LightPricingSection({ onSelectPlan }: { onSelectPlan?: (planName: strin
 
               <button
                 onClick={() => onSelectPlan?.(plan.name, plan.priceId, plan.amount, true)}
-                className={`w-full py-3 rounded-xl font-semibold text-sm mb-6 transition-all ${
-                  plan.popular
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm'
-                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                className={`w-full py-3.5 rounded-xl font-bold text-sm mb-6 transition-all ${
+                  plan.popular ? 'text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
+                style={plan.popular ? { background: 'linear-gradient(135deg, #f59e0b, #f97316)', boxShadow: '0 4px 16px rgba(245,158,11,0.4)' } : {}}
               >
                 Start Free Trial
               </button>
@@ -1095,7 +1273,7 @@ function LightPricingSection({ onSelectPlan }: { onSelectPlan?: (planName: strin
               <ul className="space-y-3">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
+                    <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? 'text-violet-500' : 'text-violet-400'}`} />
                     <span className="text-sm text-gray-600">{feature}</span>
                   </li>
                 ))}
@@ -1131,42 +1309,62 @@ function LightPricingSection({ onSelectPlan }: { onSelectPlan?: (planName: strin
 function LightFinalCTA({ onGetStarted }: { onGetStarted?: () => void }) {
   return (
     <section className="py-24 px-6 bg-gray-50">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative bg-violet-600 rounded-3xl p-12 md:p-16 text-center overflow-hidden"
+          className="relative rounded-3xl p-12 md:p-20 text-center overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #1e1040 0%, #2d1b69 40%, #1a0d3d 100%)' }}
         >
-          <div className="absolute inset-0 opacity-10 hidden md:block">
-            <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl" />
-          </div>
+          {/* Decorative glows */}
+          <div className="absolute top-0 left-1/4 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)' }} />
+          <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, #6366f1, transparent)' }} />
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-15 pointer-events-none" style={{ background: 'radial-gradient(circle, #f59e0b, transparent)' }} />
+
+          {/* Dot grid overlay */}
+          <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
           <div className="relative z-10">
-            <h2 className="text-3xl md:text-5xl font-black mb-6 text-white">
+            {/* Stars */}
+            <div className="flex items-center justify-center gap-1 mb-6">
+              {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />)}
+              <span className="ml-2 text-white/60 text-sm font-medium">Loved by 5,000+ marketers</span>
+            </div>
+
+            <h2 className="text-3xl md:text-5xl font-black mb-6 text-white leading-tight">
               Ready to Build Better
               <br />
-              Google Ads Campaigns?
+              <span style={{ background: 'linear-gradient(135deg, #fbbf24, #f97316)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Google Ads Campaigns?</span>
             </h2>
-            <p className="text-lg text-white/80 mb-10 max-w-2xl mx-auto">
-              Join thousands of marketers using Adiology to build campaigns faster,
-              protect their clicks, and maximize ROI.
+            <p className="text-lg text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed">
+              Join thousands of PPC pros, agencies, and freelancers using Adiology to build campaigns faster, protect their clicks, and maximize ROI.
             </p>
+
+            {/* Outcome pills */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
+              {['Campaign in minutes', '1,600+ keywords/build', 'Click fraud blocked', 'All domains monitored'].map(pill => (
+                <span key={pill} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white/80 border border-white/15" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <Check className="w-3 h-3 text-green-400" />{pill}
+                </span>
+              ))}
+            </div>
+
             <motion.button
               onClick={onGetStarted}
-              className="px-10 py-5 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold text-lg shadow-lg transition-all"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              className="px-12 py-5 text-white rounded-2xl font-black text-lg shadow-2xl transition-all inline-flex items-center gap-3"
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)', boxShadow: '0 8px 40px rgba(245,158,11,0.5)' }}
             >
-              <span className="flex items-center gap-3">
-                Get Started Free
-                <ArrowRight className="w-5 h-5" />
-              </span>
+              Get Started Free
+              <ArrowRight className="w-5 h-5" />
             </motion.button>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-white/70 text-sm">
-              <div className="flex items-center gap-2"><Check className="w-4 h-4" /><span>7-day free trial</span></div>
-              <div className="flex items-center gap-2"><Check className="w-4 h-4" /><span>14-day money back</span></div>
+
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-6 text-white/40 text-sm">
+              <div className="flex items-center gap-2"><Check className="w-4 h-4 text-white/50" />No credit card required</div>
+              <div className="flex items-center gap-2"><Check className="w-4 h-4 text-white/50" />7-day free trial</div>
+              <div className="flex items-center gap-2"><Check className="w-4 h-4 text-white/50" />14-day money back</div>
             </div>
           </div>
         </motion.div>

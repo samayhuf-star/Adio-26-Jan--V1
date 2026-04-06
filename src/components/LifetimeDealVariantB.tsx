@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { captureLead } from '../utils/leadCapture';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import {
@@ -36,6 +37,12 @@ export function LifetimeDealVariantB({ onNavigate }: Props) {
       setCheckoutEmail(storedEmail);
       setShowSuccess(true);
       window.history.replaceState({}, '', window.location.pathname);
+      // Quora Purchase pixel — fires immediately if pixel loaded, or via onload handler in index.html
+      sessionStorage.setItem('qp_purchase_pending', '1');
+      if (typeof (window as any).qp === 'function') {
+        (window as any).qp('track', 'Purchase');
+        sessionStorage.removeItem('qp_purchase_pending');
+      }
     }
   }, []);
 
@@ -84,7 +91,7 @@ export function LifetimeDealVariantB({ onNavigate }: Props) {
     e.preventDefault();
     const trimmed = email.trim();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailError('Please enter a valid email address.'); return; }
-    fetch('/api/leads/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: trimmed, source: 'lifetime_deal_b', page: window.location.pathname }) }).catch(() => {});
+    captureLead(trimmed, 'lifetime_deal', { variant: 'B' });
     processCheckout(trimmed);
   };
 
@@ -133,9 +140,32 @@ export function LifetimeDealVariantB({ onNavigate }: Props) {
         <title>Adiology Lifetime Deal — Stop Paying Monthly for Google Ads Tools</title>
         <meta name="description" content="Stop paying $99–300/mo for Google Ads tools. Get lifetime access to Adiology's complete 8-tool platform for a one-time $99. Campaign builder, click fraud protection, keyword planner and more." />
         <link rel="canonical" href="https://adiology.io/lifetime-deal" />
+        <meta property="og:title" content="Adiology Lifetime Deal - $99 One-Time | Google Ads Tools" />
+        <meta property="og:description" content="Get lifetime access to Adiology's complete Google Ads platform for $99. Campaign builder, click fraud protection, keyword planner, and more." />
+        <meta property="og:url" content="https://adiology.io/lifetime-deal" />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "Adiology Lifetime Deal",
+          "description": "Lifetime access to Adiology's complete 8-tool Google Ads platform. Campaign builder, click fraud protection, keyword planner, domain monitor, and more.",
+          "url": "https://adiology.io/lifetime-deal",
+          "brand": { "@type": "Brand", "name": "Adiology" },
+          "offers": {
+            "@type": "Offer",
+            "price": "99",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/LimitedAvailability",
+            "priceValidUntil": "2026-12-31",
+            "url": "https://adiology.io/lifetime-deal",
+            "description": "One-time payment. Lifetime access to all features."
+          }
+        })}</script>
       </Helmet>
 
-      <div className="min-h-screen bg-white text-slate-900">
+      <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
 
         {/* Nav */}
         <nav className="border-b border-slate-200 bg-white/95 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
@@ -146,8 +176,9 @@ export function LifetimeDealVariantB({ onNavigate }: Props) {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-slate-500 hidden md:block">Replace 5+ tools for $99 once</span>
-              <Button onClick={handleBuyNow} disabled={isLoading} className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-5 shadow-md">
-                Get Lifetime Access — $99
+              <Button onClick={handleBuyNow} disabled={isLoading} size="sm" className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 sm:px-6 text-xs sm:text-sm shadow-md">
+                <span className="sm:hidden">Get Access — $99</span>
+                <span className="hidden sm:inline">Get Lifetime Access — $99</span>
               </Button>
             </div>
           </div>
@@ -167,9 +198,9 @@ export function LifetimeDealVariantB({ onNavigate }: Props) {
         )}
 
         {/* ===== HERO ===== */}
-        <section className="bg-gradient-to-b from-slate-50 to-white pt-12 sm:pt-20 pb-0 px-4 sm:px-6">
+        <section className="bg-gradient-to-b from-slate-50 to-white pt-10 sm:pt-20 pb-0 px-4 sm:px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-center">
 
               {/* Left: copy */}
               <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
@@ -177,41 +208,41 @@ export function LifetimeDealVariantB({ onNavigate }: Props) {
                   <TrendingDown className="w-4 h-4 text-red-500" />
                   <span className="text-sm font-semibold text-red-600">Stop throwing money at monthly subscriptions</span>
                 </div>
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-[1.08] tracking-tight mb-5">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-[1.1] tracking-tight mb-5">
                   You're Paying{' '}
                   <span className="relative inline-block text-red-500">
                     $100–400/mo
                     <span className="absolute -bottom-1 left-0 right-0 h-1.5 bg-red-200 rounded-full" />
                   </span>
-                  {' '}for Tools<br className="hidden sm:block" />
+                  {' '}for Tools<br />
                   You Could Own for{' '}
                   <span className="text-violet-600">$99 Forever.</span>
                 </h1>
-                <p className="text-lg text-slate-600 mb-6 leading-relaxed max-w-lg">
+                <p className="text-sm sm:text-lg text-slate-600 mb-6 leading-relaxed max-w-lg">
                   Adiology replaces your entire Google Ads toolstack — one platform, 8 tools, no monthly fees. Campaign builder, keyword planner, click fraud protection, domain monitoring, AI ad generator, and more.
                 </p>
 
                 {/* Interactive ROI Calc */}
-                <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-lg mb-6 max-w-md">
+                <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 sm:p-5 shadow-lg mb-6 w-full max-w-md">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Your monthly tool spend</p>
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className="text-2xl font-black text-slate-900 w-24">${monthlyWaste}/mo</span>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">${monthlyWaste}/mo</span>
                     <input type="range" min={49} max={500} step={10} value={monthlyWaste} onChange={(e) => setMonthlyWaste(Number(e.target.value))}
-                      className="flex-1 h-2 rounded-full accent-violet-600 cursor-pointer" />
+                      className="flex-1 h-2 rounded-full accent-violet-600 cursor-pointer min-w-0" />
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="bg-red-50 rounded-xl p-3 border border-red-100">
-                      <div className="text-lg font-extrabold text-red-500">${yearlyCost.toLocaleString()}/yr</div>
-                      <div className="text-[11px] text-red-400 font-medium">You're paying now</div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-red-50 rounded-xl p-2.5 border border-red-100 text-center">
+                      <div className="text-sm sm:text-base font-extrabold text-red-500">${yearlyCost.toLocaleString()}/yr</div>
+                      <div className="text-[10px] sm:text-[11px] text-red-400 font-medium">You're paying now</div>
                     </div>
-                    <div className="flex items-center justify-center"><ArrowRight className="w-5 h-5 text-slate-300" /></div>
-                    <div className="bg-green-50 rounded-xl p-3 border border-green-100">
-                      <div className="text-lg font-extrabold text-green-600">$99</div>
-                      <div className="text-[11px] text-green-500 font-medium">Once, forever</div>
+                    <ArrowRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                    <div className="flex-1 bg-green-50 rounded-xl p-2.5 border border-green-100 text-center">
+                      <div className="text-sm sm:text-base font-extrabold text-green-600">$99 once</div>
+                      <div className="text-[10px] sm:text-[11px] text-green-500 font-medium">Forever</div>
                     </div>
                   </div>
                   <div className="mt-3 bg-violet-50 rounded-xl p-2.5 text-center border border-violet-100">
-                    <span className="text-sm font-bold text-violet-700">You save <span className="text-lg">${savings2yr.toLocaleString()}</span> over 2 years</span>
+                    <span className="text-xs sm:text-sm font-bold text-violet-700">You save <span className="text-base sm:text-lg">${savings2yr.toLocaleString()}</span> over 2 years</span>
                   </div>
                 </div>
 
@@ -227,8 +258,8 @@ export function LifetimeDealVariantB({ onNavigate }: Props) {
                 </p>
               </motion.div>
 
-              {/* Right: Product Demo */}
-              <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+              {/* Right: Product Demo — hidden on mobile, shown md+ */}
+              <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.15 }} className="hidden md:block">
                 <LTDProductDemo theme="light" />
               </motion.div>
             </div>
@@ -332,11 +363,10 @@ export function LifetimeDealVariantB({ onNavigate }: Props) {
                         { ip: '77.88.55.60', country: 'BR', clicks: 29, score: 76, status: 'Flagged' },
                         { ip: '103.21.244.0', country: 'DE', clicks: 12, score: 41, status: 'Allowed' },
                       ].map((row) => (
-                        <div key={row.ip} className="grid grid-cols-5 items-center px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                          <div className="col-span-2"><div className="text-xs font-mono text-slate-700">{row.ip}</div><div className="text-[10px] text-slate-400">{row.country}</div></div>
-                          <div className="text-center text-xs text-slate-600">{row.clicks}</div>
-                          <div className="text-center"><span className={`text-xs font-bold ${row.score >= 75 ? 'text-red-600' : row.score >= 50 ? 'text-amber-600' : 'text-green-600'}`}>{row.score}</span></div>
-                          <div className="text-right"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.status === 'Blocked' ? 'bg-red-100 text-red-700' : row.status === 'Flagged' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{row.status}</span></div>
+                        <div key={row.ip} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <div className="min-w-0 flex-1"><div className="text-xs font-mono text-slate-700 truncate">{row.ip}</div><div className="text-[10px] text-slate-400">{row.country}</div></div>
+                          <div className="text-xs text-slate-600 flex-shrink-0">{row.clicks} clicks</div>
+                          <div className="flex-shrink-0"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.status === 'Blocked' ? 'bg-red-100 text-red-700' : row.status === 'Flagged' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{row.status}</span></div>
                         </div>
                       ))}
                     </div>

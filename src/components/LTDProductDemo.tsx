@@ -117,26 +117,17 @@ function ClickGuardDemo({ theme }: { theme: Theme }) {
           </div>
         ))}
       </div>
-      <div className={`grid grid-cols-5 text-[9px] font-bold uppercase tracking-wide px-2 pb-1 ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
-        <span className="col-span-2">IP Address</span>
-        <span className="text-center">Clicks</span>
-        <span className="text-center">Bot Score</span>
-        <span className="text-right">Status</span>
-      </div>
       <div className="space-y-1.5">
         {rows.map((row, i) => (
           <motion.div key={row.ip} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-            className={`grid grid-cols-5 items-center px-2 py-2 rounded-lg ${isDark ? 'bg-white/5 border border-white/5' : 'bg-slate-50 border border-slate-100'}`}
+            className={`flex items-center justify-between gap-2 px-2 py-2 rounded-lg ${isDark ? 'bg-white/5 border border-white/5' : 'bg-slate-50 border border-slate-100'}`}
           >
-            <div className="col-span-2">
-              <div className={`text-[10px] font-mono ${isDark ? 'text-white/80' : 'text-slate-700'}`}>{row.ip}</div>
+            <div className="min-w-0 flex-1">
+              <div className={`text-[10px] font-mono truncate ${isDark ? 'text-white/80' : 'text-slate-700'}`}>{row.ip}</div>
               <div className={`text-[9px] ${isDark ? 'text-white/30' : 'text-slate-400'}`}>{row.country}</div>
             </div>
-            <div className={`text-center text-[10px] font-bold ${isDark ? 'text-white/70' : 'text-slate-600'}`}>{row.clicks}</div>
-            <div className="text-center">
-              <span className={`text-[10px] font-black ${row.score >= 75 ? 'text-red-400' : row.score >= 50 ? 'text-amber-400' : 'text-green-400'}`}>{row.score}</span>
-            </div>
-            <div className="text-right">
+            <div className={`text-[10px] flex-shrink-0 ${isDark ? 'text-white/50' : 'text-slate-500'}`}>{row.clicks}×</div>
+            <div className="flex-shrink-0">
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                 row.status === 'Blocked' ? 'bg-red-500/20 text-red-400' :
                 row.status === 'Flagged' ? 'bg-amber-500/20 text-amber-400' :
@@ -178,22 +169,14 @@ function KeywordPlannerDemo({ theme }: { theme: Theme }) {
           Generate
         </div>
       </div>
-      <div className={`grid grid-cols-4 text-[9px] font-bold uppercase tracking-wide px-2 pb-1 ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
-        <span className="col-span-2">Keyword</span>
-        <span className="text-center">Vol / CPC</span>
-        <span className="text-right">Match</span>
-      </div>
       <div className="space-y-1.5">
         {keywords.map((k, i) => (
           <motion.div key={k.kw} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-            className={`grid grid-cols-4 items-center px-2 py-2 rounded-lg ${isDark ? 'bg-white/5 border border-white/5' : 'bg-slate-50 border border-slate-100'}`}
+            className={`flex items-center justify-between gap-2 px-2 py-2 rounded-lg ${isDark ? 'bg-white/5 border border-white/5' : 'bg-slate-50 border border-slate-100'}`}
           >
-            <div className={`col-span-2 text-[10px] font-medium truncate pr-2 ${isDark ? 'text-white/80' : 'text-slate-700'}`}>{k.kw}</div>
-            <div className="text-center">
-              <div className={`text-[10px] font-bold ${accentColor}`}>{k.vol}</div>
-              <div className={`text-[9px] ${isDark ? 'text-white/30' : 'text-slate-400'}`}>{k.cpc}</div>
-            </div>
-            <div className="text-right">
+            <div className={`min-w-0 flex-1 text-[10px] font-medium truncate ${isDark ? 'text-white/80' : 'text-slate-700'}`}>{k.kw}</div>
+            <div className={`text-[10px] font-bold flex-shrink-0 ${accentColor}`}>{k.vol}</div>
+            <div className="flex-shrink-0">
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${tagColor}`}>{k.match}</span>
             </div>
           </motion.div>

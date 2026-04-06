@@ -25,6 +25,7 @@ import { errorsRoutes } from './routes/errors';
 import { adPlatformsRoutes } from './routes/adplatforms';
 import { leadsRoutes } from './routes/leads';
 import { skyvernRoutes } from './routes/skyvern';
+import { chatRoutes } from './routes/chat';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -77,12 +78,45 @@ app.get('/sitemap.xml', async (c) => {
         const lastmod = (post.updatedAt || post.createdAt || new Date()).toISOString().slice(0, 10);
         blogXml += `  <url>\n    <loc>https://adiology.io/blog/${post.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
       }
-      // Remove hardcoded blog post entries from static file and append fresh ones
+      // Only replace static blog entries when DB has live posts — otherwise keep the
+      // hardcoded entries so the sitemap is never stripped bare by an empty DB query.
+      if (posts.length > 0) {
+        const strippedXml = staticXml.replace(/<url>\s*<loc>https:\/\/adiology\.io\/blog\/[^<]+<\/loc>[\s\S]*?<\/url>\n?/g, '');
+        const finalXml = strippedXml.replace('</urlset>', blogXml + '</urlset>');
+        return c.text(finalXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
+      }
+      // No published posts in DB — serve static file unchanged (keeps hardcoded blog entries)
+      return c.text(staticXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
+    } catch (dbErr) {
+      console.error('[Sitemap] DB error, falling back to static:', dbErr);
+      return c.text(staticXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
+    }
+  } catch {
+    return c.text('Not found', 404);
+  }
+});
+
+app.get('/sitemap_v2.xml', async (c) => {
+  const currentDir = path.dirname(new URL(import.meta.url).pathname);
+  const sitemapPath = path.resolve(currentDir, '../public/sitemap_v2.xml');
+  try {
+    const staticXml = fs.readFileSync(sitemapPath, 'utf-8');
+    let blogXml = '';
+    try {
+      const posts = await db
+        .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, createdAt: blogPosts.createdAt })
+        .from(blogPosts)
+        .where(eq(blogPosts.published, true))
+        .orderBy(desc(blogPosts.createdAt));
+      for (const post of posts) {
+        const lastmod = (post.updatedAt || post.createdAt || new Date()).toISOString().slice(0, 10);
+        blogXml += `  <url>\n    <loc>https://adiology.io/blog/${post.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+      }
       const strippedXml = staticXml.replace(/<url>\s*<loc>https:\/\/adiology\.io\/blog\/[^<]+<\/loc>[\s\S]*?<\/url>\n?/g, '');
       const finalXml = strippedXml.replace('</urlset>', blogXml + '</urlset>');
       return c.text(finalXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
     } catch (dbErr) {
-      console.error('[Sitemap] DB error, falling back to static:', dbErr);
+      console.error('[Sitemap v2] DB error, falling back to static:', dbErr);
       return c.text(staticXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
     }
   } catch {
@@ -155,6 +189,7 @@ app.route('/api/errors', errorsRoutes);
 app.route('/api/leads', leadsRoutes);
 app.route('/api/skyvern', skyvernRoutes);
 app.route('/api/superadmin', adPlatformsRoutes);
+app.route('/api/chat', chatRoutes);
 
 // SSR meta injection for blog pages — lets Googlebot see per-post title/description
 function readIndexHtml(): string {
@@ -2830,6 +2865,156 @@ app.delete('/api/long-tail-keywords/lists/:id', async (c) => {
   }
 });
 
+// ── SPA page SEO: page-specific JSON-LD + title + description per route ──────
+// Googlebot needs this before JS executes. Injected into index.html server-side
+// for every route that has meaningful structured data to add.
+function getSpaPageSeo(requestPath: string): { title?: string; description?: string; jsonLd?: string } {
+  const base = 'https://adiology.io';
+  const canonical = `${base}${requestPath === '/' ? '' : requestPath}`;
+  const org = `{"@type":"Organization","@id":"${base}/#organization","name":"Adiology","url":"${base}"}`;
+  const appBase = `{"@type":"SoftwareApplication","applicationCategory":"BusinessApplication","operatingSystem":"Web","publisher":${org},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD","description":"7-day free trial, no credit card required"}}`;
+
+  const faqSchema = (items: Array<{ q: string; a: string }>) =>
+    JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: items.map(({ q, a }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: a },
+      })),
+    });
+
+  const softwareSchema = (name: string, desc: string, features: string[]) =>
+    JSON.stringify({
+      '@context': 'https://schema.org',
+      ...JSON.parse(appBase),
+      name,
+      description: desc,
+      featureList: features,
+      url: canonical,
+    });
+
+  if (requestPath === '/' || requestPath === '') {
+    const faq = faqSchema([
+      { q: 'What is Adiology?', a: 'Adiology is an AI-powered Google Ads management platform with 8 integrated tools: campaign builder, keyword planner, click fraud protection, domain monitoring, proxy mail, negative keyword manager, long-tail keyword generator, and direct Google Ads integration.' },
+      { q: 'How does the free trial work?', a: 'Every new account gets a full 7-day free trial with access to all features. No credit card is required to start.' },
+      { q: 'Does Adiology connect directly to Google Ads?', a: 'Yes. You can connect your Google Ads account and launch campaigns directly from the Adiology dashboard without switching tabs.' },
+      { q: 'What campaign structures does Adiology support?', a: 'Adiology supports 13 campaign structures including SKAG, STAG, Intent-Based, Alpha-Beta, Geo-Targeted, Funnel-Based, and more, with AI-generated keywords and ad copy for each.' },
+      { q: 'Is there a free plan?', a: 'Adiology offers a 7-day free trial. After the trial, a paid subscription is required to continue. Visit the pricing page for current plan details.' },
+    ]);
+    return { jsonLd: `<script type="application/ld+json">${faq}</script>` };
+  }
+
+  if (requestPath === '/features/campaign-builder') {
+    const sw = softwareSchema('Adiology Campaign Builder', 'AI-powered Google Ads campaign builder supporting 13 campaign structures. Generate 1,600+ keywords, RSA ad copy, and launch directly to Google Ads in minutes.', ['13 campaign structures (SKAG, STAG, Alpha-Beta, Geo-Targeted, Funnel-Based and more)', 'AI keyword generation (1,600+ per campaign)', 'Responsive Search Ad copy generation', 'One-click Google Ads launch', 'CSV export']);
+    const faq = faqSchema([
+      { q: 'What is a Google Ads campaign builder?', a: 'A campaign builder automates the creation of Google Ads campaigns, including keyword research, ad group structure, and ad copy, saving hours of manual work.' },
+      { q: 'What campaign structures does Adiology support?', a: 'Adiology supports 13 structures including Single Keyword Ad Groups (SKAG), Single Theme Ad Groups (STAG), Intent-Based, Alpha-Beta split, Geo-Targeted with 30K+ ZIP locations, and Funnel-Based campaigns.' },
+      { q: 'How many keywords can the AI generate?', a: 'The AI can generate over 1,600 keywords per campaign, covering broad, phrase, and exact match types.' },
+      { q: 'Can I export the campaign to Google Ads?', a: 'Yes. You can launch campaigns directly to your connected Google Ads account or export to CSV for manual upload.' },
+      { q: 'Does Adiology create the ad copy too?', a: 'Yes. The AI generates Responsive Search Ads (RSA) with multiple headlines and descriptions for each ad group.' },
+    ]);
+    return { title: 'AI Google Ads Campaign Builder — 13 Structures, 1,600+ Keywords | Adiology', description: 'Build Google Ads campaigns in minutes with AI. Supports 13 campaign structures, generates 1,600+ keywords and RSA ad copy. Connect and launch directly to Google Ads.', jsonLd: `<script type="application/ld+json">${sw}</script>\n<script type="application/ld+json">${faq}</script>` };
+  }
+
+  if (requestPath === '/features/click-guard') {
+    const sw = softwareSchema('Adiology Click Guard', 'Click fraud protection for Google Ads. Automatically detects and blocks bots, VPNs, proxy servers, and repeat clickers to protect your ad budget.', ['Real-time bot detection', 'VPN and proxy server blocking', 'IP exclusion automation', 'Suspicious click pattern analysis', 'Domain-level protection', 'Google Ads IP exclusion sync']);
+    const faq = faqSchema([
+      { q: 'What is click fraud in Google Ads?', a: 'Click fraud is the practice of repeatedly clicking your ads — by bots, competitors, or malicious users — to drain your ad budget without generating real conversions.' },
+      { q: 'How does Click Guard detect fraudulent clicks?', a: 'Click Guard analyses traffic patterns, device fingerprints, click frequency, IP reputation, and VPN/proxy usage to identify and block invalid traffic in real time.' },
+      { q: 'Does Click Guard automatically block bad IPs?', a: 'Yes. Detected malicious IPs are automatically added to your Google Ads IP exclusion list, stopping future ad spend on those sources.' },
+      { q: 'Will Click Guard reduce my Google Ads CPC?', a: 'By eliminating invalid clicks, Click Guard ensures your budget is spent on genuine potential customers, which typically lowers effective CPC and improves conversion rates.' },
+      { q: 'Does it work with all Google Ads campaign types?', a: 'Yes. Click Guard works across Search, Display, Shopping, and Performance Max campaign types.' },
+    ]);
+    return { title: 'Google Ads Click Fraud Protection — Block Bots & VPNs | Adiology Click Guard', description: 'Stop wasting ad budget on click fraud. Adiology Click Guard detects bots, VPNs, and repeat clickers, then automatically syncs IP exclusions to Google Ads.', jsonLd: `<script type="application/ld+json">${sw}</script>\n<script type="application/ld+json">${faq}</script>` };
+  }
+
+  if (requestPath === '/features/keyword-planner') {
+    const sw = softwareSchema('Adiology Keyword Planner', 'Google Ads keyword research tool with keyword mixer, negative keyword manager, and long-tail keyword generator.', ['Keyword Planner with search volume estimates', 'Keyword Mixer for ad group building', 'Long-tail keyword generator', 'Negative keyword manager', 'Match type suggestions', 'CSV and Google Ads export']);
+    const faq = faqSchema([
+      { q: 'What does the Adiology Keyword Planner do?', a: 'It generates keyword ideas, estimates search volumes, organises keywords into ad groups, and helps build negative keyword lists — all in one place.' },
+      { q: 'How is the Keyword Mixer different from the Planner?', a: 'The Keyword Planner finds keyword ideas from seed terms. The Keyword Mixer combines those terms with modifiers to build exhaustive ad group keyword sets instantly.' },
+      { q: 'Can I manage negative keywords?', a: 'Yes. The Negative Keyword Manager lets you build and maintain negative keyword lists to prevent irrelevant searches from triggering your ads.' },
+      { q: 'Does it support long-tail keywords?', a: 'Yes. The Long-tail Keyword Generator expands seed keywords into hundreds of specific, low-competition phrases using AI and Google autocomplete data.' },
+      { q: 'Can I export keywords to Google Ads?', a: 'Yes. Keywords can be exported as CSV or pushed directly to your connected Google Ads account.' },
+    ]);
+    return { title: 'Google Ads Keyword Planner, Mixer & Negative Keyword Manager | Adiology', description: 'Research, mix, and manage Google Ads keywords in one tool. Generate long-tail keywords, build negative lists, and export to Google Ads in minutes.', jsonLd: `<script type="application/ld+json">${sw}</script>\n<script type="application/ld+json">${faq}</script>` };
+  }
+
+  if (requestPath === '/features/domain-monitor') {
+    const sw = softwareSchema('Adiology Domain Monitor', 'Domain monitoring tool that tracks SSL certificate expiry, DNS changes, WHOIS data, and competitor ad campaigns.', ['SSL certificate expiry alerts', 'DNS change monitoring', 'WHOIS data tracking', 'Uptime monitoring', 'Competitor domain analysis', 'Email alerts']);
+    const faq = faqSchema([
+      { q: 'What does domain monitoring do?', a: 'Domain monitoring tracks your domains (and competitor domains) for SSL expiry, DNS changes, WHOIS updates, and downtime, alerting you before problems affect your campaigns.' },
+      { q: 'Can I monitor competitor domains?', a: 'Yes. Add any domain — including competitor domains — to get alerts about changes to their SSL, DNS, or ad presence.' },
+      { q: 'How early does it alert about SSL expiry?', a: 'Adiology Domain Monitor sends alerts 30, 14, and 7 days before an SSL certificate expires, giving you time to renew before your site goes down.' },
+      { q: 'Does it monitor DNS changes?', a: 'Yes. Any change to A, CNAME, MX, or NS records triggers an immediate alert so you can investigate and respond quickly.' },
+      { q: 'Is uptime monitoring included?', a: 'Yes. Domain Monitor checks site availability and alerts you if a monitored domain goes offline.' },
+    ]);
+    return { title: 'Domain Monitoring — SSL, DNS, WHOIS & Competitor Tracking | Adiology', description: 'Monitor domains for SSL expiry, DNS changes, WHOIS updates, and uptime. Get early alerts before problems affect your Google Ads campaigns.', jsonLd: `<script type="application/ld+json">${sw}</script>\n<script type="application/ld+json">${faq}</script>` };
+  }
+
+  if (requestPath === '/features/proxy-mail' || requestPath === '/features/instant-mail') {
+    const sw = softwareSchema('Adiology Proxy Mail', 'Anonymous temporary email tool for signing up to competitor tools and ad platforms without revealing your real address.', ['Instant temporary email addresses', 'Anonymous competitor intelligence', 'No sign-up required for temp addresses', 'Inbox with full email reading', 'Works with any email-based sign-up form']);
+    const faq = faqSchema([
+      { q: 'What is Proxy Mail?', a: 'Proxy Mail generates anonymous temporary email addresses you can use to sign up for competitor tools, ad networks, or research platforms without revealing your real identity.' },
+      { q: 'How do I create a temporary email?', a: 'Click "New Address" in the Proxy Mail tool and an instant inbox is created. Use the address anywhere — emails arrive in real time.' },
+      { q: 'Are the emails real and functional?', a: 'Yes. You receive real emails and can read them in full inside the Adiology dashboard. This is useful for competitor research or verifying sign-up flows.' },
+      { q: 'Do I need to sign up to use Proxy Mail?', a: 'You need an Adiology account to access Proxy Mail, but no additional sign-up or configuration is required.' },
+      { q: 'How long do temporary addresses last?', a: 'Temporary email addresses and their contents are available during your session and cleaned up automatically to protect your privacy.' },
+    ]);
+    return { title: 'Anonymous Temporary Email for Competitor Research | Adiology Proxy Mail', description: 'Generate anonymous temporary email addresses instantly. Sign up for competitor tools and ad platforms without revealing your real email address.', jsonLd: `<script type="application/ld+json">${sw}</script>\n<script type="application/ld+json">${faq}</script>` };
+  }
+
+  if (requestPath === '/features/ads-search') {
+    const sw = softwareSchema('Adiology Ads Search', 'Google Ads transparency search tool. Research competitor ad copy, keywords, and campaign strategies using the Google Ads Transparency Centre.', ['Competitor ad copy research', 'Google Ads Transparency Centre integration', 'Ad history tracking', 'Cross-advertiser comparison', 'Keyword intelligence']);
+    const faq = faqSchema([
+      { q: 'What is the Ads Search tool?', a: 'Ads Search connects to the Google Ads Transparency Centre, letting you research any advertiser\'s active ads, keywords, and messaging strategies directly from your Adiology dashboard.' },
+      { q: 'Can I see competitor ad copy?', a: 'Yes. Search any domain or brand name to see their current Google Ads, including headlines, descriptions, and display URLs.' },
+      { q: 'Is this data live?', a: 'Data is sourced from the Google Ads Transparency Centre, which reflects recent ad activity and is updated regularly.' },
+      { q: 'How do I use this for my own campaigns?', a: 'Use competitor insights to identify strong messaging angles, spot gaps in their keyword coverage, and craft more competitive ad copy for your own campaigns.' },
+    ]);
+    return { title: 'Google Ads Competitor Research Tool — Ad Copy & Keyword Intelligence | Adiology', description: 'Research competitor Google Ads using the Transparency Centre. See their ad copy, keywords, and messaging strategies to build better campaigns.', jsonLd: `<script type="application/ld+json">${sw}</script>\n<script type="application/ld+json">${faq}</script>` };
+  }
+
+  if (requestPath === '/pricing') {
+    const faq = faqSchema([
+      { q: 'Is there a free trial?', a: 'Yes. All new accounts get a 7-day free trial with full access to every feature. No credit card required to start.' },
+      { q: 'Can I cancel at any time?', a: 'Yes. You can cancel your subscription at any time from your account settings. There are no cancellation fees or lock-in contracts.' },
+      { q: 'What happens after the free trial?', a: 'After 7 days you can choose a paid plan to continue. If you do not upgrade, your account will be limited to the free tier.' },
+      { q: 'Do you offer a lifetime deal?', a: 'Yes. Adiology offers a one-time lifetime access option on the pricing page. Pay once and get permanent access without recurring fees.' },
+      { q: 'Is there a discount for annual billing?', a: 'Yes. Annual plans are offered at a significant discount compared to monthly billing. Check the pricing page for current rates.' },
+      { q: 'What payment methods do you accept?', a: 'Adiology accepts all major credit and debit cards via Stripe. All payments are secured with industry-standard encryption.' },
+    ]);
+    return { title: 'Adiology Pricing — 7-Day Free Trial, No Credit Card Required', description: 'Start with a 7-day free trial. Choose from monthly, annual, or lifetime plans. Cancel anytime, no contracts.', jsonLd: `<script type="application/ld+json">${faq}</script>` };
+  }
+
+  return {};
+}
+
+function injectSpaPageSeo(html: string, requestPath: string): string {
+  const seo = getSpaPageSeo(requestPath);
+  if (!seo.title && !seo.description && !seo.jsonLd) return html;
+  let result = html;
+  if (seo.title) {
+    result = result.replace(/<title>[^<]*<\/title>/, `<title>${seo.title}</title>`);
+    result = result.replace(/(<meta property="og:title" content=")[^"]*(")/,  `$1${seo.title}$2`);
+    result = result.replace(/(<meta name="twitter:title" content=")[^"]*(")/,  `$1${seo.title}$2`);
+  }
+  if (seo.description) {
+    result = result.replace(/(<meta name="description" content=")[^"]*(")/,  `$1${seo.description}$2`);
+    result = result.replace(/(<meta property="og:description" content=")[^"]*(")/,  `$1${seo.description}$2`);
+    result = result.replace(/(<meta name="twitter:description" content=")[^"]*(")/,  `$1${seo.description}$2`);
+  }
+  const canonicalUrl = `https://adiology.io${requestPath === '/' ? '' : requestPath}`;
+  result = result.replace(/(<link rel="canonical" href=")[^"]*(")/,  `$1${canonicalUrl}$2`);
+  result = result.replace(/(<meta property="og:url" content=")[^"]*(")/,  `$1${canonicalUrl}$2`);
+  if (seo.jsonLd) {
+    result = result.replace('</head>', `${seo.jsonLd}\n</head>`);
+  }
+  return result;
+}
+
 // Serve static files
 const isProduction = process.env.NODE_ENV === 'production';
 const buildPath = path.resolve(process.cwd(), 'build');
@@ -2844,6 +3029,7 @@ if (fs.existsSync(buildPath)) {
   app.use('/*', serveStatic({ root: './build' }));
   
   // SPA fallback - serve index.html for all non-API routes
+  // Injects page-specific JSON-LD, title, description, and canonical for Googlebot.
   app.get('*', async (c) => {
     const requestPath = c.req.path;
     // Don't serve index.html for API routes or file requests
@@ -2853,7 +3039,8 @@ if (fs.existsSync(buildPath)) {
     
     const indexPath = path.join(buildPath, 'index.html');
     if (fs.existsSync(indexPath)) {
-      const html = fs.readFileSync(indexPath, 'utf-8');
+      const rawHtml = fs.readFileSync(indexPath, 'utf-8');
+      const html = injectSpaPageSeo(rawHtml, requestPath);
       return c.html(html);
     }
     return c.text('Not found', 404);
@@ -3006,71 +3193,75 @@ function sleep(ms: number): Promise<void> {
 app.post('/api/keywords/alphabet-soup', async (c) => {
   try {
     const body = await c.req.json();
-    const { seedKeywords, maxKeywordsPerSeed = 300 } = body;
+    const { seedKeywords } = body;
 
     if (!seedKeywords || !Array.isArray(seedKeywords) || seedKeywords.length === 0) {
       return c.json({ error: 'seedKeywords array is required' }, 400);
     }
 
+    // Quality caps — prevents 1900-keyword noise floods
+    const MAX_PER_LETTER = 2;   // keep only top 2 suggestions per letter query
+    const MAX_PER_SEED   = 60;  // hard cap per seed before frontend filters
+    const MAX_TOTAL_RAW  = 300; // absolute ceiling before returning
+
     const allKeywords = new Set<string>();
     const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
-    const digits = '0123456789'.split('');
     const DELAY_MS = 80;
 
     for (const seed of seedKeywords.slice(0, 5)) {
       const trimmedSeed = seed.trim().toLowerCase();
       if (!trimmedSeed || trimmedSeed.length < 2) continue;
 
-      const words = trimmedSeed.split(/\s+/);
-      const queries: string[] = [];
+      const seedKeywordsCollected: string[] = [];
 
+      // Suffix pass: "plumber a", "plumber b" …
       for (const letter of alphabet) {
-        queries.push(`${trimmedSeed} ${letter}`);
-      }
-
-      for (const letter of alphabet) {
-        queries.push(`${letter} ${trimmedSeed}`);
-      }
-
-      for (const digit of digits) {
-        queries.push(`${trimmedSeed} ${digit}`);
-      }
-
-      if (words.length > 1) {
-        for (const letter of alphabet) {
-          queries.push(`${words[0]} ${letter} ${words.slice(1).join(' ')}`);
-        }
-      }
-
-      const BATCH_SIZE = 5;
-      for (let i = 0; i < queries.length; i += BATCH_SIZE) {
-        const batch = queries.slice(i, i + BATCH_SIZE);
-        const results = await Promise.all(batch.map(q => fetchGoogleAutocomplete(q)));
-        for (const suggestions of results) {
-          for (const suggestion of suggestions) {
-            const cleaned = suggestion.toLowerCase().trim();
-            if (cleaned.length >= 3 && cleaned.length <= 80) {
-              allKeywords.add(cleaned);
-            }
+        if (seedKeywordsCollected.length >= MAX_PER_SEED) break;
+        const suggestions = await fetchGoogleAutocomplete(`${trimmedSeed} ${letter}`);
+        let addedThisLetter = 0;
+        for (const suggestion of suggestions) {
+          if (addedThisLetter >= MAX_PER_LETTER) break;
+          const cleaned = suggestion.toLowerCase().trim();
+          if (cleaned.length >= 3 && cleaned.length <= 80 && !allKeywords.has(cleaned)) {
+            seedKeywordsCollected.push(cleaned);
+            allKeywords.add(cleaned);
+            addedThisLetter++;
           }
         }
-        if (i + BATCH_SIZE < queries.length) {
-          await sleep(DELAY_MS);
-        }
+        await sleep(DELAY_MS);
+        if (allKeywords.size >= MAX_TOTAL_RAW) break;
+      }
 
-        if (allKeywords.size >= maxKeywordsPerSeed * seedKeywords.length) {
-          break;
+      // Prefix pass: "a plumber", "b plumber" … (only if seed budget remains)
+      if (seedKeywordsCollected.length < MAX_PER_SEED) {
+        for (const letter of alphabet) {
+          if (seedKeywordsCollected.length >= MAX_PER_SEED) break;
+          const suggestions = await fetchGoogleAutocomplete(`${letter} ${trimmedSeed}`);
+          let addedThisLetter = 0;
+          for (const suggestion of suggestions) {
+            if (addedThisLetter >= MAX_PER_LETTER) break;
+            const cleaned = suggestion.toLowerCase().trim();
+            if (cleaned.length >= 3 && cleaned.length <= 80 && !allKeywords.has(cleaned)) {
+              seedKeywordsCollected.push(cleaned);
+              allKeywords.add(cleaned);
+              addedThisLetter++;
+            }
+          }
+          await sleep(DELAY_MS);
+          if (allKeywords.size >= MAX_TOTAL_RAW) break;
         }
       }
+
+      if (allKeywords.size >= MAX_TOTAL_RAW) break;
     }
 
-    const keywordsArray = Array.from(allKeywords).map((kw, index) => ({
+    const keywordsArray = Array.from(allKeywords).map((kw) => ({
       keyword: kw,
       source: 'google_autocomplete',
       matchType: 'broad' as const,
     }));
 
-    console.log(`[Alphabet Soup] Generated ${keywordsArray.length} unique keywords from ${seedKeywords.length} seeds`);
+    console.log(`[Alphabet Soup] Generated ${keywordsArray.length} raw keywords from ${seedKeywords.length} seeds (capped at ${MAX_PER_LETTER}/letter, ${MAX_PER_SEED}/seed)`);
 
     return c.json({
       success: true,
@@ -3083,6 +3274,15 @@ app.post('/api/keywords/alphabet-soup', async (c) => {
     console.error('[Alphabet Soup] Error:', error);
     return c.json({ error: 'Failed to generate keywords', message: error.message }, 500);
   }
+});
+
+// SPA catch-all: serve index.html for any route not matched by API/blog/static routes
+// This ensures client-side routes like /auth/magic, /dashboard, /pricing, etc.
+// return the React SPA when accessed directly (e.g. from an email link).
+app.get('*', async (c) => {
+  const html = readIndexHtml();
+  if (!html) return c.text('Not found', 404);
+  return c.html(html);
 });
 
 import { startHourlyReporting } from './services/whatsapp';
@@ -3130,8 +3330,68 @@ serve({
         updated_at timestamp DEFAULT NOW()
       )
     `);
+    // Create blocked_ips table for superadmin IP filtering
+    await startupPool.query(`
+      CREATE TABLE IF NOT EXISTS blocked_ips (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        ip text NOT NULL UNIQUE,
+        reason text,
+        blocked_by text,
+        created_at timestamp DEFAULT NOW()
+      )
+    `);
+    // Create magic_link_tokens table for passwordless auth
+    await startupPool.query(`
+      CREATE TABLE IF NOT EXISTS magic_link_tokens (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        token text NOT NULL UNIQUE,
+        email text NOT NULL,
+        user_id uuid,
+        type text NOT NULL DEFAULT 'login',
+        expires_at timestamp NOT NULL,
+        used_at timestamp,
+        created_at timestamp DEFAULT NOW()
+      )
+    `);
+    // Add trial_starts_at column for trial tracking
+    await startupPool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_starts_at timestamp
+    `);
+    // Chat support tables
+    await startupPool.query(`
+      CREATE TABLE IF NOT EXISTS chat_conversations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id TEXT UNIQUE NOT NULL,
+        user_id UUID,
+        user_email TEXT,
+        user_name TEXT,
+        status TEXT NOT NULL DEFAULT 'open',
+        page_url TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await startupPool.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await startupPool.query(`CREATE INDEX IF NOT EXISTS idx_chat_conversations_session ON chat_conversations(session_id)`);
+    await startupPool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id)`);
+    // System settings table (used by chatbot and other features)
+    await startupPool.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value JSONB NOT NULL DEFAULT '{}',
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
     await startupPool.end();
-    console.log('[Startup] DB schema ensured (payments index, is_internal, signup_ip, ad_platform_connections)');
+    console.log('[Startup] DB schema ensured (payments index, is_internal, signup_ip, ad_platform_connections, blocked_ips, magic_link_tokens, trial_starts_at, chat_conversations, chat_messages, system_settings)');
   } catch (e: any) {
     console.log('[Startup] DB schema check (non-fatal):', e?.message);
   }

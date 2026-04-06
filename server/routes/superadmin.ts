@@ -1243,6 +1243,7 @@ app.get('/visitors', authMiddleware, async (c) => {
         FROM page_views
         WHERE session_id IS NOT NULL
           AND created_at >= '${startIso}'
+          AND (ip IS NULL OR ip NOT IN (SELECT ip FROM blocked_ips))
         GROUP BY session_id
       ) s
       JOIN page_views pv_first ON pv_first.id = s.first_id
@@ -1260,6 +1261,7 @@ app.get('/visitors', authMiddleware, async (c) => {
       FROM page_views
       WHERE session_id IS NOT NULL
         AND created_at >= '${startIso}'
+        AND (ip IS NULL OR ip NOT IN (SELECT ip FROM blocked_ips))
         ${deviceFilter ? `AND device_type = '${deviceFilter.replace(/'/g, "''")}'` : ''}
         ${countryFilter ? `AND country = '${countryFilter.replace(/'/g, "''")}'` : ''}
     `;
@@ -1501,6 +1503,584 @@ app.get('/journeys', authMiddleware, async (c) => {
   } catch (error: any) {
     console.error('[SuperAdmin] Journeys fetch error:', error);
     return c.json({ error: 'Failed to fetch journeys', detail: error.message }, 500);
+  }
+});
+
+app.get('/email-monitoring', authMiddleware, async (c) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayIso = todayStart.toISOString();
+
+    const totalResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs`);
+    const total = Number((totalResult.rows[0] as any)?.count || 0);
+
+    const sentResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE status = 'sent'`);
+    const failedResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE status = 'failed'`);
+    const openedResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE opens > 0`);
+    const clickedResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE clicks > 0`);
+    const todayResult = await db.execute(sql`SELECT COUNT(*) as count FROM email_logs WHERE sent_at >= ${todayIso}`);
+
+    const sentCount = Number((sentResult.rows[0] as any)?.count || 0);
+    const failedCount = Number((failedResult.rows[0] as any)?.count || 0);
+    const openedCount = Number((openedResult.rows[0] as any)?.count || 0);
+    const sentToday = Number((todayResult.rows[0] as any)?.count || 0);
+
+    const deliveryRate = total > 0 ? Math.round((sentCount / total) * 100) : 0;
+    const openRate = sentCount > 0 ? Math.round((openedCount / sentCount) * 100) : 0;
+    const bounceRate = total > 0 ? Math.round((failedCount / total) * 100) : 0;
+
+    const recentResult = await db.execute(sql`
+      SELECT id, recipient, subject, status, opens, clicks, sent_at
+      FROM email_logs
+      ORDER BY sent_at DESC
+      LIMIT 20
+    `);
+
+    const dailyResult = await db.execute(sql`
+      SELECT
+        DATE(sent_at) as date,
+        COUNT(*) as count,
+        COUNT(*) FILTER (WHERE status = 'sent') as delivered,
+        COUNT(*) FILTER (WHERE opens > 0) as opened
+      FROM email_logs
+      WHERE sent_at >= NOW() - INTERVAL '7 days'
+      GROUP BY DATE(sent_at)
+      ORDER BY date DESC
+    `);
+
+    const recentEmails = (recentResult.rows as any[]).map(r => ({
+      id: r.id,
+      to: r.recipient,
+      subject: r.subject,
+      status: r.status,
+      opened: (r.opens || 0) > 0,
+      clicked: (r.clicks || 0) > 0,
+      sentAt: r.sent_at,
+    }));
+
+    const dailyStats = (dailyResult.rows as any[]).map(r => ({
+      date: r.date,
+      count: Number(r.count),
+      delivered: Number(r.delivered),
+      opened: Number(r.opened),
+    }));
+
+    return c.json({
+      sentToday,
+      deliveryRate,
+      openRate,
+      bounceRate,
+      totalSent: total,
+      recentEmails,
+      dailyStats,
+    });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Email monitoring error:', error);
+    return c.json({ error: 'Failed to fetch email monitoring data', detail: error.message }, 500);
+  }
+});
+
+app.get('/system-logs', authMiddleware, async (c) => {
+  try {
+    const page = parseInt(c.req.query('page') || '1', 10);
+    const limit = Math.min(parseInt(c.req.query('limit') || '100', 10), 500);
+    const search = c.req.query('search') || '';
+    const source = c.req.query('source') || 'all';
+    const offset = (page - 1) * limit;
+
+    let auditRows: any[] = [];
+    let eventRows: any[] = [];
+
+    if (source === 'all' || source === 'audit') {
+      const searchClause = search
+        ? sql`AND (action ILIKE ${'%' + search + '%'} OR resource_type ILIKE ${'%' + search + '%'} OR CAST(details AS TEXT) ILIKE ${'%' + search + '%'})`
+        : sql``;
+      const res = await db.execute(sql`
+        SELECT
+          id, user_id, action, resource_type, level,
+          details, ip_address, created_at,
+          'audit' as log_source
+        FROM audit_logs
+        WHERE 1=1 ${searchClause}
+        ORDER BY created_at DESC
+        LIMIT ${limit * 2}
+      `);
+      auditRows = res.rows as any[];
+    }
+
+    if (source === 'all' || source === 'events') {
+      const searchClause = search
+        ? sql`AND (event_type ILIKE ${'%' + search + '%'} OR title ILIKE ${'%' + search + '%'} OR description ILIKE ${'%' + search + '%'})`
+        : sql``;
+      const res = await db.execute(sql`
+        SELECT
+          id, user_id, event_type as action, title as resource_type, 'info' as level,
+          metadata as details, NULL as ip_address, created_at,
+          'event' as log_source
+        FROM user_events
+        WHERE 1=1 ${searchClause}
+        ORDER BY created_at DESC
+        LIMIT ${limit * 2}
+      `);
+      eventRows = res.rows as any[];
+    }
+
+    const combined = [...auditRows, ...eventRows]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(offset, offset + limit)
+      .map(r => ({
+        id: r.id,
+        source: r.log_source,
+        userId: r.user_id || null,
+        action: r.action,
+        resourceType: r.resource_type || null,
+        level: r.level || 'info',
+        details: r.details || null,
+        ipAddress: r.ip_address || null,
+        createdAt: r.created_at,
+      }));
+
+    const totalCount = auditRows.length + eventRows.length;
+
+    return c.json({ logs: combined, total: totalCount, page, limit });
+  } catch (error: any) {
+    console.error('[SuperAdmin] System logs error:', error);
+    return c.json({ error: 'Failed to fetch system logs', detail: error.message }, 500);
+  }
+});
+
+// ─── GSC API helper ───────────────────────────────────────────────────────────
+
+async function getGSCClient() {
+  const email = process.env.GSC_SERVICE_ACCOUNT_EMAIL;
+  const rawKey = process.env.GSC_SERVICE_ACCOUNT_PRIVATE_KEY;
+  if (!email || !rawKey) return null;
+
+  const { google } = await import('googleapis');
+  // Handle escaped newlines stored in the secret
+  const privateKey = rawKey.replace(/\\n/g, '\n');
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: { client_email: email, private_key: privateKey },
+    scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+  });
+  return google.searchconsole({ version: 'v1', auth });
+}
+
+async function queryGSC(params: {
+  siteUrl: string;
+  startDate: string;
+  endDate: string;
+  dimensions: string[];
+  rowLimit?: number;
+  dimensionFilterGroups?: any[];
+}) {
+  const gsc = await getGSCClient();
+  if (!gsc) return null;
+  try {
+    const res = await gsc.searchanalytics.query({
+      siteUrl: params.siteUrl,
+      requestBody: {
+        startDate: params.startDate,
+        endDate: params.endDate,
+        dimensions: params.dimensions,
+        rowLimit: params.rowLimit || 500,
+        dimensionFilterGroups: params.dimensionFilterGroups,
+      },
+    });
+    return res.data.rows || [];
+  } catch (err: any) {
+    console.error('[GSC] Query error:', err?.message || err);
+    return null;
+  }
+}
+
+function dateStr(daysAgo: number): string {
+  const d = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+  return d.toISOString().split('T')[0];
+}
+
+// ─── SEO Dashboard ────────────────────────────────────────────────────────────
+
+app.get('/seo/overview', authMiddleware, async (c) => {
+  try {
+    const { pageViews } = await import('../../shared/schema');
+    const { gte, like, count, ilike } = await import('drizzle-orm');
+    const drizzleSql = (await import('drizzle-orm')).sql;
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const organicFilter = sql`(
+      ${pageViews.referrer} ILIKE '%google.%' OR
+      ${pageViews.referrer} ILIKE '%bing.com%' OR
+      ${pageViews.referrer} ILIKE '%yahoo.com%' OR
+      ${pageViews.referrer} ILIKE '%duckduckgo.com%' OR
+      ${pageViews.referrer} ILIKE '%yandex.%'
+    )`;
+
+    const [
+      totalOrganicRows,
+      totalAllRows,
+      organicLast7Rows,
+      organicPerPage,
+      topReferrers,
+    ] = await Promise.all([
+      db.select({ count: sql<number>`COUNT(*)` })
+        .from(pageViews)
+        .where(and(gte(pageViews.createdAt, thirtyDaysAgo), organicFilter)),
+      db.select({ count: sql<number>`COUNT(*)` })
+        .from(pageViews)
+        .where(gte(pageViews.createdAt, thirtyDaysAgo)),
+      db.select({ count: sql<number>`COUNT(*)` })
+        .from(pageViews)
+        .where(and(gte(pageViews.createdAt, sevenDaysAgo), organicFilter)),
+      db.select({
+        path: pageViews.path,
+        visits: sql<number>`COUNT(*)`,
+      }).from(pageViews)
+        .where(and(gte(pageViews.createdAt, thirtyDaysAgo), organicFilter))
+        .groupBy(pageViews.path)
+        .orderBy(sql`COUNT(*) DESC`)
+        .limit(20),
+      db.select({
+        referrer: pageViews.referrer,
+        visits: sql<number>`COUNT(*)`,
+      }).from(pageViews)
+        .where(and(gte(pageViews.createdAt, thirtyDaysAgo), organicFilter))
+        .groupBy(pageViews.referrer)
+        .orderBy(sql`COUNT(*) DESC`)
+        .limit(10),
+    ]);
+
+    const organicTotal30 = Number(totalOrganicRows[0]?.count || 0);
+    const allTotal30 = Number(totalAllRows[0]?.count || 0);
+    const organicShare = allTotal30 > 0 ? Math.round((organicTotal30 / allTotal30) * 100) : 0;
+
+    // Pull live GSC summary if connected
+    let gscSummary: { clicks: number; impressions: number; ctr: number; avgPosition: number } | null = null;
+    const siteUrl = process.env.GSC_PROPERTY_URL;
+    if (process.env.GSC_SERVICE_ACCOUNT_EMAIL && siteUrl) {
+      try {
+        const gscRows = await queryGSC({
+          siteUrl,
+          startDate: dateStr(30),
+          endDate: dateStr(1),
+          dimensions: ['date'],
+          rowLimit: 30,
+        });
+        if (gscRows && gscRows.length > 0) {
+          const totals = gscRows.reduce((acc: any, row: any) => ({
+            clicks: acc.clicks + (row.clicks || 0),
+            impressions: acc.impressions + (row.impressions || 0),
+            position: acc.position + (row.position || 0),
+            count: acc.count + 1,
+          }), { clicks: 0, impressions: 0, position: 0, count: 0 });
+          gscSummary = {
+            clicks: totals.clicks,
+            impressions: totals.impressions,
+            ctr: totals.impressions > 0 ? +(totals.clicks / totals.impressions * 100).toFixed(2) : 0,
+            avgPosition: totals.count > 0 ? +(totals.position / totals.count).toFixed(1) : 0,
+          };
+        }
+      } catch (e) { console.error('[GSC] overview summary error:', e); }
+    }
+
+    return c.json({
+      organicVisits30d: organicTotal30,
+      organicVisits7d: Number(organicLast7Rows[0]?.count || 0),
+      totalVisits30d: allTotal30,
+      organicSharePct: organicShare,
+      gscConnected: !!(process.env.GSC_SERVICE_ACCOUNT_EMAIL),
+      gscSummary,
+      pagesWithOrganicTraffic: organicPerPage.length,
+      topOrganicPages: organicPerPage.map(r => ({ path: r.path, visits: Number(r.visits) })),
+      topSearchEngines: topReferrers.map(r => {
+        const ref = r.referrer || '';
+        let engine = 'Other';
+        if (ref.includes('google')) engine = 'Google';
+        else if (ref.includes('bing')) engine = 'Bing';
+        else if (ref.includes('yahoo')) engine = 'Yahoo';
+        else if (ref.includes('duckduckgo')) engine = 'DuckDuckGo';
+        else if (ref.includes('yandex')) engine = 'Yandex';
+        return { engine, referrer: ref, visits: Number(r.visits) };
+      }),
+    });
+  } catch (error: any) {
+    console.error('[SEO] overview error:', error);
+    return c.json({ error: 'Failed to fetch SEO overview', detail: error.message }, 500);
+  }
+});
+
+app.get('/seo/pages', authMiddleware, async (c) => {
+  try {
+    const { pageViews } = await import('../../shared/schema');
+    const { gte } = await import('drizzle-orm');
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const organicFilter = sql`(
+      ${pageViews.referrer} ILIKE '%google.%' OR
+      ${pageViews.referrer} ILIKE '%bing.com%' OR
+      ${pageViews.referrer} ILIKE '%yahoo.com%' OR
+      ${pageViews.referrer} ILIKE '%duckduckgo.com%'
+    )`;
+
+    const [organicPerPage, allPerPage] = await Promise.all([
+      db.select({
+        path: pageViews.path,
+        visits: sql<number>`COUNT(*)`,
+      }).from(pageViews)
+        .where(and(gte(pageViews.createdAt, thirtyDaysAgo), organicFilter))
+        .groupBy(pageViews.path)
+        .orderBy(sql`COUNT(*) DESC`),
+      db.select({
+        path: pageViews.path,
+        visits: sql<number>`COUNT(*)`,
+      }).from(pageViews)
+        .where(gte(pageViews.createdAt, thirtyDaysAgo))
+        .groupBy(pageViews.path)
+        .orderBy(sql`COUNT(*) DESC`),
+    ]);
+
+    const organicMap = new Map(organicPerPage.map(r => [r.path, Number(r.visits)]));
+    const allMap = new Map(allPerPage.map(r => [r.path, Number(r.visits)]));
+
+    const sitemapPages = [
+      { path: '/', priority: 1.0, label: 'Homepage', targetKeywords: ['google ads tool', 'google ads automation', 'adiology'], wordCount: 850, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/features/campaign-builder', priority: 0.9, label: 'Campaign Builder', targetKeywords: ['google ads campaign builder', 'build google ads campaigns', 'campaign automation'], wordCount: 620, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/features/keyword-planner', priority: 0.9, label: 'Keyword Planner', targetKeywords: ['google ads keyword planner', 'keyword research tool', 'ppc keywords'], wordCount: 590, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/pricing', priority: 0.9, label: 'Pricing', targetKeywords: ['adiology pricing', 'google ads tool pricing', 'ppc tool cost'], wordCount: 400, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/features/ads-search', priority: 0.8, label: 'Ads Search', targetKeywords: ['google ads search tool', 'search ads creator'], wordCount: 540, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/features/click-guard', priority: 0.8, label: 'Click Guard', targetKeywords: ['click fraud protection', 'invalid click guard', 'google ads click fraud'], wordCount: 610, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/blog', priority: 0.8, label: 'Blog Index', targetKeywords: ['google ads blog', 'ppc tips blog', 'google ads news'], wordCount: 300, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/features/blog-generator', priority: 0.7, label: 'Blog Generator', targetKeywords: ['ai blog generator', 'seo blog writer', 'content generator'], wordCount: 510, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/features/proxy-mail', priority: 0.7, label: 'Proxy Mail', targetKeywords: ['email proxy tool', 'business email proxy'], wordCount: 480, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/features/domain-monitor', priority: 0.7, label: 'Domain Monitor', targetKeywords: ['domain monitoring tool', 'google ads domain monitor'], wordCount: 520, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/features/instant-mail', priority: 0.7, label: 'Instant Mail', targetKeywords: ['instant email tool', 'bulk email sender'], wordCount: 460, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/lifetime-deal', priority: 0.7, label: 'Lifetime Deal', targetKeywords: ['adiology lifetime deal', 'google ads tool lifetime deal', 'saas lifetime deal'], wordCount: 720, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
+      { path: '/contact', priority: 0.5, label: 'Contact', targetKeywords: [], wordCount: 180, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
+      { path: '/help-center', priority: 0.5, label: 'Help Center', targetKeywords: ['adiology help', 'google ads help', 'ppc support'], wordCount: 350, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
+      { path: '/privacy-policy', priority: 0.3, label: 'Privacy Policy', targetKeywords: [], wordCount: 1200, hasTitle: true, hasDesc: false, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
+      { path: '/terms-of-service', priority: 0.3, label: 'Terms of Service', targetKeywords: [], wordCount: 1400, hasTitle: true, hasDesc: false, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
+      { path: '/refund-policy', priority: 0.3, label: 'Refund Policy', targetKeywords: [], wordCount: 600, hasTitle: true, hasDesc: false, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
+    ];
+
+    const pages = sitemapPages.map(page => {
+      const issues: string[] = [];
+      if (!page.hasStructuredData) issues.push('Missing JSON-LD structured data');
+      if (page.wordCount < 300) issues.push('Thin content (under 300 words)');
+      if (!page.hasDesc) issues.push('Missing meta description');
+      if (!page.hasOG) issues.push('Missing Open Graph tags');
+      if (page.targetKeywords.length === 0 && page.priority >= 0.5) issues.push('No target keywords defined');
+      if (page.wordCount < 500 && page.priority >= 0.7) issues.push('Content too thin for competitive ranking');
+
+      const passCount = [page.hasTitle, page.hasDesc, page.hasH1, page.hasStructuredData, page.hasOG, page.hasCanonical, page.wordCount >= 400, page.targetKeywords.length > 0].filter(Boolean).length;
+      const seoScore = Math.round((passCount / 8) * 100);
+
+      return {
+        path: page.path,
+        label: page.label,
+        priority: page.priority,
+        targetKeywords: page.targetKeywords,
+        wordCount: page.wordCount,
+        seoScore,
+        organicVisits30d: organicMap.get(page.path) || 0,
+        totalVisits30d: allMap.get(page.path) || 0,
+        issues,
+        signals: {
+          title: page.hasTitle,
+          metaDesc: page.hasDesc,
+          h1: page.hasH1,
+          structuredData: page.hasStructuredData,
+          openGraph: page.hasOG,
+          canonical: page.hasCanonical,
+        },
+        inSitemap: true,
+      };
+    });
+
+    return c.json({ pages, asOf: new Date().toISOString() });
+  } catch (error: any) {
+    console.error('[SEO] pages error:', error);
+    return c.json({ error: 'Failed to fetch SEO pages', detail: error.message }, 500);
+  }
+});
+
+// ─── GSC Keyword Rankings ─────────────────────────────────────────────────────
+
+app.get('/seo/keywords', authMiddleware, async (c) => {
+  const siteUrl = process.env.GSC_PROPERTY_URL;
+  if (!process.env.GSC_SERVICE_ACCOUNT_EMAIL || !siteUrl) {
+    return c.json({ connected: false, keywords: [] });
+  }
+
+  try {
+    const days = parseInt(c.req.query('days') || '28');
+    const limit = parseInt(c.req.query('limit') || '200');
+
+    const rows = await queryGSC({
+      siteUrl,
+      startDate: dateStr(days),
+      endDate: dateStr(1),
+      dimensions: ['query'],
+      rowLimit: limit,
+    });
+
+    if (!rows) return c.json({ connected: true, keywords: [], error: 'GSC query failed — check service account permissions' });
+
+    const keywords = rows.map((row: any) => ({
+      query: row.keys?.[0] || '',
+      clicks: row.clicks || 0,
+      impressions: row.impressions || 0,
+      ctr: row.ctr ? +(row.ctr * 100).toFixed(2) : 0,
+      position: row.position ? +row.position.toFixed(1) : 0,
+    })).sort((a: any, b: any) => b.clicks - a.clicks);
+
+    return c.json({ connected: true, keywords, asOf: new Date().toISOString(), period: `Last ${days} days` });
+  } catch (error: any) {
+    console.error('[GSC] keywords error:', error);
+    return c.json({ connected: true, keywords: [], error: error.message }, 500);
+  }
+});
+
+// ─── GSC Page Performance ─────────────────────────────────────────────────────
+
+app.get('/seo/gsc-pages', authMiddleware, async (c) => {
+  const siteUrl = process.env.GSC_PROPERTY_URL;
+  if (!process.env.GSC_SERVICE_ACCOUNT_EMAIL || !siteUrl) {
+    return c.json({ connected: false, pages: [] });
+  }
+
+  try {
+    const rows = await queryGSC({
+      siteUrl,
+      startDate: dateStr(28),
+      endDate: dateStr(1),
+      dimensions: ['page'],
+      rowLimit: 100,
+    });
+
+    if (!rows) return c.json({ connected: true, pages: [] });
+
+    const pages = rows.map((row: any) => {
+      const url = row.keys?.[0] || '';
+      const path = url.replace(siteUrl.replace(/\/$/, ''), '') || '/';
+      return {
+        path,
+        url,
+        clicks: row.clicks || 0,
+        impressions: row.impressions || 0,
+        ctr: row.ctr ? +(row.ctr * 100).toFixed(2) : 0,
+        position: row.position ? +row.position.toFixed(1) : 0,
+      };
+    }).sort((a: any, b: any) => b.clicks - a.clicks);
+
+    return c.json({ connected: true, pages, asOf: new Date().toISOString() });
+  } catch (error: any) {
+    console.error('[GSC] pages error:', error);
+    return c.json({ connected: true, pages: [], error: error.message }, 500);
+  }
+});
+
+// ── Blocked IPs management ────────────────────────────────────────────────────
+
+app.get('/blocked-ips', authMiddleware, async (c) => {
+  try {
+    const { getDb } = await import('../db');
+    const { sql: drizzleSql } = await import('drizzle-orm');
+    const dbInst = getDb();
+    const result = await dbInst.execute(drizzleSql.raw(`
+      SELECT ip, reason, blocked_by, created_at FROM blocked_ips ORDER BY created_at DESC
+    `));
+    return c.json({ blockedIps: result.rows || [] });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Blocked IPs fetch error:', error);
+    return c.json({ error: 'Failed to fetch blocked IPs' }, 500);
+  }
+});
+
+app.post('/blocked-ips', authMiddleware, async (c) => {
+  try {
+    const { ip, reason } = await c.req.json();
+    if (!ip || typeof ip !== 'string' || ip.trim().length === 0) {
+      return c.json({ error: 'IP address is required' }, 400);
+    }
+    const cleanIp = ip.trim();
+    const { getDb } = await import('../db');
+    const { sql: drizzleSql } = await import('drizzle-orm');
+    const dbInst = getDb();
+    await dbInst.execute(drizzleSql.raw(`
+      INSERT INTO blocked_ips (ip, reason, blocked_by)
+      VALUES ('${cleanIp.replace(/'/g, "''")}', ${reason ? `'${String(reason).replace(/'/g, "''")}'` : 'NULL'}, 'superadmin')
+      ON CONFLICT (ip) DO NOTHING
+    `));
+    return c.json({ success: true, ip: cleanIp });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Block IP error:', error);
+    return c.json({ error: 'Failed to block IP' }, 500);
+  }
+});
+
+app.delete('/blocked-ips/:ip', authMiddleware, async (c) => {
+  try {
+    const ip = decodeURIComponent(c.req.param('ip') || '');
+    if (!ip) return c.json({ error: 'IP address is required' }, 400);
+    const { getDb } = await import('../db');
+    const { sql: drizzleSql } = await import('drizzle-orm');
+    const dbInst = getDb();
+    await dbInst.execute(drizzleSql.raw(`
+      DELETE FROM blocked_ips WHERE ip = '${ip.replace(/'/g, "''")}'
+    `));
+    return c.json({ success: true, ip });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Unblock IP error:', error);
+    return c.json({ error: 'Failed to unblock IP' }, 500);
+  }
+});
+
+// ─── Replit Dev Spend ───────────────────────────────────────────────────────
+app.get('/replit-spend', authMiddleware, async (c) => {
+  try {
+    const { getDb } = await import('../db');
+    const { sql: drizzleSql } = await import('drizzle-orm');
+    const dbInst = getDb();
+    const result = await dbInst.execute(drizzleSql.raw(`
+      SELECT value, updated_at FROM system_settings WHERE key = 'replit_dev_spend' LIMIT 1
+    `));
+    if (result.rows && result.rows.length > 0) {
+      const row = result.rows[0] as any;
+      const val = row.value;
+      return c.json({
+        amount: typeof val === 'object' && val !== null ? val.amount ?? 0 : 0,
+        updatedAt: row.updated_at
+      });
+    }
+    return c.json({ amount: 0, updatedAt: null });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Replit spend fetch error:', error);
+    return c.json({ error: 'Failed to fetch Replit spend' }, 500);
+  }
+});
+
+app.put('/replit-spend', authMiddleware, async (c) => {
+  try {
+    const { amount } = await c.req.json();
+    const numAmount = parseFloat(String(amount));
+    if (isNaN(numAmount) || numAmount < 0) {
+      return c.json({ error: 'Invalid amount' }, 400);
+    }
+    const { getDb } = await import('../db');
+    const { sql: drizzleSql } = await import('drizzle-orm');
+    const dbInst = getDb();
+    await dbInst.execute(drizzleSql.raw(`
+      INSERT INTO system_settings (key, value, updated_at)
+      VALUES ('replit_dev_spend', '${JSON.stringify({ amount: numAmount })}'::jsonb, NOW())
+      ON CONFLICT (key) DO UPDATE SET value = '${JSON.stringify({ amount: numAmount })}'::jsonb, updated_at = NOW()
+    `));
+    return c.json({ success: true, amount: numAmount });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Replit spend update error:', error);
+    return c.json({ error: 'Failed to update Replit spend' }, 500);
   }
 });
 

@@ -15,31 +15,27 @@ const pool = new Pool({ connectionString: getDatabaseUrl() });
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'adiology-jwt-secret-key';
 const PRODUCTION_URL = process.env.DOMAIN || process.env.APP_URL || 'https://adiology.io';
 
+// The canonical URL used in all email links — must always be the production domain.
+// NEVER derive this from request headers: emails are opened in mail clients and
+// the link must work regardless of which Replit/deployment server handled the request.
+const EMAIL_BASE_URL = 'https://adiology.io';
+
 function getBaseUrl(c: any): string {
-  if (PRODUCTION_URL && PRODUCTION_URL !== 'https://adiology.io') {
-    return PRODUCTION_URL;
-  }
-  const origin = c.req.header('origin');
-  if (origin) return origin;
+  // Always prefer the explicitly configured production URL
+  if (PRODUCTION_URL) return PRODUCTION_URL;
   const host = c.req.header('x-forwarded-host') || c.req.header('host');
   if (host) {
     const proto = c.req.header('x-forwarded-proto') || 'https';
     return `${proto}://${host}`;
   }
-  return PRODUCTION_URL;
+  return EMAIL_BASE_URL;
 }
 
-function getEmailBaseUrl(c?: any): string {
-  if (c) {
-    const origin = c.req.header('origin');
-    if (origin) return origin;
-    const host = c.req.header('x-forwarded-host') || c.req.header('host');
-    if (host) {
-      const proto = c.req.header('x-forwarded-proto') || 'https';
-      return `${proto}://${host}`;
-    }
-  }
-  return PRODUCTION_URL;
+// Always returns the canonical adiology.io URL for use in emails.
+// Do NOT change this to use request headers — Replit deployment domains
+// must never end up inside magic links or verification emails.
+function getEmailBaseUrl(_c?: any): string {
+  return EMAIL_BASE_URL;
 }
 
 export const accountRoutes = new Hono();
@@ -123,84 +119,96 @@ accountRoutes.post('/register', async (c) => {
         throw dbError;
       }
 
-      await logUserEvent(userId, 'signup', 'User registered', `New account created (pending payment)`, { email: normalizedEmail, plan });
-
-      const stripeClient = await getUncachableStripeClient();
-      if (!stripeClient) {
-        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
-        return c.json({ success: false, error: 'Payment system not configured. Please try again later.' }, 503);
-      }
-
-      let stripeCustomerId: string;
-      try {
-        const customer = await stripeClient.customers.create({ email: normalizedEmail, metadata: { userId } });
-        stripeCustomerId = customer.id;
-        await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [stripeCustomerId, userId]);
-      } catch (stripeErr: any) {
-        console.error('[Auth] Stripe customer creation error:', stripeErr);
-        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
-        return c.json({ success: false, error: 'Failed to set up payment. Please try again.' }, 500);
-      }
-
-      const baseUrl = getBaseUrl(c);
-      const successUrl = `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${baseUrl}/signup?cancelled=true`;
-
-      let sessionParams: any;
+      await logUserEvent(userId, 'signup', 'User registered', `New account created`, { email: normalizedEmail, plan });
 
       const LIFETIME_PRICE_ID = 'price_1T2uVCAYv17Z995V7g1xTSwN';
-      const PLAN_PRICE_IDS: Record<string, string> = {
-        starter: 'price_1T6SDuAYv17Z995Vind8Ze6S',
-        professional: 'price_1T6SHkAYv17Z995VkD5WcTc7',
-        agency: 'price_1T6SKQAYv17Z995VKvkd6lbN',
-        monthly: process.env.STRIPE_MONTHLY_PRICE_ID || '',
-        annual: process.env.STRIPE_ANNUAL_PRICE_ID || '',
-      };
 
       if (plan === 'lifetime') {
-        const resolvedPriceId = priceId || LIFETIME_PRICE_ID;
-        sessionParams = {
-          customer: stripeCustomerId,
-          mode: 'payment',
-          line_items: [{ price: resolvedPriceId, quantity: 1 }],
-          success_url: successUrl,
-          cancel_url: cancelUrl,
-          allow_promotion_codes: true,
-          metadata: { userId, plan: 'lifetime' },
-        };
-      } else {
-        const resolvedPriceId = priceId || PLAN_PRICE_IDS[plan] || process.env[`STRIPE_${plan.toUpperCase()}_PRICE_ID`];
-        if (!resolvedPriceId) {
+        const stripeClient = await getUncachableStripeClient();
+        if (!stripeClient) {
           await pool.query('DELETE FROM users WHERE id = $1', [userId]);
-          return c.json({ success: false, error: 'Plan price not configured. Please contact support.' }, 500);
+          return c.json({ success: false, error: 'Payment system not configured. Please try again later.' }, 503);
         }
-        sessionParams = {
-          customer: stripeCustomerId,
-          mode: 'subscription',
-          line_items: [{ price: resolvedPriceId, quantity: 1 }],
-          success_url: successUrl,
-          cancel_url: cancelUrl,
-          allow_promotion_codes: true,
-          payment_method_collection: 'always',
-          subscription_data: { trial_period_days: 7 },
-          metadata: { userId, plan },
-        };
+
+        let stripeCustomerId: string;
+        try {
+          const customer = await stripeClient.customers.create({ email: normalizedEmail, metadata: { userId } });
+          stripeCustomerId = customer.id;
+          await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [stripeCustomerId, userId]);
+        } catch (stripeErr: any) {
+          console.error('[Auth] Stripe customer creation error:', stripeErr);
+          await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+          return c.json({ success: false, error: 'Failed to set up payment. Please try again.' }, 500);
+        }
+
+        const baseUrl = getBaseUrl(c);
+        const successUrl = `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
+        const cancelUrl = `${baseUrl}/signup?cancelled=true`;
+        const resolvedPriceId = priceId || LIFETIME_PRICE_ID;
+
+        let checkoutSession: any;
+        try {
+          checkoutSession = await stripeClient.checkout.sessions.create({
+            customer: stripeCustomerId,
+            mode: 'payment',
+            line_items: [{ price: resolvedPriceId, quantity: 1 }],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            allow_promotion_codes: true,
+            metadata: { userId, plan: 'lifetime' },
+          });
+        } catch (sessionErr: any) {
+          console.error('[Auth] Stripe session creation error:', sessionErr);
+          await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+          return c.json({ success: false, error: 'Failed to create payment session. Please try again.' }, 500);
+        }
+
+        console.log(`[Auth] Lifetime user registered, redirecting to payment: ${normalizedEmail}`);
+        return c.json({
+          success: true,
+          message: 'Account created. Redirecting to payment...',
+          checkoutUrl: checkoutSession.url,
+        });
       }
 
-      let checkoutSession: any;
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+
+      await pool.query(
+        `UPDATE users SET subscription_status = 'trialing', current_period_end = $1, email_verified = true WHERE id = $2`,
+        [trialEndDate, userId]
+      );
+
       try {
-        checkoutSession = await stripeClient.checkout.sessions.create(sessionParams);
-      } catch (sessionErr: any) {
-        console.error('[Auth] Stripe session creation error:', sessionErr);
-        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
-        return c.json({ success: false, error: 'Failed to create payment session. Please try again.' }, 500);
+        const stripeClient = await getUncachableStripeClient();
+        if (stripeClient) {
+          const customer = await stripeClient.customers.create({ email: normalizedEmail, metadata: { userId, plan } });
+          await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [customer.id, userId]);
+        }
+      } catch (stripeErr: any) {
+        console.error('[Auth] Stripe customer creation error (non-blocking):', stripeErr);
       }
 
-      console.log(`[Auth] User registered with pending payment: ${normalizedEmail} (plan: ${plan})`);
+      const jwtToken = jwt.sign(
+        { userId, email: normalizedEmail, role: 'user' },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      await pool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [userId]);
+      await logUserEvent(userId, 'login', 'Trial started', `7-day free trial started`, { email: normalizedEmail, plan, trialEnds: trialEndDate });
+
+      console.log(`[Auth] User registered with 7-day trial: ${normalizedEmail} (plan: ${plan})`);
       return c.json({
         success: true,
-        message: 'Account created. Redirecting to payment...',
-        checkoutUrl: checkoutSession.url,
+        message: 'Account created. Starting your free trial...',
+        token: jwtToken,
+        user: {
+          id: userId,
+          email: normalizedEmail,
+          subscription_plan: plan,
+          subscription_status: 'trialing',
+        },
       });
     }
 
@@ -453,6 +461,330 @@ accountRoutes.post('/resend-verification', async (c) => {
   }
 });
 
+// ── Passwordless / Magic Link Auth ────────────────────────────────────────────
+
+accountRoutes.post('/send-magic-link', async (c) => {
+  try {
+    const { email } = await c.req.json();
+    if (!email || typeof email !== 'string') {
+      return c.json({ success: false, error: 'Email is required' }, 400);
+    }
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Rate-limit: max 5 magic links per email per hour
+    const rateCheck = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM magic_link_tokens WHERE email = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+      [normalizedEmail]
+    );
+    if (parseInt(rateCheck.rows[0]?.cnt || '0', 10) >= 5) {
+      return c.json({ success: false, error: 'Too many requests. Please try again in an hour.' }, 429);
+    }
+
+    // Find or create user
+    let userRow: any;
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
+    if (existing.rows.length > 0) {
+      userRow = existing.rows[0];
+    } else {
+      // New user — create with 7-day trial
+      const userId = crypto.randomUUID();
+      const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const signupIp = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || null;
+      await pool.query(
+        `INSERT INTO users (id, email, email_verified, role, subscription_plan, subscription_status, current_period_end, trial_starts_at, signup_ip, created_at, updated_at)
+         VALUES ($1, $2, true, 'user', 'free', 'trialing', $3, NOW(), $4, NOW(), NOW())`,
+        [userId, normalizedEmail, trialEnd, signupIp]
+      );
+      // Create Stripe customer in background (non-blocking)
+      try {
+        const stripeClient = await getUncachableStripeClient();
+        if (stripeClient) {
+          const customer = await stripeClient.customers.create({ email: normalizedEmail, metadata: { userId } });
+          await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [customer.id, userId]);
+        }
+      } catch {}
+      await logUserEvent(userId, 'signup', 'User registered', 'Passwordless signup — magic link', { email: normalizedEmail });
+      const freshUser = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      userRow = freshUser.rows[0];
+    }
+
+    if (userRow.is_blocked) {
+      return c.json({ success: false, error: 'Account suspended. Please contact support.' }, 403);
+    }
+
+    // Generate token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    const isNewUser = !existing.rows.length;
+
+    await pool.query(
+      `INSERT INTO magic_link_tokens (token, email, user_id, type, expires_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [token, normalizedEmail, userRow.id, isNewUser ? 'signup' : 'login', expiresAt]
+    );
+
+    const baseUrl = getEmailBaseUrl(c);
+    const magicUrl = `${baseUrl}/auth/magic?token=${token}`;
+    const subjectLine = isNewUser
+      ? 'Welcome to Adiology — sign in to start your free trial'
+      : 'Your Adiology sign-in link';
+
+    await EmailService.sendRaw(normalizedEmail, 'magic_link', {
+      magic_link_url: magicUrl,
+      subject_line: subjectLine,
+    });
+
+    console.log(`[Auth] Magic link sent to ${normalizedEmail} (new=${isNewUser})`);
+    return c.json({ success: true, message: 'Magic link sent. Check your email.', isNewUser });
+  } catch (error: any) {
+    console.error('[Auth] Send magic link error:', error);
+    return c.json({ success: false, error: 'Failed to send magic link. Please try again.' }, 500);
+  }
+});
+
+accountRoutes.post('/verify-magic-link', async (c) => {
+  try {
+    const { token } = await c.req.json();
+    if (!token || typeof token !== 'string') {
+      return c.json({ success: false, error: 'Token is required' }, 400);
+    }
+
+    const tokenResult = await pool.query(
+      `SELECT * FROM magic_link_tokens WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()`,
+      [token]
+    );
+    if (tokenResult.rows.length === 0) {
+      return c.json({ success: false, error: 'This link has expired or already been used. Please request a new one.' }, 400);
+    }
+
+    const tokenRow = tokenResult.rows[0];
+
+    // Mark token as used
+    await pool.query('UPDATE magic_link_tokens SET used_at = NOW() WHERE id = $1', [tokenRow.id]);
+
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [tokenRow.user_id]);
+    if (userResult.rows.length === 0) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+    const user = userResult.rows[0];
+
+    // Mark email verified if not already
+    if (!user.email_verified) {
+      await pool.query('UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1', [user.id]);
+    }
+
+    await pool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [user.id]);
+
+    const jwtToken = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role || 'user' },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    const isNewSignup = tokenRow.type === 'signup';
+    await logUserEvent(user.id, isNewSignup ? 'signup_complete' : 'login', isNewSignup ? 'Magic link signup complete' : 'Magic link login', 'User signed in via magic link', { email: user.email });
+
+    // Send welcome email for brand-new users
+    if (isNewSignup) {
+      EmailService.sendRaw(user.email, 'welcome', { name: user.full_name || 'there' }).catch(err => {
+        console.error('[Auth] Failed to send welcome email after magic link signup:', err);
+      });
+    }
+
+    console.log(`[Auth] Magic link verified: ${user.email} (new=${isNewSignup})`);
+    return c.json({
+      success: true,
+      token: jwtToken,
+      is_new_signup: isNewSignup,
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        avatar_url: user.avatar_url,
+        role: user.role || 'user',
+        subscription_plan: user.subscription_plan,
+        subscription_status: user.subscription_status,
+        stripe_customer_id: user.stripe_customer_id,
+        created_at: user.created_at,
+        card_validated: user.card_validated || false,
+        selected_plan: user.selected_plan || null,
+        email_verified: true,
+        current_period_end: user.current_period_end || null,
+        trial_starts_at: user.trial_starts_at || null,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Auth] Verify magic link error:', error);
+    return c.json({ success: false, error: 'Verification failed. Please try again.' }, 500);
+  }
+});
+
+// ── Complete Profile (after magic link signup) ────────────────────────────────
+accountRoutes.post('/complete-profile', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization') || '';
+    const token = authHeader.replace('Bearer ', '').trim();
+    if (!token) return c.json({ success: false, error: 'Unauthorized' }, 401);
+
+    let userId: string;
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      userId = decoded.userId;
+    } catch {
+      return c.json({ success: false, error: 'Invalid token' }, 401);
+    }
+
+    const { full_name, password } = await c.req.json();
+    if (!full_name || typeof full_name !== 'string' || full_name.trim().length < 1) {
+      return c.json({ success: false, error: 'Full name is required' }, 400);
+    }
+    if (password && typeof password === 'string' && password.length < 8) {
+      return c.json({ success: false, error: 'Password must be at least 8 characters' }, 400);
+    }
+
+    const updates: string[] = ['full_name = $1', 'updated_at = NOW()'];
+    const values: any[] = [full_name.trim()];
+
+    if (password && typeof password === 'string' && password.trim().length >= 8) {
+      const hash = await bcrypt.hash(password, 10);
+      updates.push(`password_hash = $${values.length + 1}`);
+      values.push(hash);
+    }
+
+    values.push(userId);
+    await pool.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${values.length}`,
+      values
+    );
+
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = userResult.rows[0];
+
+    console.log(`[Auth] Profile completed for user: ${user.email}`);
+    return c.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        avatar_url: user.avatar_url,
+        role: user.role || 'user',
+        subscription_plan: user.subscription_plan,
+        subscription_status: user.subscription_status,
+        card_validated: user.card_validated || false,
+        selected_plan: user.selected_plan || null,
+        email_verified: user.email_verified,
+        current_period_end: user.current_period_end || null,
+        trial_starts_at: user.trial_starts_at || null,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Auth] Complete profile error:', error);
+    return c.json({ success: false, error: 'Failed to update profile. Please try again.' }, 500);
+  }
+});
+
+// ── Google OAuth Sign-In ──────────────────────────────────────────────────────
+accountRoutes.post('/auth/google', async (c) => {
+  try {
+    const { credential } = await c.req.json();
+    if (!credential) return c.json({ success: false, error: 'No credential provided' }, 400);
+
+    // Verify the Google ID token via Google's tokeninfo endpoint
+    const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+    if (!googleRes.ok) return c.json({ success: false, error: 'Invalid Google token' }, 401);
+    const googleData: any = await googleRes.json();
+
+    if (googleData.error_description) {
+      return c.json({ success: false, error: 'Google token verification failed' }, 401);
+    }
+
+    // Optionally verify audience matches our client ID
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (clientId && googleData.aud !== clientId) {
+      return c.json({ success: false, error: 'Token audience mismatch' }, 401);
+    }
+
+    const email = googleData.email?.toLowerCase()?.trim();
+    const name = googleData.name || '';
+    const avatar = googleData.picture || null;
+
+    if (!email) return c.json({ success: false, error: 'No email returned from Google' }, 400);
+
+    // Find or create user
+    let userRow: any;
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      userRow = existing.rows[0];
+      // Update avatar if not already set, and ensure email is verified
+      await pool.query(
+        'UPDATE users SET last_sign_in = NOW(), email_verified = true, avatar_url = COALESCE(avatar_url, $1), updated_at = NOW() WHERE id = $2',
+        [avatar, userRow.id]
+      );
+    } else {
+      // New user — create with 7-day trial
+      const userId = crypto.randomUUID();
+      const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const signupIp = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || null;
+      await pool.query(
+        `INSERT INTO users (id, email, full_name, avatar_url, email_verified, role, subscription_plan, subscription_status, current_period_end, trial_starts_at, signup_ip, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, true, 'user', 'free', 'trialing', $5, NOW(), $6, NOW(), NOW())`,
+        [userId, email, name, avatar, trialEnd, signupIp]
+      );
+      try {
+        const stripeClient = await getUncachableStripeClient();
+        if (stripeClient) {
+          const customer = await stripeClient.customers.create({ email, name, metadata: { userId } });
+          await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [customer.id, userId]);
+        }
+      } catch {}
+      await logUserEvent(userId, 'signup', 'User registered', 'Google OAuth signup', { email });
+      const freshUser = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      userRow = freshUser.rows[0];
+    }
+
+    if (userRow.is_blocked) {
+      return c.json({ success: false, error: 'Account suspended. Please contact support.' }, 403);
+    }
+
+    await pool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [userRow.id]);
+
+    const jwtToken = jwt.sign(
+      { userId: userRow.id, email: userRow.email, role: userRow.role || 'user' },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    await logUserEvent(userRow.id, 'login', 'Google OAuth login', 'User signed in via Google', { email });
+
+    console.log(`[Auth] Google sign-in: ${email}`);
+    return c.json({
+      success: true,
+      token: jwtToken,
+      user: {
+        id: userRow.id,
+        email: userRow.email,
+        full_name: userRow.full_name || name,
+        avatar_url: userRow.avatar_url || avatar,
+        role: userRow.role || 'user',
+        subscription_plan: userRow.subscription_plan,
+        subscription_status: userRow.subscription_status,
+        stripe_customer_id: userRow.stripe_customer_id,
+        created_at: userRow.created_at,
+        card_validated: userRow.card_validated || false,
+        selected_plan: userRow.selected_plan || null,
+        email_verified: true,
+        current_period_end: userRow.current_period_end || null,
+        trial_starts_at: userRow.trial_starts_at || null,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Auth] Google auth error:', error);
+    return c.json({ success: false, error: 'Google sign-in failed. Please try again.' }, 500);
+  }
+});
+
 accountRoutes.get('/verification-status', async (c) => {
   try {
     const email = c.req.query('email');
@@ -509,8 +841,7 @@ accountRoutes.post('/forgot-password', async (c) => {
         [user.id, token]
       );
 
-      const baseUrl = getBaseUrl(c);
-      const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+      const resetUrl = `${EMAIL_BASE_URL}/reset-password?token=${token}`;
       const emailResult = await EmailService.sendRaw(user.email, 'passwordReset', { reset_url: resetUrl });
       await logUserEvent(user.id, 'password_reset_requested', 'Password reset requested', `Password reset email sent`, { email: normalizedEmail });
 
@@ -613,10 +944,53 @@ accountRoutes.get('/me', async (c) => {
         selected_plan: user.selected_plan || null,
         email_verified: user.email_verified || false,
         current_period_end: user.current_period_end || null,
+        trial_starts_at: user.trial_starts_at || null,
       }
     });
   } catch (error: any) {
     console.error('[Auth] Get user error:', error);
     return c.json({ success: false, error: 'Failed to get user data' }, 500);
+  }
+});
+
+accountRoutes.get('/reditus-token', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) {
+      return c.json({ success: false, error: 'Unauthorized' }, 401);
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any;
+    } catch {
+      return c.json({ success: false, error: 'Invalid token' }, 401);
+    }
+
+    const result = await pool.query(
+      'SELECT id, email, full_name FROM users WHERE id = $1',
+      [decoded.userId]
+    );
+    if (result.rows.length === 0) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    const user = result.rows[0];
+    const productSecret = process.env.REDITUS_PRODUCT_SECRET;
+    if (!productSecret) {
+      return c.json({ success: false, error: 'Referral widget not configured' }, 500);
+    }
+
+    const referralToken = jwt.sign(
+      { email: user.email, name: user.full_name || user.email },
+      productSecret,
+      { expiresIn: '1h' }
+    );
+
+    return c.json({ success: true, token: referralToken });
+  } catch (error: any) {
+    console.error('[Reditus] Token generation error:', error);
+    return c.json({ success: false, error: 'Failed to generate referral token' }, 500);
   }
 });

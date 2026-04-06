@@ -26,6 +26,8 @@ export interface User {
   email_confirmed_at?: string | null;
   card_validated?: boolean;
   selected_plan?: string | null;
+  current_period_end?: string | null;
+  trial_starts_at?: string | null;
 }
 
 const API_BASE = '/api/account';
@@ -88,6 +90,16 @@ export async function signUpWithEmail(
       if (result.user) {
         localStorage.setItem('user', JSON.stringify(result.user));
       }
+    }
+
+    // Reditus referral conversion — must fire on signup so Reditus can attribute
+    // the new user to the affiliate / advocate who referred them
+    try {
+      if (typeof window !== 'undefined' && typeof (window as any).gr === 'function') {
+        (window as any).gr('track', 'conversion', { email: email.trim().toLowerCase() });
+      }
+    } catch {
+      // non-critical — never block signup
     }
 
     if (result.needsEmailVerification) {
@@ -278,6 +290,8 @@ export async function getCurrentUserAsync(): Promise<User | null> {
         email_confirmed_at: result.user.email_verified ? new Date().toISOString() : null,
         created: result.user.created_at,
         updated: result.user.updated_at,
+        current_period_end: result.user.current_period_end || null,
+        trial_starts_at: result.user.trial_starts_at || null,
       };
 
       localStorage.setItem('user', JSON.stringify(user));
@@ -373,4 +387,61 @@ export function setLegacyUser(_user: any) {
 }
 
 export function setLegacyAuth(_auth: any) {
+}
+
+export async function sendMagicLink(
+  email: string
+): Promise<{ error: { message: string } | null; isNewUser?: boolean }> {
+  try {
+    const result = await apiRequest('/send-magic-link', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+    if (!result.success) {
+      return { error: { message: result.error || 'Failed to send magic link' } };
+    }
+    return { error: null, isNewUser: result.isNewUser };
+  } catch (err: any) {
+    return { error: { message: err.message || 'Failed to send magic link' } };
+  }
+}
+
+export async function verifyMagicLink(
+  token: string
+): Promise<{ user: User | null; isNewSignup: boolean; error: { message: string } | null }> {
+  try {
+    const result = await apiRequest('/verify-magic-link', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+    if (!result.success) {
+      return { user: null, isNewSignup: false, error: { message: result.error || 'Invalid or expired link' } };
+    }
+
+    const user: User = {
+      id: result.user.id,
+      email: result.user.email,
+      name: result.user.full_name || '',
+      full_name: result.user.full_name || '',
+      avatar: result.user.avatar_url,
+      role: result.user.role || 'user',
+      subscription_plan: result.user.subscription_plan || 'free',
+      subscription_status: result.user.subscription_status || 'inactive',
+      card_validated: result.user.card_validated || false,
+      selected_plan: result.user.selected_plan || null,
+      email_confirmed_at: new Date().toISOString(),
+      created: result.user.created_at,
+      current_period_end: result.user.current_period_end || null,
+      trial_starts_at: result.user.trial_starts_at || null,
+    };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_token', result.token);
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+
+    return { user, isNewSignup: result.is_new_signup === true, error: null };
+  } catch (err: any) {
+    return { user: null, isNewSignup: false, error: { message: err.message || 'Verification failed' } };
+  }
 }

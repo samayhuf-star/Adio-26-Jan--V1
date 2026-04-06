@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { captureLead } from '../utils/leadCapture';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import {
@@ -39,6 +40,12 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
       setCheckoutEmail(storedEmail);
       setShowSuccess(true);
       window.history.replaceState({}, '', window.location.pathname);
+      // Quora Purchase pixel — fires immediately if pixel loaded, or via onload handler in index.html
+      sessionStorage.setItem('qp_purchase_pending', '1');
+      if (typeof (window as any).qp === 'function') {
+        (window as any).qp('track', 'Purchase');
+        sessionStorage.removeItem('qp_purchase_pending');
+      }
     }
   }, []);
 
@@ -114,7 +121,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
     e.preventDefault();
     const trimmed = email.trim();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailError('Please enter a valid email address.'); return; }
-    fetch('/api/leads/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: trimmed, source: 'lifetime_deal', page: window.location.pathname }) }).catch(() => {});
+    captureLead(trimmed, 'lifetime_deal', { variant: 'A' });
     processCheckout(trimmed);
   };
 
@@ -168,7 +175,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         <script type="text/javascript">{`window._tfa = window._tfa || []; window._tfa.push({notify: 'event', name: 'page_view', id: 2006301}); !function (t, f, a, x) { if (!document.getElementById(x)) { t.async = 1; t.src = a; t.id = x; f.parentNode.insertBefore(t, f); } }(document.createElement('script'), document.getElementsByTagName('script')[0], '//cdn.taboola.com/libtrc/unip/2006301/tfa.js', 'tb_tfa_script');`}</script>
       </Helmet>
 
-      <div className="min-h-screen bg-slate-950 text-white">
+      <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden">
 
         {/* Sticky Nav */}
         <nav className="border-b border-white/10 bg-slate-950/90 backdrop-blur-lg sticky top-0 z-50">
@@ -210,11 +217,11 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
         )}
 
         {/* ===== HERO ===== */}
-        <section className="relative pt-12 sm:pt-20 pb-0 px-4 sm:px-6 overflow-hidden">
+        <section className="relative pt-10 sm:pt-20 pb-0 px-4 sm:px-6 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(16,185,129,0.12),transparent)]" />
 
           <div className="max-w-7xl mx-auto relative z-10">
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-center">
 
               {/* Left: copy */}
               <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
@@ -228,7 +235,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
                     <span className="text-sm font-mono font-bold text-amber-400">Offer ends in {countdown}</span>
                   </div>
                 )}
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-5 leading-[1.08] tracking-tight">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold mb-5 leading-[1.1] tracking-tight">
                   The Complete<br />
                   Google Ads Platform —<br />
                   <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
@@ -264,8 +271,8 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
                 </div>
               </motion.div>
 
-              {/* Right: Product Demo */}
-              <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+              {/* Right: Product Demo — hidden on mobile, shown md+ */}
+              <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.15 }} className="hidden md:block">
                 <LTDProductDemo theme="dark-emerald" />
               </motion.div>
             </div>
@@ -395,7 +402,7 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
                         </div>
                       ))}
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {[
                         { ip: '185.220.101.47', country: 'RU', clicks: 47, score: 94, status: 'Blocked' },
                         { ip: '45.83.64.12', country: 'CN', clicks: 31, score: 88, status: 'Blocked' },
@@ -403,12 +410,11 @@ export function LifetimeDealPage({ onNavigate }: LifetimeDealPageProps) {
                         { ip: '103.21.244.0', country: 'DE', clicks: 12, score: 41, status: 'Allowed' },
                       ].map((row, i) => (
                         <motion.div key={row.ip} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                          className="grid grid-cols-5 items-center px-3 py-2.5 rounded-lg bg-white/5 border border-white/5"
+                          className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 border border-white/5 gap-2"
                         >
-                          <div className="col-span-2"><div className="text-[10px] font-mono text-white/80">{row.ip}</div><div className="text-[9px] text-white/30">{row.country}</div></div>
-                          <div className="text-center text-[10px] text-white/60">{row.clicks}</div>
-                          <div className="text-center text-[10px] font-bold" style={{ color: row.score >= 75 ? '#f87171' : row.score >= 50 ? '#fbbf24' : '#34d399' }}>{row.score}</div>
-                          <div className="text-right"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${row.status === 'Blocked' ? 'bg-red-500/20 text-red-400' : row.status === 'Flagged' ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'}`}>{row.status}</span></div>
+                          <div className="min-w-0 flex-1"><div className="text-[10px] font-mono text-white/80 truncate">{row.ip}</div><div className="text-[9px] text-white/30">{row.country}</div></div>
+                          <div className="text-[10px] text-white/60 flex-shrink-0">{row.clicks} clicks</div>
+                          <div className="flex-shrink-0"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${row.status === 'Blocked' ? 'bg-red-500/20 text-red-400' : row.status === 'Flagged' ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'}`}>{row.status}</span></div>
                         </motion.div>
                       ))}
                     </div>

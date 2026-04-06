@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { ArrowLeft } from 'lucide-react';
 import { Footer } from './Footer';
 
@@ -9,6 +10,24 @@ interface RefundPolicyProps {
 export const RefundPolicy: React.FC<RefundPolicyProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-white text-gray-600">
+      <Helmet>
+        <title>Refund Policy - Adiology | 30-Day Money-Back Guarantee</title>
+        <meta name="description" content="Adiology offers a 30-day money-back guarantee on all plans. Learn how to request a refund for monthly, annual, or lifetime subscriptions." />
+        <link rel="canonical" href="https://adiology.io/refund-policy" />
+        <meta property="og:title" content="Refund Policy - Adiology" />
+        <meta property="og:description" content="30-day money-back guarantee on all Adiology plans. Learn our refund process." />
+        <meta property="og:url" content="https://adiology.io/refund-policy" />
+        <meta property="og:type" content="website" />
+        <meta name="robots" content="index, follow" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "Refund Policy - Adiology",
+          "description": "30-day money-back guarantee policy for Adiology subscriptions and lifetime deals.",
+          "url": "https://adiology.io/refund-policy",
+          "isPartOf": { "@type": "WebSite", "name": "Adiology", "url": "https://adiology.io" }
+        })}</script>
+      </Helmet>
       <div className="max-w-4xl mx-auto px-6 py-12">
         <button
           onClick={onBack}

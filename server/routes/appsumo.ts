@@ -335,10 +335,10 @@ appsumoRoutes.get('/license/:key', async (c) => {
   }
 });
 
-function getRedirectUri(c: any): string {
-  const host = c.req.header('Host') || 'adiology.io';
-  const proto = c.req.header('X-Forwarded-Proto') || 'https';
-  return `${proto}://${host}/api/appsumo/callback`;
+function getRedirectUri(_c?: any): string {
+  // Always use the canonical domain — AppSumo OAuth callback must match the
+  // registered redirect URI exactly and must never be a Replit infrastructure URL.
+  return 'https://adiology.io/api/appsumo/callback';
 }
 
 async function activateLifetimePlan(db: any, userId: string) {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Check, X, Sparkles, Star, Crown, Clock, Users, Zap, Shield, Calendar, ChevronDown, ChevronUp, Infinity } from 'lucide-react';
 
@@ -163,6 +164,39 @@ export function Pricing({ onSelectPlan }: PricingProps) {
 
   return (
     <section id="pricing" className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 via-white to-gray-50">
+      <Helmet>
+        <title>Pricing - Adiology | Google Ads Tools Plans & Pricing</title>
+        <meta name="description" content="Simple, transparent pricing for Adiology. Monthly, annual, and lifetime plans for Google Ads campaign management, keyword planning, and click fraud protection." />
+        <link rel="canonical" href="https://adiology.io/pricing" />
+        <meta property="og:title" content="Pricing - Adiology | Google Ads Tools" />
+        <meta property="og:description" content="Affordable plans for Google Ads campaign management. Start free or upgrade for full access to all tools." />
+        <meta property="og:url" content="https://adiology.io/pricing" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Adiology" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Pricing - Adiology" />
+        <meta name="twitter:description" content="Affordable plans for Google Ads campaign management tools." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "PriceSpecification",
+          "name": "Adiology Pricing Plans",
+          "url": "https://adiology.io/pricing",
+          "description": "Adiology offers monthly, annual, and lifetime pricing plans for Google Ads management tools.",
+          "priceCurrency": "USD",
+          "mainEntity": {
+            "@type": "SoftwareApplication",
+            "name": "Adiology",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "offers": [
+              { "@type": "Offer", "name": "Starter", "price": "29", "priceCurrency": "USD", "priceValidUntil": "2027-01-01", "availability": "https://schema.org/InStock" },
+              { "@type": "Offer", "name": "Pro", "price": "59", "priceCurrency": "USD", "priceValidUntil": "2027-01-01", "availability": "https://schema.org/InStock" },
+              { "@type": "Offer", "name": "Lifetime Deal", "price": "99", "priceCurrency": "USD", "priceValidUntil": "2027-01-01", "availability": "https://schema.org/LimitedAvailability" }
+            ]
+          }
+        })}</script>
+      </Helmet>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div

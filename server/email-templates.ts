@@ -569,6 +569,57 @@ export const emailTemplates = {
 </body>
 </html>
     `
+  },
+
+  magic_link: {
+    name: 'Magic Link Login',
+    subject: 'Your Adiology sign-in link',
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5;">
+  <div style="max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+    <div style="background: white; border-radius: 12px; padding: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+
+      <div style="text-align: center; margin-bottom: 32px;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: linear-gradient(135deg, #6366f1, #9333ea); border-radius: 14px; margin-bottom: 12px;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+          </svg>
+        </div>
+        <h1 style="font-size: 24px; font-weight: 800; color: #6366f1; margin: 0;">ADIOLOGY</h1>
+      </div>
+
+      <h2 style="color: #111827; font-size: 20px; font-weight: 700; margin: 0 0 8px 0; text-align: center;">{{subject_line}}</h2>
+      <p style="color: #6b7280; font-size: 15px; margin: 0 0 28px 0; text-align: center;">Click the button below to instantly sign in. This link expires in 1 hour.</p>
+
+      <div style="text-align: center; margin: 0 0 28px 0;">
+        <a href="{{magic_link_url}}" style="display: inline-block; padding: 15px 36px; background: linear-gradient(135deg, #6366f1, #9333ea); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em;">Sign In to Adiology →</a>
+      </div>
+
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px;">
+        <p style="color: #6b7280; font-size: 12px; margin: 0 0 6px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Or copy this link</p>
+        <p style="color: #6366f1; font-size: 12px; margin: 0; word-break: break-all; font-family: monospace;">{{magic_link_url}}</p>
+      </div>
+
+      <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 0;">
+        If you didn't request this, you can safely ignore this email.<br>This link can only be used once.
+      </p>
+    </div>
+
+    <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+      <p style="margin: 0 0 4px 0;">&copy; {{year}} Adiology. All rights reserved.</p>
+      <p style="margin: 0;"><a href="{{unsubscribe_url}}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a></p>
+    </div>
+  </div>
+</body>
+</html>
+    `
   }
 };
 

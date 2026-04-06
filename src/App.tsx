@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import CreativeMinimalistHomepageComponent from './components/CreativeMinimalistHomepage';
+import { EmailCaptureModal } from './components/EmailCaptureModal';
 import { 
-  LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare, Globe, Mail, Plus, Minus, Circle, Keyboard, BarChart3, Activity, Lock, Ticket, FileText
+  LayoutDashboard, TrendingUp, Settings, Bell, Search, Menu, X, FileCheck, Lightbulb, Shuffle, MinusCircle, Shield, HelpCircle, Megaphone, User, LogOut, Sparkles, Zap, Package, Clock, ChevronDown, ChevronRight, FolderOpen, Code, Download, GitCompare, CreditCard, ArrowRight, BookOpen, Wand2, Eye, MessageSquare, Globe, Mail, Plus, Minus, Circle, Keyboard, BarChart3, Activity, Lock, Ticket, FileText, Gift
 } from 'lucide-react';
 
 import { initGA, trackPageView } from './lib/analytics';
@@ -11,6 +12,8 @@ import { useAnalytics } from './hooks/use-analytics';
 declare global {
   interface Window {
     Helploom: (action: string, data?: { uniqueId?: string; name?: string; email?: string }) => void;
+    gr: (...args: any[]) => void;
+    referralWidget: { show: () => void } | undefined;
   }
 }
 import { useTheme } from './contexts/ThemeContext';
@@ -36,8 +39,10 @@ import { Popover, PopoverTrigger, PopoverContent } from './components/ui/popover
 import { getUserPreferences, applyUserPreferences } from './utils/userPreferences';
 import { notifications as notificationService } from './utils/notifications';
 import { setCurrentUserId } from './utils/localStorageHistory';
-import { getCurrentUserProfile, signOut, getSessionToken } from './utils/auth';
+import { getCurrentUserProfile, signOut, getSessionToken, verifyMagicLink } from './utils/auth';
 import { getCurrentUser, isAuthenticated } from './utils/auth';
+import { TrialBanner } from './components/TrialBanner';
+import { ChatWidget } from './components/ChatWidget';
 import { setAuthGetToken } from './utils/historyService';
 import { DataSourceIndicator } from './components/DataSourceIndicator';
 import { useDataSource } from './hooks/useDataSource';
@@ -106,6 +111,8 @@ const HelpCenterPage = lazy(() => import('./components/HelpCenterPage').then(m =
 const CommunityPageStandalone = lazy(() => import('./components/CommunityPage').then(m => ({ default: m.CommunityPage })));
 const AppSumoRedeem = lazy(() => import('./components/AppSumoRedeem').then(m => ({ default: m.AppSumoRedeem })));
 const DemoPage = lazy(() => import('./components/DemoPage'));
+const AffiliatePage = lazy(() => import('./components/AffiliatePage').then(m => ({ default: m.AffiliatePage })));
+const CompleteProfile = lazy(() => import('./components/CompleteProfile').then(m => ({ default: m.CompleteProfile })));
 
 // Loading component for lazy-loaded modules
 const ComponentLoader = () => (
@@ -117,7 +124,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'signup' | 'cancelled' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article' | 'appsumo-redeem' | 'demo';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'signup' | 'cancelled' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article' | 'appsumo-redeem' | 'demo' | 'affiliates' | 'complete-profile';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -133,9 +140,12 @@ const AppContent = () => {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [previousView, setPreviousView] = useState<AppView>('homepage');
   const [blogArticleSlug, setBlogArticleSlug] = useState<string>('');
+  const [pendingProfileEmail, setPendingProfileEmail] = useState<string>('');
   const [viewMode, setViewMode] = useState<'admin' | 'user'>('admin');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [signupInitialEmail, setSignupInitialEmail] = useState('');
 
   // Track page views when tab or view changes
   useEffect(() => {
@@ -162,6 +172,13 @@ const AppContent = () => {
   useEffect(() => {
     // Initialize historyService with token getter so it can use database storage
     setAuthGetToken(getSessionToken);
+
+    // If we're on the magic link verification path, skip initAuth entirely.
+    // The magic link effect owns loading state and user resolution on this path.
+    if (window.location.pathname === '/auth/magic') {
+      setLoading(false);
+      return;
+    }
     
     const initAuth = async (silent = false) => {
       if (!silent) setLoading(true);
@@ -210,6 +227,29 @@ const AppContent = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  // Authenticate Reditus referral widget when user logs in
+  useEffect(() => {
+    if (!user?.id) return;
+    const authToken = localStorage.getItem('auth_token');
+    if (!authToken) return;
+
+    const loadReferralWidget = async () => {
+      try {
+        const res = await fetch('/api/account/reditus-token', {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        const data = await res.json();
+        if (data.success && data.token && typeof window.gr === 'function') {
+          window.gr('loadReferralWidget', { auth_token: data.token });
+        }
+      } catch {
+        // silent — widget auth is non-critical
+      }
+    };
+
+    loadReferralWidget();
+  }, [user?.id]);
   
   // Handle session_id from Stripe redirect (e.g., /dashboard?session_id=xxx)
   useEffect(() => {
@@ -258,6 +298,47 @@ const AppContent = () => {
     };
 
     exchangeSession();
+  }, []);
+
+  // Handle magic link verification: /auth/magic?token=xxx
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path !== '/auth/magic') return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (!token) return;
+
+    const verifyToken = async () => {
+      setLoading(true);
+      try {
+        const result = await verifyMagicLink(token);
+        if (result.error || !result.user) {
+          const msg = result.error?.message || 'This link has expired or already been used.';
+          window.history.replaceState({}, '', `/login?error=${encodeURIComponent(msg)}`);
+          setAppView('auth');
+          setLoading(false);
+          return;
+        }
+        setUser(result.user);
+        setCurrentUserId(result.user.id);
+        if (result.isNewSignup) {
+          setPendingProfileEmail(result.user.email);
+          window.history.replaceState({}, '', '/complete-profile');
+          setAppView('complete-profile');
+        } else {
+          window.history.replaceState({}, '', '/dashboard');
+          setAppView('user');
+          setActiveTab('dashboard');
+        }
+      } catch {
+        window.history.replaceState({}, '', '/login?error=Verification+failed.+Please+request+a+new+link.');
+        setAppView('auth');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyToken();
   }, []);
 
   // Track if user has been synced to prevent infinite loops
@@ -701,10 +782,24 @@ const AppContent = () => {
       const isWhitelistedEmail = userEmail && superAdminEmails.includes(userEmail);
       
       if (isAdminPath && isWhitelistedEmail) {
-        // Navigate to admin panel for super admins on admin path
         setAppView('admin-panel');
       } else {
-        // Navigate to user dashboard for regular users
+        // Check if user came from clicking a pricing plan
+        const pendingPlanRaw = sessionStorage.getItem('selectedPlan') || localStorage.getItem('signup_pending_plan');
+        if (pendingPlanRaw) {
+          try {
+            const pendingPlan = JSON.parse(pendingPlanRaw);
+            if (pendingPlan?.priceId) {
+              // Clear pending plan and redirect to payment
+              sessionStorage.removeItem('selectedPlan');
+              localStorage.removeItem('signup_pending_plan');
+              setSelectedPlan(pendingPlan);
+              window.history.pushState({}, '', `/payment?plan=${encodeURIComponent(pendingPlan.name)}&priceId=${encodeURIComponent(pendingPlan.priceId)}&amount=${pendingPlan.amount}&subscription=${pendingPlan.isSubscription}`);
+              setAppView('payment');
+              return;
+            }
+          } catch { /* ignore parse errors */ }
+        }
         setAppView('user');
         setActiveTab('dashboard');
       }
@@ -729,10 +824,13 @@ const AppContent = () => {
   useEffect(() => {
     if (loading) return;
     
-    // Don't interfere with auth or signup-wizard flow
-    if (appView === 'auth' || appView === 'signup-wizard') return;
+    // Don't interfere with active auth flow
+    if (appView === 'auth') return;
 
+    // Don't interfere with magic-link verification or post-signup profile completion
+    if (appView === 'complete-profile') return;
     const path = window.location.pathname;
+    if (path === '/auth/magic') return;
     const urlParams = new URLSearchParams(window.location.search);
 
     const setView = (next: AppView) => {
@@ -773,7 +871,8 @@ const AppContent = () => {
 
       if (path === '/signup' || path.startsWith('/signup')) {
         if (!user) {
-          setView('signup');
+          setAuthMode('sign-up');
+          setView('auth');
         } else {
           setView('user');
         }
@@ -873,6 +972,11 @@ const AppContent = () => {
 
       if (path === '/contact') {
         setView('contact');
+        return;
+      }
+
+      if (path === '/affiliates') {
+        setView('affiliates');
         return;
       }
       if (path === '/help-center') {
@@ -1005,7 +1109,8 @@ const AppContent = () => {
       
       if (path === '/signup' || path.startsWith('/signup')) {
         if (!user) {
-          setAppView('signup');
+          setAuthMode('sign-up');
+          setAppView('auth');
         } else {
           setAppView('user');
         }
@@ -1094,20 +1199,6 @@ const AppContent = () => {
     }
   }, [user, appView, loading]);
 
-  // Gate: redirect to signup wizard if user hasn't validated their card
-  useEffect(() => {
-    if (user && appView === 'user' && !loading) {
-      const adminEmails = ['samayhuf@gmail.com', 'adiologyads@gmail.com', 'oadiology@gmail.com'];
-      const isAdmin = user.role === 'superadmin' || user.role === 'super_admin' || adminEmails.includes(user.email?.toLowerCase() || '');
-      
-      const hasAccess = isAdmin || user.card_validated || user.subscription_status === 'active' || user.subscription_status === 'trialing';
-
-      if (!hasAccess) {
-        window.history.pushState({}, '', '/signup');
-        setAppView('signup-wizard');
-      }
-    }
-  }, [user, appView, loading]);
 
 
   // Function to handle plan selection
@@ -1118,14 +1209,8 @@ const AppContent = () => {
     setSelectedPlan({ name: planName, priceId, amount, isSubscription });
 
     if (!user) {
-      window.history.pushState({}, '', '/signup');
-      setAppView('signup-wizard');
-      return;
-    }
-
-    if (!user.card_validated && user.subscription_status !== 'active' && user.subscription_status !== 'trialing') {
-      window.history.pushState({}, '', '/signup');
-      setAppView('signup-wizard');
+      // Not logged in: show email capture → magic link signup, then redirect to payment after login
+      setShowEmailModal(true);
       return;
     }
 
@@ -1475,6 +1560,34 @@ const AppContent = () => {
     );
   }
 
+  if (appView === 'affiliates') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <AffiliatePage onBack={() => {
+          window.history.pushState({}, '', '/');
+          setAppView(previousView);
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'complete-profile') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <CompleteProfile
+          email={pendingProfileEmail || user?.email || ''}
+          onComplete={(updatedUser) => {
+            setUser((prev: any) => prev ? { ...prev, full_name: updatedUser.full_name, name: updatedUser.full_name } : prev);
+            setPendingProfileEmail('');
+            window.history.replaceState({}, '', '/dashboard');
+            setAppView('user');
+            setActiveTab('dashboard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   if (appView === 'help-center') {
     return (
       <Suspense fallback={<ComponentLoader />}>
@@ -1804,12 +1917,14 @@ const AppContent = () => {
       <Suspense fallback={<ComponentLoader />}>
         <SignupPage
           cancelledMessage={wasCancelled}
+          initialEmail={signupInitialEmail || undefined}
           onLogin={() => {
             setAuthMode('sign-in');
             window.history.pushState({}, '', '/login');
             setAppView('auth');
           }}
           onBack={() => {
+            setSignupInitialEmail('');
             window.history.pushState({}, '', '/');
             setAppView('homepage');
           }}
@@ -1984,10 +2099,22 @@ const AppContent = () => {
 
   if (appView === 'homepage') {
     return (
+      <>
+        {showEmailModal && (
+          <EmailCaptureModal
+            onContinue={(capturedEmail) => {
+              setShowEmailModal(false);
+              setSignupInitialEmail(capturedEmail);
+              setAuthMode('sign-up');
+              window.history.pushState({}, '', '/signup');
+              setAppView('auth');
+            }}
+            onClose={() => setShowEmailModal(false)}
+          />
+        )}
       <CreativeMinimalistHomepage
         onGetStarted={() => {
-          window.history.pushState({}, '', '/signup');
-          setAppView('signup');
+          setShowEmailModal(true);
         }}
         onLogin={() => {
           setAuthMode('sign-in');
@@ -2025,6 +2152,7 @@ const AppContent = () => {
             '/blog': { path: '/blog', view: 'blog' },
             '/lifetime-deal': { path: '/lifetime-deal', view: 'lifetime-deal' },
             '/demo': { path: '/demo', view: 'demo' },
+            '/affiliates': { path: '/affiliates', view: 'affiliates' },
           };
           const target = pageMap[page];
           if (target) {
@@ -2040,6 +2168,9 @@ const AppContent = () => {
           setAppView('auth');
         }}
       />
+        {/* Chat support widget on the public homepage */}
+        <ChatWidget />
+      </>
     );
   }
 
@@ -2054,6 +2185,7 @@ const AppContent = () => {
     return (
       <Auth
         initialMode={authMode === 'sign-in' ? 'login' : 'signup'}
+        initialEmail={signupInitialEmail || undefined}
         onLoginSuccess={async () => {
           try {
             const currentUser = getCurrentUser();
@@ -2116,6 +2248,7 @@ const AppContent = () => {
           setAppView('signup-wizard');
         }}
         onBackToHome={() => {
+          setSignupInitialEmail('');
           setAppView('homepage');
         }}
       />
@@ -2700,6 +2833,18 @@ const AppContent = () => {
                 </span>
               </button>
               
+              {/* Share & Earn — Reditus referral widget trigger */}
+              <button
+                onClick={() => window.referralWidget?.show()}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer hover:bg-violet-50 group"
+              >
+                <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-slate-300 group-hover:bg-violet-500" />
+                <Gift className="w-4 h-4 shrink-0 text-violet-500" />
+                <span className="text-[13px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-left font-medium text-slate-600 group-hover:text-violet-700">
+                  Share &amp; Earn
+                </span>
+              </button>
+
               {/* User Profile with Popover */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -2770,6 +2915,14 @@ const AppContent = () => {
                 title="Billing"
               >
                 <CreditCard className="w-5 h-5 text-white" />
+              </button>
+              <button
+                onClick={() => window.referralWidget?.show()}
+                className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto cursor-pointer hover:bg-white/20 transition-all"
+                style={{ background: 'rgba(255,255,255,0.1)' }}
+                title="Share & Earn"
+              >
+                <Gift className="w-5 h-5 text-white" />
               </button>
               <button
                 onClick={() => setActiveTabSafe('settings')}
@@ -3176,6 +3329,14 @@ const AppContent = () => {
 
         {/* Enhanced Content Area */}
         <main id="main-content" className="flex-1 overflow-x-hidden overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-20 md:pb-6 w-full min-w-0 relative bg-gray-50">
+          {user && (
+            <div className="mb-4">
+              <TrialBanner
+                user={user}
+                onUpgrade={() => setActiveTabSafe('billing')}
+              />
+            </div>
+          )}
           <div className="slide-in-up">
             {renderContent()}
           </div>
@@ -3194,6 +3355,9 @@ const AppContent = () => {
       </div>
 
       <FloatingFeedback />
+
+      {/* Chat support widget - always visible on dashboard */}
+      <ChatWidget />
     </div>
   );
 };

@@ -1,11 +1,27 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, AlertCircle, ArrowLeft, Sparkle, Shield, Rocket, Search, ShieldCheck, MailOpen, Globe, Layers } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Sparkle, Shield, Rocket, Search, ShieldCheck, MailOpen, Globe, Mail, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
-import { signUpWithEmail, signInWithEmail, resetPassword, isAuthenticatedAsync, resendVerificationEmail } from '../utils/auth';
+import { sendMagicLink } from '../utils/auth';
 import { notifications } from '../utils/notifications';
+import { captureLead } from '../utils/leadCapture';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: object) => void;
+          renderButton: (element: HTMLElement, config: object) => void;
+          prompt: () => void;
+          cancel: () => void;
+        };
+      };
+    };
+  }
+}
 
 interface AuthProps {
   onLoginSuccess: () => void;
@@ -14,145 +30,210 @@ interface AuthProps {
   onSignupRedirect?: () => void;
   initialMode?: 'login' | 'signup';
   isAdminLogin?: boolean;
+  initialEmail?: string;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onBackToHome, onSignupRedirect, initialMode = 'login', isAdminLogin = false }) => {
-  const [isLogin, setIsLogin] = useState(initialMode === 'login');
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [email, setEmail] = useState('');
+export const Auth: React.FC<AuthProps> = ({
+  onLoginSuccess,
+  onBackToHome,
+  isAdminLogin = false,
+  initialEmail = '',
+}) => {
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [showSignupSuccess, setShowSignupSuccess] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [resendCount, setResendCount] = useState(0);
   const [isResending, setIsResending] = useState(false);
-  const MAX_RESENDS = 3;
-  const COOLDOWN_SECONDS = 60;
-  
-  const SIGNUP_DISABLED = false;
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const googleButtonRef = React.useRef<HTMLDivElement>(null);
+  const GOOGLE_CLIENT_ID = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
 
+  // Show error from URL ?error= param (e.g. when redirected from a failed magic link)
   React.useEffect(() => {
-    setIsLogin(initialMode === 'login');
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlError = urlParams.get('error');
+    if (urlError) {
+      setError(decodeURIComponent(urlError));
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // Auto-send magic link if email was pre-filled from homepage capture modal
+  React.useEffect(() => {
+    if (!initialEmail || isAdminLogin) return;
+    const trimmed = initialEmail.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return;
+    setIsLoading(true);
+    captureLead(trimmed, 'signup');
+    sendMagicLink(trimmed).then(result => {
+      if (result.error) {
+        setError(result.error.message);
+      } else {
+        setSentEmail(trimmed);
+        setMagicLinkSent(true);
+        startResendCooldown();
+        try { (window as any).gr?.('track', 'conversion', { email: trimmed }); } catch {}
+      }
+    }).catch(err => {
+      setError(err.message || 'Something went wrong. Please try again.');
+    }).finally(() => setIsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle Google credential response
+  const handleGoogleCredential = React.useCallback(async (response: { credential: string }) => {
+    setGoogleLoading(true);
     setError('');
-    
-    if (initialMode === 'signup') {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('clerk_token');
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Google sign-in failed');
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.full_name || '',
+        full_name: data.user.full_name || '',
+        avatar: data.user.avatar_url,
+        role: data.user.role || 'user',
+        subscription_plan: data.user.subscription_plan || 'free',
+        subscription_status: data.user.subscription_status || 'trialing',
+        card_validated: data.user.card_validated || false,
+        selected_plan: data.user.selected_plan || null,
+        email_confirmed_at: new Date().toISOString(),
+        created: data.user.created_at,
+      }));
+      onLoginSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [onLoginSuccess]);
+
+  // Initialize Google Identity Services
+  React.useEffect(() => {
+    if (isAdminLogin || !GOOGLE_CLIENT_ID || magicLinkSent) return;
+
+    const initGoogle = () => {
+      if (!window.google?.accounts?.id || !googleButtonRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        type: 'standard',
+        shape: 'rectangular',
+        theme: 'outline',
+        text: 'continue_with',
+        size: 'large',
+        width: Math.min(googleButtonRef.current.offsetWidth || 400, 400),
+        logo_alignment: 'left',
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      initGoogle();
+    } else {
+      const script = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+      if (script) {
+        script.addEventListener('load', initGoogle, { once: true });
+        return () => script.removeEventListener('load', initGoogle);
       }
     }
-  }, [initialMode]);
+  }, [isAdminLogin, GOOGLE_CLIENT_ID, magicLinkSent, handleGoogleCredential]);
 
-  const handleResendVerification = async () => {
-    if (resendCooldown > 0 || isResending || resendCount >= MAX_RESENDS) return;
-    
+  const startResendCooldown = () => {
+    setResendCooldown(60);
+    const interval = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(interval); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleMagicLinkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed) { setError('Please enter your email address.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setError('Please enter a valid email address.'); return; }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      captureLead(trimmed, 'signup');
+      const result = await sendMagicLink(trimmed);
+      if (result.error) {
+        setError(result.error.message);
+      } else {
+        setSentEmail(trimmed);
+        setMagicLinkSent(true);
+        startResendCooldown();
+        try { (window as any).gr?.('track', 'conversion', { email: trimmed }); } catch {}
+      }
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0 || isResending) return;
     setIsResending(true);
     try {
-      await resendVerificationEmail(signupEmail);
-      setResendCount(prev => prev + 1);
-      setResendCooldown(COOLDOWN_SECONDS);
-      
-      const interval = setInterval(() => {
-        setResendCooldown(prev => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      notifications.success('Verification email resent!');
-    } catch (err: any) {
-      notifications.error(err.message || 'Failed to resend verification email');
+      const result = await sendMagicLink(sentEmail);
+      if (result.error) {
+        notifications.error(result.error.message);
+      } else {
+        notifications.success('New magic link sent!');
+        startResendCooldown();
+      }
+    } catch {
+      notifications.error('Failed to resend. Please try again.');
     } finally {
       setIsResending(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     try {
-      if (isForgotPassword) {
-        await resetPassword(email);
-        notifications.success('Password reset email sent! Check your inbox.');
-        setIsForgotPassword(false);
-        setIsLoading(false);
-        return;
+      const response = await fetch('/api/superadmin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: email, password }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Invalid admin credentials');
       }
-
-      if (isLogin) {
-        if (isAdminLogin) {
-          const response = await fetch('/api/superadmin/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: email, password })
-          });
-          
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Invalid admin credentials');
-          }
-          
-          const data = await response.json();
-          sessionStorage.setItem('superadmin_token', data.token);
-          onLoginSuccess();
-        } else {
-          const result = await signInWithEmail(email, password);
-          if (!result.error) {
-            const isAuth = await isAuthenticatedAsync();
-            if (isAuth) {
-              onLoginSuccess();
-            } else {
-              throw new Error('Authentication failed. Please try again.');
-            }
-          } else {
-            throw new Error(result.error?.message || 'Login failed');
-          }
-        }
-      } else {
-        if (password !== confirmPassword) {
-          throw new Error('Passwords do not match');
-        }
-        if (password.length < 8) {
-          throw new Error('Password must be at least 8 characters');
-        }
-        
-        const result = await signUpWithEmail(email, password, confirmPassword, name);
-        if (!result.error) {
-          if (result.needsEmailVerification) {
-            setSignupEmail(email);
-            setShowSignupSuccess(true);
-          } else {
-            if (onSignupSuccess) {
-              onSignupSuccess(email, name);
-            } else {
-              onLoginSuccess();
-            }
-          }
-        } else {
-          throw new Error(result.error?.message || 'Signup failed');
-        }
-      }
-      setIsLoading(false);
+      const data = await response.json();
+      sessionStorage.setItem('superadmin_token', data.token);
+      onLoginSuccess();
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred. Please try again.');
+      setError(err.message || 'Login failed');
+    } finally {
       setIsLoading(false);
     }
   };
 
   const features = [
     { icon: Rocket, label: 'AI Campaign Builder', color: 'from-violet-500 to-indigo-600' },
-    { icon: Layers, label: '13 Campaign Structures', color: 'from-indigo-500 to-blue-600' },
     { icon: Search, label: 'Keyword Intelligence', color: 'from-blue-500 to-cyan-500' },
     { icon: ShieldCheck, label: 'Click Fraud Protection', color: 'from-amber-500 to-orange-600' },
     { icon: MailOpen, label: 'Proxy Mail', color: 'from-pink-500 to-rose-600' },
@@ -161,19 +242,15 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel - Branding */}
+      {/* Left Panel */}
       <div className={`hidden lg:flex lg:w-[45%] relative flex-col justify-between p-12 overflow-hidden ${
         isAdminLogin
           ? 'bg-gradient-to-br from-slate-950 via-red-950 to-orange-950'
           : 'bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950'
       }`}>
         <div className="absolute inset-0 overflow-hidden">
-          <div className={`absolute top-1/4 left-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse opacity-30 ${
-            isAdminLogin ? 'bg-red-500' : 'bg-purple-500'
-          }`} />
-          <div className={`absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse opacity-20 ${
-            isAdminLogin ? 'bg-orange-500' : 'bg-blue-500'
-          }`} style={{ animationDelay: '1s' }} />
+          <div className={`absolute top-1/4 left-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse opacity-30 ${isAdminLogin ? 'bg-red-500' : 'bg-purple-500'}`} />
+          <div className={`absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full blur-3xl animate-pulse opacity-20 ${isAdminLogin ? 'bg-orange-500' : 'bg-blue-500'}`} style={{ animationDelay: '1s' }} />
         </div>
 
         <div className="relative z-10">
@@ -181,11 +258,8 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
             <ArrowLeft className="w-4 h-4" />
             Back to home
           </button>
-
           <div className="flex items-center gap-3 mb-2">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              isAdminLogin ? 'bg-gradient-to-br from-red-500 to-orange-600' : 'bg-gradient-to-br from-violet-500 to-indigo-600'
-            }`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isAdminLogin ? 'bg-gradient-to-br from-red-500 to-orange-600' : 'bg-gradient-to-br from-violet-500 to-indigo-600'}`}>
               {isAdminLogin ? <Shield className="w-5 h-5 text-white" /> : <Sparkle className="w-5 h-5 text-white" />}
             </div>
             <span className="text-xl font-bold text-white">Adiology</span>
@@ -203,7 +277,6 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
           <p className={`text-lg mb-10 ${isAdminLogin ? 'text-orange-200/70' : 'text-indigo-200/70'}`}>
             {isAdminLogin ? 'Authorized personnel only' : 'Launch Search Ads in minutes with AI-powered automation.'}
           </p>
-
           {!isAdminLogin && (
             <div className="space-y-3">
               {features.map((f, i) => (
@@ -223,23 +296,17 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
         </div>
       </div>
 
-      {/* Right Panel - Form */}
-      <div className={`flex-1 flex items-center justify-center p-6 sm:p-8 ${
-        isAdminLogin
-          ? 'bg-gray-50'
-          : 'bg-white'
-      }`}>
+      {/* Right Panel */}
+      <div className={`flex-1 flex items-center justify-center p-6 sm:p-8 ${isAdminLogin ? 'bg-gray-50' : 'bg-white'}`}>
         <div className="w-full max-w-md">
-          {/* Mobile Back Button & Logo */}
+          {/* Mobile header */}
           <div className="lg:hidden mb-8">
             <button onClick={onBackToHome} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm mb-6">
               <ArrowLeft className="w-4 h-4" />
               Back to home
             </button>
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isAdminLogin ? 'bg-gradient-to-br from-red-500 to-orange-600' : 'bg-violet-600'
-              }`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isAdminLogin ? 'bg-gradient-to-br from-red-500 to-orange-600' : 'bg-violet-600'}`}>
                 {isAdminLogin ? <Shield className="w-5 h-5 text-white" /> : <Sparkle className="w-5 h-5 text-white" />}
               </div>
               <span className="text-xl font-bold text-gray-900">Adiology</span>
@@ -257,311 +324,192 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onSignupSuccess, onB
             </div>
           )}
 
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">
-              {isForgotPassword
-                ? 'Reset Password'
-                : isLogin
-                  ? (isAdminLogin ? 'Admin Sign In' : 'Welcome back')
-                  : SIGNUP_DISABLED
-                    ? 'Sign Up Disabled'
-                    : 'Create your account'}
-            </h2>
-            <p className="text-gray-500 text-sm">
-              {isForgotPassword
-                ? 'Enter your email to receive a reset link'
-                : isLogin
-                  ? (isAdminLogin ? 'Enter your administrator credentials' : 'Sign in to continue building campaigns')
-                  : SIGNUP_DISABLED
-                    ? 'New signups are currently disabled'
-                    : 'Start building winning campaigns today'}
-            </p>
-          </div>
-
-          {showSignupSuccess ? (
+          {/* ── Check Email Screen ── */}
+          {magicLinkSent && !isAdminLogin ? (
             <div className="space-y-6 text-center">
               <div className="flex justify-center">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-900/30">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-violet-900/30">
+                  <Mail className="w-9 h-9 text-white" />
                 </div>
               </div>
-              
               <div>
-                <h3 className="text-xl font-bold text-white mb-1">Account Created!</h3>
-                <p className="text-gray-400">Check your email to verify</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Check your inbox</h2>
+                <p className="text-gray-500 text-sm">We sent a sign-in link to</p>
+                <p className="text-gray-900 font-semibold mt-1 break-all">{sentEmail}</p>
               </div>
-
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                <p className="text-blue-300 text-sm leading-relaxed">
-                  We've sent a verification link to your email. Click the link to activate your account.
+              <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
+                <p className="text-violet-700 text-sm leading-relaxed">
+                  Click the link in your email to instantly sign in — no password needed. The link expires in <strong>1 hour</strong>.
                 </p>
               </div>
-
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <p className="text-xs text-gray-500 mb-1">Sent to:</p>
-                <p className="text-sm font-semibold text-white break-all">{signupEmail}</p>
-              </div>
-
               <div className="space-y-3">
-                {resendCount < MAX_RESENDS ? (
-                  <button
-                    onClick={handleResendVerification}
-                    disabled={resendCooldown > 0 || isResending}
-                    className={`w-full h-11 text-sm font-medium rounded-xl transition-all border ${
-                      resendCooldown > 0 || isResending
-                        ? 'bg-white/5 text-gray-500 border-white/10 cursor-not-allowed'
-                        : 'bg-white/5 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/10 hover:border-indigo-500/40'
-                    }`}
-                  >
-                    {isResending ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Sending...
-                      </span>
-                    ) : resendCooldown > 0 ? (
-                      `Resend in ${resendCooldown}s`
-                    ) : (
-                      `Resend verification email (${MAX_RESENDS - resendCount} left)`
-                    )}
-                  </button>
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-2">
-                    Maximum resend attempts reached. Please check your spam folder.
-                  </p>
-                )}
-
                 <button
-                  onClick={() => {
-                    setShowSignupSuccess(false);
-                    setIsLogin(true);
-                    setEmail('');
-                    setPassword('');
-                    setConfirmPassword('');
-                    setName('');
-                    setSignupEmail('');
-                    setError('');
-                    setResendCount(0);
-                    setResendCooldown(0);
-                  }}
-                  className={`w-full h-12 text-base font-semibold rounded-xl transition-all text-white ${
-                    isAdminLogin
-                      ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500'
-                      : 'bg-amber-500 hover:bg-amber-600'
+                  onClick={handleResend}
+                  disabled={resendCooldown > 0 || isResending}
+                  className={`w-full h-11 text-sm font-medium rounded-xl transition-all border flex items-center justify-center gap-2 ${
+                    resendCooldown > 0 || isResending
+                      ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'bg-white text-violet-600 border-violet-300 hover:bg-violet-50'
                   }`}
                 >
-                  Back to Login
+                  {isResending ? (
+                    <><RefreshCw className="w-4 h-4 animate-spin" /> Sending...</>
+                  ) : resendCooldown > 0 ? (
+                    `Resend in ${resendCooldown}s`
+                  ) : (
+                    'Resend link'
+                  )}
+                </button>
+                <button
+                  onClick={() => { setMagicLinkSent(false); setEmail(''); setSentEmail(''); setError(''); setResendCooldown(0); }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors py-2"
+                >
+                  ← Use a different email
                 </button>
               </div>
+              <p className="text-xs text-gray-400">Can't find it? Check your spam folder.</p>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
-                <Alert variant="destructive" className="border-red-500/30 bg-red-500/10 text-red-300">
-                  <AlertCircle className="w-4 h-4 text-red-400" />
-                  <AlertDescription className="text-red-300 font-medium text-sm">{error}</AlertDescription>
-                </Alert>
-              )}
 
-              {!isLogin && !SIGNUP_DISABLED && (
+          ) : isAdminLogin ? (
+            /* ── Admin Login ── */
+            <>
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Admin Sign In</h2>
+                <p className="text-gray-500 text-sm">Enter your administrator credentials</p>
+              </div>
+              <form onSubmit={handleAdminSubmit} className="space-y-5">
+                {error && (
+                  <Alert variant="destructive" className="border-red-500/30 bg-red-500/10">
+                    <AlertCircle className="w-4 h-4 text-red-400" />
+                    <AlertDescription className="text-red-600 font-medium text-sm">{error}</AlertDescription>
+                  </Alert>
+                )}
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-gray-700 font-medium text-sm">Full Name</Label>
+                  <Label htmlFor="admin-email" className="text-gray-700 font-medium text-sm">Username / Email</Label>
                   <Input
-                    id="name"
+                    id="admin-email"
                     type="text"
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:border-violet-500 focus:ring-violet-500/20"
-                    required={!isLogin}
-                    disabled={SIGNUP_DISABLED}
+                    placeholder="admin@example.com"
+                    value={email}
+                    onChange={e => { setEmail(e.target.value); setError(''); }}
+                    className="h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:border-red-500 focus:ring-red-500/20"
+                    required
+                    autoFocus
                   />
                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700 font-medium text-sm">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:border-violet-500 focus:ring-violet-500/20"
-                  required
-                />
-              </div>
-
-              {!isForgotPassword && (
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-700 font-medium text-sm">Password</Label>
+                  <Label htmlFor="admin-password" className="text-gray-700 font-medium text-sm">Password</Label>
                   <div className="relative">
                     <Input
-                      id="password"
+                      id="admin-password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder={isLogin ? 'Enter your password' : 'Create a password'}
+                      placeholder="Enter password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl pr-12 focus:border-indigo-500/50 focus:ring-indigo-500/20"
-                      required={!isForgotPassword}
+                      onChange={e => setPassword(e.target.value)}
+                      className="h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl pr-12 focus:border-red-500 focus:ring-red-500/20"
+                      required
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1"
-                    >
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1">
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
-              )}
+                <Button
+                  type="submit"
+                  className="w-full text-white h-12 text-base font-semibold rounded-xl shadow-sm transition-all bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4 animate-spin" /> Signing in...</span> : 'Access Admin Panel'}
+                </Button>
+              </form>
+            </>
 
-              {!isLogin && !SIGNUP_DISABLED && !isForgotPassword && (
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-gray-700 font-medium text-sm">Confirm Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl pr-12 focus:border-indigo-500/50 focus:ring-indigo-500/20"
-                      required={!isLogin}
-                      disabled={SIGNUP_DISABLED}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
+          ) : (
+            /* ── Regular User: Email-only magic link ── */
+            <>
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Get started free</h2>
+                <p className="text-gray-500 text-sm">Enter your email — we'll send you a sign-in link. No password needed.</p>
+              </div>
+
+              {/* Google Sign-In */}
+              {GOOGLE_CLIENT_ID && (
+                <div className="mb-5">
+                  {googleLoading ? (
+                    <div className="w-full h-11 flex items-center justify-center gap-2 border border-gray-300 rounded-xl text-gray-600 text-sm bg-white">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Signing in with Google...
+                    </div>
+                  ) : (
+                    <div ref={googleButtonRef} className="w-full flex justify-center" style={{ minHeight: 44 }} />
+                  )}
+                  <div className="relative my-5">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs text-gray-400">
+                      <span className="bg-white px-3">or continue with email</span>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {isLogin && !isForgotPassword && (
-                <div className="flex items-center justify-between text-sm">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input type="checkbox" className="rounded border-gray-300 bg-white" />
-                    <span className="text-gray-600 font-medium">Remember me</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError('');
-                      setIsForgotPassword(true);
-                    }}
-                    className="text-violet-600 hover:text-violet-700 font-medium cursor-pointer"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              )}
-
-              {isForgotPassword && (
-                <div className="p-4 bg-violet-50 border border-violet-200 rounded-xl">
-                  <p className="text-sm text-gray-600 mb-3">
-                    Enter your email and we'll send you a link to reset your password.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError('');
-                      setIsForgotPassword(false);
-                      setEmail('');
-                    }}
-                    className="text-sm text-violet-600 hover:text-violet-700 font-medium"
-                  >
-                    ← Back to login
-                  </button>
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                className={`w-full text-white h-12 text-base font-semibold rounded-xl shadow-sm transition-all ${
-                  isAdminLogin
-                    ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500'
-                    : 'bg-amber-500 hover:bg-amber-600'
-                }`}
-                disabled={isLoading || (!isLogin && SIGNUP_DISABLED)}
-              >
-                {isLoading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {isForgotPassword
-                      ? 'Sending reset link...'
-                      : isLogin
-                        ? 'Signing in...'
-                        : 'Creating account...'}
-                  </span>
-                ) : (
-                  isForgotPassword
-                    ? 'Send Reset Link'
-                    : isLogin
-                      ? (isAdminLogin ? 'Access Admin Panel' : 'Sign In')
-                      : (SIGNUP_DISABLED ? 'Sign Up Disabled' : 'Create Account')
+              <form onSubmit={handleMagicLinkSubmit} className="space-y-5">
+                {error && (
+                  <Alert variant="destructive" className="border-red-500/30 bg-red-50">
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <AlertDescription className="text-red-600 font-medium text-sm">{error}</AlertDescription>
+                  </Alert>
                 )}
-              </Button>
 
-              {SIGNUP_DISABLED ? (
-                <div className="text-center text-sm text-gray-500 italic">
-                  Sign up is currently disabled. Please contact support for access.
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-gray-700 font-medium text-sm">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={e => { setEmail(e.target.value); setError(''); }}
+                    className="h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-xl focus:border-violet-500 focus:ring-violet-500/20"
+                    required
+                    autoFocus
+                  />
                 </div>
-              ) : (
-                !isForgotPassword && (
-                  <div className="text-center text-sm text-gray-400">
-                    {isLogin ? (
-                      <>
-                        Don't have an account?{' '}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onSignupRedirect) {
-                              onSignupRedirect();
-                            } else {
-                              setIsLogin(false);
-                              setError('');
-                              setIsForgotPassword(false);
-                            }
-                          }}
-                          className="text-indigo-400 hover:text-indigo-300 font-semibold"
-                        >
-                          Sign up
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        Already have an account?{' '}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsLogin(true);
-                            setError('');
-                            setIsForgotPassword(false);
-                          }}
-                          className="text-indigo-400 hover:text-indigo-300 font-semibold"
-                        >
-                          Sign in
-                        </button>
-                      </>
-                    )}
+
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
-                )
-              )}
-            </form>
+                  <p className="text-xs text-green-700 font-medium">7-day free trial · No credit card required · Cancel anytime</p>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base font-semibold rounded-xl bg-violet-600 hover:bg-violet-700 text-white shadow-sm transition-all"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Sending link...
+                    </span>
+                  ) : (
+                    'Continue with email →'
+                  )}
+                </Button>
+
+                <p className="text-center text-xs text-gray-400">
+                  Already have an account? Just enter your email above — same link works for sign in and sign up.
+                </p>
+              </form>
+            </>
           )}
         </div>
       </div>
     </div>
   );
 };
+
+export default Auth;

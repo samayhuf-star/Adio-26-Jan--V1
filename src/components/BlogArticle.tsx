@@ -138,8 +138,44 @@ export default function BlogArticle({ slug, onBack, onArticleClick }: BlogArticl
         <meta property="og:description" content={article.excerpt || ''} />
         <meta property="og:url" content={`https://adiology.io/blog/${article.slug}`} />
         <meta property="og:type" content="article" />
+        <meta property="og:site_name" content="Adiology" />
         <meta property="article:published_time" content={article.createdAt} />
         <meta property="article:section" content={article.category} />
+        <meta property="article:author" content={article.author} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={article.title} />
+        <meta name="twitter:description" content={article.excerpt || ''} />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": article.title,
+          "description": article.metaDescription || article.excerpt || '',
+          "author": { "@type": "Person", "name": article.author },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io",
+            "logo": { "@type": "ImageObject", "url": "https://adiology.io/og-image.png" }
+          },
+          "datePublished": article.createdAt,
+          "dateModified": article.createdAt,
+          "url": `https://adiology.io/blog/${article.slug}`,
+          "mainEntityOfPage": { "@type": "WebPage", "@id": `https://adiology.io/blog/${article.slug}` },
+          "articleSection": article.category,
+          "keywords": article.tags?.join(', '),
+          "wordCount": article.wordCount,
+          "timeRequired": article.readTime,
+          "inLanguage": "en-US",
+          "isPartOf": { "@type": "Blog", "name": "Adiology Blog", "url": "https://adiology.io/blog" },
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://adiology.io" },
+              { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://adiology.io/blog" },
+              { "@type": "ListItem", "position": 3, "name": article.title, "item": `https://adiology.io/blog/${article.slug}` }
+            ]
+          }
+        })}</script>
       </Helmet>
 
       <div className="min-h-screen bg-white">

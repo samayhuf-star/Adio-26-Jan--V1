@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Monitor, Smartphone, Tablet, Globe, Clock, RefreshCw, ChevronDown, ChevronRight, MapPin, Wifi, User, ExternalLink } from 'lucide-react';
+import { Monitor, Smartphone, Tablet, Globe, Clock, RefreshCw, ChevronDown, ChevronRight, MapPin, Wifi, User, ExternalLink, Shield, ShieldOff, X, ChevronUp } from 'lucide-react';
 
 interface VisitorSession {
   sessionId: string;
@@ -23,6 +23,13 @@ interface VisitorSession {
   registeredEmail: string | null;
   converted: boolean;
   durationSeconds: number;
+}
+
+interface BlockedIp {
+  ip: string;
+  reason: string | null;
+  blocked_by: string | null;
+  created_at: string;
 }
 
 interface Summary {
@@ -117,6 +124,26 @@ export function VisitorsDashboard({ adminToken }: { adminToken: string }) {
   const [countryFilter, setCountryFilter] = useState('');
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
 
+  const [blockedIps, setBlockedIps] = useState<BlockedIp[]>([]);
+  const [blockedIpSet, setBlockedIpSet] = useState<Set<string>>(new Set());
+  const [blockingIp, setBlockingIp] = useState<string | null>(null);
+  const [showBlockedPanel, setShowBlockedPanel] = useState(false);
+  const [hoveredIp, setHoveredIp] = useState<string | null>(null);
+
+  const fetchBlockedIps = useCallback(async () => {
+    try {
+      const res = await fetch('/api/superadmin/blocked-ips', {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const list: BlockedIp[] = json.blockedIps || [];
+      setBlockedIps(list);
+      setBlockedIpSet(new Set(list.map(b => b.ip)));
+    } catch {
+    }
+  }, [adminToken]);
+
   const fetchVisitors = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -145,6 +172,50 @@ export function VisitorsDashboard({ adminToken }: { adminToken: string }) {
   useEffect(() => {
     fetchVisitors();
   }, [fetchVisitors]);
+
+  useEffect(() => {
+    fetchBlockedIps();
+  }, [fetchBlockedIps]);
+
+  const handleBlockIp = async (ip: string) => {
+    if (!ip || blockingIp) return;
+    setBlockingIp(ip);
+    try {
+      const res = await fetch('/api/superadmin/blocked-ips', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ ip }),
+      });
+      if (res.ok) {
+        await fetchBlockedIps();
+        await fetchVisitors();
+      }
+    } catch {
+    } finally {
+      setBlockingIp(null);
+    }
+  };
+
+  const handleUnblockIp = async (ip: string) => {
+    if (!ip || blockingIp) return;
+    setBlockingIp(ip);
+    try {
+      const res = await fetch(`/api/superadmin/blocked-ips/${encodeURIComponent(ip)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      if (res.ok) {
+        await fetchBlockedIps();
+        await fetchVisitors();
+      }
+    } catch {
+    } finally {
+      setBlockingIp(null);
+    }
+  };
 
   const toggleExpand = (sessionId: string) => {
     setExpandedSessions(prev => {
@@ -178,14 +249,63 @@ export function VisitorsDashboard({ adminToken }: { adminToken: string }) {
           <h2 className="text-xl font-semibold text-white">Visitors</h2>
           <p className="text-sm text-gray-400 mt-0.5">Every person who visited your website — anonymous or signed up</p>
         </div>
-        <button
-          onClick={fetchVisitors}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowBlockedPanel(p => !p)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors border ${
+              blockedIps.length > 0
+                ? 'bg-red-900/30 hover:bg-red-900/50 text-red-400 border-red-700'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
+            }`}
+          >
+            <Shield size={14} />
+            Blocked IPs {blockedIps.length > 0 && `(${blockedIps.length})`}
+            {showBlockedPanel ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+          <button
+            onClick={fetchVisitors}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Blocked IPs Panel */}
+      {showBlockedPanel && (
+        <div className="bg-gray-800/50 border border-red-800/50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield size={16} className="text-red-400" />
+            <h3 className="text-sm font-medium text-red-300">Blocked IP Addresses</h3>
+            <span className="text-xs text-gray-500">— these IPs are hidden from all visitor views</span>
+          </div>
+          {blockedIps.length === 0 ? (
+            <p className="text-sm text-gray-500">No IPs blocked yet. Click an IP in the table below to block it.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {blockedIps.map(b => (
+                <div key={b.ip} className="flex items-center justify-between bg-gray-900/60 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm text-red-300">{b.ip}</span>
+                    <span className="text-xs text-gray-500">
+                      blocked {new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleUnblockIp(b.ip)}
+                    disabled={blockingIp === b.ip}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded transition-colors disabled:opacity-40"
+                  >
+                    <ShieldOff size={12} />
+                    Unblock
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Summary cards */}
       {summary && (
@@ -310,6 +430,8 @@ export function VisitorsDashboard({ adminToken }: { adminToken: string }) {
                   const locationParts = [session.city, session.region, session.country].filter(Boolean);
                   const location = locationParts.join(', ') || '—';
                   const isp = session.isp || session.org || '—';
+                  const isIpHovered = hoveredIp === session.sessionId;
+                  const isBeingBlocked = blockingIp === session.ip;
 
                   return (
                     <React.Fragment key={session.sessionId}>
@@ -349,8 +471,30 @@ export function VisitorsDashboard({ adminToken }: { adminToken: string }) {
                             <span className="max-w-[160px] truncate" title={isp}>{isp}</span>
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-gray-400">
-                          {session.ip || '—'}
+                        <td
+                          className="px-4 py-3 font-mono text-xs"
+                          onMouseEnter={() => setHoveredIp(session.sessionId)}
+                          onMouseLeave={() => setHoveredIp(null)}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {session.ip ? (
+                            <div className="flex items-center gap-1.5 group">
+                              <span className="text-gray-400">{session.ip}</span>
+                              {isIpHovered && (
+                                <button
+                                  onClick={() => handleBlockIp(session.ip)}
+                                  disabled={isBeingBlocked}
+                                  title={`Block ${session.ip}`}
+                                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs bg-red-900/40 text-red-400 hover:bg-red-800/60 border border-red-800/50 transition-colors disabled:opacity-40 whitespace-nowrap"
+                                >
+                                  {isBeingBlocked ? <RefreshCw size={10} className="animate-spin" /> : <Shield size={10} />}
+                                  Block
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-600">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className="flex items-center gap-1.5 text-gray-300">
@@ -401,7 +545,19 @@ export function VisitorsDashboard({ adminToken }: { adminToken: string }) {
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 pt-3 border-t border-gray-700">
                                 <div>
                                   <div className="text-xs text-gray-500">Full IP</div>
-                                  <div className="text-sm font-mono text-gray-300">{session.ip || '—'}</div>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-sm font-mono text-gray-300">{session.ip || '—'}</span>
+                                    {session.ip && (
+                                      <button
+                                        onClick={() => handleBlockIp(session.ip)}
+                                        disabled={!!blockingIp}
+                                        className="flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-800/50 transition-colors disabled:opacity-40"
+                                      >
+                                        <Shield size={10} />
+                                        Block IP
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                                 <div>
                                   <div className="text-xs text-gray-500">ISP</div>

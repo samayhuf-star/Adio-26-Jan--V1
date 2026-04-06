@@ -28,6 +28,10 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
+// Canonical production URL — used for all Stripe redirect URLs (success, cancel, portal return).
+// Must always be adiology.io. Replit deployment/dev URLs must NEVER appear in Stripe redirects.
+const CANONICAL_URL = 'https://adiology.io';
+
 const ALLOWED_ORIGINS = [
   'adiology.io',
   'adiology.online',
@@ -37,26 +41,34 @@ const ALLOWED_ORIGINS = [
   'replit.app',
 ];
 
+// Domains that are safe to use as Stripe redirect targets (not Replit infrastructure URLs)
+const PAYMENT_ALLOWED_ORIGINS = [
+  'adiology.io',
+  'adiology.online',
+  'www.adiology.io',
+  'www.adiology.online',
+];
+
 function isAllowedOrigin(hostname: string): boolean {
   return ALLOWED_ORIGINS.some(allowed => hostname === allowed || hostname.endsWith('.' + allowed));
 }
 
+function isPaymentAllowedOrigin(hostname: string): boolean {
+  return PAYMENT_ALLOWED_ORIGINS.some(allowed => hostname === allowed || hostname.endsWith('.' + allowed));
+}
+
 function getOrigin(c: { req: { url: string; header: (n: string) => string | undefined } }): string {
+  // Only use request origin if it's a real production domain — never use Replit URLs as Stripe redirect targets
   const origin = c.req.header('Origin') || c.req.header('Referer');
   if (origin) {
     try {
       const u = new URL(origin);
-      if (isAllowedOrigin(u.hostname)) {
+      if (isPaymentAllowedOrigin(u.hostname)) {
         return u.origin;
       }
     } catch {}
   }
-  try {
-    const u = new URL(c.req.url);
-    return `${u.protocol}//${u.host}`;
-  } catch {
-    return process.env.DOMAIN || 'https://www.adiology.online';
-  }
+  return CANONICAL_URL;
 }
 
 function sanitizeRedirectUrl(url: string | undefined, fallback: string): string {

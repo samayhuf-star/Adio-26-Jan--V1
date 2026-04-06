@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { ArrowLeft } from 'lucide-react';
 import { Footer } from './Footer';
 
@@ -9,6 +10,24 @@ interface TermsOfServiceProps {
 export const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-white text-gray-600">
+      <Helmet>
+        <title>Terms of Service - Adiology | Usage Agreement</title>
+        <meta name="description" content="Read Adiology's terms of service. Understand your rights and obligations when using our AI-powered Google Ads campaign management platform." />
+        <link rel="canonical" href="https://adiology.io/terms-of-service" />
+        <meta property="og:title" content="Terms of Service - Adiology" />
+        <meta property="og:description" content="Adiology terms of service and usage agreement for our Google Ads management platform." />
+        <meta property="og:url" content="https://adiology.io/terms-of-service" />
+        <meta property="og:type" content="website" />
+        <meta name="robots" content="index, follow" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "Terms of Service - Adiology",
+          "description": "Adiology terms of service and usage agreement.",
+          "url": "https://adiology.io/terms-of-service",
+          "isPartOf": { "@type": "WebSite", "name": "Adiology", "url": "https://adiology.io" }
+        })}</script>
+      </Helmet>
       <div className="max-w-4xl mx-auto px-6 py-12">
         <button
           onClick={onBack}

@@ -20,8 +20,40 @@ export interface KeywordGenerationOptions {
   vertical?: string;
   intentResult?: any;
   landingPageData?: any;
-  maxKeywords?: number; // Default 600
-  minKeywords?: number; // Default 300
+  maxKeywords?: number; // Default 250
+  minKeywords?: number; // Default 150
+}
+
+// ─── Step 2: Hard-block irrelevant intent categories ─────────────────────────
+const INTENT_BLOCKLIST: string[] = [
+  // Career / jobs
+  'job', 'jobs', 'career', 'careers', 'salary', 'salaries', 'hiring', 'hire me',
+  'resume', 'cv', 'interview', 'intern', 'internship', 'vacancy', 'vacancies',
+  'employment', 'recruit', 'recruiter', 'glassdoor', 'indeed', 'linkedin',
+  // Education / learning
+  'course', 'courses', 'tutorial', 'tutorials', 'learn', 'learning', 'training',
+  'certification', 'certificate', 'degree', 'beginner', 'beginners', 'study',
+  'exam', 'quiz', 'lesson', 'lessons', 'udemy', 'coursera', 'edx',
+  // Social / community
+  'reddit', 'twitter', 'facebook', 'instagram', 'tiktok', 'youtube', 'forum',
+  'community', 'group', 'discord', 'slack', 'subreddit',
+  // Research / informational
+  'wikipedia', 'history', 'definition', 'meaning', 'vs', 'versus', 'comparison',
+  'compare', 'explained', 'overview', 'introduction',
+  // Competitor ad platforms (irrelevant to Google Ads buyers)
+  'facebook ads', 'meta ads', 'tiktok ads', 'instagram ads', 'bing ads',
+];
+
+// ─── Step 1: Seed-proximity score ─────────────────────────────────────────────
+function seedProximityScore(keyword: string, seeds: string[]): number {
+  const kw = keyword.toLowerCase();
+  const seedWords = seeds
+    .flatMap(s => s.toLowerCase().split(/\s+/))
+    .filter(w => w.length > 3);
+  if (seedWords.length === 0) return 1; // no long seed words → don't penalise
+  const matchCount = seedWords.filter(w => kw.includes(w)).length;
+  const totalWords = kw.split(/\s+/).length;
+  return matchCount / totalWords;
 }
 
 export interface GeneratedKeyword {
@@ -101,45 +133,38 @@ function isValidKeyword(keyword: string, serviceTerms: string[]): boolean {
   const hasServiceTerm = serviceTerms.some(term => 
     lower.includes(term.toLowerCase())
   );
-  // Allow modifiers like "near me", "24/7", "free", "cheap", etc. even without service term
   const validModifiers = ['near me', '24/7', 'same day', 'open now', 'available', 'emergency', 'cost', 'price', 'cheap', 'affordable', 'free', 'best', 'top', 'local', 'online'];
   const hasValidModifier = validModifiers.some(mod => lower.includes(mod));
   if (!hasServiceTerm && !hasValidModifier) return false;
   
   // Rule 5: No nonsense question patterns
   const invalidPatterns = [
-    /^what is\s+\w+$/,           // "what is plumber" (incomplete)
-    /^where to\s+\w+$/,          // "where to plumber" (incomplete)
-    /^when to\s+\w+$/,           // "when to plumber" (incomplete) 
-    /^why is\s+\w+$/,            // "why is plumber" (incomplete)
-    /^does\s+\w+$/,              // "does plumber" (incomplete)
-    /^can\s+\w+$/,               // "can plumber" (incomplete)
-    /^how to\s+\w+$/,            // "how to plumber" (incomplete)
-    /^(near|price|cost|cheap|discount|free|job|apply|brand|information)$/,  // standalone spam words
+    /^what is\s+\w+$/,
+    /^where to\s+\w+$/,
+    /^when to\s+\w+$/,
+    /^why is\s+\w+$/,
+    /^does\s+\w+$/,
+    /^can\s+\w+$/,
+    /^how to\s+\w+$/,
+    /^(near|price|cost|cheap|discount|free|job|apply|brand|information)$/,
   ];
+  if (invalidPatterns.some(pattern => pattern.test(lower))) return false;
   
-  if (invalidPatterns.some(pattern => pattern.test(lower))) {
-    return false;
-  }
+  // Rule 5b: "number" without "phone" context is spam
+  if (lower.includes('number') && !lower.includes('phone')) return false;
   
-  // Rule 5b: "number" without "phone" context is spam (e.g., "number near me")
-  // But allow phrases like "phone number", "delta phone number", etc.
-  if (lower.includes('number') && !lower.includes('phone')) {
-    return false;
-  }
-  
-  // Rule 6: No standalone generic spam words as the entire keyword
+  // Rule 6: No standalone generic spam words
   const spamWords = ['cheap', 'discount', 'free', 'job', 'apply', 'brand', 'information', 'near', 'price'];
   if (spamWords.includes(lower)) return false;
   
-  // Rule 7: Keywords starting with question words must have proper verb structure
+  // Rule 7: Question starters need at least 4 words
   const questionStarters = ['how to', 'what is', 'where to', 'when to', 'why is', 'does', 'can'];
   for (const starter of questionStarters) {
-    if (lower.startsWith(starter)) {
-      // Must have at least 4 words total to form a meaningful question
-      if (words.length < 4) return false;
-    }
+    if (lower.startsWith(starter) && words.length < 4) return false;
   }
+
+  // Rule 8 (Step 2): Hard-block career / education / social / research terms
+  if (INTENT_BLOCKLIST.some(term => lower.includes(term))) return false;
   
   return true;
 }
@@ -264,6 +289,9 @@ function classifyIntent(keyword: string): KeywordIntent {
  * Calls backend endpoint that scrapes Google Autocomplete for real user searches.
  * Falls back to basic expansion if backend is unavailable.
  */
+// Allowed intents — Informational is dropped entirely (Step 3)
+const ALLOWED_INTENTS: KeywordIntent[] = ['Commercial', 'Transactional', 'Local'];
+
 export async function generateKeywords(options: KeywordGenerationOptions): Promise<GeneratedKeyword[]> {
   const {
     seedKeywords,
@@ -271,8 +299,8 @@ export async function generateKeywords(options: KeywordGenerationOptions): Promi
     vertical = 'default',
     intentResult,
     landingPageData,
-    maxKeywords = 600,
-    minKeywords = 300
+    maxKeywords = 250,
+    minKeywords = 150
   } = options;
 
   const negativeList = negativeKeywords
@@ -327,7 +355,15 @@ export async function generateKeywords(options: KeywordGenerationOptions): Promi
 
         if (seenTexts.has(keyword)) continue;
 
+        // Step 2 + Rule 8: blocklist + core validity check
         if (!isValidKeyword(keyword, serviceTerms)) continue;
+
+        // Step 3: Drop Informational intent entirely
+        const intent = classifyIntent(keyword);
+        if (!ALLOWED_INTENTS.includes(intent)) continue;
+
+        // Step 4: Seed proximity score > 0.3 — drops semantically drifted suggestions
+        if (seedProximityScore(keyword, seedList) < 0.3) continue;
 
         seenTexts.add(keyword);
         generatedKeywords.push({
@@ -335,7 +371,7 @@ export async function generateKeywords(options: KeywordGenerationOptions): Promi
           text: keyword,
           volume: 'Medium',
           cpc: '$2.50',
-          type: classifyIntent(keyword),
+          type: intent,
           matchType: keyword.includes('near me') || keyword.includes('local') ? 'EXACT' : 'BROAD',
         });
 

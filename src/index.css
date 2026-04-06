@@ -627,6 +627,11 @@ html[data-homepage="true"] #root {
   border: 1px solid #e2e8f0;
 }
 
+/* Hide figures that have no actual image — only a caption placeholder */
+.blog-article-content figure:not(:has(img)) {
+  display: none;
+}
+
 .blog-article-content figcaption {
   font-size: 0.875rem;
   color: #64748b;

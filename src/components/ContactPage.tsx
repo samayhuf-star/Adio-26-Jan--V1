@@ -74,6 +74,25 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBack }) => {
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content="Contact Us - Adiology" />
         <meta name="twitter:description" content="Get in touch with Adiology support team." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          "name": "Contact Us - Adiology",
+          "description": "Get in touch with Adiology for support, feature requests, or general inquiries.",
+          "url": "https://adiology.io/contact",
+          "mainEntity": {
+            "@type": "Organization",
+            "name": "Adiology",
+            "url": "https://adiology.io",
+            "email": "hello@adiology.io",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "customer support",
+              "email": "support@adiology.io",
+              "availableLanguage": "English"
+            }
+          }
+        })}</script>
       </Helmet>
       <div className="min-h-screen bg-white">
         <div className="bg-violet-600 text-white">

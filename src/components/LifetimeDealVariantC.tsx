@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { captureLead } from '../utils/leadCapture';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -51,6 +52,12 @@ export function LifetimeDealVariantC({ onNavigate }: Props) {
       setCheckoutEmail(storedEmail);
       setShowSuccess(true);
       window.history.replaceState({}, '', window.location.pathname);
+      // Quora Purchase pixel — fires immediately if pixel loaded, or via onload handler in index.html
+      sessionStorage.setItem('qp_purchase_pending', '1');
+      if (typeof (window as any).qp === 'function') {
+        (window as any).qp('track', 'Purchase');
+        sessionStorage.removeItem('qp_purchase_pending');
+      }
     }
   }, []);
 
@@ -128,7 +135,7 @@ export function LifetimeDealVariantC({ onNavigate }: Props) {
     e.preventDefault();
     const trimmed = email.trim();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailError('Please enter a valid email address.'); return; }
-    fetch('/api/leads/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: trimmed, source: 'lifetime_deal_c', page: window.location.pathname }) }).catch(() => {});
+    captureLead(trimmed, 'lifetime_deal', { variant: 'C' });
     processCheckout(trimmed);
   };
 
@@ -166,9 +173,32 @@ export function LifetimeDealVariantC({ onNavigate }: Props) {
         <title>{`Only ${spotsLeft} Spots Left — Adiology Lifetime Deal $99`}</title>
         <meta name="description" content={`Only ${spotsLeft} lifetime access spots remaining. Get Adiology's complete Google Ads platform — campaign builder, click fraud protection, keyword planner and more — for $99 one-time.`} />
         <link rel="canonical" href="https://adiology.io/lifetime-deal" />
+        <meta property="og:title" content="Adiology Lifetime Deal - $99 One-Time | Google Ads Tools" />
+        <meta property="og:description" content="Get lifetime access to Adiology's complete Google Ads platform for $99. Campaign builder, click fraud protection, keyword planner, and more." />
+        <meta property="og:url" content="https://adiology.io/lifetime-deal" />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://adiology.io/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "Adiology Lifetime Deal",
+          "description": "Lifetime access to Adiology's complete Google Ads platform. One-time $99 payment.",
+          "url": "https://adiology.io/lifetime-deal",
+          "brand": { "@type": "Brand", "name": "Adiology" },
+          "offers": {
+            "@type": "Offer",
+            "price": "99",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/LimitedAvailability",
+            "priceValidUntil": "2026-12-31",
+            "url": "https://adiology.io/lifetime-deal",
+            "description": "One-time payment. Lifetime access to all features."
+          }
+        })}</script>
       </Helmet>
 
-      <div className="min-h-screen bg-[#0d0d0f] text-white" style={{ backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(245,158,11,0.07) 0%, transparent 70%)' }}>
+      <div className="min-h-screen bg-[#0d0d0f] text-white overflow-x-hidden" style={{ backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(245,158,11,0.07) 0%, transparent 70%)' }}>
 
         {/* Nav */}
         <nav className="border-b border-white/10 bg-[#0d0d0f]/90 backdrop-blur-lg sticky top-0 z-50">
@@ -221,9 +251,9 @@ export function LifetimeDealVariantC({ onNavigate }: Props) {
         )}
 
         {/* ===== HERO ===== */}
-        <section className="pt-10 sm:pt-16 pb-0 px-4 sm:px-6">
+        <section className="pt-8 sm:pt-16 pb-0 px-4 sm:px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+            <div className="grid md:grid-cols-2 gap-8 lg:gap-14 items-center">
 
               {/* Left: copy */}
               <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
@@ -240,7 +270,7 @@ export function LifetimeDealVariantC({ onNavigate }: Props) {
                   )}
                 </AnimatePresence>
 
-                <h1 className="text-4xl sm:text-5xl lg:text-[3.4rem] font-extrabold leading-[1.08] tracking-tight mb-5">
+                <h1 className="text-3xl sm:text-5xl lg:text-[3.4rem] font-extrabold leading-[1.1] tracking-tight mb-5">
                   <span className="text-white">The Complete</span><br />
                   <span className="text-white">Google Ads Platform.</span><br />
                   <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent">
@@ -305,8 +335,8 @@ export function LifetimeDealVariantC({ onNavigate }: Props) {
                 </p>
               </motion.div>
 
-              {/* Right: Product Demo */}
-              <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+              {/* Right: Product Demo — hidden on mobile, shown md+ */}
+              <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.15 }} className="hidden md:block">
                 <LTDProductDemo theme="dark-amber" />
               </motion.div>
             </div>

@@ -4,7 +4,7 @@ import {
   Ban, CheckCircle, Eye, TrendingUp, DollarSign, Activity,
   UserCheck, AlertTriangle, Calendar, Mail, ChevronRight,
   Edit, Trash2, X, Save, MoreHorizontal, MessageSquare,
-  Server, Tag, Brain, FileText, MessageCircle, Globe, Send, Route
+  Server, Tag, Brain, FileText, MessageCircle, Globe, Send, Route, Terminal
 } from 'lucide-react';
 import { VisitorsDashboard } from './VisitorsDashboard';
 import { UserJourneyDashboard } from './UserJourneyDashboard';
@@ -25,7 +25,10 @@ import { WhatsAppConfigPanel } from './WhatsAppConfigPanel';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import { UserLifecyclePanel } from './UserLifecyclePanel';
 import { AdSpendDashboard } from './AdSpendDashboard';
-const SEODirectoryGuide = lazy(() => import('./SEODirectoryGuide'));
+import { SystemLogsDashboard } from './SystemLogsDashboard';
+import { LeadsDashboard } from './LeadsDashboard';
+import { ChatbotDashboard } from './ChatbotDashboard';
+const SEODashboard = lazy(() => import('./SEODashboard'));
 import {
   Dialog,
   DialogContent,
@@ -103,7 +106,7 @@ interface SubscriptionRecord {
   paidAmountCents: number | string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend';
+type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend' | 'system-logs' | 'leads' | 'chatbot';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -139,6 +142,13 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
   // User lifecycle panel
   const [lifecycleUserId, setLifecycleUserId] = useState<string | null>(null);
   const [planFilter, setPlanFilter] = useState<string>('all');
+
+  // Replit Dev Spend widget
+  const [replitSpend, setReplitSpend] = useState<number>(0);
+  const [replitSpendUpdatedAt, setReplitSpendUpdatedAt] = useState<string | null>(null);
+  const [editingSpend, setEditingSpend] = useState(false);
+  const [spendInput, setSpendInput] = useState('');
+  const [spendSaving, setSpendSaving] = useState(false);
 
   const adminFetch = async (url: string, options: RequestInit = {}) => {
     return fetch(url, {
@@ -187,11 +197,51 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     }
   };
 
+  const loadReplitSpend = async () => {
+    try {
+      const response = await adminFetch('/api/superadmin/replit-spend');
+      if (response.ok) {
+        const data = await response.json();
+        setReplitSpend(data.amount ?? 0);
+        setReplitSpendUpdatedAt(data.updatedAt ?? null);
+      }
+    } catch (error) {
+      console.error('Failed to load Replit spend:', error);
+    }
+  };
+
+  const saveReplitSpend = async () => {
+    const parsed = parseFloat(spendInput);
+    if (isNaN(parsed) || parsed < 0) return;
+    setSpendSaving(true);
+    try {
+      const response = await adminFetch('/api/superadmin/replit-spend', {
+        method: 'PUT',
+        body: JSON.stringify({ amount: parsed })
+      });
+      if (response.ok) {
+        setReplitSpend(parsed);
+        setReplitSpendUpdatedAt(new Date().toISOString());
+        setEditingSpend(false);
+      }
+    } catch (error) {
+      console.error('Failed to save Replit spend:', error);
+    } finally {
+      setSpendSaving(false);
+    }
+  };
+
   const refreshData = async () => {
     setLoading(true);
     await Promise.all([loadStats(), loadUsers(), loadSubscriptions()]);
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadReplitSpend();
+    const spendInterval = setInterval(loadReplitSpend, 30000);
+    return () => clearInterval(spendInterval);
+  }, []);
 
   useEffect(() => {
     refreshData();
@@ -504,16 +554,73 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Header */}
       <header className="bg-slate-800/50 backdrop-blur-xl border-b border-slate-700/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-white">Super Admin</h1>
+                <p className="text-xs text-slate-400">Control Panel</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Super Admin</h1>
-              <p className="text-xs text-slate-400">Control Panel</p>
+
+            {/* Replit Dev Spend Widget */}
+            <div className="flex items-center gap-2 bg-slate-900/70 border border-emerald-500/30 rounded-xl px-4 py-2 min-w-[220px]">
+              <div className="flex flex-col flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[10px] font-medium text-emerald-400 uppercase tracking-widest">Replit Dev Cost</span>
+                </div>
+                {editingSpend ? (
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-emerald-400 text-sm font-bold">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={spendInput}
+                      onChange={e => setSpendInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveReplitSpend(); if (e.key === 'Escape') setEditingSpend(false); }}
+                      className="bg-slate-700 text-white text-sm font-bold rounded px-2 py-0.5 w-24 border border-emerald-500/50 outline-none focus:border-emerald-400"
+                      autoFocus
+                    />
+                    <button
+                      onClick={saveReplitSpend}
+                      disabled={spendSaving}
+                      className="text-emerald-400 hover:text-emerald-300 text-xs font-bold px-1"
+                    >
+                      {spendSaving ? '...' : <Save className="w-3.5 h-3.5" />}
+                    </button>
+                    <button onClick={() => setEditingSpend(false)} className="text-slate-400 hover:text-slate-300">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setSpendInput(replitSpend.toFixed(2)); setEditingSpend(true); }}
+                    className="text-left group"
+                    title="Click to update amount"
+                  >
+                    <span className="text-2xl font-black text-emerald-400 group-hover:text-emerald-300 transition-colors tabular-nums">
+                      ${replitSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <Edit className="w-3 h-3 text-slate-500 group-hover:text-emerald-400 inline ml-1.5 mb-1 transition-colors" />
+                  </button>
+                )}
+                {replitSpendUpdatedAt && !editingSpend && (
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Updated {new Date(replitSpendUpdatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
             <Button
               onClick={refreshData}
@@ -556,7 +663,10 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             { id: 'seo', label: 'SEO & Directories', icon: Globe },
             { id: 'feedback', label: 'Feedback', icon: MessageSquare },
             { id: 'user-journey', label: 'User Journey', icon: Route },
-            { id: 'ad-spend', label: 'Ad Spend', icon: TrendingUp }
+            { id: 'ad-spend', label: 'Ad Spend', icon: TrendingUp },
+            { id: 'system-logs', label: 'System Logs', icon: Terminal },
+            { id: 'leads', label: 'Leads', icon: Mail },
+            { id: 'chatbot', label: 'Chat Support', icon: MessageCircle },
           ].map(tab => (
             <Button
               key={tab.id}
@@ -908,6 +1018,21 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
           <AdSpendDashboard token={token} />
         )}
 
+        {/* System Logs Tab */}
+        {activeTab === 'system-logs' && (
+          <SystemLogsDashboard token={token} />
+        )}
+
+        {/* Leads Tab */}
+        {activeTab === 'leads' && (
+          <LeadsDashboard token={token} />
+        )}
+
+        {/* Chatbot Tab */}
+        {activeTab === 'chatbot' && (
+          <ChatbotDashboard token={token} />
+        )}
+
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
           <AnalyticsDashboard token={token} />
@@ -920,8 +1045,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
 
         {/* SEO & Directories Tab */}
         {activeTab === 'seo' && (
-          <Suspense fallback={<div className="text-center text-slate-400 py-10">Loading SEO guide...</div>}>
-            <SEODirectoryGuide />
+          <Suspense fallback={<div className="text-center text-slate-400 py-10">Loading SEO dashboard...</div>}>
+            <SEODashboard />
           </Suspense>
         )}
 

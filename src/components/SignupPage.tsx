@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, ChevronDown, Loader2, Eye, EyeOff, ArrowLeft, RefreshCw, CheckCircle } from 'lucide-react';
+import { captureLead } from '../utils/leadCapture';
 
 interface Plan {
   id: string;
@@ -28,19 +29,21 @@ interface SignupPageProps {
   onLogin: () => void;
   onBack: () => void;
   cancelledMessage?: boolean;
+  initialEmail?: string;
 }
 
-export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProps) {
+export function SignupPage({ onLogin, onBack, cancelledMessage, initialEmail }: SignupPageProps) {
   const [plans, setPlans] = useState<Plan[]>(FALLBACK_PLANS);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('professional');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
   const [planDropdownOpen, setPlanDropdownOpen] = useState(false);
+  const [signupStep, setSignupStep] = useState<'email' | 'details'>(initialEmail ? 'details' : 'email');
 
   useEffect(() => {
     fetch('/api/stripe/products')
@@ -85,6 +88,16 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
     return `$${dollars}/mo`;
   };
 
+  const handleEmailContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed) { setError('Please enter your email address.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setError('Please enter a valid email address.'); return; }
+    setError('');
+    captureLead(trimmed, 'signup-email-step');
+    setSignupStep('details');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -97,17 +110,7 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
 
     setLoading(true);
 
-    fetch('/api/leads/capture', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        source: 'signup',
-        page: window.location.pathname,
-        referrer: document.referrer,
-        metadata: { plan: selectedPlan?.id },
-      }),
-    }).catch(() => {});
+    captureLead(email.trim(), 'signup', { plan: selectedPlan?.id });
 
     try {
       const controller = new AbortController();
@@ -142,15 +145,17 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
         return;
       }
 
+      try { (window as any).gr?.('track', 'conversion', { email: 'ronald@googlinks.com' }); } catch {}
+
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+        setTimeout(() => { window.location.href = data.checkoutUrl; }, 250);
         return;
       }
 
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-        window.location.href = '/';
+        setTimeout(() => { window.location.href = '/'; }, 250);
         return;
       }
 
@@ -185,8 +190,16 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-600 mb-4">
             <span className="text-white font-bold text-xl">A</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-          <p className="text-gray-500 mt-1 text-sm">Start building better campaigns today</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {signupStep === 'email' ? "What's your email?" : 'Create your account'}
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm">
+            {signupStep === 'email'
+              ? 'Enter your work email to get started — it takes seconds.'
+              : selectedPlanId === 'lifetime'
+                ? 'Set a password and choose your plan to continue.'
+                : 'Start free for 7 days — no credit card required.'}
+          </p>
         </div>
 
         {cancelledMessage && (
@@ -196,7 +209,54 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
           </div>
         )}
 
+        {signupStep === 'email' ? (
+          <form onSubmit={handleEmailContinue} className="bg-white border border-gray-200 rounded-2xl p-8 space-y-5 shadow-sm">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
+                <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Work Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setError(''); }}
+                placeholder="you@company.com"
+                required
+                autoFocus
+                className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-violet-500 transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white font-semibold py-3.5 rounded-xl transition-all shadow-sm text-base"
+            >
+              Continue →
+            </button>
+            <p className="text-center text-sm text-gray-500">
+              Already have an account?{' '}
+              <button type="button" onClick={onLogin} className="text-violet-600 hover:text-violet-700 font-medium">
+                Sign in
+              </button>
+            </p>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-2xl p-8 space-y-5 shadow-sm">
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-violet-50 border border-violet-200 rounded-xl">
+            <div className="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">{email.charAt(0).toUpperCase()}</span>
+            </div>
+            <span className="text-sm text-gray-700 font-medium flex-1 truncate">{email}</span>
+            <button
+              type="button"
+              onClick={() => { setSignupStep('email'); setError(''); }}
+              className="text-xs text-violet-600 hover:text-violet-700 font-medium flex-shrink-0"
+            >
+              Change
+            </button>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Plan</label>
             <div className="relative">
@@ -245,18 +305,6 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Jane Smith"
-              required
-              className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-violet-500 transition-colors"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="jane@company.com"
               required
               className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-violet-500 transition-colors"
             />
@@ -318,17 +366,29 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
             ) : retryCount > 0 ? (
               <>
                 <RefreshCw size={18} />
-                Try Again — {selectedPlan ? formatPrice(selectedPlan) : ''}
+                Try Again
               </>
-            ) : (
+            ) : selectedPlanId === 'lifetime' ? (
               `Continue to Payment — ${selectedPlan ? formatPrice(selectedPlan) : ''}`
+            ) : (
+              'Start Free Trial — 7 Days Free'
             )}
           </button>
 
           <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
-            <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Secure checkout</span>
-            <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Cancel anytime</span>
-            <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> 30-day refund</span>
+            {selectedPlanId === 'lifetime' ? (
+              <>
+                <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Secure checkout</span>
+                <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Cancel anytime</span>
+                <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> 30-day refund</span>
+              </>
+            ) : (
+              <>
+                <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> No credit card</span>
+                <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> 7 days free</span>
+                <span className="flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Cancel anytime</span>
+              </>
+            )}
           </div>
 
           <p className="text-center text-xs text-gray-400">
@@ -338,13 +398,16 @@ export function SignupPage({ onLogin, onBack, cancelledMessage }: SignupPageProp
             <a href="/privacy-policy" className="text-gray-600 hover:text-gray-900 underline">Privacy Policy</a>.
           </p>
         </form>
+        )}
 
-        <p className="text-center mt-6 text-gray-500 text-sm">
-          Already have an account?{' '}
-          <button onClick={onLogin} className="text-violet-600 hover:text-violet-700 font-medium transition-colors">
-            Sign in
-          </button>
-        </p>
+        {signupStep === 'details' && (
+          <p className="text-center mt-6 text-gray-500 text-sm">
+            Already have an account?{' '}
+            <button onClick={onLogin} className="text-violet-600 hover:text-violet-700 font-medium transition-colors">
+              Sign in
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );

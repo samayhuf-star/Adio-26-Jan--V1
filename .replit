@@ -66,7 +66,7 @@ externalPort = 3002
 [deployment]
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
-run = ["bash", "-c", "NODE_ENV=production npx tsx server/index.ts"]
+run = ["npm", "run", "start"]
 publicDir = "dist/public"
 
 [userenv]
@@ -96,6 +96,7 @@ SUPERADMIN_PASSWORD = "Adiology@2026!"
 ADMIN_API_KEY = "d352703d88458424307d6650a083a32e823ca5b7b179abb46333f6a75d589ac1"
 AFFONSO_PROGRAM_ID = "cmm3pjxd4002t12ijzoookmni"
 VITE_CLARITY_PROJECT_ID = "vm05wbtod1"
+REDITUS_PRODUCT_SECRET = "2cf1e7c47163e792c3df5a5e69c9f763ffe1eb03841195419ace3b6736524f92"
 
 [userenv.production]
 DOMAIN = "https://adiology.io"

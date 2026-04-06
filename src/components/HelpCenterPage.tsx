@@ -446,6 +446,19 @@ export const HelpCenterPage: React.FC<HelpCenterPageProps> = ({ onBack }) => {
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content="Help Center - Adiology" />
         <meta name="twitter:description" content="Find answers to common questions about Adiology." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "name": "Help Center - Adiology",
+          "description": "Frequently asked questions about using Adiology for Google Ads campaign management.",
+          "url": "https://adiology.io/help-center",
+          "mainEntity": [
+            { "@type": "Question", "name": "How do I create a Google Ads campaign with Adiology?", "acceptedAnswer": { "@type": "Answer", "text": "Sign up, connect your Google Ads account via OAuth, then use the Campaign Builder to select a template, enter your keywords and goals, and export your campaign as a Google Ads CSV." } },
+            { "@type": "Question", "name": "Is Adiology free to use?", "acceptedAnswer": { "@type": "Answer", "text": "Adiology offers a free plan with limited features. Pro plans start at $29/month with full access to all tools including the campaign builder, keyword planner, and click fraud protection." } },
+            { "@type": "Question", "name": "Does Adiology integrate with Google Ads directly?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Adiology integrates with Google Ads via OAuth, allowing you to directly import campaigns, pull performance data, and push new campaigns without downloading CSV files." } },
+            { "@type": "Question", "name": "What is click fraud protection in Adiology?", "acceptedAnswer": { "@type": "Answer", "text": "Adiology's Click Guard feature detects and blocks invalid clicks on your Google Ads by monitoring IP patterns, device fingerprints, and click frequency — protecting your ad budget from bots and competitors." } }
+          ]
+        })}</script>
       </Helmet>
       <div className="min-h-screen bg-gray-50">
         <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white">
