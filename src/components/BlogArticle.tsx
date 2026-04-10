@@ -52,6 +52,43 @@ function getCategoryStyle(category: string) {
   return CATEGORY_COLORS[category] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
 }
 
+const SESSION_KEY = 'adiology_session_id';
+const FIRST_ARTICLE_KEY = 'adiology_first_article';
+
+function getOrCreateSessionId(): string {
+  let sid = sessionStorage.getItem(SESSION_KEY);
+  if (!sid) {
+    sid = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    sessionStorage.setItem(SESSION_KEY, sid);
+  }
+  return sid;
+}
+
+function trackArticleView(slug: string) {
+  const sessionId = getOrCreateSessionId();
+
+  if (!sessionStorage.getItem(FIRST_ARTICLE_KEY)) {
+    sessionStorage.setItem(FIRST_ARTICLE_KEY, slug);
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const payload = {
+    slug,
+    sessionId,
+    utmSource: params.get('utm_source') || undefined,
+    utmMedium: params.get('utm_medium') || undefined,
+    utmCampaign: params.get('utm_campaign') || undefined,
+    referrer: document.referrer || undefined,
+  };
+
+  fetch('/api/analytics/article-view', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  }).catch(() => {});
+}
+
 export default function BlogArticle({ slug, onBack, onArticleClick }: BlogArticleProps) {
   const [article, setArticle] = useState<Article | null>(null);
   const [related, setRelated] = useState<RelatedArticle[]>([]);
@@ -61,6 +98,7 @@ export default function BlogArticle({ slug, onBack, onArticleClick }: BlogArticl
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchArticle();
+    trackArticleView(slug);
   }, [slug]);
 
   const fetchArticle = async () => {

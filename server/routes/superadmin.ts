@@ -1812,10 +1812,55 @@ app.get('/seo/overview', authMiddleware, async (c) => {
   }
 });
 
+// ── In-memory cache for live page signal checks ───────────────────────────────
+// Each entry: { signals, fetchedAt }. TTL = 10 minutes.
+// Bypassed when ?bust=1 is passed (triggered by the Refresh button).
+const _seoSignalsCache = new Map<string, { signals: LiveSignals; fetchedAt: number }>();
+const SEO_SIGNAL_TTL = 10 * 60 * 1000;
+
+interface LiveSignals {
+  hasTitle: boolean;
+  hasDesc: boolean;
+  hasH1: boolean;
+  hasStructuredData: boolean;
+  hasOG: boolean;
+  hasCanonical: boolean;
+}
+
+async function fetchLiveSignals(pagePath: string): Promise<LiveSignals | null> {
+  const port = process.env.PORT || '3001';
+  const url = `http://localhost:${port}${pagePath}`;
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(7000),
+      headers: { Accept: 'text/html' },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    return {
+      hasTitle: /<title>[^<]{5,}<\/title>/i.test(html),
+      hasDesc:
+        /<meta[^>]+name=["']description["'][^>]+content=["'][^"']{15,}["']/i.test(html) ||
+        /<meta[^>]+content=["'][^"']{15,}["'][^>]+name=["']description["']/i.test(html),
+      hasH1: /<h1[\s>]/i.test(html),
+      hasStructuredData:
+        html.includes('application/ld+json') && html.includes('"@type"'),
+      hasOG:
+        /<meta[^>]+property=["']og:title["']/i.test(html) ||
+        /<meta[^>]+property=["']og:description["']/i.test(html),
+      hasCanonical: /<link[^>]+rel=["']canonical["']/i.test(html),
+    };
+  } catch (e: any) {
+    console.error(`[SEO] live signal fetch failed for ${pagePath}:`, e.message);
+    return null;
+  }
+}
+
 app.get('/seo/pages', authMiddleware, async (c) => {
   try {
     const { pageViews } = await import('../../shared/schema');
     const { gte } = await import('drizzle-orm');
+    const bust = c.req.query('bust') === '1';
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     const organicFilter = sql`(
@@ -1845,36 +1890,67 @@ app.get('/seo/pages', authMiddleware, async (c) => {
     const organicMap = new Map(organicPerPage.map(r => [r.path, Number(r.visits)]));
     const allMap = new Map(allPerPage.map(r => [r.path, Number(r.visits)]));
 
+    // Page metadata — only keywords, priority, label, and estimated word count
+    // (word count cannot be computed from static HTML of a React SPA)
     const sitemapPages = [
-      { path: '/', priority: 1.0, label: 'Homepage', targetKeywords: ['google ads tool', 'google ads automation', 'adiology'], wordCount: 850, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/features/campaign-builder', priority: 0.9, label: 'Campaign Builder', targetKeywords: ['google ads campaign builder', 'build google ads campaigns', 'campaign automation'], wordCount: 620, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/features/keyword-planner', priority: 0.9, label: 'Keyword Planner', targetKeywords: ['google ads keyword planner', 'keyword research tool', 'ppc keywords'], wordCount: 590, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/pricing', priority: 0.9, label: 'Pricing', targetKeywords: ['adiology pricing', 'google ads tool pricing', 'ppc tool cost'], wordCount: 400, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/features/ads-search', priority: 0.8, label: 'Ads Search', targetKeywords: ['google ads search tool', 'search ads creator'], wordCount: 540, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/features/click-guard', priority: 0.8, label: 'Click Guard', targetKeywords: ['click fraud protection', 'invalid click guard', 'google ads click fraud'], wordCount: 610, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/blog', priority: 0.8, label: 'Blog Index', targetKeywords: ['google ads blog', 'ppc tips blog', 'google ads news'], wordCount: 300, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/features/blog-generator', priority: 0.7, label: 'Blog Generator', targetKeywords: ['ai blog generator', 'seo blog writer', 'content generator'], wordCount: 510, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/features/proxy-mail', priority: 0.7, label: 'Proxy Mail', targetKeywords: ['email proxy tool', 'business email proxy'], wordCount: 480, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/features/domain-monitor', priority: 0.7, label: 'Domain Monitor', targetKeywords: ['domain monitoring tool', 'google ads domain monitor'], wordCount: 520, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/features/instant-mail', priority: 0.7, label: 'Instant Mail', targetKeywords: ['instant email tool', 'bulk email sender'], wordCount: 460, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/lifetime-deal', priority: 0.7, label: 'Lifetime Deal', targetKeywords: ['adiology lifetime deal', 'google ads tool lifetime deal', 'saas lifetime deal'], wordCount: 720, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true },
-      { path: '/contact', priority: 0.5, label: 'Contact', targetKeywords: [], wordCount: 180, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
-      { path: '/help-center', priority: 0.5, label: 'Help Center', targetKeywords: ['adiology help', 'google ads help', 'ppc support'], wordCount: 350, hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
-      { path: '/privacy-policy', priority: 0.3, label: 'Privacy Policy', targetKeywords: [], wordCount: 1200, hasTitle: true, hasDesc: false, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
-      { path: '/terms-of-service', priority: 0.3, label: 'Terms of Service', targetKeywords: [], wordCount: 1400, hasTitle: true, hasDesc: false, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
-      { path: '/refund-policy', priority: 0.3, label: 'Refund Policy', targetKeywords: [], wordCount: 600, hasTitle: true, hasDesc: false, hasH1: true, hasStructuredData: false, hasOG: false, hasCanonical: true },
+      { path: '/', priority: 1.0, label: 'Homepage', targetKeywords: ['google ads tool', 'google ads automation', 'adiology'], wordCount: 850 },
+      { path: '/features/campaign-builder', priority: 0.9, label: 'Campaign Builder', targetKeywords: ['google ads campaign builder', 'build google ads campaigns', 'campaign automation'], wordCount: 620 },
+      { path: '/features/keyword-planner', priority: 0.9, label: 'Keyword Planner', targetKeywords: ['google ads keyword planner', 'keyword research tool', 'ppc keywords'], wordCount: 590 },
+      { path: '/pricing', priority: 0.9, label: 'Pricing', targetKeywords: ['adiology pricing', 'google ads tool pricing', 'ppc tool cost'], wordCount: 400 },
+      { path: '/features/ads-search', priority: 0.8, label: 'Ads Search', targetKeywords: ['google ads search tool', 'competitor ad research'], wordCount: 540 },
+      { path: '/features/click-guard', priority: 0.8, label: 'Click Guard', targetKeywords: ['click fraud protection', 'invalid click guard', 'google ads click fraud'], wordCount: 610 },
+      { path: '/blog', priority: 0.8, label: 'Blog Index', targetKeywords: ['google ads blog', 'ppc tips blog', 'google ads news'], wordCount: 300 },
+      { path: '/features/blog-generator', priority: 0.7, label: 'Blog Generator', targetKeywords: ['ai blog generator', 'seo blog writer', 'content generator'], wordCount: 510 },
+      { path: '/features/proxy-mail', priority: 0.7, label: 'Proxy Mail', targetKeywords: ['anonymous email tool', 'competitor research email'], wordCount: 480 },
+      { path: '/features/domain-monitor', priority: 0.7, label: 'Domain Monitor', targetKeywords: ['domain monitoring tool', 'google ads domain monitor'], wordCount: 520 },
+      { path: '/features/instant-mail', priority: 0.7, label: 'Instant Mail', targetKeywords: ['instant email tool', 'temporary email'], wordCount: 460 },
+      { path: '/lifetime-deal', priority: 0.7, label: 'Lifetime Deal', targetKeywords: ['adiology lifetime deal', 'google ads tool lifetime deal', 'saas lifetime deal'], wordCount: 720 },
+      { path: '/contact', priority: 0.5, label: 'Contact', targetKeywords: [], wordCount: 180 },
+      { path: '/help-center', priority: 0.5, label: 'Help Center', targetKeywords: ['adiology help', 'google ads help', 'ppc support'], wordCount: 350 },
+      { path: '/privacy-policy', priority: 0.3, label: 'Privacy Policy', targetKeywords: [], wordCount: 1200 },
+      { path: '/terms-of-service', priority: 0.3, label: 'Terms of Service', targetKeywords: [], wordCount: 1400 },
+      { path: '/refund-policy', priority: 0.3, label: 'Refund Policy', targetKeywords: [], wordCount: 600 },
     ];
 
+    // Fetch live HTML signals for all pages in parallel (with cache)
+    const now = Date.now();
+    const signalResults = await Promise.all(
+      sitemapPages.map(async (page) => {
+        const cached = _seoSignalsCache.get(page.path);
+        if (!bust && cached && now - cached.fetchedAt < SEO_SIGNAL_TTL) {
+          return { path: page.path, signals: cached.signals, fromCache: true };
+        }
+        const live = await fetchLiveSignals(page.path);
+        if (live) {
+          _seoSignalsCache.set(page.path, { signals: live, fetchedAt: now });
+          return { path: page.path, signals: live, fromCache: false };
+        }
+        // Fallback: use stale cache or safe defaults if fetch failed
+        if (cached) return { path: page.path, signals: cached.signals, fromCache: true };
+        return {
+          path: page.path,
+          fromCache: false,
+          signals: { hasTitle: true, hasDesc: true, hasH1: true, hasStructuredData: false, hasOG: true, hasCanonical: true } as LiveSignals,
+        };
+      })
+    );
+    const signalMap = new Map(signalResults.map(r => [r.path, r.signals]));
+
     const pages = sitemapPages.map(page => {
+      const sig = signalMap.get(page.path)!;
       const issues: string[] = [];
-      if (!page.hasStructuredData) issues.push('Missing JSON-LD structured data');
+      if (!sig.hasStructuredData) issues.push('Missing JSON-LD structured data');
       if (page.wordCount < 300) issues.push('Thin content (under 300 words)');
-      if (!page.hasDesc) issues.push('Missing meta description');
-      if (!page.hasOG) issues.push('Missing Open Graph tags');
+      if (!sig.hasDesc) issues.push('Missing meta description');
+      if (!sig.hasOG) issues.push('Missing Open Graph tags');
       if (page.targetKeywords.length === 0 && page.priority >= 0.5) issues.push('No target keywords defined');
       if (page.wordCount < 500 && page.priority >= 0.7) issues.push('Content too thin for competitive ranking');
 
-      const passCount = [page.hasTitle, page.hasDesc, page.hasH1, page.hasStructuredData, page.hasOG, page.hasCanonical, page.wordCount >= 400, page.targetKeywords.length > 0].filter(Boolean).length;
+      const passCount = [
+        sig.hasTitle, sig.hasDesc, sig.hasH1, sig.hasStructuredData,
+        sig.hasOG, sig.hasCanonical, page.wordCount >= 400,
+        page.targetKeywords.length > 0,
+      ].filter(Boolean).length;
       const seoScore = Math.round((passCount / 8) * 100);
 
       return {
@@ -1888,18 +1964,18 @@ app.get('/seo/pages', authMiddleware, async (c) => {
         totalVisits30d: allMap.get(page.path) || 0,
         issues,
         signals: {
-          title: page.hasTitle,
-          metaDesc: page.hasDesc,
-          h1: page.hasH1,
-          structuredData: page.hasStructuredData,
-          openGraph: page.hasOG,
-          canonical: page.hasCanonical,
+          title: sig.hasTitle,
+          metaDesc: sig.hasDesc,
+          h1: sig.hasH1,
+          structuredData: sig.hasStructuredData,
+          openGraph: sig.hasOG,
+          canonical: sig.hasCanonical,
         },
         inSitemap: true,
       };
     });
 
-    return c.json({ pages, asOf: new Date().toISOString() });
+    return c.json({ pages, asOf: new Date().toISOString(), busted: bust });
   } catch (error: any) {
     console.error('[SEO] pages error:', error);
     return c.json({ error: 'Failed to fetch SEO pages', detail: error.message }, 500);
@@ -2081,6 +2157,318 @@ app.put('/replit-spend', authMiddleware, async (c) => {
   } catch (error: any) {
     console.error('[SuperAdmin] Replit spend update error:', error);
     return c.json({ error: 'Failed to update Replit spend' }, 500);
+  }
+});
+
+// ============================================
+// Bulk Blog Generation Routes
+// ============================================
+
+app.post('/blog/bulk-generate', authMiddleware, async (c) => {
+  try {
+    const { keywords, batchId } = await c.req.json();
+    if (!Array.isArray(keywords) || keywords.length === 0) {
+      return c.json({ error: 'keywords must be a non-empty array' }, 400);
+    }
+    if (keywords.length > 500) {
+      return c.json({ error: 'Maximum 500 keywords per batch' }, 400);
+    }
+
+    const { articleGenerationJobs, blogPosts } = await import('../../shared/schema');
+    const { eq } = await import('drizzle-orm');
+    const bid = batchId || `batch_${Date.now()}`;
+
+    let queued = 0;
+    let skipped = 0;
+    for (const raw of keywords) {
+      const keyword = String(raw).trim();
+      if (!keyword) { skipped++; continue; }
+
+      const slug = keyword.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const existing = await db
+        .select({ id: blogPosts.id })
+        .from(blogPosts)
+        .where(eq(blogPosts.slug, slug))
+        .limit(1);
+
+      if (existing.length > 0) { skipped++; continue; }
+
+      const existingJob = await db
+        .select({ id: articleGenerationJobs.id })
+        .from(articleGenerationJobs)
+        .where(eq(articleGenerationJobs.keyword, keyword))
+        .limit(1);
+
+      if (existingJob.length > 0 && !['failed', 'skipped'].includes((existingJob[0] as any).status || '')) {
+        skipped++;
+        continue;
+      }
+
+      await db.insert(articleGenerationJobs).values({
+        keyword,
+        status: 'queued',
+        batchId: bid,
+      });
+      queued++;
+    }
+
+    return c.json({ success: true, queued, skipped, batchId: bid });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Bulk generate error:', error);
+    return c.json({ error: 'Failed to queue articles', message: error.message }, 500);
+  }
+});
+
+app.get('/blog/bulk-queue', authMiddleware, async (c) => {
+  try {
+    const { articleGenerationJobs } = await import('../../shared/schema');
+    const { desc, sql: drizzleSql } = await import('drizzle-orm');
+
+    const jobs = await db
+      .select()
+      .from(articleGenerationJobs)
+      .orderBy(desc(articleGenerationJobs.createdAt))
+      .limit(500);
+
+    const counts = await db.execute(drizzleSql.raw(`
+      SELECT status, COUNT(*) as count FROM article_generation_jobs GROUP BY status
+    `));
+
+    const summary: Record<string, number> = {};
+    for (const row of (counts.rows || []) as any[]) {
+      summary[row.status] = Number(row.count);
+    }
+
+    return c.json({ jobs, summary });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Bulk queue fetch error:', error);
+    return c.json({ error: 'Failed to fetch queue', message: error.message }, 500);
+  }
+});
+
+app.post('/blog/bulk-retry', authMiddleware, async (c) => {
+  try {
+    const { jobIds } = await c.req.json();
+    const { articleGenerationJobs } = await import('../../shared/schema');
+    const { inArray } = await import('drizzle-orm');
+
+    if (!Array.isArray(jobIds) || jobIds.length === 0) {
+      return c.json({ error: 'jobIds must be a non-empty array' }, 400);
+    }
+
+    await db
+      .update(articleGenerationJobs)
+      .set({ status: 'queued', errorMsg: null, startedAt: null, completedAt: null })
+      .where(inArray(articleGenerationJobs.id, jobIds));
+
+    return c.json({ success: true, retried: jobIds.length });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Bulk retry error:', error);
+    return c.json({ error: 'Failed to retry jobs', message: error.message }, 500);
+  }
+});
+
+app.delete('/blog/bulk-clear', authMiddleware, async (c) => {
+  try {
+    const { status } = await c.req.json().catch(() => ({}));
+    const { articleGenerationJobs } = await import('../../shared/schema');
+    const { eq, inArray } = await import('drizzle-orm');
+
+    const validStatuses = ['completed', 'skipped', 'failed'];
+    const statuses = Array.isArray(status) ? status.filter((s: string) => validStatuses.includes(s)) : validStatuses;
+
+    await db
+      .delete(articleGenerationJobs)
+      .where(inArray(articleGenerationJobs.status, statuses));
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    console.error('[SuperAdmin] Bulk clear error:', error);
+    return c.json({ error: 'Failed to clear jobs', message: error.message }, 500);
+  }
+});
+
+app.get('/blog/bulk-export-csv', authMiddleware, async (c) => {
+  try {
+    const { articleGenerationJobs } = await import('../../shared/schema');
+    const { eq, desc } = await import('drizzle-orm');
+
+    const jobs = await db
+      .select()
+      .from(articleGenerationJobs)
+      .where(eq(articleGenerationJobs.status, 'completed'))
+      .orderBy(desc(articleGenerationJobs.completedAt));
+
+    const rows = [
+      ['keyword', 'title_slug', 'url', 'word_count', 'category', 'completed_at'],
+      ...jobs.map((j) => [
+        j.keyword,
+        j.articleSlug || '',
+        j.articleSlug ? `https://adiology.io/blog/${j.articleSlug}` : '',
+        String(j.wordCount || 0),
+        j.category || '',
+        j.completedAt ? new Date(j.completedAt).toISOString() : '',
+      ]),
+    ];
+
+    const csv = rows
+      .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    c.header('Content-Type', 'text/csv');
+    c.header('Content-Disposition', 'attachment; filename="bulk-articles.csv"');
+    return c.text(csv);
+  } catch (error: any) {
+    console.error('[SuperAdmin] Export CSV error:', error);
+    return c.json({ error: 'Failed to export CSV', message: error.message }, 500);
+  }
+});
+
+app.get('/blog/article-performance', authMiddleware, async (c) => {
+  try {
+    const { articlePageViews, articleConversions, blogPosts } = await import('../../shared/schema');
+    const { eq, desc, sql: drizzleSql, and, gte, count } = await import('drizzle-orm');
+
+    const periodParam = c.req.query('period') || '30';
+    const period = parseInt(periodParam, 10) || 30;
+    const sortParam = c.req.query('sort') || 'views_30d';
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - period);
+
+    const viewsAllTime = await db
+      .select({
+        articleSlug: articlePageViews.articleSlug,
+        total: count(),
+      })
+      .from(articlePageViews)
+      .groupBy(articlePageViews.articleSlug);
+
+    const views7d = await db
+      .select({
+        articleSlug: articlePageViews.articleSlug,
+        total: count(),
+      })
+      .from(articlePageViews)
+      .where(gte(articlePageViews.createdAt, new Date(Date.now() - 7 * 86400000)))
+      .groupBy(articlePageViews.articleSlug);
+
+    const views30d = await db
+      .select({
+        articleSlug: articlePageViews.articleSlug,
+        total: count(),
+      })
+      .from(articlePageViews)
+      .where(gte(articlePageViews.createdAt, new Date(Date.now() - 30 * 86400000)))
+      .groupBy(articlePageViews.articleSlug);
+
+    const signups = await db
+      .select({
+        articleSlug: articleConversions.articleSlug,
+        total: count(),
+      })
+      .from(articleConversions)
+      .where(eq(articleConversions.eventType, 'signup'))
+      .groupBy(articleConversions.articleSlug);
+
+    const paidConversions = await db
+      .select({
+        articleSlug: articleConversions.articleSlug,
+        total: count(),
+        revenue: drizzleSql<number>`COALESCE(SUM(${articleConversions.revenueCents}), 0)`,
+      })
+      .from(articleConversions)
+      .where(eq(articleConversions.eventType, 'paid'))
+      .groupBy(articleConversions.articleSlug);
+
+    const articles = await db
+      .select({ slug: blogPosts.slug, title: blogPosts.title, createdAt: blogPosts.createdAt })
+      .from(blogPosts)
+      .where(eq(blogPosts.published, true));
+
+    const allSlugs = new Set([
+      ...viewsAllTime.map((r) => r.articleSlug),
+      ...articles.map((a) => a.slug),
+    ]);
+
+    const allTimeMap = Object.fromEntries(viewsAllTime.map((r) => [r.articleSlug, Number(r.total)]));
+    const v7Map = Object.fromEntries(views7d.map((r) => [r.articleSlug, Number(r.total)]));
+    const v30Map = Object.fromEntries(views30d.map((r) => [r.articleSlug, Number(r.total)]));
+    const signupMap = Object.fromEntries(signups.map((r) => [r.articleSlug, Number(r.total)]));
+    const paidMap = Object.fromEntries(paidConversions.map((r) => [r.articleSlug, { count: Number(r.total), revenue: Number(r.revenue) }]));
+    const articleMeta = Object.fromEntries(articles.map((a) => [a.slug, { title: a.title, createdAt: a.createdAt }]));
+
+    const rows = Array.from(allSlugs).map((slug) => {
+      const views = allTimeMap[slug] || 0;
+      const views7 = v7Map[slug] || 0;
+      const views30 = v30Map[slug] || 0;
+      const signupCount = signupMap[slug] || 0;
+      const paid = paidMap[slug] || { count: 0, revenue: 0 };
+      const conversionRate = views > 0 ? ((signupCount / views) * 100).toFixed(2) : '0.00';
+
+      return {
+        slug,
+        title: articleMeta[slug]?.title || slug,
+        url: `https://adiology.io/blog/${slug}`,
+        viewsAllTime: views,
+        views7d: views7,
+        views30d: views30,
+        signups: signupCount,
+        paidConversions: paid.count,
+        revenueCents: paid.revenue,
+        conversionRate: parseFloat(conversionRate),
+        createdAt: articleMeta[slug]?.createdAt || null,
+      };
+    });
+
+    const sortFns: Record<string, (a: any, b: any) => number> = {
+      views_alltime: (a, b) => b.viewsAllTime - a.viewsAllTime,
+      views_30d: (a, b) => b.views30d - a.views30d,
+      views_7d: (a, b) => b.views7d - a.views7d,
+      signups: (a, b) => b.signups - a.signups,
+      paid: (a, b) => b.paidConversions - a.paidConversions,
+      revenue: (a, b) => b.revenueCents - a.revenueCents,
+      conversion_rate: (a, b) => b.conversionRate - a.conversionRate,
+      newest: (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+    };
+
+    rows.sort(sortFns[sortParam] || sortFns['views_30d']);
+
+    return c.json({ success: true, rows, period, sort: sortParam });
+  } catch (error: any) {
+    console.error('[SuperAdmin] article-performance error:', error);
+    return c.json({ error: 'Failed to fetch article performance', message: error.message }, 500);
+  }
+});
+
+app.get('/blog/article-daily/:slug', authMiddleware, async (c) => {
+  try {
+    const { articlePageViews, articleConversions } = await import('../../shared/schema');
+    const { eq, and, gte, sql: drizzleSql, count } = await import('drizzle-orm');
+
+    const slug = c.req.param('slug');
+    const days = 30;
+    const since = new Date(Date.now() - days * 86400000);
+
+    const daily = await db
+      .select({
+        day: drizzleSql<string>`DATE(${articlePageViews.createdAt})`,
+        views: count(),
+      })
+      .from(articlePageViews)
+      .where(and(eq(articlePageViews.articleSlug, slug), gte(articlePageViews.createdAt, since)))
+      .groupBy(drizzleSql`DATE(${articlePageViews.createdAt})`)
+      .orderBy(drizzleSql`DATE(${articlePageViews.createdAt})`);
+
+    const conversionList = await db
+      .select()
+      .from(articleConversions)
+      .where(eq(articleConversions.articleSlug, slug));
+
+    return c.json({ success: true, daily, conversions: conversionList });
+  } catch (error: any) {
+    console.error('[SuperAdmin] article-daily error:', error);
+    return c.json({ error: 'Failed to fetch daily stats', message: error.message }, 500);
   }
 });
 

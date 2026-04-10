@@ -1,7 +1,10 @@
 import { Hono } from 'hono';
 import { getDb } from '../db';
-import { pageViews } from '../../shared/schema';
+import { pageViews, articlePageViews, articleConversions } from '../../shared/schema';
 import { eq, desc, sql, and, gte, lte, count } from 'drizzle-orm';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'adiology-jwt-secret-key';
 
 export const analyticsRoutes = new Hono();
 
@@ -481,5 +484,110 @@ analyticsRoutes.get('/stats', async (c) => {
   } catch (error) {
     console.error('[Analytics] Stats error:', error);
     return c.json({ error: 'Failed to fetch analytics' }, 500);
+  }
+});
+
+analyticsRoutes.post('/article-view', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { slug, sessionId, utmSource, utmMedium, utmCampaign, referrer } = body;
+
+    if (!slug || !sessionId) {
+      return c.json({ ok: false, error: 'Missing slug or sessionId' }, 400);
+    }
+
+    const ua = c.req.header('user-agent') || '';
+    if (/bot|crawl|spider|slurp/i.test(ua)) {
+      return c.json({ ok: true });
+    }
+
+    const db = getDb();
+    await db.insert(articlePageViews).values({
+      articleSlug: slug,
+      sessionId,
+      utmSource: utmSource || null,
+      utmMedium: utmMedium || null,
+      utmCampaign: utmCampaign || null,
+      referrer: referrer || null,
+    });
+
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('[Analytics] article-view error:', err);
+    return c.json({ ok: false }, 500);
+  }
+});
+
+analyticsRoutes.post('/article-conversion', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization') || '';
+    const token = authHeader.replace('Bearer ', '').trim();
+    let userId: number | null = null;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        userId = decoded.userId ? parseInt(decoded.userId) : null;
+      } catch {
+        // no-op — unauthenticated conversions still tracked
+      }
+    }
+
+    const body = await c.req.json().catch(() => ({}));
+    const { sessionId, eventType, planName, revenueCents, articleSlug } = body;
+
+    if (!sessionId || !eventType) {
+      return c.json({ ok: false, error: 'Missing required fields' }, 400);
+    }
+
+    const db = getDb();
+
+    let resolvedSlug = articleSlug || null;
+
+    if (!resolvedSlug) {
+      const firstView = await db
+        .select({ articleSlug: articlePageViews.articleSlug })
+        .from(articlePageViews)
+        .where(eq(articlePageViews.sessionId, sessionId))
+        .orderBy(articlePageViews.createdAt)
+        .limit(1);
+
+      if (firstView.length > 0) {
+        resolvedSlug = firstView[0].articleSlug;
+      }
+    }
+
+    if (!resolvedSlug) {
+      return c.json({ ok: false, error: 'No article attribution found for session' });
+    }
+
+    const existing = await db
+      .select({ id: articleConversions.id })
+      .from(articleConversions)
+      .where(
+        and(
+          eq(articleConversions.sessionId, sessionId),
+          eq(articleConversions.eventType, eventType)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      return c.json({ ok: true, skipped: true });
+    }
+
+    await db.insert(articleConversions).values({
+      articleSlug: resolvedSlug,
+      sessionId,
+      userId: userId || null,
+      eventType,
+      planName: planName || null,
+      revenueCents: revenueCents || 0,
+    });
+
+    return c.json({ ok: true, articleSlug: resolvedSlug });
+  } catch (err) {
+    console.error('[Analytics] article-conversion error:', err);
+    return c.json({ ok: false }, 500);
   }
 });

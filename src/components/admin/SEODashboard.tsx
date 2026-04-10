@@ -104,12 +104,13 @@ export default function SEODashboard() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (bust = false) => {
     setError('');
     try {
+      const bustParam = bust ? '?bust=1' : '';
       const [ovRes, pgRes] = await Promise.all([
-        fetch('/api/superadmin/seo/overview', { headers: authHeaders() }),
-        fetch('/api/superadmin/seo/pages', { headers: authHeaders() }),
+        fetch(`/api/superadmin/seo/overview${bustParam}`, { headers: authHeaders() }),
+        fetch(`/api/superadmin/seo/pages${bustParam}`, { headers: authHeaders() }),
       ]);
       if (ovRes.ok) {
         const ovData = await ovRes.json();
@@ -127,13 +128,13 @@ export default function SEODashboard() {
 
   const load = async () => {
     setLoading(true);
-    await fetchData();
+    await fetchData(false);
     setLoading(false);
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchData();
+    await fetchData(true);
     setRefreshing(false);
   };
 

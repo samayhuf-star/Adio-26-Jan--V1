@@ -4,7 +4,7 @@ import {
   Ban, CheckCircle, Eye, TrendingUp, DollarSign, Activity,
   UserCheck, AlertTriangle, Calendar, Mail, ChevronRight,
   Edit, Trash2, X, Save, MoreHorizontal, MessageSquare,
-  Server, Tag, Brain, FileText, MessageCircle, Globe, Send, Route, Terminal
+  Server, Tag, Brain, FileText, MessageCircle, Globe, Send, Route, Terminal, Zap
 } from 'lucide-react';
 import { VisitorsDashboard } from './VisitorsDashboard';
 import { UserJourneyDashboard } from './UserJourneyDashboard';
@@ -28,6 +28,8 @@ import { AdSpendDashboard } from './AdSpendDashboard';
 import { SystemLogsDashboard } from './SystemLogsDashboard';
 import { LeadsDashboard } from './LeadsDashboard';
 import { ChatbotDashboard } from './ChatbotDashboard';
+import { BulkBlogGenerator } from './BulkBlogGenerator';
+import { ArticlePerformanceDashboard } from './ArticlePerformanceDashboard';
 const SEODashboard = lazy(() => import('./SEODashboard'));
 import {
   Dialog,
@@ -106,7 +108,7 @@ interface SubscriptionRecord {
   paidAmountCents: number | string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend' | 'system-logs' | 'leads' | 'chatbot';
+type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend' | 'system-logs' | 'leads' | 'chatbot' | 'bulk-blog' | 'article-performance';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -667,6 +669,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             { id: 'system-logs', label: 'System Logs', icon: Terminal },
             { id: 'leads', label: 'Leads', icon: Mail },
             { id: 'chatbot', label: 'Chat Support', icon: MessageCircle },
+            { id: 'bulk-blog', label: 'Bulk Blog', icon: Zap },
+            { id: 'article-performance', label: 'Article ROI', icon: TrendingUp },
           ].map(tab => (
             <Button
               key={tab.id}
@@ -1031,6 +1035,16 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
         {/* Chatbot Tab */}
         {activeTab === 'chatbot' && (
           <ChatbotDashboard token={token} />
+        )}
+
+        {/* Bulk Blog Generator Tab */}
+        {activeTab === 'bulk-blog' && (
+          <BulkBlogGenerator token={token} />
+        )}
+
+        {/* Article Performance Tab */}
+        {activeTab === 'article-performance' && (
+          <ArticlePerformanceDashboard token={token} />
         )}
 
         {/* Analytics Tab */}

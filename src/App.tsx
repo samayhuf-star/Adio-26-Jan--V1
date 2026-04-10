@@ -284,6 +284,20 @@ const AppContent = () => {
           localStorage.setItem('user', JSON.stringify(userObj));
           setUser(userObj);
           setCurrentUserId(userObj.id);
+          const paidSessionId = sessionStorage.getItem('adiology_session_id');
+          if (paidSessionId) {
+            fetch('/api/analytics/article-conversion', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.token}` },
+              body: JSON.stringify({
+                sessionId: paidSessionId,
+                eventType: 'paid',
+                planName: data.user.subscription_plan || data.user.selected_plan || 'unknown',
+                revenueCents: data.amount_cents || 0,
+              }),
+              keepalive: true,
+            }).catch(() => {});
+          }
         }
 
         window.history.replaceState({}, '', '/dashboard');
@@ -322,6 +336,16 @@ const AppContent = () => {
         setUser(result.user);
         setCurrentUserId(result.user.id);
         if (result.isNewSignup) {
+          const sessionId = sessionStorage.getItem('adiology_session_id');
+          if (sessionId) {
+            const authTok = localStorage.getItem('auth_token');
+            fetch('/api/analytics/article-conversion', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...(authTok ? { Authorization: `Bearer ${authTok}` } : {}) },
+              body: JSON.stringify({ sessionId, eventType: 'signup', planName: 'trial' }),
+              keepalive: true,
+            }).catch(() => {});
+          }
           setPendingProfileEmail(result.user.email);
           window.history.replaceState({}, '', '/complete-profile');
           setAppView('complete-profile');

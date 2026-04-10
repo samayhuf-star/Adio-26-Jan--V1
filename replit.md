@@ -19,8 +19,11 @@ Preferred communication style: Simple, everyday language.
 ## SEO & Routing
 - **Path-Based Routing**: All public pages use clean path URLs for proper Google indexing. Routes are handled in `App.tsx`.
 - **Public Feature Pages**: Dedicated landing pages at `/features/*` for various functionalities.
-- **SEO Meta Tags**: `react-helmet-async` provides per-page title, description, canonical URL, OpenGraph, and Twitter Card meta tags. JSON-LD structured data is used on key pages.
-- **Sitemap & Robots**: `public/sitemap.xml` lists crawlable URLs, and `public/robots.txt` manages indexing.
+- **SEO Meta Tags**: `react-helmet-async` provides per-page title, description, canonical URL, OpenGraph, and Twitter Card meta tags.
+- **Global JSON-LD (index.html)**: Organization, WebSite, and SoftwareApplication schemas are baked into every page via `index.html` and the Vite build. Googlebot sees them before JavaScript loads.
+- **Server-side page-specific JSON-LD injection** (`server/index.ts` → `getSpaPageSeo` + `injectSpaPageSeo`): The production SPA catch-all rewrites `index.html` for each known route, injecting a unique title, description, canonical URL, and FAQPage + SoftwareApplication JSON-LD for: `/` (homepage), all `/features/*` pages, and `/pricing`. Blog pages get Article JSON-LD via their own server route.
+- **Sitemap & Robots**: `public/sitemap.xml` lists 25+ blog articles and all key pages. The `/sitemap.xml` server route dynamically replaces static blog entries with DB-published posts (falls back to static entries if DB has no published posts, preventing articles from disappearing).
+- **Static file middleware**: The `/*` static middleware only serves paths with file extensions — SPA routes (no extension) fall through to the injection handler every time, ensuring JSON-LD is always present.
 - **SEO Directory Guide**: SuperAdmin panel includes an "SEO & Directories" tab with directory submission links, SEO checklist, and progress tracking.
 - **Internal Navigation**: Dashboard pages use custom event-based navigation, intentionally not indexed.
 
@@ -29,6 +32,16 @@ Preferred communication style: Simple, everyday language.
 - **Tracking**: Lightweight client-side tracker using `navigator.sendBeacon` for non-blocking page view collection, tracking various user and device data.
 - **Dashboard**: Native analytics dashboard in SuperAdmin with traffic trend charts, top pages, referrers, and device breakdowns.
 - **API**: `POST /api/analytics/track` for data collection and `GET /api/analytics/stats` for dashboard data.
+
+## Article Conversion Attribution
+- **Article View Tracking**: `BlogArticle.tsx` fires `POST /api/analytics/article-view` on every article visit with slug, sessionId, UTM params (utm_source/medium/campaign), and referrer. Stored in `article_page_views` table. Bot traffic filtered.
+- **First-Touch Attribution**: When a user visits a blog article, the slug is stored in `sessionStorage` under `adiology_first_article`. SessionId reuses the existing `adiology_session_id` key.
+- **Conversion Tracking**: `POST /api/analytics/article-conversion` resolves the first article a sessionId ever viewed and logs it to `article_conversions` table with eventType (`signup`/`paid`), planName, and revenueCents. Deduplication prevents double-counting.
+- **Attribution Window**: 30-day (controlled by JOIN logic in the reporting query).
+- **Signup Attribution**: App.tsx fires conversion tracking immediately after magic link verification (new signups) and after Stripe session exchange (paid plans).
+- **Article ROI Dashboard**: SuperAdmin "Article ROI" tab powered by `ArticlePerformanceDashboard.tsx` — shows per-article views (7d/30d/all-time), attributed signups, paid conversions, revenue, and conversion rate. Sortable by any column. Clicking a row opens a detail panel with day-by-day bar chart and conversion list. CSV export for Google Ads URL targeting.
+- **DB Tables**: `article_page_views` (slug, session_id, utm_source/medium/campaign, referrer, created_at) and `article_conversions` (slug, session_id, user_id, event_type, plan_name, revenue_cents, created_at).
+- **Backend API**: `GET /api/superadmin/blog/article-performance?sort=<key>` and `GET /api/superadmin/blog/article-daily/:slug` (both SuperAdmin-authenticated).
 
 ## Backend
 - **Core API**: Hono (Node.js/TypeScript) for primary API endpoints, with optional FastAPI (Python) for legacy ad generation.

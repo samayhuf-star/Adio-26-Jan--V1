@@ -30,6 +30,7 @@ import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
 import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredDomains, clickGuardDomains, feedback, blogPosts, aiUsageLogs } from '../shared/schema';
+import { startBlogGeneratorQueue } from './blogGeneratorQueue';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
 import { eq, desc, asc, and } from 'drizzle-orm';
@@ -2992,10 +2993,19 @@ function getSpaPageSeo(requestPath: string): { title?: string; description?: str
   return {};
 }
 
+// Global structured data injected into every page when the production build
+// was created before the index.html was updated (safe no-op once the build catches up).
+const GLOBAL_SEO_JSON_LD = `<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://adiology.io/#organization","name":"Adiology","url":"https://adiology.io","logo":{"@type":"ImageObject","url":"https://adiology.io/og-image.png","width":1200,"height":630},"description":"AI-powered Google Ads campaign management platform.","contactPoint":{"@type":"ContactPoint","contactType":"customer support","url":"https://adiology.io/contact"}},{"@type":"WebSite","@id":"https://adiology.io/#website","url":"https://adiology.io","name":"Adiology","publisher":{"@id":"https://adiology.io/#organization"},"potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://adiology.io/blog?q={search_term_string}"},"query-input":"required name=search_term_string"}},{"@type":"SoftwareApplication","@id":"https://adiology.io/#app","name":"Adiology","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://adiology.io","description":"AI-powered Google Ads campaign builder with keyword planner, click fraud protection, domain monitoring, and proxy mail.","publisher":{"@id":"https://adiology.io/#organization"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD","description":"7-day free trial, no credit card required"}}]}</script>`;
+
 function injectSpaPageSeo(html: string, requestPath: string): string {
   const seo = getSpaPageSeo(requestPath);
-  if (!seo.title && !seo.description && !seo.jsonLd) return html;
   let result = html;
+
+  // Inject global schema if not already present in the built HTML
+  if (!result.includes('"@type":"Organization"')) {
+    result = result.replace('</head>', `${GLOBAL_SEO_JSON_LD}\n</head>`);
+  }
+
   if (seo.title) {
     result = result.replace(/<title>[^<]*<\/title>/, `<title>${seo.title}</title>`);
     result = result.replace(/(<meta property="og:title" content=")[^"]*(")/,  `$1${seo.title}$2`);
@@ -3025,11 +3035,16 @@ if (fs.existsSync(buildPath)) {
   // Serve static assets
   app.use('/assets/*', serveStatic({ root: './build' }));
   
-  // Serve other static files (favicon, etc.)
-  app.use('/*', serveStatic({ root: './build' }));
+  // Serve other public static files (favicon, sitemap, images — anything with an extension).
+  // Paths WITHOUT an extension are SPA routes: skip static serving so the injection handler runs.
+  const _buildStatic = serveStatic({ root: './build' });
+  app.use('/*', async (c, next) => {
+    const reqPath = c.req.path;
+    if (!reqPath.includes('.')) return next(); // SPA route — fall through to injection handler
+    return _buildStatic(c, next);
+  });
   
-  // SPA fallback - serve index.html for all non-API routes
-  // Injects page-specific JSON-LD, title, description, and canonical for Googlebot.
+  // SPA fallback — serve index.html with injected page-specific JSON-LD for every HTML route.
   app.get('*', async (c) => {
     const requestPath = c.req.path;
     // Don't serve index.html for API routes or file requests
@@ -3392,6 +3407,9 @@ serve({
     `);
     await startupPool.end();
     console.log('[Startup] DB schema ensured (payments index, is_internal, signup_ip, ad_platform_connections, blocked_ips, magic_link_tokens, trial_starts_at, chat_conversations, chat_messages, system_settings)');
+
+    // Start the bulk blog generator queue worker
+    startBlogGeneratorQueue();
   } catch (e: any) {
     console.log('[Startup] DB schema check (non-fatal):', e?.message);
   }

@@ -988,6 +988,28 @@ export const blogPosts = pgTable("blog_posts", {
   createdAtIdx: index("idx_blog_posts_created_at").on(table.createdAt),
 }));
 
+export const articleGenerationJobs = pgTable("article_generation_jobs", {
+  id: serial("id").primaryKey(),
+  keyword: text("keyword").notNull(),
+  topic: text("topic"),
+  status: text("status").notNull().default("queued"),
+  articleId: integer("article_id"),
+  articleSlug: text("article_slug"),
+  errorMsg: text("error_msg"),
+  wordCount: integer("word_count"),
+  category: text("category"),
+  batchId: text("batch_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+}, (table) => ({
+  statusIdx: index("idx_article_gen_jobs_status").on(table.status),
+  batchIdx: index("idx_article_gen_jobs_batch").on(table.batchId),
+  createdAtIdx: index("idx_article_gen_jobs_created_at").on(table.createdAt),
+}));
+
+export type ArticleGenerationJob = typeof articleGenerationJobs.$inferSelect;
+
 export const appsumoLicenses = pgTable("appsumo_licenses", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   licenseKey: text("license_key").unique().notNull(),
@@ -1066,4 +1088,36 @@ export const emailLeads = pgTable("email_leads", {
   emailIdx: index("idx_email_leads_email").on(table.email),
   sourceIdx: index("idx_email_leads_source").on(table.source),
   createdAtIdx: index("idx_email_leads_created_at").on(table.createdAt),
+}));
+
+export const articlePageViews = pgTable("article_page_views", {
+  id: serial("id").primaryKey(),
+  articleSlug: text("article_slug").notNull(),
+  sessionId: text("session_id").notNull(),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  referrer: text("referrer"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  slugIdx: index("idx_article_views_slug").on(table.articleSlug),
+  sessionIdx: index("idx_article_views_session").on(table.sessionId),
+  createdAtIdx: index("idx_article_views_created_at").on(table.createdAt),
+}));
+
+export const articleConversions = pgTable("article_conversions", {
+  id: serial("id").primaryKey(),
+  articleSlug: text("article_slug").notNull(),
+  sessionId: text("session_id").notNull(),
+  userId: integer("user_id"),
+  eventType: text("event_type").notNull(),
+  planName: text("plan_name"),
+  revenueCents: integer("revenue_cents").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  slugIdx: index("idx_article_conv_slug").on(table.articleSlug),
+  sessionIdx: index("idx_article_conv_session").on(table.sessionId),
+  userIdx: index("idx_article_conv_user").on(table.userId),
+  eventTypeIdx: index("idx_article_conv_event_type").on(table.eventType),
+  createdAtIdx: index("idx_article_conv_created_at").on(table.createdAt),
 }));
