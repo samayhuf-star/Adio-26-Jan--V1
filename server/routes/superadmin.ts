@@ -2444,26 +2444,40 @@ app.get('/blog/article-performance', authMiddleware, async (c) => {
 app.get('/blog/article-daily/:slug', authMiddleware, async (c) => {
   try {
     const { articlePageViews, articleConversions } = await import('../../shared/schema');
-    const { eq, and, gte, sql: drizzleSql, count } = await import('drizzle-orm');
+    const { eq, and, gte, sql: drizzleSql, count, desc } = await import('drizzle-orm');
 
     const slug = c.req.param('slug');
     const days = 30;
     const since = new Date(Date.now() - days * 86400000);
 
-    const daily = await db
+    const rawDaily = await db
       .select({
-        day: drizzleSql<string>`DATE(${articlePageViews.createdAt})`,
+        day: drizzleSql<string>`TO_CHAR(${articlePageViews.createdAt}, 'YYYY-MM-DD')`,
         views: count(),
       })
       .from(articlePageViews)
       .where(and(eq(articlePageViews.articleSlug, slug), gte(articlePageViews.createdAt, since)))
-      .groupBy(drizzleSql`DATE(${articlePageViews.createdAt})`)
-      .orderBy(drizzleSql`DATE(${articlePageViews.createdAt})`);
+      .groupBy(drizzleSql`TO_CHAR(${articlePageViews.createdAt}, 'YYYY-MM-DD')`)
+      .orderBy(drizzleSql`TO_CHAR(${articlePageViews.createdAt}, 'YYYY-MM-DD')`);
+
+    // Fill all 30 days so the chart always shows a continuous timeline
+    const viewMap: Record<string, number> = {};
+    for (const r of rawDaily) {
+      viewMap[r.day] = Number(r.views);
+    }
+    const daily: { day: string; views: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      daily.push({ day: key, views: viewMap[key] || 0 });
+    }
 
     const conversionList = await db
       .select()
       .from(articleConversions)
-      .where(eq(articleConversions.articleSlug, slug));
+      .where(eq(articleConversions.articleSlug, slug))
+      .orderBy(desc(articleConversions.createdAt))
+      .limit(200);
 
     return c.json({ success: true, daily, conversions: conversionList });
   } catch (error: any) {

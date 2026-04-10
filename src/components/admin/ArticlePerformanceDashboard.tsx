@@ -59,21 +59,31 @@ function formatDate(dateStr: string | null): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatDayLabel(isoDate: string): string {
+  const d = new Date(isoDate + 'T12:00:00Z');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
 function MiniBarChart({ data }: { data: DailyDataPoint[] }) {
   if (!data.length) return <p className="text-slate-500 text-sm text-center py-8">No view data available for this period.</p>;
 
   const max = Math.max(...data.map((d) => d.views), 1);
+  const hasAnyViews = data.some((d) => d.views > 0);
+
+  if (!hasAnyViews) {
+    return <p className="text-slate-500 text-sm text-center py-8">No views recorded in the last 30 days.</p>;
+  }
 
   return (
-    <div className="flex items-end gap-1 h-20 mt-2">
+    <div className="flex items-end gap-[2px] h-24 mt-2">
       {data.map((d) => (
-        <div key={d.day} className="flex-1 flex flex-col items-center gap-1 group relative">
+        <div key={d.day} className="flex-1 flex flex-col items-center group relative" style={{ minWidth: 0 }}>
           <div
-            className="w-full bg-blue-500/70 hover:bg-blue-400 transition-colors rounded-t-sm"
-            style={{ height: `${(d.views / max) * 72}px`, minHeight: d.views > 0 ? '4px' : '0' }}
+            className={`w-full rounded-t-sm transition-colors ${d.views > 0 ? 'bg-blue-500/70 hover:bg-blue-400' : 'bg-slate-700/30'}`}
+            style={{ height: `${(d.views / max) * 88}px`, minHeight: d.views > 0 ? '3px' : '2px' }}
           />
-          <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:flex bg-slate-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10 border border-slate-700">
-            {d.day}: {d.views} view{d.views !== 1 ? 's' : ''}
+          <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:flex bg-slate-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-20 border border-slate-700 pointer-events-none shadow-lg">
+            {formatDayLabel(d.day)}: {d.views} view{d.views !== 1 ? 's' : ''}
           </div>
         </div>
       ))}
@@ -384,7 +394,7 @@ export function ArticlePerformanceDashboard({ token }: ArticlePerformanceDashboa
                   <th className="text-right px-4 py-3 text-slate-400 font-medium">Paid</th>
                   <th className="text-right px-4 py-3 text-slate-400 font-medium">Revenue</th>
                   <th className="text-right px-4 py-3 text-slate-400 font-medium">Conv%</th>
-                  <th className="text-right px-4 py-3 text-slate-400 font-medium">UTM</th>
+                  <th className="text-right px-4 py-3 text-slate-400 font-medium">Published</th>
                 </tr>
               </thead>
               <tbody>

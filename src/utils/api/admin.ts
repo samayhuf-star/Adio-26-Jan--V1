@@ -1,5 +1,6 @@
-import { projectId } from "./auth"/info';
-import { supabase } from "./auth"/client';
+// Legacy Supabase imports removed - now using Hono API
+const projectId = '';
+const supabase: any = null;
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca`;
 

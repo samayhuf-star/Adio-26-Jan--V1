@@ -12,7 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
 import { historyService } from '../utils/historyService';
 import { notifications } from '../utils/notifications';
-import { projectId, publicAnonKey } from "../../utils/auth"/info';
+// Legacy Supabase imports removed - now using Hono API
+const projectId = '';
+const publicAnonKey = '';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-6757d0ca`;
 

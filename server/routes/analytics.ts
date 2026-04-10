@@ -497,11 +497,31 @@ analyticsRoutes.post('/article-view', async (c) => {
     }
 
     const ua = c.req.header('user-agent') || '';
-    if (/bot|crawl|spider|slurp/i.test(ua)) {
+    if (/bot|crawl|spider|slurp|headless|prerender|Googlebot|bingbot|facebookexternalhit|Twitterbot|LinkedInBot|WhatsApp|Slackbot|Discordbot/i.test(ua)) {
       return c.json({ ok: true });
     }
 
     const db = getDb();
+
+    // Deduplicate: one view per session+slug per day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const existing = await db
+      .select({ id: articlePageViews.id })
+      .from(articlePageViews)
+      .where(
+        and(
+          eq(articlePageViews.sessionId, sessionId),
+          eq(articlePageViews.articleSlug, slug),
+          gte(articlePageViews.createdAt, today)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      return c.json({ ok: true, deduped: true });
+    }
+
     await db.insert(articlePageViews).values({
       articleSlug: slug,
       sessionId,
@@ -545,10 +565,17 @@ analyticsRoutes.post('/article-conversion', async (c) => {
     let resolvedSlug = articleSlug || null;
 
     if (!resolvedSlug) {
+      // First-touch attribution with 30-day window
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
       const firstView = await db
         .select({ articleSlug: articlePageViews.articleSlug })
         .from(articlePageViews)
-        .where(eq(articlePageViews.sessionId, sessionId))
+        .where(
+          and(
+            eq(articlePageViews.sessionId, sessionId),
+            gte(articlePageViews.createdAt, thirtyDaysAgo)
+          )
+        )
         .orderBy(articlePageViews.createdAt)
         .limit(1);
 
