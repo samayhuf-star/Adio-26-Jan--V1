@@ -62,7 +62,6 @@ const CancelledScreen = lazy(() => import('./components/CancelledScreen').then(m
 const CreativeMinimalistHomepage = CreativeMinimalistHomepageComponent;
 const MobileNavigation = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileNavigation })));
 const MobileQuickActions = lazy(() => import('./components/MobileNavigation').then(m => ({ default: m.MobileQuickActions })));
-const FloatingFeedback = lazy(() => import('./components/FloatingFeedback').then(m => ({ default: m.FloatingFeedback })));
 
 // Lazy load heavy components for code splitting
 const CampaignBuilder3 = lazy(() => import('./components/CampaignBuilder3').then(m => ({ default: m.CampaignBuilder3 })));
@@ -3377,8 +3376,6 @@ const AppContent = () => {
           onNewCampaign={() => setActiveTabSafe('builder-3')}
         />
       </div>
-
-      <FloatingFeedback />
 
       {/* Chat support widget - always visible on dashboard */}
       <ChatWidget />
