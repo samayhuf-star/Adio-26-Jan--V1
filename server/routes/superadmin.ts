@@ -2486,5 +2486,92 @@ app.get('/blog/article-daily/:slug', authMiddleware, async (c) => {
   }
 });
 
+app.get('/blog/articles', authMiddleware, async (c) => {
+  try {
+    const { blogPosts } = await import('../../shared/schema');
+    const { desc } = await import('drizzle-orm');
+    const articles = await db
+      .select()
+      .from(blogPosts)
+      .orderBy(desc(blogPosts.createdAt));
+    return c.json({ articles });
+  } catch (error: any) {
+    return c.json({ error: 'Failed to fetch articles', message: error.message }, 500);
+  }
+});
+
+app.put('/blog/articles/:id', authMiddleware, async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    if (isNaN(id)) return c.json({ error: 'Invalid article ID' }, 400);
+
+    const body = await c.req.json();
+    const { title, slug, excerpt, content, category, tags, metaTitle, metaDescription, published, featured } = body;
+
+    if (!title || !slug || !content) {
+      return c.json({ error: 'title, slug, and content are required' }, 400);
+    }
+
+    const { blogPosts } = await import('../../shared/schema');
+    const { eq, and, ne } = await import('drizzle-orm');
+
+    if (slug) {
+      const existing = await db
+        .select({ id: blogPosts.id })
+        .from(blogPosts)
+        .where(and(eq(blogPosts.slug, slug), ne(blogPosts.id, id)))
+        .limit(1);
+      if (existing.length > 0) {
+        return c.json({ error: 'A different article already uses this slug' }, 409);
+      }
+    }
+
+    const wordCount = content.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+    const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+
+    const updated = await db
+      .update(blogPosts)
+      .set({
+        title: title.trim(),
+        slug: slug.trim(),
+        excerpt: excerpt?.trim() || null,
+        content,
+        category: category?.trim() || null,
+        tags: Array.isArray(tags) ? tags : [],
+        metaTitle: metaTitle?.trim() || null,
+        metaDescription: metaDescription?.trim() || null,
+        published: Boolean(published),
+        featured: Boolean(featured),
+        wordCount,
+        readTime: `${readingTime} min read`,
+        updatedAt: new Date(),
+      })
+      .where(eq(blogPosts.id, id))
+      .returning();
+
+    if (!updated.length) return c.json({ error: 'Article not found' }, 404);
+    return c.json({ success: true, article: updated[0] });
+  } catch (error: any) {
+    console.error('[SuperAdmin] blog update error:', error);
+    return c.json({ error: 'Failed to update article', message: error.message }, 500);
+  }
+});
+
+app.delete('/blog/articles/:id', authMiddleware, async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    if (isNaN(id)) return c.json({ error: 'Invalid article ID' }, 400);
+
+    const { blogPosts } = await import('../../shared/schema');
+    const { eq } = await import('drizzle-orm');
+
+    const deleted = await db.delete(blogPosts).where(eq(blogPosts.id, id)).returning({ id: blogPosts.id });
+    if (!deleted.length) return c.json({ error: 'Article not found' }, 404);
+    return c.json({ success: true });
+  } catch (error: any) {
+    return c.json({ error: 'Failed to delete article', message: error.message }, 500);
+  }
+});
+
 export { app as superadminRoutes };
 

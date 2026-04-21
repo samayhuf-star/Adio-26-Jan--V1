@@ -30,6 +30,7 @@ import { LeadsDashboard } from './LeadsDashboard';
 import { ChatbotDashboard } from './ChatbotDashboard';
 import { BulkBlogGenerator } from './BulkBlogGenerator';
 import { ArticlePerformanceDashboard } from './ArticlePerformanceDashboard';
+import { BlogEditor } from './BlogEditor';
 const SEODashboard = lazy(() => import('./SEODashboard'));
 import {
   Dialog,
@@ -108,7 +109,7 @@ interface SubscriptionRecord {
   paidAmountCents: number | string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend' | 'system-logs' | 'leads' | 'chatbot' | 'bulk-blog' | 'article-performance';
+type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend' | 'system-logs' | 'leads' | 'chatbot' | 'bulk-blog' | 'article-performance' | 'blog-editor';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -670,6 +671,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             { id: 'leads', label: 'Leads', icon: Mail },
             { id: 'chatbot', label: 'Chat Support', icon: MessageCircle },
             { id: 'bulk-blog', label: 'Bulk Blog', icon: Zap },
+            { id: 'blog-editor', label: 'Blog Editor', icon: Edit },
             { id: 'article-performance', label: 'Article ROI', icon: TrendingUp },
           ].map(tab => (
             <Button
@@ -1040,6 +1042,11 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
         {/* Bulk Blog Generator Tab */}
         {activeTab === 'bulk-blog' && (
           <BulkBlogGenerator token={token} />
+        )}
+
+        {/* Blog Editor Tab */}
+        {activeTab === 'blog-editor' && (
+          <BlogEditor token={token} />
         )}
 
         {/* Article Performance Tab */}
