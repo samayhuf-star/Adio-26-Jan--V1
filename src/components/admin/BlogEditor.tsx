@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  FileText, Edit, Trash2, Eye, Save, X, RefreshCw,
+  FileText, Edit, Trash2, Eye, Save, RefreshCw,
   CheckCircle, XCircle, Globe, EyeOff, Search, ChevronLeft,
   ExternalLink, Lock, Unlock
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
+import { RichTextEditor } from './RichTextEditor';
 
 interface Article {
   id: number;
@@ -239,20 +240,13 @@ export function BlogEditor({ token }: BlogEditorProps) {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs text-slate-400">Content (HTML)</label>
-                  <span className="text-xs text-slate-500">
-                    {form.content.split(/\s+/).filter(Boolean).length} words
-                  </span>
-                </div>
-                <textarea
-                  value={form.content}
-                  onChange={e => setForm(f => f ? { ...f, content: e.target.value } : f)}
-                  rows={20}
-                  className="w-full bg-slate-700 border border-slate-600 text-white rounded-md px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
-                  placeholder="<p>Article content in HTML...</p>"
+                <label className="block text-xs text-slate-400 mb-1.5">Content</label>
+                <RichTextEditor
+                  content={form.content}
+                  onChange={html => setForm(f => f ? { ...f, content: html } : f)}
+                  placeholder="Start writing your article content here…"
                 />
-                <p className="text-xs text-slate-500 mt-1">Content is stored as HTML. Markdown is auto-converted on save.</p>
+                <p className="text-xs text-slate-500 mt-1.5">Use the {'</>'} button to switch to raw HTML mode.</p>
               </div>
             </div>
           </div>
