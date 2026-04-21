@@ -172,6 +172,7 @@ Target Audience: ${config.targetAudience}
 Tone: ${config.tone}
 
 Requirements:
+- Start DIRECTLY with the first body paragraph — do NOT include any heading or title
 - Hook the reader in the first sentence
 - Clearly state the problem or opportunity
 - Preview what the reader will learn
@@ -179,7 +180,7 @@ Requirements:
 - Create urgency or curiosity
 - End with a transition to the main content
 
-Write in markdown format.`;
+Write in markdown format (paragraphs and emphasis only — no headings).`;
 
   return await generateWithOpenAI(prompt, 600);
 }
@@ -441,9 +442,7 @@ export async function generateDetailedBlog(config: BlogConfig): Promise<Generate
     `Results/success visualization for "${config.topic}" case study`
   ];
   
-  const fullContent = `# ${outline.title}
-
-${introduction}
+  const fullContent = `${introduction}
 
 ${sections.map(s => `## ${s.title}\n\n${s.content}`).join('\n\n')}
 

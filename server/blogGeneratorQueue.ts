@@ -2,6 +2,9 @@ import { db } from './db';
 import { articleGenerationJobs, blogPosts } from '../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { generateDetailedBlog } from './blogGenerator';
+import { marked } from 'marked';
+
+marked.setOptions({ gfm: true, breaks: false });
 
 const MAX_CONCURRENT = 3;
 let activeJobs = 0;
@@ -81,6 +84,7 @@ async function processNextJob() {
       /https:\/\/adiology\.io(?!\?utm)/g,
       `https://adiology.io${utmCta}`
     );
+    const htmlContent = await marked.parse(contentWithUtm);
 
     const inserted = await db
       .insert(blogPosts)
@@ -88,7 +92,7 @@ async function processNextJob() {
         title: generated.title,
         slug: generated.slug,
         excerpt: generated.metaDescription,
-        content: contentWithUtm,
+        content: htmlContent,
         category: category,
         tags: [keyword, 'Google Ads', category],
         author: 'Adiology Team',

@@ -1,6 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { ChevronLeft, Clock, Calendar, User, Tag, BookOpen, ArrowRight, Share2, Copy, Check } from 'lucide-react';
+import { marked } from 'marked';
+
+marked.setOptions({ gfm: true, breaks: false });
+
+function renderContent(content: string): string {
+  if (!content) return '';
+  const trimmed = content.trim();
+  const looksLikeMarkdown =
+    trimmed.startsWith('#') ||
+    (/^#{1,6}\s/m.test(trimmed) && !trimmed.startsWith('<'));
+  if (looksLikeMarkdown) {
+    return marked.parse(trimmed) as string;
+  }
+  return trimmed;
+}
 
 interface Article {
   id: number;
@@ -282,7 +297,7 @@ export default function BlogArticle({ slug, onBack, onArticleClick }: BlogArticl
 
           <div
             className="blog-article-content max-w-none"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: renderContent(article.content) }}
           />
 
           {article.tags && article.tags.length > 0 && (
