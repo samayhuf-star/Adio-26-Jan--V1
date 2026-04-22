@@ -26,6 +26,7 @@ import { adPlatformsRoutes } from './routes/adplatforms';
 import { leadsRoutes } from './routes/leads';
 import { skyvernRoutes } from './routes/skyvern';
 import { chatRoutes } from './routes/chat';
+import { seoPagesRoutes } from './routes/seoPages';
 import { stripeService } from './stripeService';
 import { adminAuthMiddleware } from './adminAuthService';
 import { db, getDb } from './db';
@@ -33,7 +34,7 @@ import { campaignHistory, auditLogs, workspaceProjects, projectItems, monitoredD
 import { startBlogGeneratorQueue } from './blogGeneratorQueue';
 import { analyzeUrlWithCheerio } from './urlAnalyzerLite';
 import { nhostAdmin } from './nhostAdmin';
-import { eq, desc, asc, and } from 'drizzle-orm';
+import { eq, desc, asc, and, isNull, or } from 'drizzle-orm';
 import { getUserIdFromToken } from './utils/auth';
 import fs from 'fs';
 import path from 'path';
@@ -66,27 +67,32 @@ app.get('/sitemap.xml', async (c) => {
   const sitemapPath = path.resolve(currentDir, '../public/sitemap.xml');
   try {
     const staticXml = fs.readFileSync(sitemapPath, 'utf-8');
-    // Dynamically inject all published blog posts from the database
     let blogXml = '';
+    let blog2Xml = '';
     try {
-      const posts = await db
+      const mainPosts = await db
         .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, createdAt: blogPosts.createdAt })
         .from(blogPosts)
-        .where(eq(blogPosts.published, true))
+        .where(and(eq(blogPosts.published, true), isNull(blogPosts.library)))
         .orderBy(desc(blogPosts.createdAt));
-      const today = new Date().toISOString().slice(0, 10);
-      for (const post of posts) {
+      for (const post of mainPosts) {
         const lastmod = (post.updatedAt || post.createdAt || new Date()).toISOString().slice(0, 10);
         blogXml += `  <url>\n    <loc>https://adiology.io/blog/${post.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
       }
-      // Only replace static blog entries when DB has live posts — otherwise keep the
-      // hardcoded entries so the sitemap is never stripped bare by an empty DB query.
-      if (posts.length > 0) {
+      const blog2Posts = await db
+        .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, createdAt: blogPosts.createdAt })
+        .from(blogPosts)
+        .where(and(eq(blogPosts.published, true), eq(blogPosts.library, 'blog-2')))
+        .orderBy(desc(blogPosts.createdAt));
+      for (const post of blog2Posts) {
+        const lastmod = (post.updatedAt || post.createdAt || new Date()).toISOString().slice(0, 10);
+        blog2Xml += `  <url>\n    <loc>https://adiology.io/blog-2/${post.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      }
+      if (mainPosts.length > 0 || blog2Posts.length > 0) {
         const strippedXml = staticXml.replace(/<url>\s*<loc>https:\/\/adiology\.io\/blog\/[^<]+<\/loc>[\s\S]*?<\/url>\n?/g, '');
-        const finalXml = strippedXml.replace('</urlset>', blogXml + '</urlset>');
+        const finalXml = strippedXml.replace('</urlset>', blogXml + blog2Xml + '</urlset>');
         return c.text(finalXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
       }
-      // No published posts in DB — serve static file unchanged (keeps hardcoded blog entries)
       return c.text(staticXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
     } catch (dbErr) {
       console.error('[Sitemap] DB error, falling back to static:', dbErr);
@@ -103,18 +109,28 @@ app.get('/sitemap_v2.xml', async (c) => {
   try {
     const staticXml = fs.readFileSync(sitemapPath, 'utf-8');
     let blogXml = '';
+    let blog2Xml = '';
     try {
-      const posts = await db
+      const mainPosts = await db
         .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, createdAt: blogPosts.createdAt })
         .from(blogPosts)
-        .where(eq(blogPosts.published, true))
+        .where(and(eq(blogPosts.published, true), isNull(blogPosts.library)))
         .orderBy(desc(blogPosts.createdAt));
-      for (const post of posts) {
+      for (const post of mainPosts) {
         const lastmod = (post.updatedAt || post.createdAt || new Date()).toISOString().slice(0, 10);
         blogXml += `  <url>\n    <loc>https://adiology.io/blog/${post.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
       }
+      const blog2Posts = await db
+        .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, createdAt: blogPosts.createdAt })
+        .from(blogPosts)
+        .where(and(eq(blogPosts.published, true), eq(blogPosts.library, 'blog-2')))
+        .orderBy(desc(blogPosts.createdAt));
+      for (const post of blog2Posts) {
+        const lastmod = (post.updatedAt || post.createdAt || new Date()).toISOString().slice(0, 10);
+        blog2Xml += `  <url>\n    <loc>https://adiology.io/blog-2/${post.slug}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+      }
       const strippedXml = staticXml.replace(/<url>\s*<loc>https:\/\/adiology\.io\/blog\/[^<]+<\/loc>[\s\S]*?<\/url>\n?/g, '');
-      const finalXml = strippedXml.replace('</urlset>', blogXml + '</urlset>');
+      const finalXml = strippedXml.replace('</urlset>', blogXml + blog2Xml + '</urlset>');
       return c.text(finalXml, 200, { 'Content-Type': 'application/xml; charset=utf-8' });
     } catch (dbErr) {
       console.error('[Sitemap v2] DB error, falling back to static:', dbErr);
@@ -191,6 +207,7 @@ app.route('/api/leads', leadsRoutes);
 app.route('/api/skyvern', skyvernRoutes);
 app.route('/api/superadmin', adPlatformsRoutes);
 app.route('/api/chat', chatRoutes);
+app.route('/api/seo-pages', seoPagesRoutes);
 
 // SSR meta injection for blog pages — lets Googlebot see per-post title/description
 function readIndexHtml(): string {
@@ -351,6 +368,159 @@ app.get('/blog/:slug', async (c) => {
     return c.html(injected);
   } catch (err) {
     console.error('[Blog SSR] Error fetching post meta:', err);
+    return c.html(html);
+  }
+});
+
+// IndexNow key verification file
+app.get('/e1d486f466a04ef68e517d49595680ff.txt', (c) => {
+  return c.text('e1d486f466a04ef68e517d49595680ff', 200, { 'Content-Type': 'text/plain' });
+});
+
+// IndexNow ping helper
+async function pingIndexNow(urls: string[]): Promise<void> {
+  try {
+    const body = {
+      host: 'adiology.io',
+      key: 'e1d486f466a04ef68e517d49595680ff',
+      keyLocation: 'https://adiology.io/e1d486f466a04ef68e517d49595680ff.txt',
+      urlList: urls,
+    };
+    await fetch('https://api.indexnow.org/indexnow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify(body),
+    });
+    console.log(`[IndexNow] Pinged ${urls.length} URL(s)`);
+  } catch (err) {
+    console.error('[IndexNow] Ping failed:', err);
+  }
+}
+
+// Export for use in blogGeneratorQueue
+export { pingIndexNow };
+
+app.get('/blog-2', async (c) => {
+  const html = readIndexHtml();
+  if (!html) return c.text('Not found', 404);
+
+  let recentPostsHtml = '';
+  try {
+    const recent = await db
+      .select({ title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt, category: blogPosts.category })
+      .from(blogPosts)
+      .where(and(eq(blogPosts.published, true), eq(blogPosts.library, 'blog-2')))
+      .orderBy(desc(blogPosts.createdAt))
+      .limit(20);
+    if (recent.length > 0) {
+      const items = recent.map(p =>
+        `<li><a href="/blog-2/${p.slug}"><strong>${p.title}</strong></a>${p.excerpt ? ` — ${p.excerpt}` : ''}</li>`
+      ).join('\n');
+      recentPostsHtml = `<div id="ssr-blog2-index" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;" aria-hidden="true"><h1>Google Ads Library — Adiology</h1><p>Comprehensive guides on Performance Max, Smart Bidding, AI Max, match types, shopping campaigns, geographic targeting, and more.</p><ul>${items}</ul></div>`;
+    }
+  } catch {}
+
+  const jsonLd = `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "Google Ads Library — Adiology",
+    "url": "https://adiology.io/blog-2",
+    "description": "100+ expert Google Ads guides covering Performance Max, Smart Bidding, AI Max, match types, shopping campaigns, and more.",
+  })}</script>`;
+
+  const injected = injectBlogMeta(html, {
+    title: 'Google Ads Library — Complete Guides & Strategies | Adiology',
+    description: 'Comprehensive Google Ads library covering Performance Max, Smart Bidding, AI Max, match types, shopping campaigns, geo-targeting, and more. 100+ in-depth guides.',
+    canonical: 'https://adiology.io/blog-2',
+    ogTitle: 'Google Ads Library — Adiology',
+    ogDesc: '100+ expert Google Ads guides covering PMax, Smart Bidding, AI Max, Shopping, and more.',
+    jsonLd,
+    articleHtml: recentPostsHtml,
+  });
+  return c.html(injected);
+});
+
+app.get('/blog-2/:slug', async (c) => {
+  const slug = c.req.param('slug');
+  const html = readIndexHtml();
+  if (!html) return c.text('Not found', 404);
+  try {
+    const results = await db
+      .select({
+        title: blogPosts.title,
+        excerpt: blogPosts.excerpt,
+        content: blogPosts.content,
+        metaTitle: blogPosts.metaTitle,
+        metaDescription: blogPosts.metaDescription,
+        imageUrl: blogPosts.imageUrl,
+        author: blogPosts.author,
+        category: blogPosts.category,
+        slug: blogPosts.slug,
+        published: blogPosts.published,
+        createdAt: blogPosts.createdAt,
+        updatedAt: blogPosts.updatedAt,
+      })
+      .from(blogPosts)
+      .where(and(eq(blogPosts.slug, slug), eq(blogPosts.published, true), eq(blogPosts.library, 'blog-2')))
+      .limit(1);
+
+    if (results.length === 0) {
+      return c.html(html);
+    }
+
+    const post = results[0];
+    const pageTitle = post.metaTitle || `${post.title} | Google Ads Library — Adiology`;
+    const pageDesc = post.metaDescription || post.excerpt || 'Read this guide in the Adiology Google Ads Library.';
+    const canonical = `https://adiology.io/blog-2/${post.slug}`;
+    const datePublished = (post.createdAt || new Date()).toISOString();
+    const dateModified = (post.updatedAt || post.createdAt || new Date()).toISOString();
+    const ogImage = post.imageUrl || 'https://adiology.io/og-image.png';
+
+    const jsonLd = `<script type="application/ld+json">${JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": post.title,
+      "description": pageDesc,
+      "url": canonical,
+      "image": ogImage,
+      "author": { "@type": "Person", "name": post.author || "Adiology Team" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Adiology",
+        "logo": { "@type": "ImageObject", "url": "https://adiology.io/og-image.png" }
+      },
+      "datePublished": datePublished,
+      "dateModified": dateModified,
+      "mainEntityOfPage": { "@type": "WebPage", "@id": canonical },
+      "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://adiology.io" },
+          { "@type": "ListItem", "position": 2, "name": "Google Ads Library", "item": "https://adiology.io/blog-2" },
+          { "@type": "ListItem", "position": 3, "name": post.title, "item": canonical }
+        ]
+      }
+    })}</script>`;
+
+    const plainText = stripHtml(post.content || '').slice(0, 5000);
+    const articleHtml = `<article id="ssr-blog2-article" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+  <h1>${post.title}</h1>
+  ${post.category ? `<p>Category: ${post.category}</p>` : ''}
+  ${post.excerpt ? `<p>${post.excerpt}</p>` : ''}
+  <div>${plainText}</div>
+</article>`;
+
+    const injected = injectBlogMeta(html, {
+      title: pageTitle,
+      description: pageDesc,
+      canonical,
+      ogImage,
+      jsonLd,
+      articleHtml,
+    });
+    return c.html(injected);
+  } catch (err) {
+    console.error('[Blog-2 SSR] Error fetching post meta:', err);
     return c.html(html);
   }
 });
@@ -2769,9 +2939,9 @@ app.get('/api/blogs', async (c) => {
         createdAt: blogPosts.createdAt,
       })
       .from(blogPosts)
-      .where(eq(blogPosts.published, true))
+      .where(and(eq(blogPosts.published, true), isNull(blogPosts.library)))
       .orderBy(desc(blogPosts.createdAt))
-      .limit(50);
+      .limit(200);
 
     return c.json({ blogs: results });
   } catch (error: any) {
@@ -2785,7 +2955,7 @@ app.get('/api/blogs/categories/list', async (c) => {
     const results = await db
       .select({ category: blogPosts.category })
       .from(blogPosts)
-      .where(eq(blogPosts.published, true));
+      .where(and(eq(blogPosts.published, true), isNull(blogPosts.library)));
     
     const categories = [...new Set(results.map(r => r.category).filter(Boolean))].sort();
     return c.json({ categories });
@@ -2800,7 +2970,7 @@ app.get('/api/blogs/:slug', async (c) => {
     const results = await db
       .select()
       .from(blogPosts)
-      .where(and(eq(blogPosts.slug, slug), eq(blogPosts.published, true)))
+      .where(and(eq(blogPosts.slug, slug), eq(blogPosts.published, true), isNull(blogPosts.library)))
       .limit(1);
     
     if (results.length === 0) {
@@ -2820,6 +2990,7 @@ app.get('/api/blogs/:slug', async (c) => {
       .from(blogPosts)
       .where(and(
         eq(blogPosts.published, true),
+        isNull(blogPosts.library),
         eq(blogPosts.category, results[0].category || '')
       ))
       .orderBy(desc(blogPosts.createdAt))
@@ -2833,6 +3004,94 @@ app.get('/api/blogs/:slug', async (c) => {
     });
   } catch (error: any) {
     console.error('Get blog article error:', error);
+    return c.json({ error: 'Failed to get article', message: error.message }, 500);
+  }
+});
+
+// Blog-2 (Google Ads Library) API routes
+app.get('/api/blogs-2', async (c) => {
+  try {
+    const results = await db
+      .select({
+        id: blogPosts.id,
+        title: blogPosts.title,
+        slug: blogPosts.slug,
+        excerpt: blogPosts.excerpt,
+        category: blogPosts.category,
+        tags: blogPosts.tags,
+        author: blogPosts.author,
+        readTime: blogPosts.readTime,
+        wordCount: blogPosts.wordCount,
+        imageUrl: blogPosts.imageUrl,
+        featured: blogPosts.featured,
+        createdAt: blogPosts.createdAt,
+      })
+      .from(blogPosts)
+      .where(and(eq(blogPosts.published, true), eq(blogPosts.library, 'blog-2')))
+      .orderBy(desc(blogPosts.createdAt))
+      .limit(200);
+
+    return c.json({ blogs: results });
+  } catch (error: any) {
+    console.error('Get blogs-2 error:', error);
+    return c.json({ error: 'Failed to get articles', message: error.message }, 500);
+  }
+});
+
+app.get('/api/blogs-2/categories/list', async (c) => {
+  try {
+    const results = await db
+      .select({ category: blogPosts.category })
+      .from(blogPosts)
+      .where(and(eq(blogPosts.published, true), eq(blogPosts.library, 'blog-2')));
+    
+    const categories = [...new Set(results.map(r => r.category).filter(Boolean))].sort();
+    return c.json({ categories });
+  } catch (error: any) {
+    return c.json({ error: 'Failed to get categories' }, 500);
+  }
+});
+
+app.get('/api/blogs-2/:slug', async (c) => {
+  try {
+    const slug = c.req.param('slug');
+    const results = await db
+      .select()
+      .from(blogPosts)
+      .where(and(eq(blogPosts.slug, slug), eq(blogPosts.published, true), eq(blogPosts.library, 'blog-2')))
+      .limit(1);
+    
+    if (results.length === 0) {
+      return c.json({ error: 'Article not found' }, 404);
+    }
+
+    const related = await db
+      .select({
+        id: blogPosts.id,
+        title: blogPosts.title,
+        slug: blogPosts.slug,
+        excerpt: blogPosts.excerpt,
+        category: blogPosts.category,
+        readTime: blogPosts.readTime,
+        createdAt: blogPosts.createdAt,
+      })
+      .from(blogPosts)
+      .where(and(
+        eq(blogPosts.published, true),
+        eq(blogPosts.library, 'blog-2'),
+        eq(blogPosts.category, results[0].category || '')
+      ))
+      .orderBy(desc(blogPosts.createdAt))
+      .limit(4);
+    
+    const relatedArticles = related.filter(r => r.slug !== slug).slice(0, 3);
+
+    return c.json({ 
+      article: results[0],
+      related: relatedArticles
+    });
+  } catch (error: any) {
+    console.error('Get blog-2 article error:', error);
     return c.json({ error: 'Failed to get article', message: error.message }, 500);
   }
 });

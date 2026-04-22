@@ -979,6 +979,7 @@ export const blogPosts = pgTable("blog_posts", {
   featured: boolean("featured").default(false),
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
+  library: text("library"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -986,6 +987,7 @@ export const blogPosts = pgTable("blog_posts", {
   categoryIdx: index("idx_blog_posts_category").on(table.category),
   publishedIdx: index("idx_blog_posts_published").on(table.published),
   createdAtIdx: index("idx_blog_posts_created_at").on(table.createdAt),
+  libraryIdx: index("idx_blog_posts_library").on(table.library),
 }));
 
 export const articleGenerationJobs = pgTable("article_generation_jobs", {
@@ -999,6 +1001,7 @@ export const articleGenerationJobs = pgTable("article_generation_jobs", {
   wordCount: integer("word_count"),
   category: text("category"),
   batchId: text("batch_id"),
+  library: text("library"),
   createdAt: timestamp("created_at").defaultNow(),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
@@ -1120,4 +1123,24 @@ export const articleConversions = pgTable("article_conversions", {
   userIdx: index("idx_article_conv_user").on(table.userId),
   eventTypeIdx: index("idx_article_conv_event_type").on(table.eventType),
   createdAtIdx: index("idx_article_conv_created_at").on(table.createdAt),
+}));
+
+export const seoPages = pgTable("seo_pages", {
+  id: serial("id").primaryKey(),
+  niche: text("niche").notNull(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  metaDescription: text("meta_description"),
+  htmlContent: text("html_content"),
+  status: text("status").notNull().default("generated"),
+  githubPath: text("github_path"),
+  githubSha: text("github_sha"),
+  githubRepo: text("github_repo"),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  slugIdx: index("idx_seo_pages_slug").on(table.slug),
+  statusIdx: index("idx_seo_pages_status").on(table.status),
+  createdAtIdx: index("idx_seo_pages_created_at").on(table.createdAt),
 }));

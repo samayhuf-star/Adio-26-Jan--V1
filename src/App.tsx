@@ -82,6 +82,8 @@ const HelpSupport = lazy(() => import('./components/HelpSupport').then(m => ({ d
 const Blog = lazy(() => import('./components/Blog').then(m => ({ default: m.default })));
 const BlogListing = lazy(() => import('./components/BlogListing'));
 const BlogArticle = lazy(() => import('./components/BlogArticle'));
+const Blog2Listing = lazy(() => import('./components/Blog2Listing'));
+const Blog2Article = lazy(() => import('./components/Blog2Article'));
 const BlogGenerator = lazy(() => import('./components/BlogGenerator').then(m => ({ default: m.default })));
 const SuperAdminPanel = lazy(() => import('./components/SuperAdminPanel').then(m => ({ default: m.SuperAdminPanel })));
 const SuperAdminApp = lazy(() => import('./components/admin/SuperAdminApp').then(m => ({ default: m.SuperAdminApp })));
@@ -123,7 +125,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'signup' | 'cancelled' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article' | 'appsumo-redeem' | 'demo' | 'affiliates' | 'complete-profile';
+type AppView = 'homepage' | 'auth' | 'user' | 'verify-email' | 'reset-password' | 'payment' | 'payment-success' | 'plan-selection' | 'signup-wizard' | 'signup' | 'cancelled' | 'privacy-policy' | 'terms-of-service' | 'cookie-policy' | 'gdpr-compliance' | 'refund-policy' | 'promo' | 'lifetime-deal' | 'admin-panel' | 'accept-invite' | 'superadmin' | 'contact' | 'help-center' | 'community-page' | 'feature-campaign-builder' | 'feature-click-guard' | 'feature-proxy-mail' | 'feature-domain-monitor' | 'feature-keyword-planner' | 'feature-ads-search' | 'feature-blog-generator' | 'pricing' | 'blog' | 'blog-article' | 'blog-2' | 'blog-2-article' | 'appsumo-redeem' | 'demo' | 'affiliates' | 'complete-profile';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -139,6 +141,7 @@ const AppContent = () => {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [previousView, setPreviousView] = useState<AppView>('homepage');
   const [blogArticleSlug, setBlogArticleSlug] = useState<string>('');
+  const [blog2ArticleSlug, setBlog2ArticleSlug] = useState<string>('');
   const [pendingProfileEmail, setPendingProfileEmail] = useState<string>('');
   const [viewMode, setViewMode] = useState<'admin' | 'user'>('admin');
   const [user, setUser] = useState<any>(null);
@@ -1054,6 +1057,19 @@ const AppContent = () => {
         }
       }
 
+      if (path === '/blog-2') {
+        setView('blog-2');
+        return;
+      }
+      if (path.startsWith('/blog-2/')) {
+        const articleSlug = path.replace('/blog-2/', '');
+        if (articleSlug) {
+          setBlog2ArticleSlug(articleSlug);
+          setView('blog-2-article');
+          return;
+        }
+      }
+
       // Admin panel - detect subdomain or /admin path
       // Super admin has its own authentication system (username/password)
       const hostname = window.location.hostname;
@@ -1832,6 +1848,43 @@ const AppContent = () => {
             setBlogArticleSlug(slug);
             window.history.pushState({}, '', `/blog/${slug}`);
             setAppView('blog-article');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'blog-2') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <Blog2Listing
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setAppView('homepage');
+          }}
+          onArticleClick={(slug: string) => {
+            setBlog2ArticleSlug(slug);
+            window.history.pushState({}, '', `/blog-2/${slug}`);
+            setAppView('blog-2-article');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (appView === 'blog-2-article') {
+    return (
+      <Suspense fallback={<ComponentLoader />}>
+        <Blog2Article
+          slug={blog2ArticleSlug}
+          onBack={() => {
+            window.history.pushState({}, '', '/blog-2');
+            setAppView('blog-2');
+          }}
+          onArticleClick={(slug: string) => {
+            setBlog2ArticleSlug(slug);
+            window.history.pushState({}, '', `/blog-2/${slug}`);
+            setAppView('blog-2-article');
           }}
         />
       </Suspense>

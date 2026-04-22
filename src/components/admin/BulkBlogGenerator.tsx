@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   FileText, Play, RefreshCw, Download, Trash2, 
   AlertCircle, CheckCircle, Clock, XCircle, 
-  RotateCcw, ChevronDown, ChevronUp, Zap
+  RotateCcw, ChevronDown, ChevronUp, Zap, Library
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -16,6 +16,7 @@ interface Job {
   wordCount: number | null;
   category: string | null;
   batchId: string | null;
+  library: string | null;
   createdAt: string | null;
   completedAt: string | null;
 }
@@ -40,13 +41,19 @@ const STATUS_CONFIG = {
   skipped: { label: 'Skipped', color: 'bg-slate-500/20 text-slate-400 border-slate-500/30', icon: AlertCircle },
 };
 
+const LIBRARY_OPTIONS = [
+  { value: '', label: 'Main Blog (/blog)', description: 'General Google Ads & PPC articles' },
+  { value: 'blog-2', label: 'Google Ads Library (/blog-2)', description: 'Specialist Google Ads guides (IndexNow pinged on publish)' },
+];
+
 export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
   const [keywords, setKeywords] = useState('');
+  const [selectedLibrary, setSelectedLibrary] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [summary, setSummary] = useState<QueueSummary>({});
   const [loading, setLoading] = useState(false);
   const [queueLoading, setQueueLoading] = useState(false);
-  const [submitResult, setSubmitResult] = useState<{ queued: number; skipped: number; batchId: string } | null>(null);
+  const [submitResult, setSubmitResult] = useState<{ queued: number; skipped: number; batchId: string; library: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -102,7 +109,10 @@ export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
     try {
       const res = await adminFetch('/api/superadmin/blog/bulk-generate', {
         method: 'POST',
-        body: JSON.stringify({ keywords: lines }),
+        body: JSON.stringify({
+          keywords: lines,
+          library: selectedLibrary || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -268,11 +278,11 @@ export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
         </button>
         {showInstructions && (
           <div className="px-4 pb-4 space-y-2 text-sm text-slate-400">
-            <p>1. Enter one keyword per line below (e.g. "how to reduce google ads cpc")</p>
-            <p>2. Each keyword becomes a ~1,200-word published blog article</p>
-            <p>3. Articles are auto-categorized, tagged, and added to the sitemap</p>
+            <p>1. Choose the target library below (Main Blog or Google Ads Library)</p>
+            <p>2. Enter one keyword per line (e.g. "how to reduce google ads cpc")</p>
+            <p>3. Each keyword becomes a published article auto-categorized for its library</p>
             <p>4. The system processes up to 3 articles at once — larger batches take time</p>
-            <p>5. After generation, export a CSV of article URLs for Google Ads targeting</p>
+            <p>5. Google Ads Library articles trigger IndexNow to accelerate Bing/Google indexing</p>
             <p className="text-yellow-400">Max 500 keywords per batch. Each article costs ~$0.02–0.05 in AI tokens.</p>
           </div>
         )}
@@ -284,16 +294,50 @@ export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
           <FileText className="w-4 h-4 text-purple-400" />
           Enter Keywords (one per line)
         </h3>
+
+        {/* Library Selector */}
+        <div className="space-y-2">
+          <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
+            <Library className="w-3.5 h-3.5" />
+            Target Library
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {LIBRARY_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setSelectedLibrary(opt.value)}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  selectedLibrary === opt.value
+                    ? 'bg-purple-500/20 border-purple-500/60 ring-1 ring-purple-500/40'
+                    : 'bg-slate-900/50 border-slate-600/50 hover:border-slate-500'
+                }`}
+              >
+                <p className={`text-sm font-medium ${selectedLibrary === opt.value ? 'text-purple-300' : 'text-slate-200'}`}>
+                  {opt.label}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">{opt.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <textarea
           value={keywords}
           onChange={e => setKeywords(e.target.value)}
-          placeholder="how to reduce google ads cost per click&#10;google ads quality score optimization&#10;best bidding strategies for google ads&#10;..."
+          placeholder={
+            selectedLibrary === 'blog-2'
+              ? 'performance max campaign best practices\nhow to set up smart bidding target cpa\ngoogle ads match types explained\n...'
+              : 'how to reduce google ads cost per click\ngoogle ads quality score optimization\nbest bidding strategies for google ads\n...'
+          }
           rows={10}
           className="w-full bg-slate-900/70 border border-slate-600 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 resize-y font-mono"
         />
         <div className="flex items-center justify-between">
           <span className="text-xs text-slate-500">
             {keywords.split('\n').filter(l => l.trim()).length} keywords entered
+            {selectedLibrary === 'blog-2' && (
+              <span className="ml-2 text-purple-400">→ Google Ads Library</span>
+            )}
           </span>
           <Button
             onClick={handleSubmit}
@@ -319,6 +363,7 @@ export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
             <p className="text-green-400 text-sm font-medium">
               Queued {submitResult.queued} articles successfully
               {submitResult.skipped > 0 && ` (${submitResult.skipped} skipped — already exist)`}
+              {submitResult.library === 'blog-2' && ' → Google Ads Library'}
             </p>
             <p className="text-xs text-slate-400 mt-1">Batch ID: {submitResult.batchId}</p>
           </div>
@@ -336,7 +381,6 @@ export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
         <div className="p-4 border-b border-slate-700/50 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-white">Generation Queue</h3>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Filter buttons */}
             {(['all', 'queued', 'processing', 'completed', 'failed', 'skipped'] as const).map(s => (
               <button
                 key={s}
@@ -409,6 +453,7 @@ export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
               const cfg = STATUS_CONFIG[job.status];
               const Icon = cfg.icon;
               const isSelected = selectedIds.has(job.id);
+              const blogPath = job.library === 'blog-2' ? '/blog-2' : '/blog';
               return (
                 <div
                   key={job.id}
@@ -431,15 +476,18 @@ export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
                       {job.category && (
                         <span className="text-xs text-slate-500 bg-slate-700/50 px-2 py-0.5 rounded-full">{job.category}</span>
                       )}
+                      {job.library === 'blog-2' && (
+                        <span className="text-xs text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">Library</span>
+                      )}
                     </div>
                     {job.articleSlug && (
                       <a
-                        href={`/blog/${job.articleSlug}`}
+                        href={`${blogPath}/${job.articleSlug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-purple-400 hover:text-purple-300 truncate block"
                       >
-                        /blog/{job.articleSlug}
+                        {blogPath}/{job.articleSlug}
                       </a>
                     )}
                     {job.errorMsg && (
@@ -470,8 +518,8 @@ export function BulkBlogGenerator({ token }: BulkBlogGeneratorProps) {
           <p className="text-xs text-slate-400">Target long-tail keywords like "how to lower google ads cpc for e-commerce" — easier to rank and more specific intent.</p>
         </div>
         <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4">
-          <h4 className="text-sm font-semibold text-white mb-2">Google Ads Strategy</h4>
-          <p className="text-xs text-slate-400">After articles rank (4–8 weeks), run Google Ads to drive immediate traffic to top-performing articles to accelerate conversions.</p>
+          <h4 className="text-sm font-semibold text-white mb-2">Google Ads Library</h4>
+          <p className="text-xs text-slate-400">Generate specialist guides for /blog-2. Each article is pinged via IndexNow for faster Bing & Google indexing.</p>
         </div>
         <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4">
           <h4 className="text-sm font-semibold text-white mb-2">Export & Promote</h4>

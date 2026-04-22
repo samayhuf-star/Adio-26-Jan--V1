@@ -2166,7 +2166,7 @@ app.put('/replit-spend', authMiddleware, async (c) => {
 
 app.post('/blog/bulk-generate', authMiddleware, async (c) => {
   try {
-    const { keywords, batchId } = await c.req.json();
+    const { keywords, batchId, library } = await c.req.json();
     if (!Array.isArray(keywords) || keywords.length === 0) {
       return c.json({ error: 'keywords must be a non-empty array' }, 400);
     }
@@ -2177,6 +2177,7 @@ app.post('/blog/bulk-generate', authMiddleware, async (c) => {
     const { articleGenerationJobs, blogPosts } = await import('../../shared/schema');
     const { eq } = await import('drizzle-orm');
     const bid = batchId || `batch_${Date.now()}`;
+    const targetLibrary = library || null;
 
     let queued = 0;
     let skipped = 0;
@@ -2208,11 +2209,12 @@ app.post('/blog/bulk-generate', authMiddleware, async (c) => {
         keyword,
         status: 'queued',
         batchId: bid,
+        library: targetLibrary,
       });
       queued++;
     }
 
-    return c.json({ success: true, queued, skipped, batchId: bid });
+    return c.json({ success: true, queued, skipped, batchId: bid, library: targetLibrary });
   } catch (error: any) {
     console.error('[SuperAdmin] Bulk generate error:', error);
     return c.json({ error: 'Failed to queue articles', message: error.message }, 500);

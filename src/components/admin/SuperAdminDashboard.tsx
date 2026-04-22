@@ -31,6 +31,7 @@ import { ChatbotDashboard } from './ChatbotDashboard';
 import { BulkBlogGenerator } from './BulkBlogGenerator';
 import { ArticlePerformanceDashboard } from './ArticlePerformanceDashboard';
 import { BlogEditor } from './BlogEditor';
+import { ProgrammaticSEOEngine } from './ProgrammaticSEOEngine';
 const SEODashboard = lazy(() => import('./SEODashboard'));
 import {
   Dialog,
@@ -109,7 +110,7 @@ interface SubscriptionRecord {
   paidAmountCents: number | string;
 }
 
-type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend' | 'system-logs' | 'leads' | 'chatbot' | 'bulk-blog' | 'article-performance' | 'blog-editor';
+type ActiveTab = 'overview' | 'users' | 'emails' | 'email-monitoring' | 'analytics' | 'visitors' | 'system-health' | 'promo-codes' | 'feedback' | 'audit-logs' | 'ai-usage' | 'whatsapp' | 'seo' | 'user-journey' | 'ad-spend' | 'system-logs' | 'leads' | 'chatbot' | 'bulk-blog' | 'article-performance' | 'blog-editor' | 'programmatic-seo';
 
 export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -673,6 +674,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             { id: 'bulk-blog', label: 'Bulk Blog', icon: Zap },
             { id: 'blog-editor', label: 'Blog Editor', icon: Edit },
             { id: 'article-performance', label: 'Article ROI', icon: TrendingUp },
+            { id: 'programmatic-seo', label: 'SEO Pages', icon: Globe },
           ].map(tab => (
             <Button
               key={tab.id}
@@ -1052,6 +1054,11 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
         {/* Article Performance Tab */}
         {activeTab === 'article-performance' && (
           <ArticlePerformanceDashboard token={token} />
+        )}
+
+        {/* Programmatic SEO Engine Tab */}
+        {activeTab === 'programmatic-seo' && (
+          <ProgrammaticSEOEngine />
         )}
 
         {/* Analytics Tab */}
