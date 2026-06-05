@@ -26,3 +26,4 @@ adiology.io (adiology.io) provides real-time click fraud detection and protectio
 ## Get Started
 
 Protect your Education ad campaigns from click fraud today. Visit [adiology.io](https://adiology.io) to start your free trial.
+
